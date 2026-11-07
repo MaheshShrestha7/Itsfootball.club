@@ -48,7 +48,7 @@ export default function MatchdayStrip({ club, next, live }: {
               {live ? (
                 <span className="badge badge-live"><span className="pulse-dot" /> Live now</span>
               ) : (
-                <span className="badge badge-primary">Next match</span>
+                <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>Next match</strong>
               )}
               <span className="text-meta matchday-tile-comp">{competitionOf(first) || (first.is_club_home ? 'Home' : 'Away')}</span>
             </div>

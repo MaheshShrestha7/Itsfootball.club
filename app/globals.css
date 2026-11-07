@@ -24,6 +24,11 @@
   --max-width: 1280px;
   /* Motion: the strong ease-out used across this stylesheet */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Results read the same for every club, whatever its colours */
+  --result-win: #22C55E;
+  --result-win-ink: #052E16;
+  --result-draw: #64748B;
+  --result-loss: #DC2626;
 }
 
 /* Colour tokens. Dark is the default; <html data-theme> is set from the theme cookie (app/layout.tsx).
@@ -1833,50 +1838,83 @@ textarea {
   .club-hero-section { min-height: 460px; }
 }
 
-/* Fixtures & Results Responsive Card */
-.fixture-card {
-  padding: 1.25rem 1.75rem;
+/* Club home fixtures: rows with hairlines. The match link stretches over the whole row. */
+.fx-list { border-top: 1px solid var(--border-subtle); }
+.fx-row {
+  position: relative;
   display: grid;
-  /* Fixed side columns so the VS/score block lines up from card to card,
-     however many buttons a card has (extra buttons wrap onto a second row) */
-  grid-template-columns: 240px minmax(0, 1fr) 270px;
+  /* Fixed side columns so the score lines up from row to row */
+  grid-template-columns: 240px minmax(0, 1fr) 170px;
   align-items: center;
   gap: 1.5rem;
+  padding: 1.1rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
 }
-
-.fixture-card .fixture-actions {
-  justify-content: flex-end;
+@media (hover: hover) and (pointer: fine) {
+  .fx-row:hover { background: rgba(var(--tint-rgb), 0.03); }
+  .fx-row:hover .fx-go { text-decoration: underline; }
 }
-
+.fx-teams {
+  display: grid;
+  /* The result chip sits beside the score, in a column of its own so scores still line up */
+  grid-template-columns: minmax(0, 1fr) 24px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+.fx-home { order: 1; text-align: right; overflow-wrap: anywhere; }
+.fx-chip { order: 2; display: flex; }
+.fx-away { order: 4; overflow-wrap: anywhere; }
+.fx-score {
+  order: 3;
+  min-width: 60px;
+  text-align: center;
+  font: 900 1.2rem var(--font-heading);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fx-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.25rem 0.85rem; }
+.fx-go { display: inline-flex; align-items: center; gap: 0.2rem; color: var(--club-ink); font-size: 0.875rem; font-weight: 700; }
+.fx-go::after { content: ''; position: absolute; inset: 0; }
+.fx-go:focus-visible { outline: none; }
+.fx-go:focus-visible::after { outline: 2px solid var(--club-ink); outline-offset: -2px; }
+/* Sits above the stretched link */
+.fx-admin { position: relative; z-index: 1; display: inline-flex; align-items: center; min-height: 44px; color: var(--text-secondary); font-size: 0.875rem; font-weight: 700; }
+.fx-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  color: inherit;
+}
+.fx-empty {
+  margin: 0;
+  padding: 1.25rem 0;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
 @media (max-width: 860px) {
-  .fixture-card {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-    padding: 1.25rem 1rem;
-    text-align: center;
-  }
-
-  .fixture-meta {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .fixture-teams {
-    justify-content: center !important;
-  }
-
-  .fixture-actions {
-    justify-content: center !important;
-    width: 100%;
-  }
-
-  .fixture-actions .btn {
-    flex: 1;
-    min-height: 44px;
-  }
+  .fx-row { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; padding: 0.9rem 0; }
+  .fx-home { text-align: left; }
+  .fx-away { text-align: right; }
+  .fx-teams { grid-template-columns: 24px minmax(0, 1fr) auto minmax(0, 1fr); gap: 0.5rem; }
+  .fx-chip { order: 0; }
+  .fx-score { min-width: 48px; font-size: 1.1rem; }
 }
+
+/* Plain label + value rows (home ground) */
+.club-facts { margin: 0; border-top: 1px solid var(--border-subtle); }
+.club-facts > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 0.75rem; padding: 0.85rem 0; border-bottom: 1px solid var(--border-subtle); }
+.club-facts dt { font-size: 0.8rem; color: var(--text-muted); }
+.club-facts dd { margin: 0; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+
+.committee-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 1.25rem 2rem; }
 
 /* Member inbox: stacked on a phone, the reply pane waits until a conversation is picked */
 @media (max-width: 640px) {
@@ -2615,18 +2653,10 @@ dialog.form-dialog::backdrop {
     justify-content: space-evenly;
     padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     background: var(--bg-surface-elevated);
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid var(--border-medium);
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
     /* Its own layer, so it doesn't repaint or shift while the page scrolls under it */
     transform: translateZ(0);
-  }
-
-  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .club-tabbar {
-      background: color-mix(in srgb, var(--bg-surface-elevated) 82%, transparent);
-      backdrop-filter: blur(18px) saturate(1.6);
-      -webkit-backdrop-filter: blur(18px) saturate(1.6);
-    }
   }
 
   /* Height to keep fixed bottom buttons and toasts above the bar (club pages only have it) */
@@ -3810,9 +3840,8 @@ dialog.form-dialog::backdrop {
 .club-section { padding: clamp(2.5rem, 5vw, 3.5rem) 0; }
 
 /* Club home card rows: few cards sit centred, never in a half-empty grid; a short last row centres too */
-.club-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; }
+.club-cards { display: flex; flex-wrap: wrap; gap: 1.25rem; }
 .club-cards > * { flex: 1 1 260px; max-width: 340px; }
-.club-cards-sm > * { flex-basis: 220px; max-width: 280px; }
 @media (max-width: 600px) {
   .club-cards > * { max-width: none; }
 }
@@ -3936,21 +3965,9 @@ dialog.form-dialog::backdrop {
   height: 30px;
   font-size: 0.9rem;
 }
-.result-chip-win {
-  background: rgba(16, 185, 129, 0.18);
-  color: color-mix(in srgb, var(--c-green), var(--text-primary) 15%);
-  border: 1px solid rgba(16, 185, 129, 0.45);
-}
-.result-chip-draw {
-  background: rgba(var(--tint-rgb), 0.08);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-subtle);
-}
-.result-chip-loss {
-  background: rgba(239, 68, 68, 0.16);
-  color: color-mix(in srgb, var(--c-red), var(--text-primary) 20%);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-}
+.result-chip-win { background: var(--result-win); color: var(--result-win-ink); }
+.result-chip-draw { background: var(--result-draw); color: #FFFFFF; }
+.result-chip-loss { background: var(--result-loss); color: #FFFFFF; }
 
 /* ===== Kick-off countdown (matchday strip, match page before kick-off) ===== */
 .kickoff-countdown {
@@ -4133,24 +4150,14 @@ dialog.form-dialog::backdrop {
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
 :is(.tp-leader, .pp-band, .team-band) abbr { text-decoration: none; }
+/* The home page leader is a flat field of the club colour; the player and team bands keep their silk */
+.tp-leader { background: var(--tp-field); border: 0; box-shadow: none; }
+.tp-leader::before, .tp-leader::after { content: none; }
+.tp-leader .tp-rank1 { min-height: 0; padding: 0; background: none; color: #FFFFFF; }
 .tp-leader:focus-visible { outline: 3px solid var(--club-ink); outline-offset: 3px; }
 /* A new leader's details and a new table fade in; the silk behind them stays put */
 .tp-swap, .tp-table tbody { animation: tp-swap 150ms ease-out; }
 @keyframes tp-swap { from { opacity: 0; } }
-.tp-leader-no { position: absolute; right: -1rem; top: 1rem; z-index: -2; pointer-events: none;
-  font: 900 13rem/1 var(--font-heading); letter-spacing: -0.07em; font-variant-numeric: tabular-nums;
-  color: transparent; background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.14)); -webkit-background-clip: text; background-clip: text;
-  -webkit-mask-image: radial-gradient(closest-side, #000 80%, transparent 100%); mask-image: radial-gradient(closest-side, #000 80%, transparent 100%);
-  transform: rotate(-10deg); opacity: 0; }
-.tp-leader-has-photo .tp-leader-no { right: 3rem; top: 4.5rem; }
-.tp-leader.is-seen .tp-leader-no { animation: tp-no-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes tp-no-in {
-  from { opacity: 0; transform: translateY(22%) rotate(-3deg) scale(1.08); }
-  to { opacity: 1; transform: rotate(-10deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .tp-leader-no, .tp-leader.is-seen .tp-leader-no { opacity: 1; animation: none; }
-}
 .tp-leader-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .tp-leader-photo { position: relative; z-index: 1; flex-shrink: 0; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; padding: 4px; border-radius: 14px;
   background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35);
@@ -4168,8 +4175,6 @@ dialog.form-dialog::backdrop {
 .tp-leader-go { display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-bottom: 0.1rem; font: 700 0.88rem var(--font-heading); }
 @media (min-width: 960px) {
   .tp-leader { padding: 2.5rem; } .tp-leader-name { font-size: 3rem; } .tp-leader-photo { width: 150px; }
-  .tp-leader-no { font-size: 19rem; right: -1rem; top: 1rem; }
-  .tp-leader-has-photo .tp-leader-no { right: 7rem; top: 5rem; }
 }
 
 /* The silk background (components/SilkBackdrop.tsx): a canvas under everything, the club glow
@@ -4179,7 +4184,7 @@ dialog.form-dialog::backdrop {
 :is(.tp-leader, .pp-band, .team-band):has(> .silk-backdrop[data-on])::before { z-index: -2;
   background: linear-gradient(to top, rgba(5, 8, 15, 0.62) 0%, rgba(5, 8, 15, 0.38) 40%, transparent 65%),
     linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
-:is(.tp-leader, .pp-band, .team-band):has(> .silk-backdrop[data-on]) :is(.tp-leader-no, .pp-band-no) { visibility: hidden; }
+:is(.pp-band, .team-band):has(> .silk-backdrop[data-on]) .pp-band-no { visibility: hidden; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
@@ -4370,7 +4375,7 @@ dialog.form-dialog::backdrop {
 .team-band-season { margin-bottom: 0.6rem; color: #FFFFFF; font-size: 0.8rem; font-weight: 600; }
 .team-band .tp-leader-stats { margin: 0; padding: 0; border: 0; }
 .team-band-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0; color: #FFFFFF; font-size: 0.82rem; font-weight: 600; }
-.team-band .result-chip { background: rgba(5, 8, 15, 0.55); }
+.team-band .result-chip { background: rgba(5, 8, 15, 0.55); border: 1px solid; }
 .team-band .result-chip-win { color: #6EE7B7; border-color: #6EE7B7; }
 .team-band .result-chip-loss { color: #FCA5A5; border-color: #FCA5A5; }
 .team-band .result-chip-draw { color: #FFFFFF; border-color: #FFFFFF; }

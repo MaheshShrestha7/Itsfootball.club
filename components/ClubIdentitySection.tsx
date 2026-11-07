@@ -10,6 +10,7 @@ import { latestFirst } from '@/lib/fixtures';
 import { isSponsorOnSite } from '@/lib/sponsors';
 import { isCountedMember } from '@/lib/people';
 import { clubNumbers, hasClubNumbers, type ClubNumbers } from '@/lib/club-numbers';
+import ResultChip from '@/components/ResultChip';
 
 interface ClubIdentitySectionProps {
   club: Club;
@@ -167,11 +168,11 @@ export default function ClubIdentitySection({
 
   // Rows with a 0 are left out
   const rows = [
-    { id: 'goals', value: n.goals, label: plural(n.goals, 'Goal', 'Goals'), sub: `${n.season} season`, href: `/${slug}/fixtures`, go: 'Results' },
-    { id: 'clean', value: n.cleanSheets, label: plural(n.cleanSheets, 'Clean sheet', 'Clean sheets'), sub: `${n.season} season`, href: `/${slug}/fixtures`, go: 'Results' },
-    { id: 'players', value: n.players, label: plural(n.players, 'Player', 'Players'), sub: 'Signed up to play', href: `/${slug}/squad`, go: 'Squad' },
-    { id: 'supporters', value: n.supporters, label: plural(n.supporters, 'Supporter', 'Supporters'), sub: 'Signed up with the club', href: null, go: null },
-    { id: 'teams', value: n.teams, label: plural(n.teams, 'Team', 'Teams'), sub: 'Playing for the club', href: `/${slug}/teams`, go: 'Teams' },
+    { id: 'goals', value: n.goals, label: plural(n.goals, 'Goal', 'Goals'), href: `/${slug}/fixtures`, go: 'Results' },
+    { id: 'clean', value: n.cleanSheets, label: plural(n.cleanSheets, 'Clean sheet', 'Clean sheets'), href: `/${slug}/fixtures`, go: 'Results' },
+    { id: 'players', value: n.players, label: plural(n.players, 'Player', 'Players'), href: `/${slug}/squad`, go: 'Squad' },
+    { id: 'supporters', value: n.supporters, label: plural(n.supporters, 'Supporter', 'Supporters'), href: null, go: null },
+    { id: 'teams', value: n.teams, label: plural(n.teams, 'Team', 'Teams'), href: `/${slug}/teams`, go: 'Teams' },
   ].filter(r => r.value > 0);
 
   const reveal = (delayMs: number): React.CSSProperties => ({
@@ -188,11 +189,11 @@ export default function ClubIdentitySection({
           {club.founded_year ? <> · Est. {club.founded_year}</> : null}
           {club.motto ? <> · &ldquo;{club.motto}&rdquo;</> : null}
         </p>
-        <h2 id="club-numbers-heading" className="cn-title" style={reveal(0)}>Club&apos;s Impact in Numbers</h2>
+        <h2 id="club-numbers-heading" className="cn-title" style={reveal(0)}>{n.season} season</h2>
 
         <div className="cn-body">
           {bigGames > 0 && (
-            <div className="glass-panel cn-lead" style={reveal(40)}>
+            <div className="cn-lead" style={reveal(40)}>
               <div className="cn-big">
                 <span className="cn-fig">
                   <AnimatedCounter value={bigGames} enabled={isInView} duration={850} />
@@ -223,7 +224,7 @@ export default function ClubIdentitySection({
                   <span>Last {n.form.length}</span>
                   <span className="cn-form-list" role="list" aria-label={`Last ${n.form.length} results, oldest first`}>
                     {n.form.map((o, i) => (
-                      <i key={i} role="listitem" className={`o-${o}`} aria-label={o === 'W' ? 'Won' : o === 'D' ? 'Drawn' : 'Lost'}>{o}</i>
+                      <span key={i} role="listitem"><ResultChip outcome={o} /></span>
                     ))}
                   </span>
                 </div>
@@ -249,9 +250,7 @@ export default function ClubIdentitySection({
                     {n.upcomingEvents > 0 && <span className="cn-tile-sub">{n.upcomingEvents} coming up</span>}
                     {n.eventSignups > 0 && <span className="cn-tile-sub">{n.eventSignups} {plural(n.eventSignups, 'sign-up', 'sign-ups')}</span>}
                     {n.eventTypes.length > 0 && (
-                      <span className="cn-chips">
-                        {n.eventTypes.map(t => <span key={t.label} className="cn-chip">{t.count} {t.label}</span>)}
-                      </span>
+                      <span className="cn-tile-sub">{n.eventTypes.map(t => `${t.count} ${t.label}`).join(' · ')}</span>
                     )}
                     <span className="cn-go">Events →</span>
                   </Link>
@@ -264,9 +263,7 @@ export default function ClubIdentitySection({
                     <span className="cn-tile-label">{plural(n.sponsors, 'Sponsor', 'Sponsors')}</span>
                     <span className="cn-tile-sub">Backing the club</span>
                     {n.sponsorTiers.length > 0 && (
-                      <span className="cn-chips">
-                        {n.sponsorTiers.map(t => <span key={t.label} className="cn-chip">{t.count} {t.label}</span>)}
-                      </span>
+                      <span className="cn-tile-sub">{n.sponsorTiers.map(t => `${t.count} ${t.label}`).join(' · ')}</span>
                     )}
                     <span className="cn-go">Become a sponsor →</span>
                   </Link>
@@ -275,12 +272,12 @@ export default function ClubIdentitySection({
             )}
 
             {rows.length > 0 && (
-              <ul className="glass-panel cn-list" style={reveal(160)}>
+              <ul className="cn-list" style={reveal(160)}>
                 {rows.map(r => {
                   const inner = (
                     <>
                       <span className="cn-v"><AnimatedCounter value={r.value} enabled={isInView} duration={850} /></span>
-                      <span className="cn-t">{r.label}<span>{r.sub}</span></span>
+                      <span className="cn-t">{r.label}</span>
                       {r.go ? <span className="cn-go">{r.go} →</span> : <span />}
                     </>
                   );
@@ -331,7 +328,6 @@ export default function ClubIdentitySection({
           color: var(--club-ink);
           font-variant-numeric: tabular-nums;
         }
-        .cn-lead { padding: 1.25rem; }
         .cn-big { display: flex; align-items: baseline; gap: 0.75rem; }
         .cn-big .cn-fig { font-size: 5.5rem; }
         .cn-big-label { font-weight: 700; font-size: 1rem; line-height: 1.25; color: var(--text-primary); }
@@ -339,9 +335,9 @@ export default function ClubIdentitySection({
         .cn-wdl { margin-top: 1.1rem; }
         .cn-wdl-bar { display: flex; gap: 2px; height: 8px; border-radius: 999px; overflow: hidden; }
         .cn-wdl-bar i { display: block; }
-        .cn-wdl-bar .w { background: var(--club-primary); }
-        .cn-wdl-bar .d { background: rgba(var(--tint-rgb), 0.28); }
-        .cn-wdl-bar .l { background: rgba(var(--tint-rgb), 0.12); }
+        .cn-wdl-bar .w { background: var(--result-win); }
+        .cn-wdl-bar .d { background: var(--result-draw); }
+        .cn-wdl-bar .l { background: var(--result-loss); }
         .cn-wdl-key {
           display: flex;
           flex-wrap: wrap;
@@ -361,19 +357,6 @@ export default function ClubIdentitySection({
           color: var(--text-secondary);
         }
         .cn-form-list { display: flex; gap: 6px; }
-        .cn-form-list i {
-          font-style: normal;
-          width: 24px;
-          height: 24px;
-          border-radius: 6px;
-          display: grid;
-          place-items: center;
-          font-size: 0.7rem;
-          font-weight: 800;
-        }
-        .cn-form-list .o-W { background: var(--club-primary); color: var(--club-primary-contrast, #fff); }
-        .cn-form-list .o-D { background: rgba(var(--tint-rgb), 0.18); color: var(--text-primary); }
-        .cn-form-list .o-L { border: 1px solid var(--border-medium); color: var(--text-secondary); }
         .cn-alltime {
           margin-top: 0.9rem;
           padding-top: 0.75rem;
@@ -399,20 +382,10 @@ export default function ClubIdentitySection({
         :global(.cn-fig-md) { font-size: 3.4rem; }
         :global(.cn-tile-label) { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
         :global(.cn-tile-sub) { font-size: 0.8rem; line-height: 1.35; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-        :global(.cn-chips) { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.2rem; }
-        :global(.cn-chip) {
-          font-size: 0.72rem;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 999px;
-          background: rgba(var(--tint-rgb), 0.06);
-          color: var(--text-secondary);
-          font-variant-numeric: tabular-nums;
-        }
         :global(.cn-go) { color: var(--club-ink); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
         :global(.cn-tile .cn-go) { margin-top: auto; padding-top: 0.4rem; }
-        .cn-list { list-style: none; margin: 0; padding: 0 1.25rem; }
-        .cn-list li + li { border-top: 1px solid var(--border-subtle); }
+        .cn-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border-subtle); }
+        .cn-list li { border-bottom: 1px solid var(--border-subtle); }
         :global(.cn-row) {
           display: grid;
           grid-template-columns: 3.25rem minmax(0, 1fr) auto;
@@ -432,7 +405,6 @@ export default function ClubIdentitySection({
           color: var(--text-primary);
         }
         :global(.cn-t) { font-weight: 600; font-size: 0.95rem; line-height: 1.25; color: var(--text-primary); }
-        :global(.cn-t span) { display: block; font-weight: 500; font-size: 0.78rem; color: var(--text-muted); }
         @media (hover: hover) and (pointer: fine) {
           :global(a.cn-tile:hover) { border-color: rgba(var(--club-primary-rgb), 0.4); }
           :global(a.cn-row:hover .cn-go), :global(a.cn-tile:hover .cn-go) { text-decoration: underline; }
@@ -441,10 +413,8 @@ export default function ClubIdentitySection({
           .cn { padding: 3.5rem 0; }
           .cn-body { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 1.25rem; align-items: start; }
           .cn-right { gap: 1.25rem; }
-          .cn-lead { padding: 1.75rem; }
           .cn-big .cn-fig { font-size: 7.5rem; }
           :global(.cn-fig-md) { font-size: 4.2rem; }
-          .cn-list { padding: 0.25rem 1.75rem; }
         }
         @media (prefers-reduced-motion: reduce) {
           .cn :global(*) { transition: none !important; transform: none !important; opacity: 1 !important; }

@@ -1,54 +1,28 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Trophy } from 'lucide-react';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import SilkBackdrop from '@/components/SilkBackdrop';
 
 interface Props {
   href: string;
   name: string;
   position: string | null;
-  jerseyNumber: number | null;
   photoUrl: string | null;
   figures: { label: string; abbr?: string; n: number }[];
   /** A plain sentence under the figures, e.g. a keeper's clean sheets out of games */
   line?: string | null;
   /** Level with the next player on every figure */
   joint?: boolean;
-  /** Club colours for the silk background */
-  primary?: string | null;
-  secondary?: string | null;
 }
 
-/** The 1st-place card on Top Players, styled like the member pass: the club's silk behind, with the
- *  shirt number printed on it and the photo beside. Without WebGL it falls back to dark glass with the
- *  number huge and faded behind, drifting in once when the card scrolls into view and again for each
- *  new leader (a GK/DEF switch). Reduced motion: it simply sits there. */
-export default function TopPlayerLeader({ href, name, position, jerseyNumber, photoUrl, figures, line, joint, primary, secondary }: Props) {
-  const ref = useRef<HTMLAnchorElement>(null);
-  const [seen, setSeen] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof IntersectionObserver === 'undefined') { setSeen(true); return; }
-    const io = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) { setSeen(true); io.disconnect(); }
-    }, { threshold: 0.3 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+/** The 1st-place card on Top Players: a flat field of the club colour with the photo beside the name. */
+export default function TopPlayerLeader({ href, name, position, photoUrl, figures, line, joint }: Props) {
   const firstName = name.trim().split(/\s+/)[0];
   return (
-    <Link ref={ref} href={href}
-      className={`tp-leader${photoUrl ? ' tp-leader-has-photo' : ''}${seen ? ' is-seen' : ''}`}>
-      <SilkBackdrop primary={primary} secondary={secondary} numberSelector=".tp-leader-no" number={jerseyNumber == null ? null : `${href}#${jerseyNumber}`} />
-      {/* Keyed by player, so a new leader's number plays its entrance */}
-      {jerseyNumber != null && <span key={href} className="tp-leader-no" aria-hidden="true">{jerseyNumber}</span>}
-      {/* Keyed by player too: a new leader's details fade in over the silk, which stays put */}
-      <div key={`${href}-body`} className="tp-swap">
+    <Link href={href} className="tp-leader">
+      {/* Keyed by player: a new leader's details fade in */}
+      <div key={href} className="tp-swap">
         <div className="tp-leader-top">
           <div className="min-w-0">
             <span className="tp-rank1"><Trophy size={14} aria-hidden="true" /> {joint ? 'Joint 1st' : '1st'}</span>

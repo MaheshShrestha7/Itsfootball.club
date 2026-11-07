@@ -4,7 +4,6 @@ import { PageSkeleton } from '@/components/Skeleton';
 import React, { useState, useEffect, use, useMemo, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { matchTypeTag } from '@/lib/fixture-label';
 import { useAuth } from '@/lib/auth-context';
 import ContactModal from '@/components/ContactModal';
 import ClubContactSection from '@/components/ClubContactSection';
@@ -12,7 +11,8 @@ import MatchGlideLink from '@/components/MatchGlideLink';
 import ClubIdentitySection from '@/components/ClubIdentitySection';
 import MatchdayStrip, { When as MatchWhen, KickoffTime } from '@/components/MatchdayStrip';
 import PlayerAvatar from '@/components/PlayerAvatar';
-import { clubPlaysIn, hasKickoffTime, kickoff, latestFirst, publicFixtures, soonestFirst } from '@/lib/fixtures';
+import ResultChip from '@/components/ResultChip';
+import { clubPlaysIn, clubResult, hasKickoffTime, kickoff, latestFirst, publicFixtures, soonestFirst } from '@/lib/fixtures';
 import SponsorShowcase from '@/components/SponsorShowcase';
 import CoverImage from '@/components/CoverImage';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
@@ -20,30 +20,18 @@ import LocalTime from '@/components/LocalTime';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
   Shield,
-  Radio,
   CreditCard,
   Calendar,
-  Clock,
   MapPin,
   Users,
-  Award,
   ChevronRight,
   ChevronLeft,
   ExternalLink,
-  Flame,
-  Play,
-  ArrowRight,
-  Sparkles,
-  Info,
-  Zap,
-  Pause,
   Newspaper,
   Image as ImageIcon,
-  X,
   CalendarPlus
 } from 'lucide-react';
 import { Match, ClubEvent, EventCategory, NewsArticle, isPlayerMember } from '@/lib/supabase/types';
-import { getLiveMinuteLabel } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubTeamsOf, defaultTeamOf, juniorMemberIds, publicScoreHidden, teamLabel, teamMemberIds, teamOfMatch, withTeamSide } from '@/lib/teams';
@@ -72,13 +60,22 @@ const subscribeReducedMotion = (onChange: () => void) => {
 };
 const reducedMotionNow = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(REDUCED_MOTION).matches;
 
+const SHORT_DATE = { weekday: 'short', day: 'numeric', month: 'short' } as const;
+
+/** The competition's real name, else the kind of match; the old placeholder default isn't a name */
+const competitionName = (m: Pick<Match, 'competition' | 'match_type'>) => {
+  if (m.competition && m.competition !== 'Premier Regional League') return m.competition;
+  return m.match_type ? m.match_type.charAt(0).toUpperCase() + m.match_type.slice(1) : 'Match';
+};
+
 interface HomeHeroSlide {
   id: string;
   category: 'club' | 'match' | 'news' | 'event' | 'stadium' | 'image';
   tabLabel: string;
   // Short category word shown on phones in place of a pinned title, which would be cut off there
   phoneTabLabel?: string;
-  badge: string;
+  /** The plain line over the headline; the page adds the date to it where a slide has one */
+  kicker: string;
   bgImage: string;
   /** A flyer used as the background: shown softly blurred so the headline over it stays readable */
   bgIsFlyer?: boolean;
@@ -137,7 +134,8 @@ export default function ClubPublicPage({
 
   // Tab & Filter states
   const [squadFilter, setSquadFilter] = useState<PositionGroup>('ALL');
-  const [fixturesTab, setFixturesTab] = useState<'upcoming' | 'results'>('upcoming');
+  // Null until the visitor picks a tab: it then opens on whichever tab has games in it
+  const [fixturesTabPicked, setFixturesTab] = useState<'upcoming' | 'results' | null>(null);
   const [fixturesSeasonFilter, setFixturesSeasonFilter] = useState<string>('CURRENT');
   // Clubs with several teams: 'ALL' = every team, else a team id
   const [fixturesTeamId, setFixturesTeamId] = useState<string>('ALL');
@@ -220,11 +218,15 @@ export default function ClubPublicPage({
     return !team || team.id === fixturesTeamId;
   };
   const upcomingShown = upcomingFixtures.filter(inFixturesTeam);
-  // Nothing coming up: the latest 3 results instead. Same source as Upcoming, so the current view
-  // reaches back past a season rollover rather than going empty.
-  const recentResults = upcomingSource.filter(m => m.status === 'completed' && inFixturesTeam(m)).sort(latestFirst).slice(0, 3);
-  const fixtureCards = fixturesTab === 'results' ? pastMatches.filter(inFixturesTeam)
-    : upcomingShown.length > 0 ? upcomingShown : recentResults;
+  // Nothing coming up: open on Results, never on an "Upcoming" tab listing old games
+  const fixturesTab = fixturesTabPicked ?? (upcomingShown.length > 0 ? 'upcoming' : 'results');
+  const seasonResults = pastMatches.filter(inFixturesTeam);
+  // Same source as Upcoming, so the current view reaches back past a season rollover rather than going empty
+  const recentResults = upcomingSource.filter(m => m.status === 'completed' && inFixturesTeam(m)).sort(latestFirst).slice(0, 5);
+  const fixtureCards = fixturesTab === 'upcoming' ? upcomingShown
+    // Until a tab is picked it's a short list; "All fixtures & results" has the rest
+    : fixturesTabPicked === null ? (seasonResults.length > 0 ? seasonResults.slice(0, 5) : recentResults)
+    : seasonResults;
   const clubEvents = events.filter(e => e.club_id === clubId);
   // Soonest first, and only events that haven't finished yet
   const nowMs = Date.now();
@@ -232,6 +234,10 @@ export default function ClubPublicPage({
     .filter(e => { const end = Date.parse(e.end_time || e.start_time); return Number.isNaN(end) || end >= nowMs; })
     .sort((a, b) => (Date.parse(a.start_time) || 0) - (Date.parse(b.start_time) || 0));
   const nextEvent = upcomingEvents[0] || clubEvents[0];
+  // No fixtures to show, but a cup or match day is on the calendar: the fixtures section points to it
+  const nextFootballEvent = upcomingShown.length === 0
+    ? upcomingEvents.find(e => e.category === 'tournament' || e.category === 'match')
+    : undefined;
   // The strip's next match skips a game left on "upcoming" after it was played (no result entered yet)
   const stripNextMatch = upcomingMatches.find(m => kickoff(m) >= nowMs - 3 * 3600000);
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
@@ -267,145 +273,130 @@ export default function ClubPublicPage({
   });
 
 
-  // Dynamic multi-slider definition reading admin pinned items or falling back to defaults
+  // The hero slides: what the admin pinned, else what the club really has. A pin whose match, story or
+  // event has gone is left out, and no slide is filled in with wording the club didn't write. Badge and
+  // button wording saved on old pins was generated, never typed by the club, so it isn't read back here.
   const heroSlides: HomeHeroSlide[] = useMemo(() => {
     if (!club) return [];
 
+    const fixtureSlide = (m: Match, id: string, tabLabel: string, title?: string): HomeHeroSlide => ({
+      id,
+      category: 'match',
+      tabLabel,
+      phoneTabLabel: m.status === 'live' ? 'Live' : 'Match',
+      kicker: competitionName(m),
+      bgImage: (club.slider_images && club.slider_images[0]) || club.banner_url || '',
+      title: title || `${m.home_team_name} vs ${m.away_team_name}`,
+      subtitle: m.venue || '',
+      targetMatch: m,
+    });
+    const newsSlide = (a: NewsArticle, id: string, tabLabel: string, overrides: Partial<HomeHeroSlide> = {}): HomeHeroSlide => ({
+      id,
+      category: 'news',
+      tabLabel,
+      phoneTabLabel: a.tags?.[0] || 'News',
+      kicker: a.tags?.[0] || 'News',
+      bgImage: a.cover_image_url || club.banner_url || '',
+      title: a.title,
+      subtitle: a.summary || '',
+      targetNews: a,
+      ...overrides,
+    });
+    const eventSlide = (e: ClubEvent, id: string, tabLabel: string, overrides: Partial<HomeHeroSlide> = {}): HomeHeroSlide => ({
+      id,
+      category: 'event',
+      tabLabel,
+      phoneTabLabel: EVENT_TAB_LABELS[e.category] || 'Event',
+      kicker: EVENT_TAB_LABELS[e.category] || 'Event',
+      bgImage: e.flyer_url || club.banner_url || '',
+      bgIsFlyer: Boolean(e.flyer_url),
+      title: e.title,
+      subtitle: e.description || e.location || club.stadium_name || '',
+      targetEvent: e,
+      ...overrides,
+    });
+
+    const shortTab = (title: string | undefined, fallback: string) =>
+      title ? (title.length > 18 ? `${title.substring(0, 16)}...` : title) : fallback;
+
     const activePins = (club.hero_pinned_items || []).filter(p => p.is_active);
-
     if (activePins.length > 0) {
-      const pinnedSlides: HomeHeroSlide[] = activePins.map((item, idx) => {
+      const pinned = activePins.flatMap((item, idx): HomeHeroSlide[] => {
         if (item.type === 'fixture') {
-          const matchItem = clubMatches.find(m => m.id === item.target_id) || liveMatch || upcomingMatches[0];
-          const isLive = matchItem?.status === 'live';
-          const compClean = (!matchItem?.competition || matchItem.competition === 'Premier Regional League')
-            ? (matchItem?.match_type ? `${matchItem.match_type.charAt(0).toUpperCase() + matchItem.match_type.slice(1)} Match` : 'Club Friendly')
-            : matchItem.competition;
-          return {
-            id: item.id || `pin-fixture-${idx}`,
-            category: 'match',
-            phoneTabLabel: isLive ? 'Live Match' : 'Fixture',
-            tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Fixture',
-            badge: item.badge || (isLive ? `MATCHDAY LIVE • ${getLiveMinuteLabel(matchItem)}' IN PLAY` : `FIXTURE • ${compClean}`),
-            bgImage: item.image_url || club.banner_url || '',
-            title: item.title || (matchItem ? `${matchItem.home_team_name} vs ${matchItem.away_team_name}` : `${club.name} Matchday`),
-            subtitle: item.subtitle || (matchItem ? `${compClean} • ${matchItem.venue}` : 'Official Club Match Schedule'),
-            ctaLabel: item.cta_label || (isLive ? 'Enter Match Centre Live' : 'Match Preview & Lineups'),
-            ctaLink: item.cta_link || (matchItem ? matchPath(club.slug, matchItem) : `/${club.slug}`),
-            targetMatch: matchItem,
-          };
+          const m = clubMatches.find(x => x.id === item.target_id) || liveMatch || upcomingMatches[0];
+          if (!m) return [];
+          const slide = fixtureSlide(m, item.id || `pin-fixture-${idx}`, shortTab(item.title, 'Fixture'), item.title);
+          return [item.image_url ? { ...slide, bgImage: item.image_url } : slide];
         }
-
         if (item.type === 'news') {
-          const article = news.find(n => n.id === item.target_id) || featuredArticle;
-          return {
-            id: item.id || `pin-news-${idx}`,
-            category: 'news',
-            phoneTabLabel: article?.tags?.[0] || 'News',
-            tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'News',
-            // Slides saved before Oct 2026 carry a made-up "BREAKING NEWS" label; the club never chose it
-            badge: (item.badge || '').replace(/^BREAKING NEWS/i, 'LATEST NEWS') || (article?.tags?.[0] ? `LATEST NEWS • ${article.tags[0]}` : 'LATEST NEWS'),
-            bgImage: item.image_url || article?.cover_image_url || club.banner_url || '',
-            title: item.title || article?.title || `${club.name} news`,
-            subtitle: item.subtitle || article?.summary || 'Latest match summaries and announcements.',
-            ctaLabel: item.cta_label || 'Read Full Story',
-            ctaLink: item.cta_link || `/${club.slug}#news`,
-            targetNews: article,
-          };
+          const a = news.find(n => n.id === item.target_id) || featuredArticle;
+          if (!a) return [];
+          return [newsSlide(a, item.id || `pin-news-${idx}`, shortTab(item.title, 'News'), {
+            title: item.title || a.title,
+            subtitle: item.subtitle || a.summary || '',
+            bgImage: item.image_url || a.cover_image_url || club.banner_url || '',
+          })];
         }
-
         if (item.type === 'event') {
-          const evt = events.find(e => e.id === item.target_id) || nextEvent;
-          return {
-            id: item.id || `pin-event-${idx}`,
-            category: 'event',
-            phoneTabLabel: evt?.category ? EVENT_TAB_LABELS[evt.category] : 'Event',
-            tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Event',
-            badge: item.badge || `UPCOMING EVENT • ${evt?.category?.toUpperCase() || 'CALENDAR'}`,
-            bgImage: evt?.flyer_url || item.image_url || club.banner_url || '',
-            bgIsFlyer: Boolean(evt?.flyer_url),
-            title: item.title || evt?.title || `${club.name} Open Event`,
-            subtitle: item.subtitle || evt?.description || 'Fan sessions and trial opportunities.',
-            // Slides saved before Nov 2026 carry the default "RSVP / Event Details"; there's no RSVP to make
-            ctaLabel: (item.cta_label === 'RSVP / Event Details' ? '' : item.cta_label) || 'Event Details',
-            targetEvent: evt,
-          };
+          const e = events.find(x => x.id === item.target_id) || nextEvent;
+          if (!e) return [];
+          return [eventSlide(e, item.id || `pin-event-${idx}`, shortTab(item.title, 'Event'), {
+            title: item.title || e.title,
+            subtitle: item.subtitle || e.description || e.location || club.stadium_name || '',
+            bgImage: e.flyer_url || item.image_url || club.banner_url || '',
+          })];
         }
-
-        // Custom Image / Promo Banner slide
-        return {
+        // Custom image / promo banner: the one slide whose wording the admin types in
+        return [{
           id: item.id || `pin-image-${idx}`,
           category: 'image',
           phoneTabLabel: 'Spotlight',
-          tabLabel: item.title ? (item.title.length > 18 ? item.title.substring(0, 16) + '...' : item.title) : 'Spotlight',
+          tabLabel: shortTab(item.title, 'Spotlight'),
           // Older default home ground slides were saved as "HOME FORTRESS" / "<ground> Fortress"
-          badge: (item.badge || 'SPOTLIGHT').replace(/^HOME FORTRESS$/i, 'HOME GROUND'),
+          kicker: (item.badge || '').replace(/^HOME FORTRESS$/i, 'Home ground').replace(/^HOME GROUND$/, 'Home ground').replace(/^SPOTLIGHT$/, ''),
           bgImage: item.image_url || club.banner_url || '',
           title: (item.title || club.name).replace(/ Fortress$/, ''),
           subtitle: item.subtitle || club.motto || '',
           ctaLabel: item.cta_label || 'Find out more',
           ctaLink: item.cta_link || `/${club.slug}`,
-        };
+        }];
       });
-
-      return pinnedSlides;
+      if (pinned.length > 0) return pinned;
     }
 
-    // Default dynamic 4-slide carousel when no custom pins are set
-    return [
-      {
-        id: 'matchday-hub',
-        category: 'match',
-        tabLabel: liveMatch ? 'Matchday Live' : 'Matchday Hub',
-        badge: liveMatch
-          ? `MATCHDAY LIVE • ${getLiveMinuteLabel(liveMatch)}' IN PLAY`
-          : upcomingMatches[0]
-          ? `UPCOMING FIXTURE • ${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? (upcomingMatches[0].match_type ? `${upcomingMatches[0].match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : upcomingMatches[0].competition.toUpperCase()}`
-          : 'MATCHDAY HUB',
+    // Nothing pinned: one slide for each thing the club actually has
+    const nextMatch = liveMatch || upcomingMatches[0];
+    const comingEvent = upcomingEvents[0];
+    const slides: HomeHeroSlide[] = [];
+    if (nextMatch) slides.push(fixtureSlide(nextMatch, 'matchday', liveMatch ? 'Live match' : 'Next match'));
+    if (featuredArticle) slides.push(newsSlide(featuredArticle, 'latest-news', 'Latest news'));
+    if (comingEvent) slides.push(eventSlide(comingEvent, 'next-event', 'Next event'));
+
+    // A club with nothing posted yet gets its name and a way to join, not placeholder news and events
+    if (slides.length === 0) {
+      return [{
+        id: 'club',
+        category: 'club',
+        tabLabel: club.name,
+        kicker: '',
         bgImage: (club.slider_images && club.slider_images[0]) || club.banner_url || '',
-        title: liveMatch
-          ? `${liveMatch.home_team_name} vs ${liveMatch.away_team_name}`
-          : upcomingMatches[0]
-          ? `${upcomingMatches[0].home_team_name} vs ${upcomingMatches[0].away_team_name}`
-          : `${club.name} Matchday Hub`,
-        subtitle: liveMatch
-          ? `${(!liveMatch.competition || liveMatch.competition === 'Premier Regional League') ? 'Club Match' : liveMatch.competition} • In Play at ${liveMatch.venue}`
-          : upcomingMatches[0]
-          ? `${(!upcomingMatches[0].competition || upcomingMatches[0].competition === 'Premier Regional League') ? 'Club Fixture' : upcomingMatches[0].competition}${upcomingMatches[0].venue ? ` • ${upcomingMatches[0].venue}` : ''}`
-          : 'Official Match Schedule & Match Reports',
-        targetMatch: liveMatch || upcomingMatches[0],
-      },
-      {
-        id: 'latest-news',
-        category: 'news',
-        tabLabel: 'Latest News',
-        badge: featuredArticle?.tags?.[0] ? `LATEST NEWS • ${featuredArticle.tags[0]}` : 'LATEST NEWS',
-        bgImage: featuredArticle?.cover_image_url || club.banner_url || '',
-        title: featuredArticle?.title || `${club.name} news`,
-        subtitle: featuredArticle?.summary || 'Match reports and club announcements.',
-        targetNews: featuredArticle,
-      },
-      {
-        id: 'club-events',
-        category: 'event',
-        tabLabel: 'Events & Trials',
-        badge: `UPCOMING EVENT • ${nextEvent?.category?.toUpperCase() || 'CALENDAR'}`,
-        bgImage: nextEvent?.flyer_url || club.banner_url || '',
-        bgIsFlyer: Boolean(nextEvent?.flyer_url),
-        title: nextEvent?.title || `${club.name} Open Training Session`,
-        subtitle: nextEvent?.description || 'Fan sessions, community training camps, and player trial opportunities.',
-        targetEvent: nextEvent,
-      },
-      {
-        id: 'stadium-atmosphere',
+        title: club.name,
+        subtitle: club.stadium_name ? `Home ground: ${club.stadium_name}` : '',
+      }];
+    }
+    if (club.stadium_name) {
+      slides.push({
+        id: 'home-ground',
         category: 'stadium',
         tabLabel: 'Home ground',
-        badge: `HOME GROUND • ${club.stadium_name}`,
+        kicker: 'Home ground',
         bgImage: (club.slider_images && club.slider_images[1]) || gallery[0]?.media_url || '',
         title: club.stadium_name,
-        subtitle: club.stadium_pitch_type,
-      }
-    ];
+        subtitle: `Where ${club.name} play home matches.`,
+      });
+    }
+    return slides;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club, club?.hero_pinned_items, matches, liveMatch, upcomingMatches, news, featuredArticle, events, nextEvent, gallery]);
 
   // Autoplay ticker with pause-on-hover
@@ -418,6 +409,12 @@ export default function ClubPublicPage({
   }, [isSliderPaused, sliderStopped, heroSlides.length]);
 
   const currentSlide = heroSlides[activeSlide] || heroSlides[0];
+  const heroMatch = currentSlide?.targetMatch;
+  const heroNews = currentSlide?.targetNews;
+  const heroEvent = currentSlide?.targetEvent;
+  const heroIsLive = heroMatch?.status === 'live';
+  // A club with nothing posted and no photo: a flat field of its colour, so the text and buttons can't sit on a photo
+  const heroIsFlat = currentSlide?.category === 'club' && !currentSlide.bgImage;
 
   // Loading state while hydrating
   if (!club) {
@@ -438,7 +435,6 @@ export default function ClubPublicPage({
         padding: '3rem 1.5rem',
         textAlign: 'center'
       }}>
-        <span className="badge badge-gold">CLUB NOT FOUND</span>
         <h2 style={{ fontSize: '2.2rem', fontWeight: 900 }}>Club Not Found</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '480px' }}>
           No football club was found at <code>/{resolvedParams.clubSlug}</code>. The club may have moved or changed its address.
@@ -461,7 +457,7 @@ export default function ClubPublicPage({
       <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
         {club.name}
       </h1>
-      {/* 4.1 HERO SHOWCASE SECTION (MULTI-SLIDE CAROUSEL & CREST EMBLEM) */}
+      {/* 4.1 HERO: pinned or real slides. One layout for every slide: a plain line, the headline, buttons */}
       <section
         onMouseEnter={() => setIsSliderPaused(true)}
         onMouseLeave={() => setIsSliderPaused(false)}
@@ -473,8 +469,11 @@ export default function ClubPublicPage({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-start',
+          ...(currentSlide.category === 'club' ? { minHeight: 0 } : {}),
           background: currentSlide.bgIsFlyer
             ? 'var(--bg-pitch)'
+            : heroIsFlat
+            ? 'var(--club-ink-light, var(--club-primary))'
             : `linear-gradient(to bottom, rgba(var(--dk-7-10-15), 0.45) 0%, rgba(var(--dk-7-10-15), 0.88) 75%, var(--bg-pitch) 100%), ${currentSlide.bgImage ? `url(${currentSlide.bgImage}) center/cover no-repeat` : 'var(--club-primary)'}`,
           borderBottom: '1px solid var(--border-subtle)',
           padding: '2.5rem 0 2.5rem 0',
@@ -512,669 +511,254 @@ export default function ClubPublicPage({
 
         <div className="container" style={{ width: '100%', position: 'relative', zIndex: 1 }}>
           <div className="club-hero-grid">
-            {/* Left Column: Slide Content (Dynamic based on currentSlide.category) */}
             <div>
-              {/* Helper references for active slide items */}
-              {(() => {
-                const activeSlideMatch = currentSlide.targetMatch || liveMatch || upcomingMatches[0];
-                const activeSlideNews = currentSlide.targetNews || featuredArticle;
-                const activeSlideEvent = currentSlide.targetEvent || nextEvent;
+              {(heroIsLive || currentSlide.kicker) && (
+                <p style={{
+                  margin: '0 0 0.75rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: heroIsLive ? 'var(--c-red)' : currentSlide.category === 'event' ? 'var(--c-amber)' : 'var(--club-ink)',
+                }}>
+                  {heroIsLive && heroMatch ? (
+                    <>Live · <LiveMinute match={heroMatch} />&apos;</>
+                  ) : (
+                    <>
+                      {currentSlide.kicker}
+                      {heroMatch && <> · <MatchWhen m={heroMatch} /></>}
+                      {heroNews?.published_at && <> · <LocalTime value={heroNews.published_at} options={SHORT_DATE} /></>}
+                      {heroEvent && <> · <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /></>}
+                    </>
+                  )}
+                </p>
+              )}
 
-                return (
+              <h2 style={{
+                fontSize: 'clamp(2.1rem, 4.4vw, 3.5rem)',
+                fontWeight: 900,
+                lineHeight: 1.1,
+                letterSpacing: '-0.03em',
+                marginBottom: '1rem',
+                color: heroIsFlat ? '#FFFFFF' : 'var(--text-primary)',
+              }}>
+                {currentSlide.title}
+              </h2>
+
+              {currentSlide.subtitle && (
+                <p style={{
+                  fontSize: '1.125rem',
+                  color: heroIsFlat ? '#FFFFFF' : 'var(--text-secondary)',
+                  marginBottom: '1.75rem',
+                  lineHeight: 1.5,
+                }}>
+                  {currentSlide.subtitle}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
+                {currentSlide.category === 'match' && heroMatch && (
                   <>
-                    {/* SLIDE: MATCHDAY LIVE / FIXTURE CLASH */}
-                    {currentSlide.category === 'match' && (
-                      <div>
-                        <div data-theme="dark" style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.65rem',
-                          background: 'rgba(0,0,0,0.5)',
-                          padding: '0.35rem 0.85rem',
-                          borderRadius: '30px',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          marginBottom: '1rem',
-                        }}>
-                          <div style={{ width: '22px', height: '22px', borderRadius: '6px', border: `1.5px solid ${club.primary_color}`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {club.logo_url && !heroLogoError ? (
-                              <img loading="eager" decoding="async" src={club.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                            ) : (
-                              <Shield size={13} color={club.primary_color} />
-                            )}
-                          </div>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>{club.name}</span>
-                          <span className="text-muted">•</span>
-                          <span style={{ fontSize: '0.75rem', color: activeSlideMatch?.status === 'live' ? 'var(--c-red)' : 'var(--club-primary)', fontWeight: 700 }}>
-                            {currentSlide.badge}
-                          </span>
-                        </div>
-
-                        <h2 style={{
-                          fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)',
-                          fontWeight: 900,
-                          lineHeight: 1.1,
-                          letterSpacing: '-0.03em',
-                          marginBottom: '1rem',
-                          color: 'var(--text-primary)',
-                        }}>
-                          {currentSlide.title}
-                        </h2>
-
-                        <p style={{
-                          fontSize: '1.15rem',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1.75rem',
-                          lineHeight: 1.5,
-                        }}>
-                          {currentSlide.subtitle}
-                        </p>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                          <Link
-                            href={activeSlideMatch ? matchPath(club.slug, activeSlideMatch) : `/${club.slug}`}
-                            className="btn btn-primary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                          >
-                            <Zap size={16} />
-                            <span>{currentSlide.ctaLabel || (activeSlideMatch?.status === 'live' ? 'Enter Match Centre Live' : 'Full Fixture Centre')}</span>
-                          </Link>
-
-                          {isClubAdmin && (
-
-                          <Link
-                            href={`/${club.slug}/availability`}
-                            className="btn btn-secondary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                          >
-                            <Users size={16} color="var(--club-primary)" />
-                            <span>Squad Availability</span>
-                          </Link>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SLIDE 3: BREAKING NEWS */}
-                    {currentSlide.category === 'news' && (
-                      <div>
-                        <div data-theme="dark" style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.65rem',
-                          background: 'rgba(0,0,0,0.5)',
-                          padding: '0.35rem 0.85rem',
-                          borderRadius: '30px',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          marginBottom: '1rem',
-                        }}>
-                          <Newspaper size={14} color="var(--club-primary)" />
-                          <span style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 800 }}>
-                            {currentSlide.badge}
-                          </span>
-                        </div>
-
-                        <h2 style={{
-                          fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
-                          fontWeight: 900,
-                          lineHeight: 1.15,
-                          letterSpacing: '-0.02em',
-                          marginBottom: '1rem',
-                          color: 'var(--text-primary)',
-                        }}>
-                          {currentSlide.title}
-                        </h2>
-
-                        <p style={{
-                          fontSize: '1.1rem',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1.75rem',
-                          lineHeight: 1.6,
-                        }}>
-                          {currentSlide.subtitle}
-                        </p>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                          {activeSlideNews && (
-                            <Link
-                              href={newsPath(club.slug, activeSlideNews.slug)}
-                              className="btn btn-primary row"
-                            >
-                              <Newspaper size={16} />
-                              <span>{currentSlide.ctaLabel || 'Read Full Story'}</span>
-                            </Link>
-                          )}
-
-                          <a
-                            href="#news"
-                            className="btn btn-secondary row"
-                          >
-                            <span>All Club News</span>
-                            <ArrowRight size={14} />
-                          </a>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SLIDE 4: CLUB EVENTS & TRIALS */}
-                    {currentSlide.category === 'event' && (
-                      <div>
-                        <div data-theme="dark" style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.65rem',
-                          background: 'rgba(0,0,0,0.5)',
-                          padding: '0.35rem 0.85rem',
-                          borderRadius: '30px',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          marginBottom: '1rem',
-                        }}>
-                          <Calendar size={14} color="var(--club-accent, #F59E0B)" />
-                          <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)', fontWeight: 800 }}>
-                            {currentSlide.badge}
-                          </span>
-                        </div>
-
-                        <h2 style={{
-                          fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
-                          fontWeight: 900,
-                          lineHeight: 1.15,
-                          letterSpacing: '-0.02em',
-                          marginBottom: '1rem',
-                          color: 'var(--text-primary)',
-                        }}>
-                          {currentSlide.title}
-                        </h2>
-
-                        <p style={{
-                          fontSize: '1.1rem',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1.75rem',
-                          lineHeight: 1.6,
-                        }}>
-                          {currentSlide.subtitle}
-                        </p>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                          <Link
-                            href={activeSlideEvent ? `/${club.slug}/events/${activeSlideEvent.id}` : `/${club.slug}/events`}
-                            className="btn btn-primary row"
-                          >
-                            <span>{currentSlide.ctaLabel || 'Event Details'}</span>
-                            <ArrowRight size={14} />
-                          </Link>
-
-                          <Link
-                            href={`/${club.slug}/calendar`}
-                            className="btn btn-secondary row"
-                          >
-                            <Calendar size={16} />
-                            <span>Full Club Calendar</span>
-                          </Link>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SLIDE: CUSTOM IMAGE BANNER SPOTLIGHT */}
-                    {currentSlide.category === 'image' && (
-                      <div>
-                        <div data-theme="dark" style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.65rem',
-                          background: 'rgba(0,0,0,0.5)',
-                          padding: '0.35rem 0.85rem',
-                          borderRadius: '30px',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          marginBottom: '1rem',
-                        }}>
-                          <Sparkles size={14} color="var(--club-accent, #F59E0B)" />
-                          <span style={{ fontSize: '0.75rem', color: 'var(--c-amber)', fontWeight: 800 }}>
-                            {currentSlide.badge}
-                          </span>
-                        </div>
-
-                        <h2 style={{
-                          fontSize: 'clamp(2rem, 4.2vw, 3.2rem)',
-                          fontWeight: 900,
-                          lineHeight: 1.15,
-                          letterSpacing: '-0.02em',
-                          marginBottom: '1rem',
-                          color: 'var(--text-primary)',
-                        }}>
-                          {currentSlide.title}
-                        </h2>
-
-                        <p style={{
-                          fontSize: '1.1rem',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1.75rem',
-                          lineHeight: 1.6,
-                        }}>
-                          {currentSlide.subtitle}
-                        </p>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                          <Link
-                            href={currentSlide.ctaLink || `/${club.slug}`}
-                            className="btn btn-primary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                          >
-                            <Sparkles size={16} />
-                            <span>{currentSlide.ctaLabel || 'Find out more'}</span>
-                          </Link>
-
-                          <Link
-                            href={`/${club.slug}/member`}
-                            className="btn btn-secondary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                          >
-                            <CreditCard size={16} color="var(--club-primary)" />
-                            <span>Member Pass</span>
-                          </Link>
-                        </div>
-                      </div>
+                    <Link href={matchPath(club.slug, heroMatch)} className="btn btn-primary">
+                      {heroIsLive ? 'Follow live' : heroMatch.status === 'completed' ? 'Match report' : 'Match preview'}
+                    </Link>
+                    {isClubAdmin && (
+                      <Link href={`/${club.slug}/availability`} className="btn btn-secondary">
+                        <Users size={16} aria-hidden="true" /> Squad availability
+                      </Link>
                     )}
                   </>
-                );
-              })()}
-
-              {/* SLIDE 5: HOME GROUND */}
-              {currentSlide.category === 'stadium' && (
-                <div>
-                  <div data-theme="dark" style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.65rem',
-                    background: 'rgba(0,0,0,0.5)',
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '30px',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    marginBottom: '1rem',
-                  }}>
-                    <MapPin size={14} color="var(--club-primary)" />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 800 }}>
-                      {currentSlide.badge}
-                    </span>
-                  </div>
-
-                  <h2 style={{
-                    fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)',
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                    letterSpacing: '-0.03em',
-                    marginBottom: '1rem',
-                    color: 'var(--text-primary)',
-                  }}>
-                    {club.stadium_name}
-                  </h2>
-
-                  <p style={{
-                    fontSize: '1.15rem',
-                    color: 'var(--text-secondary)',
-                    marginBottom: '1.75rem',
-                    lineHeight: 1.6,
-                  }}>
-                    Where {club.name} play home matches.{club.stadium_pitch_type ? ` Surface: ${club.stadium_pitch_type}.` : ''}
-                  </p>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-                    <a
-                      href="#stadium"
-                      className="btn btn-primary row"
-                    >
-                      <MapPin size={16} />
-                      <span>View Home Ground Map & Directions</span>
-                    </a>
-
-                    <a
-                      href="#squad"
-                      className="btn btn-secondary row"
-                    >
-                      <Users size={16} />
-                      <span>First Team Squad</span>
-                    </a>
-                  </div>
-                </div>
-              )}
+                )}
+                {currentSlide.category === 'news' && heroNews && (
+                  <>
+                    <Link href={newsPath(club.slug, heroNews.slug)} className="btn btn-primary">Read the story</Link>
+                    <a href="#news" className="btn btn-secondary">All news</a>
+                  </>
+                )}
+                {currentSlide.category === 'event' && heroEvent && (
+                  <>
+                    <Link href={`/${club.slug}/events/${heroEvent.id}`} className="btn btn-primary">Event details</Link>
+                    <Link href={`/${club.slug}/calendar`} className="btn btn-secondary">Club calendar</Link>
+                  </>
+                )}
+                {currentSlide.category === 'image' && (
+                  <>
+                    <Link href={currentSlide.ctaLink || `/${club.slug}`} className="btn btn-primary">{currentSlide.ctaLabel || 'Find out more'}</Link>
+                    <Link href={`/${club.slug}/member`} className="btn btn-secondary">
+                      <CreditCard size={16} aria-hidden="true" /> Member pass
+                    </Link>
+                  </>
+                )}
+                {currentSlide.category === 'stadium' && (
+                  <>
+                    <a href="#stadium" className="btn btn-primary"><MapPin size={16} aria-hidden="true" /> Map &amp; directions</a>
+                    <a href="#squad" className="btn btn-secondary">Squad</a>
+                  </>
+                )}
+                {currentSlide.category === 'club' && (
+                  <>
+                    <Link href={`/${club.slug}/member?join=1`} className="btn btn-primary" style={heroIsFlat ? { background: '#FFFFFF', color: 'var(--club-ink-light, #0E141E)', boxShadow: 'none' } : undefined}>Join the club</Link>
+                    <a href="#contact" className="btn btn-secondary" style={heroIsFlat ? { background: 'transparent', color: '#FFFFFF', borderColor: 'rgba(255, 255, 255, 0.6)' } : undefined}>Contact us</a>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Right Column: Interactive Card matching slide content. On phones an upcoming fixture's or
-                a story's card only repeats the headline (and the matchday strip below), so it's left out
+            {/* Right column: one clickable card for the slide. On phones an upcoming fixture's or a
+                story's card only repeats the headline (and the matchday strip below), so it's left out
                 there and the slide tabs stay above the bottom menu; a live score always shows. */}
+            {currentSlide.category !== 'club' && (
             <div className={
-              (currentSlide.category === 'match' && !['live', 'halftime'].includes(currentSlide.targetMatch?.status || ''))
+              (currentSlide.category === 'match' && !['live', 'halftime'].includes(heroMatch?.status || ''))
               || currentSlide.category === 'news' ? 'club-hero-side-repeat' : undefined
             }>
-              {/* SLIDE: LIVE MATCH SCOREBOARD OR NEXT FIXTURE */}
-              {currentSlide.category === 'match' && (
-                <div>
-                  {(() => {
-                    const activeSlideMatch = currentSlide.targetMatch || liveMatch || upcomingMatches[0];
-                    const isLive = activeSlideMatch?.status === 'live';
-                    if (!activeSlideMatch) return null;
-                    return isLive ? (
-                      <div className="glass-panel" style={{
-                        padding: '1.5rem',
-                        border: '2px solid #EF4444',
-                        boxShadow: '0 0 35px rgba(239, 68, 68, 0.35)',
-                        background: 'rgba(var(--dk-18-26-38), 0.92)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <span className="badge badge-live">
-                            <span className="pulse-dot" /> {activeSlideMatch.is_paused ? 'MATCHDAY PAUSED' : 'MATCHDAY LIVE'} • <LiveMinute match={activeSlideMatch} />&apos;
-                          </span>
-                          <span className="text-note">
-                            {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' MATCH' : 'CLUB FRIENDLY') : activeSlideMatch.competition}
-                          </span>
+              {currentSlide.category === 'match' && heroMatch && (
+                <Link
+                  href={matchPath(club.slug, heroMatch)}
+                  className="glass-panel glass-panel-interactive"
+                  style={{ display: 'block', padding: '1.5rem', color: 'inherit', background: 'rgba(var(--dk-18-26-38), 0.92)' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {heroIsLive ? (
+                      <span className="badge badge-live">
+                        <span className="pulse-dot" /> {heroMatch.is_paused ? 'Paused' : 'Live'} · <LiveMinute match={heroMatch} />&apos;
+                      </span>
+                    ) : (
+                      <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>Next match</strong>
+                    )}
+                    <span className="text-note">{competitionName(heroMatch)}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+                      <img loading="eager" decoding="async" width={48} height={48}
+                        src={heroMatch.home_team_logo || DEFAULT_CREST}
+                        alt={`${heroMatch.home_team_name} crest`}
+                        ref={crestFallbackRef}
+                        onError={crestOnError}
+                        style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
+                      />
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{heroMatch.home_team_name}</div>
+                    </div>
+
+                    {heroIsLive ? (
+                      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                        <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 5vw, 2.8rem)', fontWeight: 900, letterSpacing: '0.05em', lineHeight: 1 }}>
+                          {publicScoreHidden(heroMatch, clubTeams) ? 'vs' : `${heroMatch.home_score} : ${heroMatch.away_score}`}
                         </div>
-
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          marginBottom: '1.5rem',
-                        }}>
-                          {/* Home Team */}
-                          <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img loading="eager" decoding="async" width={48} height={48}
-                              src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
-                              alt={`${activeSlideMatch.home_team_name} crest`}
-                              ref={crestFallbackRef}
-                              onError={crestOnError}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
-                            />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
-                            <span className="text-meta">Home</span>
-                          </div>
-
-                          {/* Live Score */}
-                          <div data-theme="dark" style={{
-                            padding: '0.5rem 1rem',
-                            background: 'rgba(0, 0, 0, 0.6)',
-                            borderRadius: '16px',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            textAlign: 'center',
-                            flexShrink: 0,
-                          }}>
-                            <div style={{
-                              fontFamily: 'var(--font-heading)',
-                              fontSize: 'clamp(2rem, 5vw, 2.8rem)',
-                              fontWeight: 900,
-                              letterSpacing: '0.05em',
-                              color: 'var(--text-primary)',
-                              lineHeight: 1,
-                            }}>
-                              {publicScoreHidden(activeSlideMatch, clubTeams) ? 'VS' : `${activeSlideMatch.home_score} : ${activeSlideMatch.away_score}`}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--c-red)', fontWeight: 700, marginTop: '4px', textTransform: 'uppercase' }}>
-                              {activeSlideMatch.period === 'first_half'
-                                ? '1st Half'
-                                : activeSlideMatch.period === 'halftime'
-                                ? 'Half Time'
-                                : activeSlideMatch.period === 'second_half'
-                                ? '2nd Half'
-                                : activeSlideMatch.period === 'extra_time'
-                                ? 'Extra Time'
-                                : activeSlideMatch.period === 'penalties'
-                                ? 'Penalties'
-                                : 'In Play'}
-                            </div>
-                          </div>
-
-                          {/* Away Team */}
-                          <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img loading="eager" decoding="async" width={48} height={48}
-                              src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
-                              alt={`${activeSlideMatch.away_team_name} crest`}
-                              ref={crestFallbackRef}
-                              onError={crestOnError}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto', border: '1px solid var(--border-subtle)' }}
-                            />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
-                            <span className="text-meta">Away</span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                          <div className="text-note">
-                            Venue: <strong className="text-primary">{activeSlideMatch.venue}</strong>
-                          </div>
-                          <Link
-                            href={matchPath(club.slug, activeSlideMatch)}
-                            className="btn btn-primary btn-sm touch-target"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                          >
-                            <span>Full Match Centre</span>
-                            <ChevronRight size={14} />
-                          </Link>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--c-red)', fontWeight: 700, marginTop: '4px' }}>
+                          {heroMatch.period === 'first_half' ? '1st half'
+                            : heroMatch.period === 'halftime' ? 'Half time'
+                            : heroMatch.period === 'second_half' ? '2nd half'
+                            : heroMatch.period === 'extra_time' ? 'Extra time'
+                            : heroMatch.period === 'penalties' ? 'Penalties'
+                            : 'In play'}
                         </div>
                       </div>
                     ) : (
-                      /* Next Fixture Countdown Card */
-                      <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <span className="badge badge-primary">FIXTURE SPOTLIGHT</span>
-                          <span className="text-note">
-                            {activeSlideMatch.competition === 'Premier Regional League' ? (activeSlideMatch.match_type ? activeSlideMatch.match_type.toUpperCase() + ' FIXTURE' : 'CLUB FRIENDLY') : (activeSlideMatch.competition || 'Club Match')}
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                          <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img loading="eager" decoding="async" width={48} height={48}
-                              src={activeSlideMatch.home_team_logo || DEFAULT_CREST}
-                              alt={`${activeSlideMatch.home_team_name} crest`}
-                              ref={crestFallbackRef}
-                              onError={crestOnError}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
-                            />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.home_team_name}</div>
-                          </div>
-                          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-muted)', padding: '0 0.5rem', flexShrink: 0 }}>VS</div>
-                          <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
-                            <img loading="eager" decoding="async" width={48} height={48}
-                              src={activeSlideMatch.away_team_logo || DEFAULT_CREST}
-                              alt={`${activeSlideMatch.away_team_name} crest`}
-                              ref={crestFallbackRef}
-                              onError={crestOnError}
-                              style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
-                            />
-                            <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{activeSlideMatch.away_team_name}</div>
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1.25rem' }}>
-                          Kick-off: <MatchWhen m={activeSlideMatch} />{activeSlideMatch.venue ? ` · ${activeSlideMatch.venue}` : ''}
-                        </div>
-                        <Link
-                          href={matchPath(club.slug, activeSlideMatch)}
-                          className="btn btn-primary btn-sm touch-target"
-                          style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                          Match Preview & Lineups
-                        </Link>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* SLIDE 3 RIGHT: FEATURED NEWS SPOTLIGHT CARD */}
-              {currentSlide.category === 'news' && (
-                <div>
-                  {(() => {
-                    const activeSlideNews = currentSlide.targetNews || featuredArticle;
-                    if (!activeSlideNews) return null;
-                    return (
-                      <Link
-                        href={newsPath(club.slug, activeSlideNews.slug)}
-                        className="glass-panel glass-panel-interactive"
-                        style={{
-                          overflow: 'hidden',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          border: '1.5px solid var(--border-medium)',
-                        }}
-                      >
-                        <div style={{ height: '200px', position: 'relative' }}>
-                          <CoverImage
-                            loading="eager"
-                            src={activeSlideNews.cover_image_url || club.banner_url}
-                            alt={activeSlideNews.title}
-                            crestUrl={club.logo_url}
-                            style={{ width: '100%', height: '100%' }}
-                          />
-                          <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
-                            <span className="badge badge-gold">{activeSlideNews.is_featured ? 'FEATURED' : 'LATEST NEWS'}</span>
-                          </div>
-                        </div>
-
-                        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--club-ink)', fontWeight: 700, textTransform: 'uppercase' }}>
-                            {activeSlideNews.tags?.join(' • ') || 'First Team'}
-                          </div>
-                          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-                            {activeSlideNews.title}
-                          </h3>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
-                            <span>By {activeSlideNews.author_name || 'Media Team'}</span>
-                            <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read Article &rarr;</span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* SLIDE 4 RIGHT: EVENT PASS & RSVP STATUS CARD */}
-              {currentSlide.category === 'event' && (
-                <div>
-                  {(() => {
-                    const activeSlideEvent = currentSlide.targetEvent || nextEvent;
-                    if (!activeSlideEvent) return null;
-                    return (
-                      <div className="glass-panel" style={{
-                        padding: '2rem',
-                        border: '1.5px solid rgba(245, 158, 11, 0.3)',
-                        background: 'rgba(var(--dk-14-20-30), 0.9)',
-                      }}>
-                        {activeSlideEvent.flyer_url && (
-                          <Link
-                            href={`/${club.slug}/events/${activeSlideEvent.id}`}
-                            aria-label={`${activeSlideEvent.title} flyer`}
-                            style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '220px', overflow: 'hidden', borderRadius: 'var(--radius-md)', background: 'rgba(0, 0, 0, 0.35)', margin: '-0.75rem -0.75rem 1.25rem' }}
-                          >
-                            <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(activeSlideEvent.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
-                            <img src={activeSlideEvent.flyer_url} alt="" decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                          </Link>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                          <span className="badge badge-gold">EVENT INVITATION</span>
-                          <span className="text-note">
-                            {activeSlideEvent.is_public ? 'Public Access' : 'Members Only'}
-                          </span>
-                        </div>
-
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-                          {activeSlideEvent.title}
-                        </h3>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: '1.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                          <div className="row">
-                            <Calendar size={15} color="var(--club-primary)" />
-                            <span><LocalTime value={activeSlideEvent.start_time} /></span>
-                          </div>
-                          <div className="row">
-                            <MapPin size={15} color="var(--club-primary)" />
-                            <span>{activeSlideEvent.location || club.stadium_name}</span>
-                          </div>
-                        </div>
-
-                        {/* Attendance Progress Meter: only once people have checked in ("0 checked in" reads as nobody coming) */}
-                        {activeSlideEvent.rsvp_count > 0 && (
-                        <div style={{ marginBottom: '1.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                            <span className="text-muted">Checked In</span>
-                            <strong className="text-primary">{activeSlideEvent.rsvp_count}{activeSlideEvent.max_capacity > 0 ? ` / ${activeSlideEvent.max_capacity}` : ''} checked in</strong>
-                          </div>
-                          <div style={{ width: '100%', height: '6px', background: 'rgba(var(--tint-rgb), 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{
-                              width: `${activeSlideEvent.max_capacity > 0 ? Math.min(100, Math.round((activeSlideEvent.rsvp_count / activeSlideEvent.max_capacity) * 100)) : 0}%`,
-                              height: '100%',
-                              background: 'linear-gradient(90deg, var(--club-primary), var(--club-accent, var(--club-primary)))',
-                            }} />
-                          </div>
-                        </div>
-                        )}
-
-                        <Link
-                          href={`/${club.slug}/events/${activeSlideEvent.id}`}
-                          className="btn btn-primary btn-sm"
-                          style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                          {(activeSlideEvent.ticket_price_cents ?? 0) > 0 ? 'Get tickets' : 'View event details'}
-                        </Link>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* SLIDE 5 RIGHT: HOME GROUND MAP */}
-              {currentSlide.category === 'stadium' && (
-                <div className="glass-panel" style={{
-                  padding: '2rem',
-                  border: '1.5px solid var(--border-medium)',
-                  background: 'rgba(var(--dk-14-20-30), 0.9)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                    <span className="badge badge-primary">HOME GROUND</span>
-                    <span className="text-note">Grounds & Facility</span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                      <MapPin size={18} color="var(--club-primary)" />
-                      <div>
-                        <div className="text-meta">Address</div>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_address}</div>
-                      </div>
-                    </div>
-
-                    {club.stadium_pitch_type && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                        <Shield size={18} color="var(--club-primary)" />
-                        <div>
-                          <div className="text-meta">Pitch Surface</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{club.stadium_pitch_type}</div>
-                        </div>
-                      </div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-muted)', padding: '0 0.5rem', flexShrink: 0 }}>vs</div>
                     )}
+
+                    <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+                      <img loading="eager" decoding="async" width={48} height={48}
+                        src={heroMatch.away_team_logo || DEFAULT_CREST}
+                        alt={`${heroMatch.away_team_name} crest`}
+                        ref={crestFallbackRef}
+                        onError={crestOnError}
+                        style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', padding: '4px', margin: '0 auto 0.5rem auto' }}
+                      />
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', wordBreak: 'break-word' }}>{heroMatch.away_team_name}</div>
+                    </div>
                   </div>
 
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(club.stadium_address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary btn-sm"
-                    style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <span>Get Home Ground Directions</span>
-                    <ExternalLink size={14} />
-                  </a>
-                </div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1rem' }}>
+                    <MatchWhen m={heroMatch} />{heroMatch.venue ? ` · ${heroMatch.venue}` : ''}
+                  </div>
+                  <span className="btn btn-primary btn-sm" style={{ width: '100%' }}>
+                    {heroIsLive ? 'Follow live' : heroMatch.status === 'completed' ? 'Match report' : 'Match preview'}
+                  </span>
+                </Link>
               )}
 
-              {/* SLIDE 6 RIGHT: CUSTOM IMAGE / SPOTLIGHT PROMO CARD */}
+              {currentSlide.category === 'news' && heroNews && (
+                <Link
+                  href={newsPath(club.slug, heroNews.slug)}
+                  className="glass-panel glass-panel-interactive"
+                  style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', color: 'inherit' }}
+                >
+                  <div style={{ height: '200px', position: 'relative' }}>
+                    <CoverImage
+                      loading="eager"
+                      src={heroNews.cover_image_url || club.banner_url}
+                      alt={heroNews.title}
+                      crestUrl={club.logo_url}
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
+                  <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {!!heroNews.tags?.length && <div className="text-meta">{heroNews.tags.join(' · ')}</div>}
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{heroNews.title}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <span>{heroNews.author_name ? `By ${heroNews.author_name}` : ''}</span>
+                      <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article &rarr;</span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {currentSlide.category === 'event' && heroEvent && (
+                <Link
+                  href={`/${club.slug}/events/${heroEvent.id}`}
+                  className="glass-panel glass-panel-interactive"
+                  style={{ display: 'block', overflow: 'hidden', color: 'inherit', background: 'rgba(var(--dk-14-20-30), 0.9)' }}
+                >
+                  {heroEvent.flyer_url && (
+                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '220px', overflow: 'hidden', background: 'rgba(0, 0, 0, 0.35)' }}>
+                      <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(heroEvent.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
+                      <img src={heroEvent.flyer_url} alt={`${heroEvent.title} flyer`} decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  <div style={{ padding: '1.5rem' }}>
+                    <p className="text-meta" style={{ margin: '0 0 0.35rem' }}>
+                      {EVENT_TAB_LABELS[heroEvent.category] || 'Event'} · {heroEvent.is_public ? 'All welcome' : 'Members only'}
+                    </p>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{heroEvent.title}</h3>
+                    <p style={{ margin: '0 0 0.85rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /> · {heroEvent.location || club.stadium_name}
+                    </p>
+                    {/* Only once people have checked in ("0 checked in" reads as nobody coming) */}
+                    {heroEvent.rsvp_count > 0 && (
+                      <p className="text-meta" style={{ margin: '0 0 0.85rem' }}>
+                        {heroEvent.rsvp_count}{heroEvent.max_capacity > 0 ? ` / ${heroEvent.max_capacity}` : ''} checked in
+                      </p>
+                    )}
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>
+                      {(heroEvent.ticket_price_cents ?? 0) > 0 ? 'Get tickets' : 'View event'} &rarr;
+                    </span>
+                  </div>
+                </Link>
+              )}
+
+              {currentSlide.category === 'stadium' && (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent([club.stadium_name, club.stadium_address].filter(Boolean).join(', '))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glass-panel glass-panel-interactive"
+                  style={{ display: 'block', padding: '1.75rem', color: 'inherit', background: 'rgba(var(--dk-14-20-30), 0.9)' }}
+                >
+                  {club.stadium_address && <p style={{ margin: '0 0 0.35rem', fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_address}</p>}
+                  {club.stadium_pitch_type && <p className="text-meta" style={{ margin: '0 0 0.85rem' }}>{club.stadium_pitch_type}</p>}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>
+                    Directions <ExternalLink size={14} aria-hidden="true" />
+                  </span>
+                </a>
+              )}
+
               {currentSlide.category === 'image' && (
-                <div className="glass-panel" style={{
-                  overflow: 'hidden',
-                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
-                  background: 'rgba(var(--dk-14-20-30), 0.92)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}>
+                <Link
+                  href={currentSlide.ctaLink || `/${club.slug}`}
+                  className="glass-panel glass-panel-interactive"
+                  style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', color: 'inherit', background: 'rgba(var(--dk-14-20-30), 0.92)' }}
+                >
                   <div style={{ height: '220px', position: 'relative' }}>
                     <CoverImage
                       loading="eager"
@@ -1183,35 +767,19 @@ export default function ClubPublicPage({
                       crestUrl={club.logo_url}
                       style={{ width: '100%', height: '100%' }}
                     />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(var(--dk-14-20-30),0.95) 0%, transparent 60%)' }} />
-                    <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
-                      <span className="badge badge-gold">{currentSlide.badge}</span>
-                    </div>
                   </div>
-
-                  <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>
-                      {currentSlide.title}
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      {currentSlide.subtitle}
-                    </p>
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                      <Link
-                        href={currentSlide.ctaLink || `/${club.slug}`}
-                        className="btn btn-primary btn-sm"
-                        style={{ width: '100%', justifyContent: 'center' }}
-                      >
-                        {currentSlide.ctaLabel || 'Learn More'}
-                      </Link>
-                    </div>
+                  <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{currentSlide.title}</h3>
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>{currentSlide.ctaLabel || 'Find out more'} &rarr;</span>
                   </div>
-                </div>
+                </Link>
               )}
             </div>
+            )}
           </div>
 
-          {/* BOTTOM SLIDER CONTROLS: CATEGORY TABS, AUTOPLAY TIMER & PREV/NEXT */}
+          {/* Slide tabs and prev/next: left out when there's only the one slide */}
+          {heroSlides.length > 1 && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -1221,14 +789,16 @@ export default function ClubPublicPage({
             paddingTop: '1.25rem',
             borderTop: '1px solid rgba(var(--tint-rgb), 0.08)',
           }}>
-            {/* Category Select Tabs: Mobile Horizontal Scroll Pill Strip */}
             <div className="scroll-pill-strip" style={{ flex: 1, minWidth: 0 }}>
               {heroSlides.map((slide, idx) => {
                 const isActive = activeSlide === idx;
+                const iconColor = isActive ? club.primary_color : 'currentColor';
                 return (
                   <button
                     key={slide.id}
+                    type="button"
                     onClick={() => setActiveSlide(idx)}
+                    aria-pressed={isActive}
                     className="scroll-pill-item"
                     title={slide.title}
                     style={{
@@ -1246,22 +816,16 @@ export default function ClubPublicPage({
                       transition: 'all 0.2s ease',
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: '38px',
+                      minHeight: '44px',
                     }}
                   >
-                    {slide.category === 'match' && (
-                      <span className="row row-inline row-tight">
-                        {slide.targetMatch?.status === 'live' ? (
-                          <span className="pulse-dot" style={{ width: '8px', height: '8px' }} />
-                        ) : (
-                          <Zap size={14} color={isActive ? club.primary_color : 'currentColor'} />
-                        )}
-                      </span>
-                    )}
-                    {slide.category === 'news' && <Newspaper size={14} color={isActive ? club.primary_color : 'currentColor'} />}
-                    {slide.category === 'event' && <Calendar size={14} color={isActive ? club.primary_color : 'currentColor'} />}
-                    {slide.category === 'stadium' && <MapPin size={14} color={isActive ? club.primary_color : 'currentColor'} />}
-                    {slide.category === 'image' && <Sparkles size={14} color={isActive ? '#F59E0B' : 'currentColor'} />}
+                    {slide.category === 'match' && (slide.targetMatch?.status === 'live'
+                      ? <span className="pulse-dot" style={{ width: '8px', height: '8px' }} />
+                      : <Calendar size={14} color={iconColor} aria-hidden="true" />)}
+                    {slide.category === 'news' && <Newspaper size={14} color={iconColor} aria-hidden="true" />}
+                    {slide.category === 'event' && <Calendar size={14} color={iconColor} aria-hidden="true" />}
+                    {slide.category === 'stadium' && <MapPin size={14} color={iconColor} aria-hidden="true" />}
+                    {slide.category === 'image' && <ImageIcon size={14} color={iconColor} aria-hidden="true" />}
                     {slide.phoneTabLabel ? (
                       <>
                         <span className="hero-tab-desktop">{slide.tabLabel}</span>
@@ -1290,20 +854,15 @@ export default function ClubPublicPage({
               })}
             </div>
 
-            {/* Slider Navigation Arrows & Hover State */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-              {isSliderPaused && (
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', display: 'none', alignItems: 'center', gap: '0.3rem', marginRight: '0.3rem' }}>
-                  <Pause size={10} />
-                </span>
-              )}
               <button
+                type="button"
                 onClick={() => setActiveSlide(prev => (prev - 1 + heroSlides.length) % heroSlides.length)}
-                aria-label="Previous Slide"
+                aria-label="Previous slide"
                 className="touch-target"
                 data-theme="dark" style={{
-                  width: '38px',
-                  height: '38px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   border: '1px solid rgba(255,255,255,0.14)',
                   background: 'rgba(0,0,0,0.5)',
@@ -1315,15 +874,16 @@ export default function ClubPublicPage({
                   transition: 'all 0.2s ease',
                 }}
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={18} aria-hidden="true" />
               </button>
               <button
+                type="button"
                 onClick={() => setActiveSlide(prev => (prev + 1) % heroSlides.length)}
-                aria-label="Next Slide"
+                aria-label="Next slide"
                 className="touch-target"
                 data-theme="dark" style={{
-                  width: '38px',
-                  height: '38px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   border: '1px solid rgba(255,255,255,0.14)',
                   background: 'rgba(0,0,0,0.5)',
@@ -1335,10 +895,11 @@ export default function ClubPublicPage({
                   transition: 'all 0.2s ease',
                 }}
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
+          )}
         </div>
       </section>
 
@@ -1356,13 +917,12 @@ export default function ClubPublicPage({
         onOpenContactModal={() => setContactModalOpen(true)}
       />
 
-      {/* 4.3 FIXTURES & RESULTS */}
+      {/* 4.3 FIXTURES & RESULTS: plain rows; each whole row opens the match */}
       <section id="fixtures" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
-              <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>SCHEDULE</span>
-              <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Fixtures & Match Results</h2>
+              <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Fixtures &amp; results</h2>
               {/* webcal:// opens the device's calendar app with a subscription that keeps itself up to date */}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '1rem' }}>
                 <a
@@ -1385,11 +945,12 @@ export default function ClubPublicPage({
             <div className="row row-loose row-wrap">
               {multiTeam && (
                 <div className="row">
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>TEAM:</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>Team</span>
                   <select aria-label="Team"
                     value={fixturesTeamId}
                     onChange={(e) => setFixturesTeamId(e.target.value)}
                     style={{
+                      minHeight: '44px',
                       padding: '0.45rem 0.85rem',
                       background: 'rgba(var(--tint-rgb), 0.07)',
                       border: '1px solid var(--border-subtle)',
@@ -1403,16 +964,17 @@ export default function ClubPublicPage({
                     {teams.map(t => (
                       <option key={t.id} value={t.id} style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>{t.name}</option>
                     ))}
-                    <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All Teams</option>
+                    <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All teams</option>
                   </select>
                 </div>
               )}
               <div className="row">
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>SEASON:</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>Season</span>
                 <select aria-label="Season"
                   value={fixturesSeasonFilter}
                   onChange={(e) => setFixturesSeasonFilter(e.target.value)}
                   style={{
+                    minHeight: '44px',
                     padding: '0.45rem 0.85rem',
                     background: 'rgba(var(--tint-rgb), 0.07)',
                     border: '1px solid var(--border-subtle)',
@@ -1424,9 +986,9 @@ export default function ClubPublicPage({
                   }}
                 >
                   <option value="CURRENT" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>
-                    Current Season ({activeSeason?.name || defaultSeasonLabel()})
+                    Current season ({activeSeason?.name || defaultSeasonLabel()})
                   </option>
-                  <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All Seasons</option>
+                  <option value="ALL" style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>All seasons</option>
                   {clubSeasons.map(s => (
                     <option key={s.id} value={s.name} style={{ background: 'rgb(var(--dk-17-24-39))', color: 'var(--text-primary)' }}>
                       {s.name} {s.is_current ? '(Active)' : `(${s.status})`}
@@ -1447,311 +1009,180 @@ export default function ClubPublicPage({
                     translate: fixturesTab === 'results' ? '100% 0' : '0 0',
                   }}
                 />
-                <button
-                  onClick={() => setFixturesTab('upcoming')}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.85rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    position: 'relative',
-                    background: 'transparent',
-                    color: fixturesTab === 'upcoming' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                    transition: 'color 0.25s ease',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    minHeight: '40px',
-                  }}
-                >
-                  Upcoming
-                </button>
-                <button
-                  onClick={() => setFixturesTab('results')}
-                  style={{
-                    flex: 1,
-                    padding: '0.5rem 0.85rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    position: 'relative',
-                    background: 'transparent',
-                    color: fixturesTab === 'results' ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
-                    transition: 'color 0.25s ease',
-                    fontWeight: 700,
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    minHeight: '40px',
-                  }}
-                >
-                  Results
-                </button>
+                {(['upcoming', 'results'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setFixturesTab(tab)}
+                    aria-pressed={fixturesTab === tab}
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      position: 'relative',
+                      background: 'transparent',
+                      color: fixturesTab === tab ? 'var(--club-primary-contrast, #090D16)' : 'var(--text-muted)',
+                      transition: 'color 0.25s ease',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      minHeight: '44px',
+                    }}
+                  >
+                    {tab === 'upcoming' ? 'Upcoming' : 'Results'}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="stack">
-            {(fixturesTab === 'results' ? fixtureCards.length === 0 : upcomingShown.length === 0) && (
-              <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>
-                <span className="text-meta">
-                  {fixturesTab === 'results' ? 'No results yet this season.'
-                    : fixtureCards.length > 0 ? 'No upcoming fixtures yet. Here are the latest results.'
-                    : 'No upcoming fixtures yet. Check back soon.'}
-                </span>
-              </div>
-            )}
-            {fixtureCards.map(match => {
-              const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
-              const hideScore = publicScoreHidden(match, clubTeams);
-              const competitionLabel = match.competition === 'Premier Regional League' ? (match.match_type ? `${match.match_type.toUpperCase()} MATCH` : 'CLUB FRIENDLY') : match.competition;
-              // The match type badge, unless the competition label already says it ("Friendly" + "FRIENDLY")
-              const typeTag = matchTypeTag({ match_type: match.match_type, competition: competitionLabel });
-              return (
-              // data-glide-card: opening the match glides this card into the match page's scoreboard (MatchGlideLink)
-              <div key={match.id} data-glide-card className="glass-panel glass-panel-interactive fixture-card">
-                {/* Competition & Date */}
-                <div className="fixture-meta">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'inherit' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--club-ink)', textTransform: 'uppercase' }}>
-                      {competitionLabel}
-                    </span>
-                    {match.status === 'postponed' && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(245, 158, 11, 0.18)', color: 'var(--c-amber)', border: '1px solid rgba(245, 158, 11, 0.45)' }}>
-                        POSTPONED
-                      </span>
-                    )}
-                    {typeTag && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-                        {typeTag}
-                      </span>
-                    )}
-                    {match.season && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-muted)' }}>
-                        {match.season}
-                      </span>
-                    )}
-                    {matchTeam && (
-                      <span className="badge" style={{ fontSize: '0.7rem', background: `${matchTeam.color || club.primary_color}22`, color: 'var(--text-primary)', border: `1px solid ${matchTeam.color || club.primary_color}66` }}>
-                        {teamLabel(matchTeam)}
-                      </span>
-                    )}
-                  </div>
-                  {match.title && (
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--c-amber)', marginTop: '2px' }}>
-                      {match.title}
+          {/* A cup or match-day event with no fixtures entered yet: say so, rather than "nothing coming up" */}
+          {nextFootballEvent && (
+            <Link
+              href={`/${club.slug}/events/${nextFootballEvent.id}`}
+              className="glass-panel glass-panel-interactive fx-next"
+            >
+              <span>
+                <strong>Next up: {nextFootballEvent.title}</strong>
+                <span className="text-meta"> · <LocalTime value={nextFootballEvent.start_time} options={SHORT_DATE} />{nextFootballEvent.location ? ` · ${nextFootballEvent.location}` : ''}</span>
+              </span>
+              <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View event &rarr;</span>
+            </Link>
+          )}
+
+          {fixtureCards.length === 0 ? (
+            <p className="fx-empty">
+              {fixturesTabPicked === null ? 'No matches listed yet.'
+                : fixturesTab === 'results' ? 'No results yet this season.' : 'No matches scheduled yet.'}
+            </p>
+          ) : (
+            <div className="fx-list">
+              {fixtureCards.map(match => {
+                const matchTeam = multiTeam ? teamOfMatch(match, clubTeams) : undefined;
+                const hideScore = publicScoreHidden(match, clubTeams);
+                const outcome = match.status === 'completed' && !hideScore ? clubResult(match).outcome : null;
+                const details = [...new Set([
+                  // A title that only repeats the two teams isn't worth a second line of the same names
+                  match.title && !/\bvs?\b/i.test(match.title) ? match.title : '',
+                  competitionName(match),
+                  match.venue,
+                  matchTeam ? teamLabel(matchTeam) : '',
+                  fixturesSeasonFilter === 'ALL' ? match.season : '',
+                ].filter(Boolean))].join(' · ');
+                return (
+                  // data-glide-card: opening the match glides this row into the match page's scoreboard (MatchGlideLink)
+                  <div key={match.id} data-glide-card className="fx-row">
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                        <LocalTime value={match.match_date} options={SHORT_DATE} />
+                        {(hasKickoffTime(match) || match.match_time) && <> · <KickoffTime m={match} /></>}
+                      </div>
+                      <div className="text-meta">{details}</div>
+                      {match.status === 'postponed' && (
+                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--c-amber)' }}>Postponed</div>
+                      )}
                     </div>
-                  )}
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px', justifyContent: 'inherit' }}>
-                    <Calendar size={14} color="var(--text-muted)" />
-                    <LocalTime value={match.match_date} options={{ weekday: 'short', month: 'short', day: 'numeric' }} />
+
+                    <div className="fx-teams">
+                      <span className="fx-chip">{outcome && <ResultChip outcome={outcome} />}</span>
+                      <span className="fx-home">{match.home_team_name}</span>
+                      <span data-glide-score className="fx-score" style={match.status === 'live' ? { color: 'var(--c-red)' } : undefined}>
+                        {match.status === 'live' ? (hideScore ? 'LIVE' : `${match.home_score} – ${match.away_score}`)
+                          : match.status === 'completed' ? (hideScore ? 'FT' : `${match.home_score} – ${match.away_score}`)
+                          : 'vs'}
+                      </span>
+                      <span className="fx-away">{match.away_team_name}</span>
+                    </div>
+
+                    <div className="fx-actions">
+                      {match.status === 'upcoming' && isClubAdmin && (
+                        <Link href={`/${club.slug}/availability`} className="fx-admin">Availability</Link>
+                      )}
+                      <MatchGlideLink matchId={match.id} href={matchPath(club.slug, match)} className="fx-go">
+                        {match.status === 'completed' ? 'Match report' : match.status === 'live' ? 'Follow live' : 'Match preview'}
+                        <ChevronRight size={14} aria-hidden="true" />
+                      </MatchGlideLink>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    <KickoffTime m={match} />{(hasKickoffTime(match) || match.match_time) && match.venue ? ' · ' : ''}{match.venue}
-                  </div>
-                </div>
-
-                {/* Scoreline / Teams */}
-                <div className="fixture-teams" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                  <div style={{ textAlign: 'right', flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                    {match.home_team_name}
-                  </div>
-
-                  <div data-glide-score style={{
-                    padding: '0.35rem 0.85rem',
-                    background: match.status === 'completed' ? 'rgba(var(--tint-rgb), 0.1)' : 'rgba(var(--shade-rgb), 0.4)',
-                    borderRadius: '8px',
-                    fontFamily: 'var(--font-heading)',
-                    fontWeight: 900,
-                    fontSize: '1.2rem',
-                    color: 'var(--text-primary)',
-                    minWidth: '70px',
-                    textAlign: 'center',
-                    flexShrink: 0,
-                  }}>
-                    {match.status === 'live' ? (
-                      <span style={{ color: 'var(--c-red)' }}>{hideScore ? 'LIVE' : `${match.home_score} - ${match.away_score}`}</span>
-                    ) : match.status === 'completed' ? (
-                      hideScore ? 'FT' : `${match.home_score} - ${match.away_score}`
-                    ) : (
-                      'VS'
-                    )}
-                  </div>
-
-                  <div style={{ textAlign: 'left', flex: 1, minWidth: 0, overflowWrap: 'anywhere', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                    {match.away_team_name}
-                  </div>
-                </div>
-
-                {/* Action Link */}
-                <div className="fixture-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  {match.status === 'upcoming' && isClubAdmin && (
-                    <Link
-                      href={`/${club.slug}/availability`}
-                      className="btn btn-sm touch-target"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem',
-                        background: 'rgba(var(--club-primary-rgb), 0.12)',
-                        border: '1px solid var(--club-primary)',
-                        color: 'var(--club-ink)',
-                        fontSize: '0.78rem',
-                        padding: '0.4rem 0.75rem',
-                      }}
-                    >
-                      <span>RSVP Availability</span>
-                    </Link>
-                  )}
-
-
-                  <MatchGlideLink
-                    matchId={match.id}
-                    href={matchPath(club.slug, match)}
-                    className="btn btn-secondary btn-sm touch-target"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
-                  >
-                    <span>{match.status === 'completed' ? 'Match Report' : 'Match Centre'}</span>
-                    <ChevronRight size={14} />
-                  </MatchGlideLink>
-                </div>
-              </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
       {/* 4.35 SPONSORS SHOWCASE (after the fixtures: fans come for the games first) */}
-      {clubSponsors.length > 0 && (() => {
-        // Highest tier first (a size override changes a card's size, not its place in the order)
-        const sortedSponsors = sortSponsorsByTier(clubSponsors);
-
-        return (
-          <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(180deg, rgba(var(--tint-rgb), 0.015) 0%, rgba(var(--shade-rgb), 0.2) 100%)' }}>
-            <div className="container">
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.75rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--club-primary, #10B981)', display: 'block', marginBottom: '0.2rem' }}>
-                    Thank you to our
-                  </span>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                    Club Sponsors
-                  </h3>
-                </div>
-                <Link
-                  href={`/${club.slug}/sponsor`}
-                  style={{
-                    display: 'inline-block',
-                    textDecoration: 'none',
-                    background: 'rgba(var(--tint-rgb), 0.05)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    color: 'var(--club-primary, #FFFFFF)',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Become a Club Sponsor &rarr;
-                </Link>
-              </div>
-
-              <SponsorShowcase sponsors={sortedSponsors} placement="club_home_showcase" />
+      {clubSponsors.length > 0 && (
+        <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <div className="container">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>Thank you to our sponsors</h2>
+              <Link href={`/${club.slug}/sponsor`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontSize: '0.875rem', fontWeight: 700 }}>
+                Become a sponsor &rarr;
+              </Link>
             </div>
-          </section>
-        );
-      })()}
+            {/* Highest tier first (a size override changes a card's size, not its place in the order) */}
+            <SponsorShowcase sponsors={sortSponsorsByTier(clubSponsors)} placement="club_home_showcase" />
+          </div>
+        </section>
+      )}
 
-      {/* 4.4 SCHEDULED SOCIAL EVENTS */}
-      <section id="events" className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.01)', borderBottom: '1px solid var(--border-subtle)' }}>
+      {/* 4.4 EVENTS: each card opens the event */}
+      <section id="events" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem' }}>
-            <div>
-              <span className="badge badge-gold" style={{ marginBottom: '0.4rem' }}>CLUB CALENDAR</span>
-              <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Upcoming Events & Trainings</h2>
-            </div>
-            <Link href={`/${club.slug}/events`} className="btn btn-secondary btn-sm">
-              <span>All events &amp; tickets</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Events &amp; training</h2>
+            <Link href={`/${club.slug}/events`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontSize: '0.875rem', fontWeight: 700 }}>
+              All events &amp; tickets &rarr;
             </Link>
           </div>
 
           {upcomingEvents.length === 0 && (
-            <p className="text-meta glass-panel" style={{ padding: '1.25rem 1.5rem', textAlign: 'center' }}>No upcoming events right now. Check back soon.</p>
+            <p className="fx-empty">No upcoming events right now.</p>
           )}
           <div className="club-cards">
             {upcomingEvents.map(evt => (
-              <div key={evt.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  {evt.flyer_url && (
-                    <Link
-                      href={`/${club.slug}/events/${evt.id}`}
-                      aria-label={`${evt.title} flyer`}
-                      style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '180px', overflow: 'hidden', borderRadius: 'var(--radius-md)', background: 'rgba(var(--shade-rgb), 0.35)', margin: '-0.5rem -0.5rem 1rem' }}
-                    >
-                      <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(evt.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
-                      <img src={evt.flyer_url} alt="" loading="lazy" decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                    </Link>
+              <Link
+                key={evt.id}
+                href={`/${club.slug}/events/${evt.id}`}
+                className="glass-panel glass-panel-interactive"
+                style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', color: 'inherit' }}
+              >
+                {evt.flyer_url && (
+                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '180px', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.35)', flexShrink: 0 }}>
+                    <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(evt.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
+                    <img src={evt.flyer_url} alt={`${evt.title} flyer`} loading="lazy" decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                  </div>
+                )}
+                <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <p className="text-meta" style={{ margin: '0 0 0.25rem' }}>{EVENT_TAB_LABELS[evt.category] || 'Event'}</p>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{evt.title}</h3>
+                  {evt.description && (
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 0.75rem' }}>{evt.description}</p>
                   )}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <span className="badge" style={{
-                      backgroundColor: evt.category === 'training' ? 'rgba(16, 185, 129, 0.15)' : evt.category === 'social' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                      color: evt.category === 'training' ? 'var(--c-green)' : evt.category === 'social' ? 'var(--c-amber)' : 'var(--c-blue)',
-                    }}>
-                      {evt.category.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-                    {evt.title}
-                  </h3>
-
-                  <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                    {evt.description}
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
+                    <LocalTime value={evt.start_time} />{evt.location ? ` · ${evt.location}` : ''}
                   </p>
+                  <span style={{ marginTop: 'auto', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View details &rarr;</span>
                 </div>
-
-                <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                  <div className="row">
-                    <Calendar size={14} color="var(--club-primary)" />
-                    <span className="text-primary"><LocalTime value={evt.start_time} /></span>
-                  </div>
-                  <div className="row">
-                    <MapPin size={14} color="var(--club-primary)" />
-                    <span>{evt.location}</span>
-                  </div>
-                </div>
-
-                <Link
-                  href={`/${club.slug}/events/${evt.id}`}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}
-                >
-                  <span>View Details</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 4.5 LATEST NEWS SHOWCASE & VIDEO */}
+      {/* 4.5 LATEST NEWS */}
       <section id="news" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div style={{ marginBottom: '2.5rem' }}>
-            <span className="badge badge-primary" style={{ marginBottom: '0.4rem' }}>CLUB NEWS</span>
-            <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Latest Club News & Video</h2>
-          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1.5rem' }}>Latest news</h2>
 
+          {clubNews.length === 0 && <p className="fx-empty">No news yet.</p>}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-            gap: '2rem',
-            marginBottom: '3rem',
+            gap: '1.5rem',
           }}>
             {/* Featured Article */}
             {featuredArticle && (
@@ -1764,6 +1195,7 @@ export default function ClubPublicPage({
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
+                  color: 'inherit',
                 }}
               >
                 <div style={{ height: '240px', position: 'relative' }}>
@@ -1773,31 +1205,29 @@ export default function ClubPublicPage({
                     crestUrl={club.logo_url}
                     style={{ width: '100%', height: '100%' }}
                   />
-                  <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
-                    <span className="badge badge-gold">FEATURED STORY</span>
-                  </div>
                 </div>
 
-                <div style={{ padding: '1.75rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
+                    {!!featuredArticle.tags?.length && <p className="text-meta" style={{ margin: '0 0 0.35rem' }}>{featuredArticle.tags.slice(0, 2).join(' · ')}</p>}
                     <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem', lineHeight: 1.3 }}>
                       {featuredArticle.title}
                     </h3>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                       {featuredArticle.summary}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    <span>By {featuredArticle.author_name}</span>
-                    <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read Article &rarr;</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <span>{featuredArticle.author_name ? `By ${featuredArticle.author_name}` : ''}</span>
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article &rarr;</span>
                   </div>
                 </div>
               </Link>
             )}
 
-            {/* News Feed Grid */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* News Feed */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {clubNews.filter(n => n.id !== featuredArticle?.id).slice(0, HOME_NEWS_COUNT).map(article => (
                 <Link
                   key={article.id}
@@ -1806,39 +1236,33 @@ export default function ClubPublicPage({
                   className="glass-panel glass-panel-interactive"
                   style={{
                     scrollMarginTop: '6rem',
-                    padding: '1.25rem',
+                    padding: '1rem',
                     display: 'flex',
-                    gap: '1.25rem',
+                    gap: '1rem',
                     alignItems: 'center',
+                    color: 'inherit',
                   }}
                 >
                   <CoverImage
-                    width={90} height={90}
+                    width={84} height={84}
                     src={article.cover_image_url}
                     alt={article.title}
                     crestUrl={club.logo_url}
-                    style={{ width: '90px', height: '90px', borderRadius: '10px' }}
+                    style={{ width: '84px', height: '84px', borderRadius: '10px', flexShrink: 0 }}
                   />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.3rem' }}>
-                      {article.tags?.slice(0, 2).map(tag => (
-                        <span key={tag} className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.07)' }}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: '0.3rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="text-meta" style={{ margin: '0 0 0.2rem' }}>
+                      {[...(article.tags?.slice(0, 2) || [])].join(' · ')}{article.tags?.length ? ' · ' : ''}<LocalTime value={article.published_at} options={SHORT_DATE} />
+                    </p>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
                       {article.title}
-                    </h4>
-                    <span className="text-meta">
-                      <LocalTime value={article.published_at} />
-                    </span>
+                    </h3>
                   </div>
                 </Link>
               ))}
               {clubNews.length > 0 && (
-                <Link href={`/${club.slug}/news`} className="btn btn-secondary" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                  All news <ChevronRight size={16} aria-hidden="true" />
+                <Link href={`/${club.slug}/news`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>
+                  All news &rarr;
                 </Link>
               )}
             </div>
@@ -1846,52 +1270,22 @@ export default function ClubPublicPage({
         </div>
       </section>
 
-      {/* 4.6 EXECUTIVE COMMITTEE SHOWCASE: left out until the club lists someone */}
+      {/* 4.6 COMMITTEE: left out until the club lists someone */}
       {executiveStaff.length > 0 && (
-      <section className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.015)', borderBottom: '1px solid var(--border-subtle)' }}>
+      <section className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <span className="badge badge-primary">LEADERSHIP</span>
-              {activeSeason && (
-                <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-primary)', fontSize: '0.72rem' }}>
-                  🗓️ {activeSeason.name} Tenure
-                </span>
-              )}
-            </div>
-            <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Executive Committee & Governance</h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-              The dedicated board, management, and technical staff guiding {club.name}.
-            </p>
-          </div>
-
-          <div className="club-cards club-cards-sm">
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1.5rem' }}>Committee</h2>
+          <div className="committee-list">
             {executiveStaff.map(exec => (
-              <div key={exec.id} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <PlayerAvatar
-                  photoUrl={exec.photo_url}
-                  name={exec.full_name}
-                  size={96}
-                  style={{
-                    border: `2px solid var(--club-primary)`,
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
-                    marginBottom: '1rem',
-                  }}
-                />
-                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                  {exec.full_name}
-                </h4>
-                <div style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.8rem', marginBottom: '0.3rem' }}>
-                  {exec.executive_title}
+              <div key={exec.id} style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', minWidth: 0 }}>
+                <PlayerAvatar photoUrl={exec.photo_url} name={exec.full_name} size={64} style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{exec.full_name}</h3>
+                  <div className="text-meta">{exec.executive_title}</div>
+                  {exec.executive_bio && (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: '0.25rem 0 0' }}>{exec.executive_bio}</p>
+                  )}
                 </div>
-                {(exec.executive_season || activeSeason) && (
-                  <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(var(--tint-rgb), 0.07)', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
-                    Tenure: {exec.executive_season || activeSeason?.name || defaultSeasonLabel()}
-                  </span>
-                )}
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  {exec.executive_bio}
-                </p>
               </div>
             ))}
           </div>
@@ -1904,7 +1298,7 @@ export default function ClubPublicPage({
         <div className="container">
           <div className="tp-head">
             <div>
-              <h2 className="tp-title">Top Players</h2>
+              <h2 className="tp-title">Top players</h2>
               <p className="tp-sub">
                 {anyRanked
                   ? `${currentSeasonName} ${squadFilter === 'GK' ? 'goalkeepers' : squadFilter === 'DEF' ? 'defenders' : 'season'}`
@@ -1932,9 +1326,6 @@ export default function ClubPublicPage({
                 href={`/${club.slug}/squad/${leader.id}`}
                 name={leader.full_name}
                 position={leader.player_position ? POSITION_NAMES[leader.player_position] || leader.player_position : null}
-                jerseyNumber={leader.jersey_number ?? null}
-                primary={club.primary_color}
-                secondary={club.secondary_color}
                 photoUrl={leader.photo_url || null}
                 joint={places[0]?.tied}
                 figures={view.leader.map(f => ({ label: f.label, abbr: f.abbr, n: statFor(leader.id)?.[f.key] ?? 0 }))}
@@ -2007,7 +1398,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.8 HOME GROUND DETAILS & MAP */}
-      <section id="stadium" className="club-reveal club-section" style={{ background: 'rgba(var(--tint-rgb), 0.015)' }}>
+      <section id="stadium" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{
             display: 'grid',
@@ -2016,46 +1407,26 @@ export default function ClubPublicPage({
             alignItems: 'center',
           }}>
             <div>
-              <span className="badge badge-primary" style={{ marginBottom: '0.6rem' }}>HOME GROUND</span>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '1rem' }}>
-                {club.stadium_name}
+              <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.75rem' }}>
+                Home ground: {club.stadium_name}
               </h2>
 
-              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                Where {club.name} play home matches. Check the fixture list for kickoff times and which pitch.
+              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                Where {club.name} play home matches. Check the fixture list for kick-off times and which pitch.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
-                <div className="glass-panel" style={{ padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <MapPin size={20} color="var(--club-primary)" />
-                  <div>
-                    <div className="text-meta">Location Address</div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_address || 'Not listed yet'}</div>
-                  </div>
-                </div>
-
-                <div className="glass-panel" style={{ padding: '0.85rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <Shield size={20} color="var(--club-primary)" />
-                  <div>
-                    <div className="text-meta">Pitch Surface</div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{club.stadium_pitch_type || 'Not listed yet'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {club.stadium_parking_info?.trim() && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  Parking: {club.stadium_parking_info}
-                </div>
-              )}
+              <dl className="club-facts">
+                {club.stadium_address?.trim() && <div><dt>Address</dt><dd>{club.stadium_address}</dd></div>}
+                {club.stadium_pitch_type?.trim() && <div><dt>Surface</dt><dd>{club.stadium_pitch_type}</dd></div>}
+                {club.stadium_parking_info?.trim() && <div><dt>Parking</dt><dd>{club.stadium_parking_info}</dd></div>}
+              </dl>
             </div>
 
-            {/* Interactive Map Embed / Visual Map Presentation */}
-            <div className="glass-panel" style={{ overflow: 'hidden', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)' }}>
-              <div style={{ height: '380px', position: 'relative', background: 'rgb(var(--dk-19-27-38))' }}>
-                {/* Embedded Map Representation, geocoded live from the club's own stadium address */}
+            <div>
+              {/* Geocoded live from the club's own stadium address */}
+              <div style={{ height: '340px', overflow: 'hidden', borderRadius: 'var(--radius-lg)', background: 'rgb(var(--dk-19-27-38))' }}>
                 <iframe
-                  title="Home Ground Map"
+                  title="Home ground map"
                   width="100%"
                   height="100%"
                   frameBorder="0"
@@ -2069,34 +1440,17 @@ export default function ClubPublicPage({
                   )}&z=15&output=embed`}
                   style={{ border: 'none' }}
                 />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  left: '16px',
-                  right: '16px',
-                  background: 'rgba(var(--dk-10-15-23), 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  padding: '0.85rem 1.25rem',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{club.stadium_name}</div>
-                    {club.stadium_address?.trim() && <div className="text-meta">{club.stadium_address}</div>}
-                  </div>
-                  <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(club.stadium_address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-primary btn-sm row row-tight"
-                  >
-                    <span>Directions</span>
-                    <ExternalLink size={12} />
-                  </a>
-                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.85rem' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>{club.stadium_name}</strong>
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent([club.stadium_name, club.stadium_address].filter(Boolean).join(', '))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                >
+                  Directions <ExternalLink size={14} aria-hidden="true" />
+                </a>
               </div>
             </div>
           </div>
@@ -2105,8 +1459,8 @@ export default function ClubPublicPage({
 
       {/* 4.85 GET IN TOUCH: a contact form anyone can find (the Sponsor page and #contact links point here) */}
       <div className="club-reveal club-section">
-        <div className="container" style={{ maxWidth: '860px' }}>
-          <ClubContactSection club={club} heading={`Get in touch with ${club.name}`} />
+        <div className="container">
+          <ClubContactSection club={club} />
         </div>
       </div>
 

@@ -11,10 +11,10 @@ export default function ClubContactSection({ club, defaultType, heading = 'Get i
   const [open, setOpen] = useState(false);
   return (
     <section id="contact" aria-labelledby="club-contact-heading" style={{ scrollMarginTop: '90px' }}>
-      <h2 id="club-contact-heading" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem' }}>{heading}</h2>
-      <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.9rem 2rem' }}>
+      <h2 id="club-contact-heading" style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{heading}</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.9rem 2rem' }}>
         <p style={{ flex: '1 1 260px', margin: 0, color: 'var(--text-secondary)' }}>
-          Questions about joining, sponsorship or matchdays? Send {club.name} a message and the committee will reply by email.
+          Questions about joining, sponsorship or matchdays? The committee will reply by email.
         </p>
         <button type="button" className="btn btn-primary" onClick={() => setOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
           <MessageSquare size={17} aria-hidden="true" /> Message the club
