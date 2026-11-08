@@ -34,7 +34,7 @@ export default function ElevenASideLineupBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 11-A-SIDE"
       h1="11-a-side lineup builder"
-      intro="Create and download an 11-a-side starting XI matchday graphic choosing from 12 tactical formations, including 4-3-3, 4-4-2, and 4-2-3-1. Customize player names, shirt numbers, team badges, substitute benches (up to 20 players), and sponsor strips. Export social media graphics in 1080 × 1350 feed post or 1080 × 1920 story formats instantly."
+      intro="Make an 11-a-side starting XI graphic for matchday. Pick from 12 formations, including 4-3-3, 4-4-2 and 4-2-3-1, then add player names, shirt numbers, your team badge, a bench of up to 20 players and a sponsor strip. It downloads straight away as a 1080 × 1350 feed post or a 1080 × 1920 story."
       description={DESCRIPTION}
       appName="Free 11-a-Side Lineup Builder"
       alternateNames={['Starting XI maker', '11v11 formation builder', 'Matchday team sheet maker']}

@@ -16,7 +16,7 @@ export const metadata = pageMetadata({
   image: toolOgImage(guide.tool.path),
 });
 
-const ANSWER = 'Sydney councils inspect sportsgrounds after wet weather on weekday afternoons, with Friday decisions (typically announced between 2:00pm and 3:30pm) applying for the entire weekend in most LGAs. If the council closes a ground, no training or games may proceed. If the council leaves fields open, the home club or referee makes the final matchday safety call.';
+const ANSWER = 'After rain, Sydney councils check their sportsgrounds on weekday afternoons. In most council areas the Friday decision, usually out between 2:00pm and 3:30pm, holds for the whole weekend. If the council closes a ground, nobody can train or play there. If it stays open, the home club or the referee decides on the day whether it\'s safe.';
 
 export default function GroundClosuresSydneyGuidePage() {
   return (
@@ -27,18 +27,18 @@ export default function GroundClosuresSydneyGuidePage() {
       answer={ANSWER}
       answerMore={
         <p>
-          Heavy rainfall frequently disrupts Sydney community football. Understanding when each local council updates its sportsground status and where to check hotlines prevents unnecessary weekend travel.
+          Rain calls off a lot of Sydney community football. If you know when your council updates its ground status and where to check it, you won&apos;t drive to a closed ground.
         </p>
       }
       sections={[
         {
           id: 'council-hotlines',
-          heading: 'Sydney council sportsground closure status lines & update schedules',
+          heading: 'When each Sydney council decides, and where to check',
           body: (
             <div className="guide-body">
               <GuideTable
-                caption="Sydney council wet weather decision times and official closure channels"
-                head={['Council (LGA)', 'Weekend Decision Schedule', 'Status Method', 'Hotline / Contact']}
+                caption="Sydney council wet weather decision times and where they post closures"
+                head={['Council (LGA)', 'When they decide', 'Where they post it', 'Phone line']}
                 rows={COUNCILS.map(c => [
                   c.name,
                   c.note.split(',')[0] || 'Weekday afternoons',
@@ -47,7 +47,7 @@ export default function GroundClosuresSydneyGuidePage() {
                 ])}
               />
               <p>
-                Browse individual ground amenities, pitch configurations, and verified parking in our dedicated{' '}
+                For toilets, pitch layouts and parking at each ground, see our{' '}
                 <Link href="/grounds" style={linkStyle}>
                   Sydney sportsgrounds directory
                 </Link>.
@@ -57,15 +57,15 @@ export default function GroundClosuresSydneyGuidePage() {
         },
         {
           id: 'rules-liability',
-          heading: 'Council closure vs Club matchday cancellation',
+          heading: 'Council closures and club cancellations',
           body: (
             <div className="guide-body">
               <p>
-                There is a legal and contractual distinction between a council closure and a club cancellation:
+                A council closure and a club calling off a game are different things, and they carry different consequences:
               </p>
               <ul>
-                <li><strong>Council Closure (Binding):</strong> When a council grounds manager declares a park closed due to saturation, all play is strictly prohibited. Clubs that breach council closures face immediate revocation of seasonal licenses and hefty financial penalties for turf damage.</li>
-                <li><strong>Council Open, but Club/Referee Closure:</strong> If the council declares fields &ldquo;open&rdquo;, the home club committee or the match referee conducts a pitch inspection prior to kick-off. If surface water, muddy goalmouths, or lightning present safety risks, the referee has the authority to postpone the match.</li>
+                <li><strong>The council closes the ground.</strong> When the council&apos;s grounds staff close a park because it&apos;s waterlogged, nobody can play on it. A club that plays anyway can lose its seasonal licence straight away and be charged heavily for the turf damage.</li>
+                <li><strong>The council says open, but the club or referee calls it off.</strong> If the council lists the ground as open, the home club committee or the referee checks the pitch before kick-off. If there&apos;s standing water, the goalmouths are too muddy or there&apos;s lightning around, the referee can postpone the game.</li>
               </ul>
             </div>
           ),
@@ -76,9 +76,9 @@ export default function GroundClosuresSydneyGuidePage() {
           body: (
             <div className="guide-body">
               <ol>
-                <li><strong>1. Check your council status first:</strong> If your council status page lists the park as closed, your match is called off.</li>
-                <li><strong>2. Check your club live match centre:</strong> Clubs using itsfootball.club update match statuses live to &ldquo;Postponed&rdquo; or &ldquo;Cancelled&rdquo; on their official club website.</li>
-                <li><strong>3. Don&apos;t rely solely on group chats:</strong> Check the official club link or council status page before travelling to avoid arriving at a locked gate.</li>
+                <li><strong>Check the council first.</strong> If the council&apos;s status page lists the park as closed, your game is off.</li>
+                <li><strong>Then check your club&apos;s site.</strong> Clubs on itsfootball.club can mark a match &ldquo;Postponed&rdquo; or &ldquo;Cancelled&rdquo;, and it shows on the club website straight away.</li>
+                <li><strong>Don&apos;t go by the group chat alone.</strong> Look at the club link or the council page before you leave, so you don&apos;t turn up to a locked gate.</li>
               </ol>
             </div>
           ),
@@ -86,20 +86,20 @@ export default function GroundClosuresSydneyGuidePage() {
       ]}
       cta={{
         tool: LINEUP_TOOL,
-        text: 'Manage your matchday lineups, squad changes, and team fixtures from any phone browser on itsfootball.club.',
+        text: 'Game back on? Make the lineup on your phone and send it to the team chat.',
       }}
       questions={[
         {
           q: 'What happens if a team plays on a council ground marked as closed?',
-          a: 'Playing on a closed council ground is a breach of the sportsground license agreement. Councils can fine the club, charge for turf restoration, and revoke future seasonal field allocations.',
+          a: 'It breaks the club\'s sportsground licence. The council can fine the club, charge it for fixing the turf and take away its future seasonal bookings.',
         },
         {
           q: 'If it stops raining on Saturday morning, will closed grounds reopen?',
-          a: 'In most Sydney councils (such as Liverpool, Blacktown, and Camden), Friday afternoon decisions stand for the entire weekend. Grounds staff do not re-inspect fields on Saturday mornings, so a field closed on Friday remains closed all weekend.',
+          a: 'Usually not. In most Sydney councils, such as Liverpool, Blacktown and Camden, the Friday afternoon decision stands for the whole weekend. Grounds staff don\'t check again on Saturday morning, so a ground closed on Friday stays closed.',
         },
         {
           q: 'Where can I find parking and pitch maps for Sydney grounds?',
-          a: 'You can check itsfootball.club/grounds for complete field maps, pitch surfaces, floodlight availability, and parking guides for sportsgrounds across Western Sydney.',
+          a: 'Our grounds directory at itsfootball.club/grounds has pitch maps, surfaces, floodlights and parking for sportsgrounds across Western Sydney.',
         },
       ]}
       sources={[SOURCES.fnswMiniRoos, SOURCES.ascGovernance]}

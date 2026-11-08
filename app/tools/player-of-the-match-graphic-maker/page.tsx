@@ -48,7 +48,7 @@ export default function PlayerOfTheMatchGraphicMakerPage() {
       parent={RESULT_TOOL}
       badge="FREE TOOL · PLAYER OF THE MATCH"
       h1="Player of the Match graphic maker"
-      intro="Design a Player of the Match graphic in 60 seconds: upload their action photo, add their name, highlight key stats or match performance, and include the final scoreline with club crests. Download high-resolution PNG images formatted for 9:16 stories (1080 × 1920), 4:5 feed posts (1080 × 1350), or 1:1 squares (1080 × 1080) free without an account."
+      intro="Make a Player of the Match graphic in about 60 seconds. Upload an action photo, add the player's name and their stats or a line about how they played, and put the final score with both club crests underneath. Download it free, with no account, as a high-resolution PNG for a 9:16 story (1080 × 1920), a 4:5 feed post (1080 × 1350) or a 1:1 square (1080 × 1080)."
       description={DESCRIPTION}
       appName="Free Player of the Match Graphic Maker"
       alternateNames={['Man of the Match graphic maker', 'MOTM graphic template', 'POTM graphic maker', 'Player of the Match template']}

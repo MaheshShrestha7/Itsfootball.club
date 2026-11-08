@@ -15,72 +15,71 @@ export const metadata = pageMetadata({
   image: toolOgImage(guide.tool.path),
 });
 
-const ANSWER = 'MiniRoos formats (4v4 for U6–U7, 7v7 for U8–U9, and 9v9 for U10–U11) are standardized nationally by Football Australia across NSW, VIC, QLD, and WA. However, state federations manage local execution, including retreat line distances, refereeing/game leader appointments, and competition ladder bans.';
+const ANSWER = 'Football Australia sets the MiniRoos formats for the whole country, so NSW, VIC, QLD and WA all play 4v4 at U6–U7, 7v7 at U8–U9 and 9v9 at U10–U11. Each state federation then runs the details itself, such as retreat line distances, who acts as referee or game leader, and the ban on ladders.';
 
 export default function MiniRoosRulesByStatePage() {
   return (
     <GuidePage
       path={PATH}
-      badge="NATIONAL COMPARISON · NSW, VIC, QLD, WA"
+      badge="JUNIOR FOOTBALL · NSW, VIC, QLD, WA"
       h1="MiniRoos rules by state: NSW, VIC, QLD & WA compared"
       answer={ANSWER}
       answerMore={
         <p>
-          While the core field dimensions and match lengths are identical across all member federations, associations enforce specific matchday guidelines for score reporting, coaching conduct, and spectator retreat boundaries.
+          Pitch sizes and match lengths are the same in every state. What changes is the local matchday rules on reporting scores, how coaches behave, and where spectators and players have to stand back to.
         </p>
       }
       sections={[
         {
           id: 'state-matrix',
-          heading: 'State-by-state MiniRoos policies at a glance',
+          heading: 'MiniRoos rules in each state',
           body: (
             <div className="guide-body">
               <GuideTable
-                caption="State federation MiniRoos policy comparison"
-                head={['State Federation', 'Published Ladders?', 'Offside Rule', 'Match Duration (U6–U9 / U10–U11)', 'Local Distinctions']}
+                caption="MiniRoos rules by state federation"
+                head={['State federation', 'Ladders published?', 'Offside', 'Match length (U6–U9 / U10–U11)', 'What\'s different locally']}
                 rows={[
-                  ['Football NSW / NNSWF', 'Prohibited (No ladders)', 'No offside', '2 × 20 min / 2 × 25 min', 'Strict retreat line enforcement at halfway (U6–U7) or box (U8–U11)'],
-                  ['Football Victoria', 'Prohibited (No ladders)', 'No offside', '2 × 20 min / 2 × 25 min', 'Game Leaders supplied by home club; emphasis on player rotation'],
-                  ['Football Queensland', 'Prohibited (No ladders)', 'No offside', '2 × 20 min / 2 × 25 min', 'Mandatory heat and hydration guidelines across regional zones'],
-                  ['Football West', 'Prohibited (No ladders)', 'No offside', '2 × 20 min / 2 × 25 min', 'Junior club development charter mandates 50%+ minimum playing time'],
+                  ['Football NSW / NNSWF', 'No, ladders are banned', 'No offside', '2 × 20 min / 2 × 25 min', 'Retreat lines enforced strictly, at halfway (U6–U7) or the box (U8–U11)'],
+                  ['Football Victoria', 'No, ladders are banned', 'No offside', '2 × 20 min / 2 × 25 min', 'The home club supplies the Game Leader, and rotating players is stressed'],
+                  ['Football Queensland', 'No, ladders are banned', 'No offside', '2 × 20 min / 2 × 25 min', 'Heat and hydration guidelines you have to follow in every regional zone'],
+                  ['Football West', 'No, ladders are banned', 'No offside', '2 × 20 min / 2 × 25 min', 'The junior club development charter requires at least 50% playing time'],
                 ]}
               />
               <p>
-                Every state federation prohibits the publication of league tables, points ladders, or official match results for ages under 12 to prioritize skill development over winning at all costs.
+                No state federation publishes league tables, points ladders or official results for under 12s. The idea is that kids at this age are there to learn skills, not to chase a win.
               </p>
             </div>
           ),
         },
         {
           id: 'retreat-lines',
-          heading: 'The retreat line rule across states',
+          heading: 'How the retreat line works',
           body: (
             <div className="guide-body">
               <p>
-                The retreat line is a critical tactical rule designed to teach young players to build attacks from the back rather than kicking the ball long:
+                The retreat line is there to get young players building attacks from the back instead of kicking it long. It works like this:
               </p>
               <ul>
-                <li><strong>Under 6 and 7 (4v4):</strong> When the goalkeeper or defending team restarts from the goal line, all opponents must drop back into their own half until the ball is in play.</li>
-                <li><strong>Under 8 and 9 (7v7):</strong> Opponents must drop back 10 metres outside the penalty area on all goal kicks.</li>
-                <li><strong>Under 10 and 11 (9v9):</strong> Defending teams must retreat behind the designated retreat marker (often 15m from the goal line) until the goalkeeper distributes the ball.</li>
+                <li><strong>Under 6 and 7 (4v4):</strong> When the defending team restarts from its goal line, every opponent drops back into their own half until the ball is in play.</li>
+                <li><strong>Under 8 and 9 (7v7):</strong> On goal kicks, opponents drop back 10 metres outside the penalty area.</li>
+                <li><strong>Under 10 and 11 (9v9):</strong> The other team goes back behind the retreat marker, often 15m from the goal line, until the keeper has played the ball.</li>
               </ul>
             </div>
           ),
         },
         {
           id: 'game-time',
-          heading: 'Equal playing time compliance',
+          heading: 'Equal playing time',
           body: (
             <div className="guide-body">
               <p>
-                All four major federations endorse Football Australia&apos;s National Game Time Policy: every junior player who attends matchday must receive approximately equal minutes, regardless of the match score or tactical situation.
+                All four federations back Football Australia&apos;s National Game Time Policy. Every junior who turns up on matchday should get about the same minutes, whatever the score.
               </p>
               <p>
-                Coaches should use a dedicated tool like the{' '}
+                It&apos;s easier if you work out the subs before you get to the ground, for example with our{' '}
                 <Link href="/tools/equal-playing-time-calculator" style={linkStyle}>
                   equal playing time calculator
-                </Link>{' '}
-                to plan their substitutions before arriving at the ground.
+                </Link>.
               </p>
             </div>
           ),
@@ -88,21 +87,21 @@ export default function MiniRoosRulesByStatePage() {
       ]}
       cta={{
         tool: PLAYING_TIME_TOOL,
-        text: 'Calculate fair and equal minutes for your junior squad according to official national guidelines with our free calculator.',
+        text: 'Work out equal minutes for your junior squad, in line with the national Game Time Policy, with our free calculator.',
         more: [LINEUP_TOOL],
       }}
       questions={[
         {
           q: 'Are MiniRoos scores officially recorded anywhere?',
-          a: 'No. Football Australia and state federations (Football NSW, Football Victoria, Football Queensland, and Football West) strictly ban the public recording of scores or championship tables for ages Under 6 through Under 11.',
+          a: 'No. Football Australia and the state federations (Football NSW, Football Victoria, Football Queensland and Football West) don\'t allow public scores or tables from Under 6 to Under 11.',
         },
         {
           q: 'Does offside apply in Under 11 football in Australia?',
-          a: 'No. The offside rule is not enforced in any MiniRoos age group (Under 6 to Under 11). Offside is introduced only when players transition to full 11-a-side football in Under 12 or Under 13.',
+          a: 'No. There\'s no offside in any MiniRoos age group (Under 6 to Under 11). It comes in when players move up to 11-a-side at Under 12 or Under 13.',
         },
         {
           q: 'Who referees MiniRoos matches?',
-          a: 'Matches are facilitated by a "Game Leader" (usually a volunteer parent, coach, or club junior) whose primary role is to keep the game safe, explain rules simply, and encourage positive sporting behavior.',
+          a: 'A "Game Leader" runs the match. It\'s usually a volunteer parent, a coach or an older junior from the club, and their job is to keep it safe, explain the rules in simple words and encourage good behaviour.',
         },
       ]}
       sources={[SOURCES.faMiniRoos, SOURCES.fnswMiniRoos, SOURCES.fvMiniRoos, SOURCES.fqMiniRoos, SOURCES.fwMiniRoos]}

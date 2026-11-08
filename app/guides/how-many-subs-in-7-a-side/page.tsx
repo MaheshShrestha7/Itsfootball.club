@@ -16,7 +16,7 @@ export const metadata = pageMetadata({
   image: toolOgImage(guide.tool.path),
 });
 
-const ANSWER = 'Under Football Australia’s official MiniRoos rules, a 7-a-side team is allowed up to 4 substitutes on the bench, for a maximum matchday squad of 11 players. Substitutions are rolling and can take place at any time, with coaches required to give every player equal playing time across the season.';
+const ANSWER = 'Under Football Australia’s MiniRoos rules, a 7-a-side team can have up to 4 substitutes on the bench, so the most you can bring on matchday is 11 players. Subs are rolling and can happen at any time, and coaches have to give every player equal playing time across the season.';
 
 export default function SubsIn7ASidePage() {
   return (
@@ -27,18 +27,18 @@ export default function SubsIn7ASidePage() {
       answer={ANSWER}
       answerMore={
         <p>
-          Matches consist of 2 × 20-minute halves (40 minutes total). With 7 players on the field, that creates 280 total player-minutes to divide fairly among your squad.
+          A game is 2 × 20-minute halves, 40 minutes in all. With 7 players on the field at a time, that&apos;s 280 player-minutes to share out across your squad.
         </p>
       }
       sections={[
         {
           id: 'bench-rules',
-          heading: 'Official bench limits and squad sizes',
+          heading: 'Bench limits and squad size',
           body: (
             <div className="guide-body">
               <GuideTable
                 caption="Football Australia MiniRoos 7-a-side playing rules"
-                head={['Rule', 'Official Standard', 'Coach Note']}
+                head={['Rule', 'What the rules say', 'Worth knowing']}
                 rows={[
                   ['Onfield players', '7 players (including 1 goalkeeper)', 'Minimum 5 players to start'],
                   ['Maximum substitutes', 'Up to 4 substitutes on the bench', '11 registered matchday players max'],
@@ -48,7 +48,7 @@ export default function SubsIn7ASidePage() {
                 ]}
               />
               <p>
-                Unlike senior 11-a-side football where substitutions are limited and permanent, 7-a-side junior soccer operates on an open rotation policy. Players who come off can re-enter multiple times throughout the game.
+                In senior 11-a-side football, subs are limited and a player who comes off stays off. In junior 7-a-side, players can come off and go back on as many times as you like.
               </p>
             </div>
           ),
@@ -59,27 +59,27 @@ export default function SubsIn7ASidePage() {
           body: (
             <div className="guide-body">
               <p>
-                Football Australia allows rolling substitutions to happen while the ball is in play or at any stoppage, provided the following safety rules are respected:
+                Football Australia lets you make rolling subs while the ball is in play or at a stoppage, as long as you stick to a few safety rules:
               </p>
               <ul>
-                <li><strong>Exit first:</strong> The player leaving the pitch must cross the touchline before the replacement steps onto the field.</li>
-                <li><strong>Interchange zone:</strong> Swaps should occur near the halfway line on your team&apos;s bench side.</li>
-                <li><strong>Goalkeeper changes:</strong> Goalkeeper swaps should only take place during a stoppage in play with the referee or game leader notified.</li>
+                <li>The player coming off has to cross the touchline before their replacement goes on.</li>
+                <li>Make the swap near halfway, on your bench side.</li>
+                <li>Only change the goalkeeper at a stoppage, and tell the referee or game leader first.</li>
               </ul>
             </div>
           ),
         },
         {
           id: 'maths',
-          heading: 'The equal playing time formula for 7-a-side',
+          heading: 'Working out equal minutes in 7-a-side',
           body: (
             <div className="guide-body">
               <p>
-                Junior grassroots regulations in every Australian state mandate equal playing time. Here is how the minutes divide based on your bench attendance on matchday:
+                Every Australian state requires equal playing time in junior grassroots football. This is how the 280 minutes split depending on how many players turn up:
               </p>
               <GuideTable
                 caption="7-a-side minutes per player across 40 minutes (280 total player-minutes)"
-                head={['Squad present', 'Subs on bench', 'Target minutes per player', 'Suggested sub rotation']}
+                head={['Players there', 'Subs on the bench', 'Minutes each', 'A rotation that works']}
                 rows={[
                   ['7 players', '0 subs', '40.0 minutes each', 'Full game for all players'],
                   ['8 players', '1 sub', '35.0 minutes each', 'Rotate 1 player every 5 minutes'],
@@ -89,11 +89,11 @@ export default function SubsIn7ASidePage() {
                 ]}
               />
               <p>
-                Use the{' '}
+                The{' '}
                 <Link href={SUBS_7?.path || '/tools/equal-playing-time-calculator'} style={linkStyle}>
                   7-a-side substitution planner
                 </Link>{' '}
-                to automatically generate your rotation intervals before kick-off.
+                works out when each swap happens, so you can sort it before kick-off.
               </p>
             </div>
           ),
@@ -101,21 +101,21 @@ export default function SubsIn7ASidePage() {
       ]}
       cta={{
         tool: SUBS_7 || PLAYING_TIME_TOOL,
-        text: 'Enter your player names and bench size to calculate exact minute-by-minute substitution rotations for your next 7-a-side match.',
+        text: 'Put in your players and bench size and get a minute-by-minute sub plan for your next 7-a-side game.',
         more: [PLAYING_TIME_TOOL, SUBS_9],
       }}
       questions={[
         {
           q: 'Can a player who was subbed off come back on in 7-a-side?',
-          a: 'Yes. In MiniRoos 7-a-side soccer, substitutions are rolling and unlimited. A player can be rotated off and return to the pitch as many times as the coach decides.',
+          a: 'Yes. Subs in MiniRoos 7-a-side are rolling and unlimited, so a player can come off and go back on as often as the coach likes.',
         },
         {
           q: 'What is the minimum number of players needed for 7-a-side?',
-          a: 'Under Football Australia guidelines, a team can begin or continue a match with a minimum of 5 players on the pitch.',
+          a: 'Five. Under Football Australia\'s guidelines a team needs at least 5 players on the pitch to start or carry on a game.',
         },
         {
           q: 'Do 7-a-side goalkeepers have to rotate?',
-          a: 'While not mandatory by the laws of the game, Football Australia encourages coaches in Under 8 and Under 9 to give multiple players experience in goal across the season.',
+          a: 'They don\'t have to, but Football Australia encourages Under 8 and Under 9 coaches to let several players have a go in goal over the season.',
         },
       ]}
       sources={[SOURCES.faMiniRoos, SOURCES.faGameTime]}

@@ -40,7 +40,7 @@ export default function TeamOfTheWeekCardMakerPage() {
       parent={PLAYER_CARD_TOOL}
       badge="FREE TOOL · TEAM OF THE WEEK"
       h1="Team of the Week card maker"
-      intro="Create black and gold Team of the Week (TOTW) player cards for your soccer club’s standout weekend performers. Add the match round, cutout player photos with on-device background removal, position, rating, key matchday stats, and team crest. Download transparent PNG cards or social graphics (1080 × 1350 post, 1080 × 1920 story) free without login."
+      intro="Make black and gold Team of the Week (TOTW) cards for the players who stood out at the weekend. Add the round, a player photo (the background is removed on your device), position, rating, their stats from the match and your team crest. Download them free, without logging in, as transparent PNG cards or social graphics (1080 × 1350 post, 1080 × 1920 story)."
       description={DESCRIPTION}
       appName="Free Team of the Week Card Maker"
       alternateNames={['TOTW card maker', 'Team of the Week graphic maker', 'Football Team of the Week template', 'Grassroots Team of the Week cards']}

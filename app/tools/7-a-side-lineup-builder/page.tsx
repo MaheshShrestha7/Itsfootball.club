@@ -14,7 +14,7 @@ const SHAPES = [
   { shape: '3-2-1', note: 'An extra defender for teams still learning to hold their shape.' },
   { shape: '2-2-2', note: 'Two lines of two plus two strikers, simple to explain at half-time.' },
   { shape: '3-1-2', note: 'Three defenders behind a single midfielder and twin strikers.' },
-  { shape: '1-3-2', note: 'One defender, a midfield three and two up front. Very attacking.' },
+  { shape: '1-3-2', note: 'One defender, a midfield three and two up front, so it\'s very attacking.' },
   { shape: '2-1-2-1', note: 'A diamond midfield for teams that like to keep the ball.' },
 ];
 
@@ -34,7 +34,7 @@ export default function SevenASideLineupBuilderPage() {
       parent={LINEUP_TOOL}
       badge="FREE TOOL · 7-A-SIDE"
       h1="7-a-side lineup builder"
-      intro="Create 7-a-side soccer lineups using 6 tactical formations including 2-3-1, 3-2-1, and 2-2-2, designed for Under 8 and Under 9 MiniRoos. Set player names, shirt numbers, captain badges, bench substitutes (up to 20 players), and sponsor logos. Download high-resolution matchday PNG images (1080 × 1350 post or 1080 × 1920 story) instantly for social media."
+      intro="Make a 7-a-side soccer lineup in one of 6 formations, including 2-3-1, 3-2-1 and 2-2-2. The shapes suit Under 8 and Under 9 MiniRoos. Add player names, shirt numbers, mark the captain, add a bench of up to 20 players and sponsor logos, then download a high-resolution PNG (1080 × 1350 post or 1080 × 1920 story) for social media."
       description={DESCRIPTION}
       appName="Free 7-a-Side Lineup Builder"
       alternateNames={['7 a side formation tool', '7v7 lineup maker', 'MiniRoos team sheet maker']}

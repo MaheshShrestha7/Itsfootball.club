@@ -36,7 +36,7 @@ export default function RoundRobinFixtureGeneratorPage() {
       parent={TOURNAMENT_TOOL}
       badge="FREE TOOL · ROUND ROBIN"
       h1="Round robin fixture generator"
-      intro="A round robin requires N × (N − 1) ÷ 2 total matches across N − 1 rounds for even team counts: 6 teams play 6 × 5 ÷ 2 = 15 matches, and 8 teams play 8 × 7 ÷ 2 = 28 matches. Generate your fair circle-method fixture draw and live updating standings table below."
+      intro="With an even number of teams, a round robin has N × (N − 1) ÷ 2 matches over N − 1 rounds. So 6 teams play 6 × 5 ÷ 2 = 15 matches, and 8 teams play 8 × 7 ÷ 2 = 28. The generator below makes a fair draw with the circle method and keeps a standings table that updates as you enter results."
       description={DESCRIPTION}
       appName="Free Round Robin Fixture Generator"
       alternateNames={['Round robin schedule maker', 'Soccer league fixture generator', 'League draw generator']}
