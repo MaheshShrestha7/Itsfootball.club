@@ -52,8 +52,10 @@ const teamMeta = (t: ClubTeam) =>
  * The friendly-invitation part of the contact form: which of our teams, their team, the game, up
  * to three dates and who hosts. Name, email and phone stay in the contact form around it.
  */
-export default function FriendlyInviteFields({ teams, value, onChange, crest }: {
+export default function FriendlyInviteFields({ teams, value, onChange, crest, lockTeam }: {
   teams: ClubTeam[];
+  /** Opened from a team's page: that team only, no picker */
+  lockTeam?: boolean;
   value: FriendlyForm;
   onChange: (next: FriendlyForm) => void;
   crest?: string;
@@ -67,7 +69,7 @@ export default function FriendlyInviteFields({ teams, value, onChange, crest }: 
 
   return (
     <div className="fi">
-      {teams.length > 1 ? (
+      {teams.length > 1 && !(lockTeam && team) ? (
         <div className="form-group">
           <label htmlFor="fi-team" className="form-label">Which of our teams? *</label>
           <select id="fi-team" className="form-select" value={value.team_id} required

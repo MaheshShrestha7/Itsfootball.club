@@ -55,7 +55,7 @@ import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
 import LocalTime from '@/components/LocalTime';
 import ResultChip from '@/components/ResultChip';
 import { DayCheckLine } from '@/components/admin/FriendlyInvitation';
-import { calendarFor, checkDay, dateLabel, fixtureFromInvitation, friendlyOf, opponentName, type FriendlyDetails } from '@/lib/friendlies';
+import { calendarFor, checkDay, fixtureFromInvitation, friendlyOf, opponentName, type FriendlyDetails } from '@/lib/friendlies';
 import { Handshake } from 'lucide-react';
 
 // Still to be played: listed first, soonest at the top
@@ -1148,8 +1148,7 @@ export default function AdminMatchesPage({
                 <div className="fx-from" role="note">
                   <Handshake size={17} aria-hidden="true" />
                   <span>
-                    Filled in from <b>{opponentName(fromInvitation.details)}</b>&apos;s invitation
-                    {' '}({fromInvitation.details.dates.map(dateLabel).join(', ')}). Check the details, then save.
+                    Filled in from the invitation from <b>{opponentName(fromInvitation.details)}</b>. Check the details, then save.
                   </span>
                 </div>
               )}

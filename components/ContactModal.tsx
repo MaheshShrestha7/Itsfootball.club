@@ -230,7 +230,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                     </select>
                   </div>
                 )}
-                <FriendlyInviteFields teams={openTeams} value={friendlyForm} onChange={setFriendly} crest={club.logo_url || undefined} />
+                <FriendlyInviteFields teams={openTeams} value={friendlyForm} onChange={setFriendly} crest={club.logo_url || undefined} lockTeam={!!defaultTeamId} />
               </>
             )}
 
@@ -315,11 +315,11 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem' }}>
-              <div className="text-meta">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div className="text-meta" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                 Club Office: {club.contact_email}
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginLeft: 'auto' }}>
                 <button type="button" onClick={handleResetAndClose} className="btn btn-secondary btn-sm">
                   Cancel
                 </button>
