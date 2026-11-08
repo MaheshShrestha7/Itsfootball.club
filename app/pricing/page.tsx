@@ -33,42 +33,42 @@ export const metadata: Metadata = pageMetadata({
 });
 
 const INCLUDED_FEATURES = [
-  { title: 'Official Public Club Website', desc: 'Custom club colours, emblem, banner and custom domain connection (.club, .com.au, .org.au).' },
-  { title: 'Live Match Centre (Web Browser)', desc: 'Goals, cards, lineups, live timer and real-time scores accessible to fans on any phone without app downloads.' },
-  { title: 'Player Availability & Squad Lineups', desc: 'Drag-and-drop tactical pitch lineup builder for 5, 7, 9 and 11-a-side formats with instant WhatsApp/Instagram export.' },
-  { title: 'Digital Member Passes with QR Terminal', desc: 'Photo-backed dynamic member cards with instant phone camera QR scanning for attendance and turnstiles.' },
-  { title: 'Tournament Maker & Bracket Engine', desc: 'Create group stages, round robins and single-elimination knockout cup draws with automated table standings.' },
-  { title: 'Online Club Merchandise Shop', desc: 'Sell jerseys, scarves and gear online directly from your club dashboard with size variants and inventory control.' },
-  { title: 'Sponsor Showcase & Click Analytics', desc: 'High-visibility sponsor tiers and click tracking for local businesses with no third-party ad networks.' },
-  { title: 'Unlimited Teams, Players & Admins', desc: 'Men, Women, Juniors, Reserves, Over 35s and committee roles under a single club management portal.' },
-  { title: 'Club News & Photo Gallery', desc: 'Publish match reports, club notices and high-res photo albums with automatic SEO article markup.' },
-  { title: 'Direct Stripe Payments & Ledger', desc: 'Collect season registrations and dues straight into your club Stripe account with downloadable CSV accounting.' },
+  { title: 'Public club website', desc: 'Your colours, crest and banner, and you can connect your own domain (.club, .com.au, .org.au).' },
+  { title: 'Live match centre', desc: 'Goals, cards, lineups, the match clock and the score, live on any phone. Fans don\'t need an app.' },
+  { title: 'Availability and lineups', desc: 'Drag players onto the pitch for 5, 7, 9 or 11-a-side, then share the lineup to WhatsApp or Instagram.' },
+  { title: 'Digital member passes', desc: 'A member card with the player\'s photo and a QR code. Scan it with a phone camera to check people in.' },
+  { title: 'Tournaments', desc: 'Group stages, round robins and knockout cup draws, with tables that update as results come in.' },
+  { title: 'Club shop', desc: 'Sell jerseys, scarves and other gear from your club dashboard, with sizes for each item.' },
+  { title: 'Sponsors and click counts', desc: 'Sponsor tiers for local businesses, and a count of clicks on each sponsor. No third-party ad networks.' },
+  { title: 'Unlimited teams, players and admins', desc: 'Men, Women, Juniors, Reserves, Over 35s and committee roles, all under one club login.' },
+  { title: 'Club news and photo gallery', desc: 'Post match reports, club notices and photo albums. Each article gets search engine markup automatically.' },
+  { title: 'Stripe payments and a ledger', desc: 'Season registrations and fees go straight into your club\'s Stripe account, and you can download the ledger as a CSV.' },
 ];
 
 const PRICING_FAQS = [
   {
     q: 'Is itsfootball.club really free for clubs?',
-    a: 'Yes. itsfootball.club charges no subscription fees, no setup costs and no monthly hosting fees. Every feature—from the public club website to the live match centre and tournament generator—is unlocked for all clubs from day one.',
+    a: 'Yes. There\'s no subscription, setup cost or hosting fee. Every club gets every feature from day one, including the public club website, the live match centre and the tournament maker.',
   },
   {
     q: 'Are there any limits on teams, players or members?',
-    a: 'No limits. Unlike competitors that restrict free plans to one team or charge monthly add-on fees for extra squads, you can create unlimited teams (Men, Women, Juniors, Reserves, Masters) and register unlimited players.',
+    a: 'No. You can create as many teams as you need (Men, Women, Juniors, Reserves, Masters) and register as many players as you like. Some other apps limit their free plan to one team or charge a monthly fee for extra squads.',
   },
   {
     q: 'How does itsfootball.club make money without charging clubs?',
-    a: `When a club chooses to collect player registration fees, ticket sales or shop orders via online card payments, a small transparent booking fee (${bookingFeeText()}) is added to the payer's checkout. The club receives 100% of its requested price directly into its own Stripe account (less standard Stripe processing). There is no fee on anything else: browsing, live scores, availability, passes, or free events.`,
+    a: `When a club takes registration fees, ticket sales or shop orders by card, a small booking fee (${bookingFeeText()}) is added at the payer's checkout. The club gets its full price in its own Stripe account, less Stripe's standard processing fee. Nothing else has a fee, including browsing, live scores, availability, passes and free events.`,
   },
   {
     q: 'Do supporters, players or parents need to install an app?',
-    a: 'No. Everything works directly in any mobile or desktop web browser (Safari, Chrome, Edge). Supporters can view lineups, live scores, and club news instantly without downloading an app or remembering another login.',
+    a: 'No. It all works in a web browser on a phone or computer, such as Safari, Chrome or Edge. Supporters can see lineups, live scores and club news without downloading an app or making another login.',
   },
   {
     q: 'Can we use our own custom domain name?',
-    a: 'Yes. Every club receives a fast itsfootball.club/yourclub address automatically, and club admins can connect their own registered domain (e.g. www.yourclub.com.au or fc.club) at no additional charge.',
+    a: 'Yes. Every club gets an itsfootball.club/yourclub address straight away, and admins can connect a domain the club owns (for example www.yourclub.com.au or fc.club) at no extra cost.',
   },
   {
     q: 'How does it compare with Pitchero or Spond?',
-    a: `Pitchero is free for one team, with paid plans at £38 or £99 a month; its Free and Standard plans show ads. Spond’s club website is A$22 a month after a free trial, and the Spond app shows brand partner ads. itsfootball.club gives your whole club a public website with no third-party ads, live scores and digital passes, with no subscription; card payers pay ${FEE_PHRASE}. Sources and dates are on the comparison pages.`,
+    a: `Pitchero is free for one team, with paid plans at £38 or £99 a month, and its Free and Standard plans show ads. Spond’s club website is A$22 a month after a free trial, and the Spond app shows brand partner ads. itsfootball.club gives your whole club a public website, live scores and digital passes with no subscription and no third-party ads. People paying by card pay ${FEE_PHRASE}. The comparison pages list our sources and when we checked them.`,
   },
 ];
 
@@ -125,14 +125,14 @@ export default function PricingPage() {
         {/* Header */}
         <header style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Transparent Grassroots Pricing
+            Pricing for grassroots clubs
           </div>
           <h1 style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '1.25rem' }}>
-            Free for Every <span style={{ color: 'var(--c-amber)' }}>Football Club</span>
+            Free for every <span style={{ color: 'var(--c-amber)' }}>football club</span>
           </h1>
           <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', maxWidth: '680px', margin: '0 auto', lineHeight: 1.55 }}>
-            No monthly subscriptions. No tier restrictions. No third-party network ads.
-            Built to give community clubs a big-club web presence without the software price tag.
+            There&apos;s no monthly subscription, every feature comes with every club, and we don&apos;t run third-party ads.
+            Community clubs get a website like the big clubs have, without paying for the software.
           </p>
         </header>
 
@@ -151,13 +151,13 @@ export default function PricingPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '2.5rem', marginBottom: '2.5rem' }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--c-amber)', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-                <Sparkles size={16} /> Complete Grassroots Platform
+                <Sparkles size={16} /> Everything included
               </div>
               <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 900, margin: '0 0 0.5rem 0' }}>
-                All-In-One Club Tier
+                One plan for every club
               </h2>
               <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
-                Everything your committee, coaches, players, and supporters need to run the season.
+                What your committee, coaches, players and supporters use to run the season.
               </p>
             </div>
 
@@ -170,7 +170,7 @@ export default function PricingPage() {
                 Free for clubs · No credit card required
               </p>
               <Link href="/create-club" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', padding: '0.85rem 1.6rem', fontSize: '1.05rem', fontWeight: 800 }}>
-                <span>Create Your Club Free</span>
+                <span>Create your club free</span>
                 <ArrowRight size={18} />
               </Link>
             </div>
@@ -200,10 +200,10 @@ export default function PricingPage() {
         <section style={{ marginBottom: '4rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 900, marginBottom: '0.6rem' }}>
-              How Online Card Payments Work
+              How card payments work
             </h2>
             <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto', fontSize: '1rem' }}>
-              Transparent, fair pricing that protects your club budget.
+              Who pays what when someone pays your club by card.
             </p>
           </div>
 
@@ -212,9 +212,9 @@ export default function PricingPage() {
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <ShieldCheck size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>Club Keeps 100% of Price</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>Your club gets its full price</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                When your club charges $200 for annual player registration or $40 for a jersey, your club receives exactly that full amount straight into its own Stripe account (less standard Stripe processing).
+                If your club charges $200 for a season&apos;s registration or $40 for a jersey, that full amount goes into the club&apos;s own Stripe account, less Stripe&apos;s standard processing fee.
               </p>
             </div>
 
@@ -222,9 +222,9 @@ export default function PricingPage() {
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <CreditCard size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>Transparent Booking Fee</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>A small booking fee</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                A small booking fee ({bookingFeeText()}) is added to card, Apple Pay, and Google Pay transactions, paid by the person checking out. It is displayed transparently before they pay—just like booking cinema or event tickets.
+                A booking fee of {bookingFeeText()} is added to card, Apple Pay and Google Pay payments, and the person checking out pays it. They see it before they pay, the same as when you book cinema or event tickets.
               </p>
             </div>
 
@@ -232,9 +232,9 @@ export default function PricingPage() {
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                 <Zap size={22} />
               </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>Zero Fee on Non-Card Use</h3>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>No fee on anything else</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                Following live matches, marking availability, tracking player stats, digital pass scanning, and generating tournament brackets are always completely fee-free.
+                Following live matches, marking availability, tracking player stats, scanning passes and making tournament brackets never cost anything.
               </p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function PricingPage() {
         <section style={{ marginBottom: '4rem' }}>
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: '20px' }}>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 900, marginBottom: '1.25rem', textAlign: 'center' }}>
-              How We Compare with Other Club Software
+              How we compare with other club software
             </h2>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
@@ -274,7 +274,7 @@ export default function PricingPage() {
             </div>
             <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
               <Link href="/compare" style={{ color: 'var(--c-amber)', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'underline' }}>
-                View complete head-to-head comparison guides →
+                See the full side-by-side comparisons →
               </Link>
             </div>
           </div>
@@ -284,10 +284,10 @@ export default function PricingPage() {
         <section style={{ marginBottom: '4rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <h2 style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.2rem)', fontWeight: 900, marginBottom: '0.5rem' }}>
-              Frequently Asked Questions
+              Questions about pricing
             </h2>
             <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1rem' }}>
-              Have questions about pricing or fees? Here are the facts.
+              Fees, limits and how we make money.
             </p>
           </div>
 

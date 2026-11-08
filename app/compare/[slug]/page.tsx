@@ -313,7 +313,7 @@ export default async function CompareAlternativePage({ params }: Props) {
           <ol className="vs-steps">
             <li><span><strong>Create your club</strong> in 60 seconds with just an email.</span></li>
             <li><span><strong>Add your teams and players</strong> or invite squad members to claim passes.</span></li>
-            <li><span><strong>Share your club link</strong>. Supporters follow scores in the browser, no app download.</span></li>
+            <li><span><strong>Share your club link</strong>. Supporters follow scores in the browser without downloading an app.</span></li>
           </ol>
           <div style={{ marginTop: '1.5rem' }}>
             <Link href="/create-club" className="btn btn-primary btn-lg" style={ctaStyle}>
