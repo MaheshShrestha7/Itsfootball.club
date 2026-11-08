@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, CalendarDays, Check, Clock, Handshake, MapPin, Shield, Users } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CalendarDays, Check, Clock, Handshake, Hourglass, MapPin, Shield, Users } from 'lucide-react';
 import type { Club, ContactInquiry, Match } from '@/lib/supabase/types';
 import type { CalendarItem } from '@/lib/admin-calendar';
 import {
@@ -36,15 +36,27 @@ export default function FriendlyInvitation({ club, item, details, teamName, team
 }) {
   const note = friendlyNote(item.message);
   const checks = details.dates.map(d => checkDay(calendar, teamId, d.date, teamName));
-  // The first free date gets the main button
-  const best = checks.findIndex(c => c.kind === 'free');
+  // The date they picked from the club's suggestions gets the main button, else the first free date
+  const picked = details.picked;
+  const best = picked ? -1 : checks.findIndex(c => c.kind === 'free');
+  const first = item.sender_name.trim().split(/\s+/)[0] || item.sender_name;
+  const acceptButton = (d: FriendlyDate, primary: boolean) => canAccept && (
+    <button type="button" className={`btn btn-sm ${primary ? 'btn-primary' : 'btn-secondary'}`} onClick={() => onAccept(d)}>
+      Accept<span className="sr-only"> {dateLabel(d)}</span>
+    </button>
+  );
 
   return (
     <div className="fr">
       <div className="fr-pills">
         <span className="admin-pill is-ok"><Handshake size={12} aria-hidden="true" /> Friendly invitation</span>
       </div>
-      <p className="fr-who">{details.their_club}, {details.their_team}</p>
+      <div className="fr-head">
+        {details.crest
+          ? <img className="fr-crest" src={details.crest} alt="" width={40} height={40} />
+          : <span className="fr-crest is-empty" aria-hidden="true">{details.their_club.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}</span>}
+        <p className="fr-who">{details.their_club}, {details.their_team}</p>
+      </div>
       <div className="fr-facts">
         <span><Shield size={13} aria-hidden="true" /> For <b>{teamName}</b></span>
         <span><Users size={13} aria-hidden="true" /> {FORMAT_LABEL[details.format]}</span>
@@ -62,17 +74,28 @@ export default function FriendlyInvitation({ club, item, details, teamName, team
         </div>
       ) : (
         <>
+          {picked ? (
+            <div className="fr-picked">
+              <CalendarCheck size={15} aria-hidden="true" />
+              <span className="fr-picked-txt">
+                <span><b>{first} picked {dateLabel(picked)}</b> from the dates you suggested.</span>
+                <DayCheckLine check={checkDay(calendar, teamId, picked.date, teamName)} />
+              </span>
+              {acceptButton(picked, true)}
+            </div>
+          ) : details.suggested?.length ? (
+            <p className="fr-waiting">
+              <Hourglass size={14} aria-hidden="true" />
+              <span>You suggested {details.suggested.map(dateLabel).join(', or ')}. Waiting for {first} to pick one.</span>
+            </p>
+          ) : null}
           <p className="fr-opts-h">Dates they offered, checked against {teamName}&apos;s calendar</p>
           <ul className="fr-opts">
             {details.dates.map((d, i) => (
               <li key={`${d.date}-${d.time}`} className="fr-opt">
                 <span className="fr-when">{dateLabel(d)}</span>
                 <DayCheckLine check={checks[i]} />
-                {canAccept && (
-                  <button type="button" className={`btn btn-sm ${i === best ? 'btn-primary' : 'btn-secondary'}`} onClick={() => onAccept(d)}>
-                    Accept<span className="sr-only"> {dateLabel(d)}</span>
-                  </button>
-                )}
+                {acceptButton(d, i === best)}
               </li>
             ))}
           </ul>

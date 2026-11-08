@@ -1,10 +1,12 @@
 'use client';
 
-import { Plus, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ImagePlus, Plus, X } from 'lucide-react';
 import type { ClubTeam, ClubTeamFormat } from '@/lib/supabase/types';
 import { FORMAT_LABEL, FRIENDLY_FORMATS, MAX_FRIENDLY_DATES, type FriendlyDate, type FriendlyHost } from '@/lib/friendlies';
 import { DEFAULT_HALF_MINUTES, MAX_HALF_MINUTES, MIN_HALF_MINUTES } from '@/lib/match-length';
 import { todayIso } from '@/lib/finance';
+import { shrinkCrest } from '@/lib/crest-image';
 
 /** What the visitor types; sent to /api/contact as `friendly` and checked there (lib/friendlies.ts) */
 export interface FriendlyForm {
@@ -17,6 +19,8 @@ export interface FriendlyForm {
   dates: FriendlyDate[];
   host: FriendlyHost;
   their_ground: string;
+  /** Their crest as a small data URL, or '' */
+  their_crest: string;
 }
 
 export function emptyFriendlyForm(team?: ClubTeam): FriendlyForm {
@@ -29,6 +33,7 @@ export function emptyFriendlyForm(team?: ClubTeam): FriendlyForm {
     dates: [{ date: '', time: '' }],
     host: 'either',
     their_ground: '',
+    their_crest: '',
   };
 }
 
@@ -42,6 +47,7 @@ export function friendlyPayload(f: FriendlyForm, teamName: string) {
     host: f.host,
     their_ground: f.host === 'us' ? '' : f.their_ground,
     team_name: teamName,
+    ...(f.their_crest ? { crest: f.their_crest } : {}),
   };
 }
 
@@ -66,6 +72,17 @@ export default function FriendlyInviteFields({ teams, value, onChange, crest, lo
     set({ dates: value.dates.map((d, j) => (j === i ? { ...d, ...patch } : d)) });
   const today = todayIso(new Date());
   const usualHalf = DEFAULT_HALF_MINUTES[value.format] ?? 45;
+  const crestInput = useRef<HTMLInputElement>(null);
+  const [crestError, setCrestError] = useState<string | null>(null);
+  const pickCrest = async (file: File | undefined) => {
+    if (!file) return;
+    setCrestError(null);
+    try {
+      set({ their_crest: await shrinkCrest(file) });
+    } catch (e) {
+      setCrestError((e as Error).message);
+    }
+  };
 
   return (
     <div className="fi">
@@ -101,6 +118,25 @@ export default function FriendlyInviteFields({ teams, value, onChange, crest, lo
           <input id="fi-their-team" className="form-input" required maxLength={80}
             placeholder="e.g. Reserves, U14 Girls" value={value.their_team} onChange={e => set({ their_team: e.target.value })} />
         </div>
+      </div>
+      <div className="form-group">
+        <span className="form-label" id="fi-crest-l">Your club crest (optional)</span>
+        <div className="fi-crest">
+          {value.their_crest
+            ? <img src={value.their_crest} alt="Your crest" width={44} height={44} />
+            : <span className="fi-crest-empty" aria-hidden="true"><ImagePlus size={18} /></span>}
+          <button type="button" className="btn btn-secondary btn-sm" aria-describedby="fi-crest-l" onClick={() => crestInput.current?.click()}>
+            {value.their_crest ? 'Change' : 'Add your crest'}
+          </button>
+          {value.their_crest && (
+            <button type="button" className="fi-crest-x" onClick={() => set({ their_crest: '' })}>Remove</button>
+          )}
+          <input ref={crestInput} type="file" accept="image/png,image/jpeg,image/webp" hidden
+            onChange={e => { pickCrest(e.target.files?.[0]); e.target.value = ''; }} />
+        </div>
+        {crestError
+          ? <p className="text-note fi-help" role="alert" style={{ color: 'var(--c-red)' }}>{crestError}</p>
+          : <p className="text-note fi-help">So your club shows properly on our fixtures.</p>}
       </div>
       <div className="form-row-2" style={{ gap: '1rem' }}>
         <div className="form-group">

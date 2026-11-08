@@ -6,9 +6,10 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
-import { Match, MatchType, MatchStatus, MatchFormat } from '@/lib/supabase/types';
+import { Match, MatchType, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
 import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
-import ImageUploadZone from '@/components/ImageUploadZone';
+import ImageUploadZone, { uploadImage } from '@/components/ImageUploadZone';
+import EventFlyerMaker from '@/components/admin/EventFlyerMaker';
 import CoverImage from '@/components/CoverImage';
 import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
@@ -39,7 +40,9 @@ import {
   Info,
   Layers,
   ArrowRight,
-  Share2
+  Share2,
+  Repeat2,
+  ImagePlus,
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { DEFAULT_HALF_MINUTES, validHalfMinutes } from '@/lib/match-length';
@@ -57,6 +60,9 @@ import ResultChip from '@/components/ResultChip';
 import { DayCheckLine } from '@/components/admin/FriendlyInvitation';
 import { calendarFor, checkDay, fixtureFromInvitation, friendlyOf, opponentName, type FriendlyDetails } from '@/lib/friendlies';
 import { Handshake } from 'lucide-react';
+import { crestFile } from '@/lib/crest-image';
+import { getAccessToken } from '@/lib/supabase/client';
+import { SITE_URL } from '@/lib/seo';
 
 // Still to be played: listed first, soonest at the top
 const AHEAD: MatchStatus[] = ['upcoming', 'live', 'halftime', 'postponed'];
@@ -100,9 +106,10 @@ export default function AdminMatchesPage({
     events,
     inquiries,
     updateInquiry,
+    applyInquiryRow,
   } = useClub();
 
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = useMemo(() => matches.filter(m => m.club_id === club.id), [matches, club.id]);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
@@ -158,7 +165,14 @@ export default function AdminMatchesPage({
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // The friendly invitation the form was filled in from (Inbox > Accept); linked to the fixture on save
-  const [fromInvitation, setFromInvitation] = useState<{ id: string; details: FriendlyDetails } | null>(null);
+  // `returnOf`: a return fixture (home and away swapped) for the friendly with this id
+  const [fromInvitation, setFromInvitation] = useState<{ id: string; details: FriendlyDetails; senderName: string; returnOf?: string } | null>(null);
+  // Email the person who sent the invitation: the confirmation for a new fixture, the change for an edit
+  const [emailVisitor, setEmailVisitor] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [posterMatch, setPosterMatch] = useState<Match | null>(null);
+  // What the edit form opened with, to tell whether the visitor needs an update email
+  const [editOpenedAt, setEditOpenedAt] = useState<{ match_date: string; match_time: string; venue: string; status: MatchStatus } | null>(null);
 
   // Form State
   const defaultDate = todayIso(new Date(Date.now() + 3 * 86400000));
@@ -191,6 +205,8 @@ export default function AdminMatchesPage({
     half_text: string;
     /** Off: the game follows its team's usual half length */
     half_custom: boolean;
+    /** The opponent's crest ('' = the plain shield). A data URL (from an invitation) is uploaded on save */
+    opponent_logo: string;
   }>({
     title: '',
     match_type: 'friendly',
@@ -216,6 +232,7 @@ export default function AdminMatchesPage({
     pitch_label: '',
     half_text: '',
     half_custom: false,
+    opponent_logo: '',
   });
 
   const showToast = (msg: string) => {
@@ -254,7 +271,9 @@ export default function AdminMatchesPage({
       pitch_label: '',
       half_text: '',
       half_custom: false,
+      opponent_logo: '',
     });
+    setEmailVisitor(true);
     setIsFormModalOpen(true);
   };
 
@@ -280,6 +299,8 @@ export default function AdminMatchesPage({
     const details = item ? friendlyOf(item) : null;
     if (!item || !details) return;
     invitationTaken.current = true;
+    // The date they accepted: read before it comes off the address
+    const date = { date: q.get('date') || details.dates[0].date, time: q.get('time') || '' };
     ['friendly', 'date', 'time'].forEach(k => q.delete(k));
     const rest = q.toString();
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
@@ -287,14 +308,88 @@ export default function AdminMatchesPage({
       showToast('A fixture was already made from this invitation.');
       return;
     }
-    const date = { date: q.get('date') || details.dates[0].date, time: q.get('time') || '' };
     const team = teams.find(t => t.id === item.team_id);
-    const fill = fixtureFromInvitation(details, details.dates.find(d => d.date === date.date && d.time === date.time) || date, team, club.stadium_name || 'Home Ground');
+    const fill = fixtureFromInvitation(details, date, team, club.stadium_name || 'Home Ground');
     handleOpenAddModal({ date: fill.match_date, time: fill.match_time, ...(team ? { team: team.id } : {}) });
-    setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id }));
-    setFromInvitation({ id: item.id, details });
+    setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id, opponent_logo: details.crest || '' }));
+    setFromInvitation({ id: item.id, details, senderName: item.sender_name });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAddMatch, inquiries, club.id]);
+
+  /** The opponent's own crest on a fixture, or '' for the plain shield */
+  const opponentLogoOf = (m: Match) => {
+    const logo = (m.is_club_home ? m.away_team_logo : m.home_team_logo) || '';
+    return logo === DEFAULT_CREST || logo === club.logo_url ? '' : logo;
+  };
+
+  /** The friendly invitation a fixture was made from (or confirmed to), for the update email */
+  const invitationOf = (matchId: string | null): ContactInquiry | undefined => {
+    if (!matchId) return undefined;
+    return inquiries.find(i => {
+      if (i.club_id !== club.id || !friendlyOf(i)) return false;
+      const sent = (i.details as { sent?: Record<string, unknown> } | null | undefined)?.sent;
+      return i.match_id === matchId || !!(sent && typeof sent === 'object' && matchId in sent);
+    });
+  };
+  const wasEmailed = (i: ContactInquiry | undefined, matchId: string) => {
+    const sent = (i?.details as { sent?: Record<string, unknown> } | null | undefined)?.sent;
+    return !!(sent && typeof sent === 'object' && matchId in sent);
+  };
+
+  /** Return fixture: the same friendly with home and away swapped, as a new fixture to date and save */
+  const handleReturnFixture = (m: Match) => {
+    const item = invitationOf(m.id);
+    const details = item ? friendlyOf(item) : null;
+    const home = !m.is_club_home;
+    handleOpenAddModal({ date: todayIso(new Date(Date.now() + 14 * 86400000)), time: m.match_time || '15:00', ...(m.team_id ? { team: m.team_id } : {}) });
+    setForm(f => ({
+      ...f,
+      match_type: 'friendly',
+      competition: m.competition || 'Club Friendly',
+      opponent_name: m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name) || '',
+      opponent_short_name: m.opponent_short_name || '',
+      is_club_home: home,
+      // Our ground when we host; theirs is where we played them last time
+      venue: home ? (club.stadium_name || 'Home Ground') : (details?.their_ground || (m.is_club_home ? '' : m.venue) || ''),
+      half_text: validHalfMinutes(m.half_minutes) ? String(m.half_minutes) : '',
+      half_custom: validHalfMinutes(m.half_minutes) !== null && validHalfMinutes(m.half_minutes) !== teamHalfOf(m.team_id || null),
+      opponent_logo: opponentLogoOf(m),
+    }));
+    if (item && details) setFromInvitation({ id: item.id, details, senderName: item.sender_name, returnOf: m.id });
+  };
+
+  /** The poster maker draws events, so a fixture goes in as one */
+  const posterEvent = (m: Match): ClubEvent => ({
+    id: m.id,
+    club_id: m.club_id,
+    title: `${m.home_team_name} v ${m.away_team_name}`,
+    description: m.description || '',
+    category: 'match',
+    start_time: hasKickoffTime(m) ? m.match_date : new Date(`${m.match_date.slice(0, 10)}T${(m.match_time || '15:00').slice(0, 5)}:00`).toISOString(),
+    location: m.venue || '',
+    is_public: true,
+  } as ClubEvent);
+
+  /** The confirmation or update email to the person who sent the invitation (after the fixture saves) */
+  const emailFriendly = async (action: 'confirm' | 'update', inquiryId: string, matchId: string, name: string, expect?: Record<string, string>) => {
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/admin/friendlies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ action, clubId: club.id, inquiryId, matchId, expect, senderName: user?.full_name || `${club.name} Committee` }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.inquiry) applyInquiryRow(data.inquiry);
+      if (!res.ok) showToast(data.error || `The email to ${name} didn’t go. Try saving again.`);
+      else if (action === 'update' && !data.sent) return;
+      else showToast(data.emailed
+        ? `${action === 'confirm' ? 'Confirmation' : 'Update'} emailed to ${name}.`
+        : `Saved, but email isn’t set up for your club yet, so ${name} wasn’t emailed. It’s in the Inbox to send yourself.`);
+    } catch {
+      showToast(`The email to ${name} didn’t go. Check your connection.`);
+    }
+  };
 
   // Open modal for editing match
   const handleOpenEditModal = (m: Match) => {
@@ -344,8 +439,12 @@ export default function AdminMatchesPage({
       half_text: validHalfMinutes(m.half_minutes) ? String(m.half_minutes) : '',
       half_custom: validHalfMinutes(m.half_minutes) !== null
         && validHalfMinutes(m.half_minutes) !== validHalfMinutes(teams.find(t => t.id === (m.team_id || mainTeamId))?.half_minutes),
+      // Keep the crest the opponent already has (it used to go back to the plain shield on every edit)
+      opponent_logo: opponentLogoOf(m),
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
+    setEditOpenedAt({ match_date: parsedDate, match_time: parsedTime, venue: m.venue || club.stadium_name || '', status: m.status || 'upcoming' });
+    setEmailVisitor(true);
     setIsFormModalOpen(true);
   };
 
@@ -392,9 +491,20 @@ export default function AdminMatchesPage({
   // The club's games and events, to say whether the team already has something on the picked day
   const calendar = useMemo(() => calendarFor({ clubId: club.id, matches: clubMatches, events, clubTeams }), [club.id, clubMatches, events, clubTeams]);
 
+  // Editing a fixture the visitor was sent: did something they'd need to know about change?
+  const opened = editOpenedAt;
+  const visitorChange = !!editingMatchId && !!opened && (
+    opened.match_date !== form.match_date || opened.match_time !== form.match_time
+    || opened.venue.trim() !== form.venue.trim()
+    || (form.status !== opened.status && (form.status === 'cancelled' || form.status === 'postponed'))
+  );
+  const linkedForEdit = editingMatchId ? invitationOf(editingMatchId) : undefined;
+  const showUpdateEmail = !!linkedForEdit && !!editingMatchId && wasEmailed(linkedForEdit, editingMatchId) && visitorChange;
+
   // Submit Match Form (Create or Update)
-  const handleSubmitMatch = (e: React.FormEvent) => {
+  const handleSubmitMatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     // Sanitize user inputs
     const cleanTitle = form.title.replace(/<[^>]*>?/gm, '').trim();
@@ -422,9 +532,23 @@ export default function AdminMatchesPage({
 
     const homeTeam = form.is_club_home ? club.name : cleanOpponent;
     const awayTeam = form.is_club_home ? cleanOpponent : club.name;
+    // The crest that came with a friendly invitation is uploaded now, so the fixture keeps a real image
+    let opponentLogo = form.opponent_logo;
+    if (opponentLogo.startsWith('data:')) {
+      const file = crestFile(opponentLogo);
+      setSaving(true);
+      try {
+        opponentLogo = file ? await uploadImage(file, { folder: 'crests', clubId: club.id, maxDimension: 256 }) : '';
+      } catch {
+        opponentLogo = '';
+        showToast('Their crest couldn’t be uploaded, so the fixture shows the plain shield. You can add it later.');
+      } finally {
+        setSaving(false);
+      }
+    }
     // The opponent has no crest on file: show the neutral shield, not a stock photo
-    const homeLogo = form.is_club_home ? (club.logo_url || '') : DEFAULT_CREST;
-    const awayLogo = form.is_club_home ? DEFAULT_CREST : (club.logo_url || '');
+    const homeLogo = form.is_club_home ? (club.logo_url || '') : (opponentLogo || DEFAULT_CREST);
+    const awayLogo = form.is_club_home ? (opponentLogo || DEFAULT_CREST) : (club.logo_url || '');
 
     // Combine date and time to ISO string
     let combinedDateIso = new Date().toISOString();
@@ -485,6 +609,13 @@ export default function AdminMatchesPage({
         ...(resolvedStatus === 'completed' && opened.status !== 'completed' ? { period: 'full_time' } : {}),
       });
       showToast(`Updated fixture: ${cleanTitle || cleanOpponent}.${form.alerts_muted ? ' Followers weren’t notified.' : ''}`);
+      // They were sent this fixture: tell them about a new date, time or ground, or that it's off
+      const linked = invitationOf(editingMatchId);
+      if (linked && emailVisitor && wasEmailed(linked, editingMatchId) && visitorChange) {
+        emailFriendly('update', linked.id, editingMatchId, linked.sender_name, {
+          match_date: combinedDateIso, match_time: form.match_time, venue: cleanVenue, status: resolvedStatus,
+        });
+      }
     } else {
       // Add new match
       const created = addMatch({
@@ -521,7 +652,10 @@ export default function AdminMatchesPage({
         ...(halfReady && halfMinutes !== null ? { half_minutes: halfMinutes } : {}),
       });
       if (fromInvitation) {
-        updateInquiry(fromInvitation.id, { match_id: created.id });
+        // A return fixture leaves the invitation linked to the first game
+        const item = inquiries.find(i => i.id === fromInvitation.id);
+        if (!item?.match_id) updateInquiry(fromInvitation.id, { match_id: created.id });
+        if (emailVisitor) emailFriendly('confirm', fromInvitation.id, created.id, fromInvitation.senderName);
         setFromInvitation(null);
       }
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
@@ -994,6 +1128,23 @@ export default function AdminMatchesPage({
                     )}
                   />
 
+                  {/* Printable matchday poster (A5 to A3, Story, Post) with a QR to the match page */}
+                  {!cupHref && !isCompleted && m.status !== 'cancelled' && m.match_type !== 'internal' && (
+                    <button type="button" onClick={() => setPosterMatch(m)} className="btn btn-secondary btn-sm"
+                      title="Print a poster for the ground, or download it for socials">
+                      <Printer size={13} aria-hidden="true" />
+                      <span>Matchday poster</span>
+                    </button>
+                  )}
+                  {/* A friendly from an invitation, played: the reverse game, home and away swapped */}
+                  {!cupHref && canAddMatch && m.match_type === 'friendly' && isCompleted && invitationOf(m.id) && (
+                    <button type="button" onClick={() => handleReturnFixture(m)} className="btn btn-secondary btn-sm"
+                      title="Make the reverse game, with home and away swapped">
+                      <Repeat2 size={13} aria-hidden="true" />
+                      <span>Return fixture</span>
+                    </button>
+                  )}
+
                   {/* Result: only once kickoff has passed, and it asks for the score. A played match is
                       corrected in the edit form ("Mark as not played" lives there too) */}
                   {!cupHref && canAddMatch && isCompleted && <button
@@ -1146,9 +1297,11 @@ export default function AdminMatchesPage({
             <form onSubmit={handleSubmitMatch}>
               {fromInvitation && !editingMatchId && (
                 <div className="fx-from" role="note">
-                  <Handshake size={17} aria-hidden="true" />
+                  {fromInvitation.returnOf ? <Repeat2 size={17} aria-hidden="true" /> : <Handshake size={17} aria-hidden="true" />}
                   <span>
-                    Filled in from the invitation from <b>{opponentName(fromInvitation.details)}</b>. Check the details, then save.
+                    {fromInvitation.returnOf
+                      ? <>Return fixture against <b>{opponentName(fromInvitation.details)}</b>, with home and away swapped. Pick a date, then save.</>
+                      : <>Filled in from the invitation from <b>{opponentName(fromInvitation.details)}</b>. Check the details, then save.</>}
                   </span>
                 </div>
               )}
@@ -1383,6 +1536,40 @@ export default function AdminMatchesPage({
                   </select>
                 </div>
               </div>
+
+              {/* The opponent's crest: kept on edit, and the one that came with an invitation */}
+              {form.match_type !== 'internal' && (
+                <div className="fx-crest">
+                  {form.opponent_logo
+                    ? <img src={form.opponent_logo} alt="" width={40} height={40} />
+                    : <Shield size={20} aria-hidden="true" className="fx-crest-empty" />}
+                  <span className="fx-crest-txt">
+                    <b>Opponent crest</b>
+                    <small>{form.opponent_logo ? (form.opponent_logo.startsWith('data:') ? 'Their crest came with the invitation.' : 'Shown on the fixture and share graphics.') : 'None yet, so the fixture shows a plain shield.'}</small>
+                  </span>
+                  <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                    <ImagePlus size={13} aria-hidden="true" /> <span>{form.opponent_logo ? 'Change' : 'Add crest'}</span>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" hidden
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        setSaving(true);
+                        try {
+                          const url = await uploadImage(file, { folder: 'crests', clubId: club.id, maxDimension: 256 });
+                          setForm(f => ({ ...f, opponent_logo: url }));
+                        } catch (err) {
+                          showToast((err as Error).message || 'The crest couldn’t be uploaded.');
+                        } finally {
+                          setSaving(false);
+                        }
+                      }} />
+                  </label>
+                  {form.opponent_logo && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setForm(f => ({ ...f, opponent_logo: '' }))}>Remove</button>
+                  )}
+                </div>
+              )}
 
               {/* Date, Time & Venue */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -1753,6 +1940,18 @@ export default function AdminMatchesPage({
                 )}
               </div>
 
+              {/* The person who sent the friendly invitation: the confirmation, or what changed */}
+              {((fromInvitation && !editingMatchId) || showUpdateEmail) && (
+                <label className="fx-email">
+                  <input type="checkbox" checked={emailVisitor} onChange={e => setEmailVisitor(e.target.checked)} />
+                  <span>
+                    {fromInvitation && !editingMatchId
+                      ? <>Email {fromInvitation.senderName} the confirmation<small>Match page, add to calendar, directions and the ground guide.</small></>
+                      : <>Email {linkedForEdit?.sender_name} about the change<small>{form.status === 'cancelled' ? 'That the game is called off.' : form.status === 'postponed' ? 'That the game is postponed.' : 'The new date, time or ground, with the match page link.'}</small></>}
+                  </span>
+                </label>
+              )}
+
               {/* Modal Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <button
@@ -1765,9 +1964,10 @@ export default function AdminMatchesPage({
                 <button
                   type="submit"
                   className="btn btn-primary"
+                  disabled={saving}
                   style={{ fontWeight: 800, padding: '0.65rem 1.5rem' }}
                 >
-                  {editingMatchId ? 'Save Changes' : 'Schedule Match'}
+                  {saving ? 'Uploading crest…' : editingMatchId ? 'Save Changes' : 'Schedule Match'}
                 </button>
               </div>
             </form>
@@ -1842,6 +2042,17 @@ export default function AdminMatchesPage({
       {/* ========================================================================= */}
       {/* 3. PRINTABLE GATE POSTER                                                  */}
       {/* ========================================================================= */}
+      {posterMatch && (
+        <EventFlyerMaker
+          club={club}
+          event={posterEvent(posterMatch)}
+          canSaveFlyer={false}
+          onSaveFlyer={() => {}}
+          fixtureUrl={club.custom_domain ? `https://${club.custom_domain}/match/${posterMatch.slug || posterMatch.id}` : `${SITE_URL}${matchPath(club.slug, posterMatch)}`}
+          onClose={() => setPosterMatch(null)}
+        />
+      )}
+
       {printPosterMatch && (
         <CheckinPoster
           club={club}

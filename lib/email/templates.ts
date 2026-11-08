@@ -27,6 +27,8 @@ interface EmailContent {
   paragraphs: string[];
   cta?: { label: string; url: string };
   details?: [label: string, value: string][];
+  /** A row of smaller links under the button, e.g. "Add to calendar · Directions" (https only) */
+  links?: { label: string; url: string }[];
   /** Small print under the button, e.g. "This link expires in 1 hour" */
   note?: string;
   /** Why the recipient got this email */
@@ -68,6 +70,11 @@ ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-t
 <a href="${esc(c.cta.url)}" target="_blank" style="display:inline-block;padding:14px 28px;font:700 16px ${font};color:${onColor};text-decoration:none;border-radius:10px">${esc(c.cta.label)}</a>
 </td></tr></table>
 <p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">Button not working? Copy this link into your browser:<br><a href="${esc(c.cta.url)}" style="color:#334155;word-break:break-all">${esc(c.cta.url)}</a></p>`
+    : '';
+
+  const links = (c.links || []).filter(l => /^https:\/\//.test(l.url));
+  const linkRow = links.length
+    ? `<p style="margin:0 0 24px;font:14px/1.9 ${font};color:#334155">${links.map(l => `<a href="${esc(l.url)}" target="_blank" style="color:#334155;font-weight:700">${esc(l.label)}</a>`).join(' &nbsp;&middot;&nbsp; ')}</p>`
     : '';
 
   const message = c.message?.trim()
@@ -112,6 +119,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
   ${message}
   ${details}
   ${cta}
+  ${linkRow}
   ${c.note ? `<p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">${esc(c.note)}</p>` : ''}
   ${sponsors}
 </td></tr>
@@ -133,6 +141,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
     ...(c.message?.trim() ? [`Message from ${brand.name}:`, c.message.trim(), ''] : []),
     ...(c.details?.length ? [...c.details.map(([k, v]) => `${k}: ${v}`), ''] : []),
     ...(c.cta ? [`${c.cta.label}: ${c.cta.url}`, ''] : []),
+    ...(links.length ? [...links.map(l => `${l.label}: ${l.url}`), ''] : []),
     ...(c.note ? [c.note, ''] : []),
     ...(c.sponsors?.list.length ? [`${c.sponsors.heading}: ${c.sponsors.list.map(sp => sp.name).join(', ')}`, ''] : []),
     '--',
@@ -527,6 +536,89 @@ export function inquiryReply(p: { brand: EmailBrand; senderName: string; reply: 
     message: p.reply,
     details: [['You asked about', p.inquiryType], ['Your message', original]],
     reason: `You're receiving this because you sent a message to ${p.brand.name} through its website.`,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Friendly invitations (lib/friendlies.ts): emails to the person who invited one of our teams
+// ---------------------------------------------------------------------------------------------
+
+const friendlyReason = (club: string) => `You're receiving this because you invited ${club} to a friendly through its website.`;
+
+/** The club suggests other dates; the button opens a private page where they pick one */
+export function friendlySuggest(p: { brand: EmailBrand; senderName: string; teamName: string; message: string; dates: string[]; link: string; canReply: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `${p.brand.name}: other dates for your friendly`,
+    preheader: `Would ${p.dates.join(' or ')} suit?`,
+    heading: p.dates.length > 1 ? 'Would one of these dates suit?' : 'Would this date suit?',
+    paragraphs: [`Hi ${firstName(p.senderName)}, thanks for inviting ${p.teamName} to a friendly. The dates you offered don't quite work, so here's what does.`],
+    message: p.message,
+    details: p.dates.map((d, i) => [p.dates.length > 1 ? `Option ${i + 1}` : 'Date', d]),
+    cta: { label: p.dates.length > 1 ? 'Pick a date' : 'Accept this date', url: p.link },
+    note: p.canReply
+      ? 'This link is just for you. If none of these work, reply to this email.'
+      : 'This link is just for you.',
+    reason: friendlyReason(p.brand.name),
+  });
+}
+
+export interface FriendlyFacts {
+  /** "Leppington Rovers Reserves v First Team", home side first */
+  title: string;
+  /** "Sat 21 Nov, kick-off 3:00 pm" */
+  when: string;
+  where: string;
+  /** "11-a-side, 2 × 45 min" */
+  game: string;
+  contact?: string | null;
+}
+
+const factRows = (f: FriendlyFacts): [string, string][] => [
+  ['When', f.when], ['Where', f.where], ['Game', f.game],
+  ...(f.contact ? [['Our contact', f.contact] as [string, string]] : []),
+];
+
+/** The game is on: the match page, add to calendar, directions and the ground guide in one email */
+export function friendlyConfirm(p: { brand: EmailBrand; senderName: string; facts: FriendlyFacts; matchUrl: string; links: { label: string; url: string }[]; message?: string | null; canReply: boolean }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand,
+    subject: `It's on: ${p.facts.title}`,
+    preheader: `${p.facts.when}. ${p.facts.where}.`,
+    heading: `It's on: ${p.facts.title}`,
+    paragraphs: [
+      `Hi ${firstName(p.senderName)}, thanks for the invite. We'd love to play. Here's everything in one place.`,
+      ...(p.canReply ? ['Any questions? Just reply to this email.'] : []),
+    ],
+    message: p.message,
+    details: factRows(p.facts),
+    cta: { label: 'See the match page', url: p.matchUrl },
+    links: p.links,
+    note: "If the date changes or the game is called off, we'll email you here.",
+    reason: friendlyReason(p.brand.name),
+  });
+}
+
+export type FriendlyChange = 'changed' | 'postponed' | 'cancelled';
+
+/** The date, time or ground changed, or the game was postponed or called off */
+export function friendlyUpdate(p: { brand: EmailBrand; senderName: string; change: FriendlyChange; facts: FriendlyFacts; was?: string | null; matchUrl: string; links: { label: string; url: string }[]; canReply: boolean }): RenderedEmail {
+  const hi = `Hi ${firstName(p.senderName)},`;
+  const head = p.change === 'cancelled' ? `Called off: ${p.facts.title}` : p.change === 'postponed' ? `Postponed: ${p.facts.title}` : `Change to our friendly: ${p.facts.title}`;
+  const intro = p.change === 'cancelled'
+    ? `${hi} sorry, we've had to call off our friendly.`
+    : p.change === 'postponed'
+      ? `${hi} we've had to postpone our friendly. We'll be in touch about a new date.`
+      : `${hi} the details of our friendly have changed. Here's what it is now.`;
+  return renderEmail({
+    brand: p.brand,
+    subject: head,
+    preheader: p.change === 'changed' ? `Now ${p.facts.when}. ${p.facts.where}.` : intro.replace(hi, '').trim(),
+    heading: head,
+    paragraphs: [intro, ...(p.canReply ? ['Any questions? Just reply to this email.'] : [])],
+    details: [...factRows(p.facts), ...(p.was ? [['Was', p.was] as [string, string]] : [])],
+    ...(p.change === 'cancelled' ? {} : { cta: { label: 'See the match page', url: p.matchUrl }, links: p.links }),
+    reason: friendlyReason(p.brand.name),
   });
 }
 
