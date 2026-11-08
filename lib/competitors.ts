@@ -190,7 +190,7 @@ export const COMPETITORS: Competitor[] = [
     alternativeSlug: 'spond-alternative',
     name: 'Spond',
     tagline: 'A free Spond alternative with a public club website and live scores',
-    summary: 'Spond is free for team admin too. The difference: its club website is a paid subscription after a free trial, and fans follow along in the browser here without an app.',
+    summary: 'Spond is free for team admin too, but its club website is a paid subscription after a free trial. Here the website is included, and fans follow along in the browser without an app.',
     aiOverview: `Spond’s app is free for teams and members, with brand partner content in the app. Its club website costs A$22 a month after a free trial (12 months in Australia), and Spond card payments cost AUD 2.5% + $0.30, charged to the club by default. itsfootball.club is free for clubs, website included; card payers pay ${FEE_PHRASE}. Supporters follow live scores in the browser.`,
     keyTakeaways: [
       'Spond’s club website is A$22 a month after the free trial. On itsfootball.club the website is included.',

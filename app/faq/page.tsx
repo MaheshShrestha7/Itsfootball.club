@@ -34,11 +34,11 @@ export default function FaqPage() {
         <header style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE FOR EVERY CLUB · EVERY FEATURE</div>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', fontWeight: 900, lineHeight: 1.1 }}>
-            Questions? Here&apos;s why clubs sign up.
+            Questions about itsfootball.club
           </h1>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0.9rem auto 0', fontSize: '1.05rem', lineHeight: 1.6 }}>
-            Club site, matchday tools, member passes, tournaments, finance, sponsors and a club shop. Everything your club needs,
-            free to sign up and free to use.
+            Answers for club admins, coaches, players, supporters and sponsors. Every club gets the club site, matchday tools,
+            member passes, tournaments, finance, sponsors and a club shop, and it&apos;s free to sign up and use.
           </p>
           <ul style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.5rem 1.25rem', listStyle: 'none', padding: 0, margin: '1.25rem 0 0' }}>
             {FREE_POINTS.map(p => (
@@ -101,9 +101,9 @@ export default function FaqPage() {
 
         {/* Closing CTA */}
         <section className="glass-panel" style={{ padding: '2.25rem 1.5rem', textAlign: 'center', borderTop: '3px solid var(--c-green)' }}>
-          <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 900 }}>Ready when you are. It&apos;s free.</h2>
+          <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 900 }}>Start your club&apos;s site for free</h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0.6rem auto 0', lineHeight: 1.6 }}>
-            Sign up in minutes, no card needed, and unlock every feature from day one.
+            It takes a few minutes and you don&apos;t need a card. Every feature is there from the first day.
             Still have a question? Ask your club through its page, or email us at{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'var(--club-ink)', fontWeight: 600 }}>{CONTACT_EMAIL}</a>.
           </p>
