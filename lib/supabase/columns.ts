@@ -18,11 +18,11 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   draft_lineups: ['id', 'club_id', 'match_id', 'format', 'formation', 'lineup_coords', 'bench_member_ids', 'tactical_notes', 'is_published', 'published_at', 'created_at', 'updated_at'],
   club_seasons: ['id', 'club_id', 'name', 'start_date', 'end_date', 'is_current', 'status', 'notes', 'created_at', 'updated_at'],
   member_messages: ['id', 'club_id', 'member_id', 'sender_type', 'sender_name', 'sender_email', 'subject', 'category', 'content', 'is_read', 'created_at'],
-  club_teams: ['id', 'club_id', 'name', 'short_name', 'slug', 'team_type', 'age_group', 'gender', 'is_junior', 'hide_public_scores', 'match_format', 'half_minutes', 'color', 'logo_url', 'description', 'sort_order', 'is_default', 'is_active', 'created_at', 'updated_at'],
+  club_teams: ['id', 'club_id', 'name', 'short_name', 'slug', 'team_type', 'age_group', 'gender', 'is_junior', 'hide_public_scores', 'match_format', 'half_minutes', 'open_to_friendlies', 'color', 'logo_url', 'description', 'sort_order', 'is_default', 'is_active', 'created_at', 'updated_at'],
   club_team_members: ['id', 'club_id', 'team_id', 'member_id', 'team_role', 'jersey_number', 'is_active', 'created_at'],
   internal_teams: ['id', 'club_id', 'name', 'short_name', 'color', 'logo_url', 'cover_url', 'captain_id', 'coach_name', 'player_ids', 'created_at', 'updated_at'],
   tournaments: ['id', 'club_id', 'name', 'slug', 'season', 'format', 'status', 'points_win', 'points_draw', 'points_loss', 'group_count', 'teams_advancing_per_group', 'has_third_place_match', 'start_date', 'end_date', 'venue', 'description', 'banner_url', 'created_at', 'updated_at'],
   tournament_participants: ['id', 'tournament_id', 'team_type', 'internal_team_id', 'name', 'short_name', 'logo_url', 'color', 'seed', 'group'],
   gate_scans: ['id', 'club_id', 'scan_type', 'token', 'member_id', 'member_name', 'event_id', 'event_title', 'match_id', 'match_title', 'valid', 'scanned_at'],
-  contact_inquiries: ['id', 'club_id', 'sender_name', 'sender_email', 'sender_phone', 'inquiry_type', 'message', 'status', 'created_at'],
+  contact_inquiries: ['id', 'club_id', 'sender_name', 'sender_email', 'sender_phone', 'inquiry_type', 'message', 'status', 'details', 'team_id', 'match_id', 'created_at'],
 };

@@ -54,6 +54,9 @@ import { matchPath } from '@/lib/slugs';
 import { clubResult, hasKickoffTime, kickoff } from '@/lib/fixtures';
 import LocalTime from '@/components/LocalTime';
 import ResultChip from '@/components/ResultChip';
+import { DayCheckLine } from '@/components/admin/FriendlyInvitation';
+import { calendarFor, checkDay, dateLabel, fixtureFromInvitation, friendlyOf, opponentName, type FriendlyDetails } from '@/lib/friendlies';
+import { Handshake } from 'lucide-react';
 
 // Still to be played: listed first, soonest at the top
 const AHEAD: MatchStatus[] = ['upcoming', 'live', 'halftime', 'postponed'];
@@ -94,6 +97,9 @@ export default function AdminMatchesPage({
     members,
     clubTeamMembers,
     activityLogs,
+    events,
+    inquiries,
+    updateInquiry,
   } = useClub();
 
   const { can } = useAuth();
@@ -151,6 +157,8 @@ export default function AdminMatchesPage({
   const [qrModalMatch, setQrModalMatch] = useState<Match | null>(null);
   const [printPosterMatch, setPrintPosterMatch] = useState<Match | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // The friendly invitation the form was filled in from (Inbox > Accept); linked to the fixture on save
+  const [fromInvitation, setFromInvitation] = useState<{ id: string; details: FriendlyDetails } | null>(null);
 
   // Form State
   const defaultDate = todayIso(new Date(Date.now() + 3 * 86400000));
@@ -220,6 +228,7 @@ export default function AdminMatchesPage({
     // Teams may still be loading when the form opens from a link; the calendar only links real teams
     const prefillTeam = prefill?.team && (!teams.length || teams.some(t => t.id === prefill.team)) ? prefill.team : undefined;
     setEditingMatchId(null);
+    setFromInvitation(null);
     setForm({
       title: '',
       match_type: 'friendly',
@@ -259,9 +268,38 @@ export default function AdminMatchesPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAddMatch]);
 
+  // Inbox > Accept on a friendly invitation (?friendly=<enquiry>&date=YYYY-MM-DD&time=HH:MM): the form
+  // opens filled in from it, once the enquiry has loaded. Nothing is saved until the admin saves.
+  const invitationTaken = useRef(false);
+  useEffect(() => {
+    if (!canAddMatch || invitationTaken.current) return;
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get('friendly');
+    if (!id) return;
+    const item = inquiries.find(i => i.id === id && i.club_id === club.id);
+    const details = item ? friendlyOf(item) : null;
+    if (!item || !details) return;
+    invitationTaken.current = true;
+    ['friendly', 'date', 'time'].forEach(k => q.delete(k));
+    const rest = q.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+    if (item.match_id && clubMatches.some(m => m.id === item.match_id)) {
+      showToast('A fixture was already made from this invitation.');
+      return;
+    }
+    const date = { date: q.get('date') || details.dates[0].date, time: q.get('time') || '' };
+    const team = teams.find(t => t.id === item.team_id);
+    const fill = fixtureFromInvitation(details, details.dates.find(d => d.date === date.date && d.time === date.time) || date, team, club.stadium_name || 'Home Ground');
+    handleOpenAddModal({ date: fill.match_date, time: fill.match_time, ...(team ? { team: team.id } : {}) });
+    setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id }));
+    setFromInvitation({ id: item.id, details });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAddMatch, inquiries, club.id]);
+
   // Open modal for editing match
   const handleOpenEditModal = (m: Match) => {
     setEditingMatchId(m.id);
+    setFromInvitation(null);
     let parsedDate = '';
     let parsedTime = m.match_time || '15:00';
     try {
@@ -350,6 +388,9 @@ export default function AdminMatchesPage({
   /** The length a game falls back to with no team length: its format's usual one */
   const usualHalfOf = (teamId: string | null, editingFormat?: string | null) =>
     DEFAULT_HALF_MINUTES[editingFormat || newMatchFormat(teamId) || '11v11'] ?? 45;
+
+  // The club's games and events, to say whether the team already has something on the picked day
+  const calendar = useMemo(() => calendarFor({ clubId: club.id, matches: clubMatches, events, clubTeams }), [club.id, clubMatches, events, clubTeams]);
 
   // Submit Match Form (Create or Update)
   const handleSubmitMatch = (e: React.FormEvent) => {
@@ -479,6 +520,10 @@ export default function AdminMatchesPage({
         // The team's usual half length (or this game's own), so the clock and minutes played follow it
         ...(halfReady && halfMinutes !== null ? { half_minutes: halfMinutes } : {}),
       });
+      if (fromInvitation) {
+        updateInquiry(fromInvitation.id, { match_id: created.id });
+        setFromInvitation(null);
+      }
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
     }
 
@@ -1099,6 +1144,15 @@ export default function AdminMatchesPage({
             )}
 
             <form onSubmit={handleSubmitMatch}>
+              {fromInvitation && !editingMatchId && (
+                <div className="fx-from" role="note">
+                  <Handshake size={17} aria-hidden="true" />
+                  <span>
+                    Filled in from <b>{opponentName(fromInvitation.details)}</b>&apos;s invitation
+                    {' '}({fromInvitation.details.dates.map(dateLabel).join(', ')}). Check the details, then save.
+                  </span>
+                </div>
+              )}
               {/* Field: Match Title */}
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label" htmlFor="form-title">
@@ -1376,6 +1430,19 @@ export default function AdminMatchesPage({
                   />
                 </div>
               </div>
+
+              {form.match_date && form.match_type !== 'tournament' && (() => {
+                const teamId = formTeamId(form);
+                const team = teams.find(t => t.id === teamId);
+                const result = checkDay(calendar, teamId, form.match_date, team?.name || club.name, editingMatchId || undefined);
+                // Saying "free" on every edit is noise; a new fixture gets the reassurance
+                if (result.kind === 'free' && editingMatchId) return null;
+                return (
+                  <div className="fx-check" aria-live="polite">
+                    <DayCheckLine check={result.kind === 'free' ? { kind: 'free', text: `${team?.name || club.name} has nothing else on that day` } : result} />
+                  </div>
+                );
+              })()}
 
               {halfReady && (() => {
                 const teamId = formTeamId(form);

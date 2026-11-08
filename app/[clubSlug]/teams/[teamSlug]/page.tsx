@@ -2,7 +2,7 @@
 
 import React, { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Lock, ShieldCheck } from 'lucide-react';
+import { ChevronRight, Handshake, Lock, ShieldCheck } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { decodeSlugParam } from '@/lib/slugs';
 import { STAFF_ROLES, TEAM_ROLE_LABELS, clubTeamsOf, juniorMemberIds, publicMember, publicTeamType, teamMemberIds, teamOfMatch } from '@/lib/teams';
@@ -18,6 +18,7 @@ import { matchesPlayer } from '@/components/PlayerSearch';
 import PlayerCardDialog from '@/components/PlayerCardDialog';
 import { isPastFixture } from '@/lib/club-lists';
 import { kickoff, latestResult, teamForm, teamRecord } from '@/lib/fixtures';
+import ContactModal from '@/components/ContactModal';
 
 // Short enough that the games column fits beside the squad as it sticks; the Fixtures page has the rest
 const UPCOMING_SHOWN = 2;
@@ -56,6 +57,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
   const [line, setLine] = useState<'ALL' | SquadLineKey>('ALL');
   const [search, setSearch] = useState('');
   const [cardPlayer, setCardPlayer] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   // A junior playing up for this team is shown as "Sam T.", without a photo unless a guardian allowed it
   const { memberById, juniorIds } = useMemo(() => {
@@ -156,6 +158,16 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
             ) : null}
           </div>
         </section>
+
+        {/* Friendly invitations (migration 20261157): the team's switch decides, so nothing shows before it runs */}
+        {team.is_active && team.open_to_friendlies === true && (
+          <div className="team-invite">
+            <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
+              <Handshake size={17} aria-hidden="true" /> Invite us to a friendly
+            </button>
+            <span className="text-note">For coaches and managers from other clubs</span>
+          </div>
+        )}
 
         <div className="team-cols">
           {/* First in the page so a phone reaches the games before a long squad; beside it on desktop */}
@@ -263,6 +275,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
         </div>
       </div>
       {cardPlayer && <PlayerCardDialog club={club} playerId={cardPlayer} colour={colour} onClose={() => setCardPlayer(null)} />}
+      <ContactModal club={club} isOpen={inviteOpen} onClose={() => setInviteOpen(false)} defaultType="Friendly Match" defaultTeamId={team.id} />
     </ClubSubPage>
   );
 }

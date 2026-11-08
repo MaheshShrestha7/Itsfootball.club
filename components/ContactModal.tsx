@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
-import { Mail, CheckCircle2, Send, X } from 'lucide-react';
+import { Mail, CheckCircle2, Send, X, Handshake } from 'lucide-react';
 import { useDialog } from '@/lib/use-escape-to-close';
+import FriendlyInviteFields, { emptyFriendlyForm, friendlyPayload, type FriendlyForm } from '@/components/FriendlyInviteFields';
+import { FRIENDLY_TYPE, invitableTeams } from '@/lib/friendlies';
 
 interface ContactModalProps {
   club: Club;
@@ -13,10 +15,16 @@ interface ContactModalProps {
   defaultType?: InquiryType;
   /** What the message is about, e.g. the event page it was sent from. Shown in the club's Inbox. */
   about?: string;
+  /** A friendly invitation for this team (the team page's "Invite us to a friendly") */
+  defaultTeamId?: string;
 }
 
-export default function ContactModal({ club, isOpen, onClose, defaultType = 'General Inquiry', about }: ContactModalProps) {
-  const { submitInquiry } = useClub();
+export default function ContactModal({ club, isOpen, onClose, defaultType = 'General Inquiry', about, defaultTeamId }: ContactModalProps) {
+  const { submitInquiry, clubTeams } = useClub();
+  // Teams taking friendly invitations (none until migration 20261157, so the choice stays hidden)
+  const openTeams = useMemo(() => invitableTeams(clubTeams, club.id), [clubTeams, club.id]);
+  const startTeam = openTeams.find(t => t.id === defaultTeamId) || (openTeams.length === 1 ? openTeams[0] : undefined);
+  const [friendly, setFriendly] = useState<FriendlyForm>(() => emptyFriendlyForm(startTeam));
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
@@ -36,6 +44,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
     setSenderPhone('');
     setMessage('');
     setWebsite('');
+    setFriendly(emptyFriendlyForm(startTeam));
     onClose();
   };
 
@@ -43,9 +52,18 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
 
   if (!isOpen) return null;
 
+  const isFriendly = inquiryType === FRIENDLY_TYPE && openTeams.length > 0;
+  // The team the form opened on (or the only open one) once it starts empty
+  const friendlyForm = !friendly.team_id && startTeam ? emptyFriendlyForm(startTeam) : friendly;
+  const friendlyTeam = openTeams.find(t => t.id === friendlyForm.team_id);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!senderName || !senderEmail || !message) return;
+    if (!senderName || !senderEmail || (!message && !isFriendly)) return;
+    if (isFriendly && !friendlyTeam) {
+      setSendError('Pick the team you’d like to play.');
+      return;
+    }
 
     setSending(true);
     setSendError(null);
@@ -54,9 +72,11 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       sender_name: senderName,
       sender_email: senderEmail,
       sender_phone: senderPhone,
-      inquiry_type: inquiryType,
+      inquiry_type: isFriendly ? FRIENDLY_TYPE : inquiryType === FRIENDLY_TYPE ? 'General Inquiry' : inquiryType,
       message,
-    }, website, about);
+    }, website, about, isFriendly && friendlyTeam
+      ? { team_id: friendlyTeam.id, details: friendlyPayload(friendlyForm, friendlyTeam.name) }
+      : undefined);
     setSending(false);
 
     if (!result.success) {
@@ -100,14 +120,16 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <Mail size={18} color="var(--club-primary-contrast, #FFFFFF)" />
+              {isFriendly
+                ? <Handshake size={18} color="var(--club-primary-contrast, #FFFFFF)" />
+                : <Mail size={18} color="var(--club-primary-contrast, #FFFFFF)" />}
             </div>
             <div>
               <h3 id="contact-modal-title" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Contact {club.name}
+                {isFriendly ? 'Invite us to a friendly' : `Contact ${club.name}`}
               </h3>
               <p className="text-meta">
-                {about ? `About: ${about}` : 'Questions, trials, sponsorship and anything else'}
+                {isFriendly ? club.name : about ? `About: ${about}` : 'Questions, trials, sponsorship and anything else'}
               </p>
             </div>
           </div>
@@ -148,12 +170,30 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
             }}>
               <CheckCircle2 size={36} color="var(--c-green)" />
             </div>
-            <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
-              Message Sent
-            </h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
-              Thanks for getting in touch with <strong>{club.name}</strong>. The committee will read your message and reply to <strong>{senderEmail}</strong>.
-            </p>
+            {isFriendly ? (
+              <>
+                <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                  Invitation sent
+                </h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
+                  Thanks{senderName.trim() ? `, ${senderName.trim().split(/\s+/)[0]}` : ''}. Your invitation for <strong>{friendlyTeam?.name}</strong> is with {club.name}.
+                </p>
+                <ol className="fi-next">
+                  <li><span>1</span>They check your dates against their games and events.</li>
+                  <li><span>2</span>They’ll pick a date, suggest another, or let you know they can’t this time, by email to <strong>{senderEmail}</strong>.</li>
+                  <li><span>3</span>Once it’s on, the game appears on their fixtures with its own match page.</li>
+                </ol>
+              </>
+            ) : (
+              <>
+              <h4 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                Message Sent
+              </h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+                Thanks for getting in touch with <strong>{club.name}</strong>. The committee will read your message and reply to <strong>{senderEmail}</strong>.
+              </p>
+              </>
+            )}
             <button onClick={handleResetAndClose} className="btn btn-primary">
               Close
             </button>
@@ -173,6 +213,26 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                 onChange={e => setWebsite(e.target.value)}
               />
             </div>
+
+            {isFriendly && (
+              <>
+                {!defaultTeamId && (
+                  <div className="form-group">
+                    <label htmlFor="contactmodal-inquiry-purpose" className="form-label">What&apos;s it about?</label>
+                    <select id="contactmodal-inquiry-purpose" className="form-select" value={inquiryType}
+                      onChange={e => setInquiryType(e.target.value as InquiryType)}>
+                      <option value="General Inquiry">General question</option>
+                      <option value="Player Trial">Playing for the club / trial</option>
+                      <option value="Sponsorship">Sponsorship</option>
+                      <option value="Youth Academy">Juniors / kids&apos; football</option>
+                      <option value="Media Request">Media / press</option>
+                      <option value="Friendly Match">Friendly match invitation</option>
+                    </select>
+                  </div>
+                )}
+                <FriendlyInviteFields teams={openTeams} value={friendlyForm} onChange={setFriendly} crest={club.logo_url || undefined} />
+              </>
+            )}
 
             <div className="form-row-2" style={{ gap: '1rem' }}>
               <div className="form-group">
@@ -212,34 +272,38 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="contactmodal-inquiry-purpose" className="form-label">What&apos;s it about?</label>
-                <select id="contactmodal-inquiry-purpose"
-                  className="form-select"
-                  value={inquiryType}
-                  onChange={e => setInquiryType(e.target.value as InquiryType)}
-                >
-                  <option value="General Inquiry">General question</option>
-                  <option value="Player Trial">Playing for the club / trial</option>
-                  <option value="Sponsorship">Sponsorship</option>
-                  <option value="Youth Academy">Juniors / kids&apos; football</option>
-                  <option value="Media Request">Media / press</option>
-                </select>
-                {inquiryType === 'Sponsorship' && (
-                  <a href={`/${club.slug}/sponsor`} style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--club-ink)', fontWeight: 700 }}>
-                    See sponsorship packages and sign up online →
-                  </a>
-                )}
-              </div>
+              {!isFriendly && (
+                <div className="form-group">
+                  <label htmlFor="contactmodal-inquiry-purpose" className="form-label">What&apos;s it about?</label>
+                  <select id="contactmodal-inquiry-purpose"
+                    className="form-select"
+                    value={inquiryType}
+                    onChange={e => setInquiryType(e.target.value as InquiryType)}
+                  >
+                    <option value="General Inquiry">General question</option>
+                    <option value="Player Trial">Playing for the club / trial</option>
+                    <option value="Sponsorship">Sponsorship</option>
+                    <option value="Youth Academy">Juniors / kids&apos; football</option>
+                    <option value="Media Request">Media / press</option>
+                    {(openTeams.length > 0 || inquiryType === FRIENDLY_TYPE) && <option value="Friendly Match">Friendly match invitation</option>}
+                  </select>
+                  {inquiryType === 'Sponsorship' && (
+                    <a href={`/${club.slug}/sponsor`} style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--club-ink)', fontWeight: 700 }}>
+                      See sponsorship packages and sign up online →
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="form-group">
-              <label htmlFor="contactmodal-detailed-message" className="form-label">Your Message *</label>
+              <label htmlFor="contactmodal-detailed-message" className="form-label">{isFriendly ? 'Anything else? (optional)' : 'Your Message *'}</label>
               <textarea id="contactmodal-detailed-message"
-                required
-                rows={4}
+                required={!isFriendly}
+                rows={isFriendly ? 2 : 4}
+                maxLength={isFriendly ? 1500 : undefined}
                 className="form-textarea"
-                placeholder="How can the club help?"
+                placeholder={isFriendly ? 'e.g. what you’re building up for, kit colours' : 'How can the club help?'}
                 value={message}
                 onChange={e => setMessage(e.target.value)}
               />
@@ -260,7 +324,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                   Cancel
                 </button>
                 <button type="submit" disabled={sending} className="btn btn-primary btn-sm row">
-                  <Send size={14} /> {sending ? 'Sending...' : 'Send Message'}
+                  <Send size={14} /> {sending ? 'Sending...' : isFriendly ? 'Send invitation' : 'Send Message'}
                 </button>
               </div>
             </div>
