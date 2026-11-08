@@ -25,7 +25,7 @@ export default function NineASideSubstitutionPlannerPage() {
       parent={PLAYING_TIME_TOOL}
       badge="FREE TOOL · 9-A-SIDE"
       h1="9-a-side substitution planner"
-      intro="To calculate equal playing time in 9-a-side football, multiply 9 players on the pitch by total match minutes and divide by squad size: 9 players × 60 min ÷ 13 squad = 41.5 min each. Over 50 minutes with 12 players: 9 × 50 ÷ 12 = 37.5 min each. Generate your rotation schedule below."
+      intro="For equal playing time in 9-a-side football, multiply the 9 players on the pitch by the match minutes and divide by your squad size. With 13 players over 60 minutes, that's 9 × 60 ÷ 13 = 41.5 min each. Over 50 minutes with 12 players, it's 9 × 50 ÷ 12 = 37.5 min each. The planner below makes the rotation for you."
       description={DESCRIPTION}
       appName="9-a-Side Substitution Planner"
       alternateNames={['9v9 sub rotation', '9v9 playing time calculator', '9 a side substitution calculator']}

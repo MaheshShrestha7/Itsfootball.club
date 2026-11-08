@@ -47,7 +47,7 @@ export default function SeasonFeeCalculatorPage() {
       path={PATH}
       badge="FREE TOOL · NO SIGN-UP"
       h1="Season budget & subs fee calculator"
-      intro="Calculate soccer club registration fees using: (costs + contingency buffer − sponsorship) ÷ paying players. For an 18-player squad with $9,500 costs, a 5% buffer ($475) and $500 sponsorship: ($9,500 + $475 − $500) ÷ 18 = $526.40 per player break-even, or $535.53 by card at Stripe's 1.7% + $0.30 Australian rate. Plan your budget below."
+      intro="To work out a soccer club registration fee, take your costs, add a contingency buffer, subtract sponsorship and divide by the number of paying players. For an 18-player squad with $9,500 of costs, a 5% buffer ($475) and $500 of sponsorship, that's ($9,500 + $475 − $500) ÷ 18 = $526.40 per player to break even, or $535.53 if they pay by card at Stripe's Australian rate of 1.7% + $0.30. Plan your own budget below."
       description={DESCRIPTION}
       appName="Season Budget & Subs Fee Calculator"
       alternateNames={['Club registration fee calculator', 'Football club subs calculator', 'Membership fee calculator', 'Stripe fee calculator Australia', 'Sports club break-even calculator', 'Soccer club budget calculator']}

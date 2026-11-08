@@ -15,34 +15,34 @@ export const metadata = pageMetadata({
   image: toolOgImage(guide.tool.path),
 });
 
-const ANSWER = 'An Australian community football club committee is led by an Executive (President, Secretary, and Treasurer) supported by operational officers (Registrar, Member Protection Officer, Coaching Coordinator, and Equipment Manager). Together, they manage association affiliation, legal governance, field hire, finances, and volunteer duty rosters.';
+const ANSWER = 'An Australian community football club committee has an executive (President, Secretary and Treasurer) and a group of officers who do the day-to-day jobs, usually a Registrar, Member Protection Officer, Coaching Coordinator and Equipment Manager. Between them they look after association affiliation, the club’s legal obligations, ground hire, the money and the volunteer rosters.';
 
 export default function CommitteeRolesPage() {
   return (
     <GuidePage
       path={PATH}
-      badge="GOVERNANCE · COMMITTEE MANAGEMENT"
+      badge="RUNNING A CLUB · COMMITTEE"
       h1="Football club committee roles and responsibilities: Australian club guide"
       answer={ANSWER}
       answerMore={
         <p>
-          Running a community sports club requires dividing operational workloads among volunteers to prevent volunteer burnout. Here is the official breakdown of committee duties under Australian sports governance guidelines.
+          Splitting the work across several volunteers stops one or two people burning out. Here&apos;s what each role usually does at an Australian club.
         </p>
       }
       sections={[
         {
           id: 'executive-roles',
-          heading: 'The Executive committee roles',
+          heading: 'The executive roles',
           body: (
             <div className="guide-body">
               <GuideTable
-                caption="Executive committee responsibilities and key deliverables"
-                head={['Role', 'Primary Purpose', 'Core Responsibilities']}
+                caption="What the executive does"
+                head={['Role', 'What it\'s for', 'Main jobs']}
                 rows={[
-                  ['Club President / Chairperson', 'Strategic leadership & external representation', 'Chairs committee meetings and AGMs; liaises with council and association; ensures club adherence to constitution and values.'],
-                  ['Club Secretary', 'Administration & official communication', 'Maintains club records; manages official association correspondence; lodges annual returns with Fair Trading; schedules meetings and records minutes.'],
-                  ['Club Treasurer', 'Financial management & budget oversight', 'Manages club bank accounts and Stripe ledger; prepares annual budgets; invoices sponsors; pays referee and council fees; presents financial reports.'],
-                  ['Vice President', 'Executive support & operations', 'Supports the President; coordinates sub-committees (canteen, social, grounds); steps in when the President is absent.'],
+                  ['Club President / Chairperson', 'Leads the club and speaks for it', 'Chairs committee meetings and the AGM. Deals with the council and the association. Makes sure the club follows its constitution.'],
+                  ['Club Secretary', 'Paperwork and official letters', 'Keeps the club records and handles letters and emails from the association. Lodges the annual return with Fair Trading, books meetings and takes the minutes.'],
+                  ['Club Treasurer', 'Looks after the money', 'Runs the bank account and Stripe ledger, writes the yearly budget, invoices sponsors, pays referee and council fees, and reports on the finances.'],
+                  ['Vice President', 'Backs up the President', 'Helps the President, looks after sub-committees such as canteen, social and grounds, and fills in when the President is away.'],
                 ]}
               />
             </div>
@@ -50,18 +50,18 @@ export default function CommitteeRolesPage() {
         },
         {
           id: 'operational-roles',
-          heading: 'Essential operational club positions',
+          heading: 'The other committee jobs',
           body: (
             <div className="guide-body">
               <GuideTable
-                caption="Operational roles vital for smooth soccer club matchdays"
-                head={['Position', 'Key Duties']}
+                caption="The roles that keep matchday running"
+                head={['Position', 'Main jobs']}
                 rows={[
-                  ['Club Registrar', 'Manages player registrations in PlayFootball; confirms transfers; ensures player eligibility and photo verification.'],
-                  ['Member Protection Officer (MPIO)', 'Ensures child safety compliance; verifies Working with Children Checks (WWCC); handles member grievances impartially.'],
-                  ['Technical Director / Coaching Coordinator', 'Mentors volunteer coaches; aligns training drills with the Football Australia National Curriculum; organizes coaching courses.'],
-                  ['Equipment & Kit Officer', 'Manages match balls, cones, bibs, portable goals, and first aid kits; coordinates seasonal jersey sizing and distribution.'],
-                  ['Canteen & Matchday Manager', 'Stocks and operates the matchday canteen; schedules volunteer team duty rosters; manages ground setup and corner flags.'],
+                  ['Club Registrar', 'Handles player registrations in PlayFootball, confirms transfers, and checks each player is eligible and has an approved photo.'],
+                  ['Member Protection Officer (MPIO)', 'Looks after child safety, checks everyone\'s Working with Children Check (WWCC), and handles complaints from members fairly.'],
+                  ['Technical Director / Coaching Coordinator', 'Supports the volunteer coaches, keeps training in line with the Football Australia National Curriculum, and organises coaching courses.'],
+                  ['Equipment & Kit Officer', 'Looks after balls, cones, bibs, portable goals and first aid kits, and sorts out jersey sizes and handing out kit each season.'],
+                  ['Canteen & Matchday Manager', 'Stocks and runs the canteen, writes the team duty roster, and makes sure the ground is set up, corner flags included.'],
                 ]}
               />
             </div>
@@ -69,17 +69,17 @@ export default function CommitteeRolesPage() {
         },
         {
           id: 'compliance-rules',
-          heading: 'Legal duties of Australian club committee members',
+          heading: 'Your legal duties as a committee member',
           body: (
             <div className="guide-body">
               <p>
-                Under Australian incorporated association laws, committee members are legally classified as &ldquo;officers&rdquo; and owe fiduciary duties to their club:
+                Under the incorporated associations laws in each state, committee members count as &ldquo;officers&rdquo; and owe the club fiduciary duties. In practice that means:
               </p>
               <ul>
-                <li><strong>Duty of care and diligence:</strong> Committee members must act prudently, review financial statements, and attend meetings regularly.</li>
-                <li><strong>Good faith and proper purpose:</strong> Decisions must serve the best interests of the club and its players, never personal commercial interests.</li>
-                <li><strong>Preventing insolvent trading:</strong> The committee must ensure the club does not incur debts it cannot pay when they fall due.</li>
-                <li><strong>Child safety &amp; WWCC:</strong> All coaches, managers, and committee members in contact with minors must hold a valid state Working with Children Check.</li>
+                <li>Act with care and diligence: read the financial statements and turn up to meetings.</li>
+                <li>Act in good faith. Decisions should be in the interests of the club and its players, not your own business.</li>
+                <li>Don&apos;t let the club take on debts it can&apos;t pay when they&apos;re due (insolvent trading).</li>
+                <li>Coaches, managers and committee members who deal with children need a current Working with Children Check for their state.</li>
               </ul>
             </div>
           ),
@@ -87,21 +87,21 @@ export default function CommitteeRolesPage() {
       ]}
       cta={{
         tool: PLAYING_TIME_TOOL,
-        text: 'Save hours for your club committee and coaches with automated equal playing time schedules and live match sheets.',
+        text: 'Give your coaches an equal playing time schedule, so nobody has to work out the subs by hand.',
         more: [LINEUP_TOOL],
       }}
       questions={[
         {
           q: 'What is the minimum committee size for an incorporated club?',
-          a: 'Australian state laws generally require a minimum of 3 distinct individuals to hold the positions of President, Secretary, and Treasurer. A single individual cannot hold both the Secretary and Treasurer roles in most jurisdictions.',
+          a: 'State laws generally expect at least 3 different people in the President, Secretary and Treasurer roles. In most states one person can\'t be both Secretary and Treasurer.',
         },
         {
           q: 'Do committee members need a Working with Children Check (WWCC)?',
-          a: 'Yes. In all Australian states and territories, committee members of clubs involving junior participants are required by law to hold a verified Working with Children Check (or state equivalent like the Blue Card in Queensland).',
+          a: 'Yes, if the club has junior players. Every state and territory requires it by law. In Queensland the check is called a Blue Card.',
         },
         {
           q: 'Can club committee members be held personally liable for debts?',
-          a: 'Incorporation as an Association (Inc.) provides limited liability protection to committee members, shielding their personal assets, provided they act honestly and do not knowingly trade while insolvent.',
+          a: 'Usually not, if the club is an incorporated association (Inc.). Incorporation protects committee members\' personal assets, as long as they act honestly and don\'t knowingly let the club trade while insolvent.',
         },
       ]}
       sources={[SOURCES.ascGovernance, SOURCES.nswIncorporation]}

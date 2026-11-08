@@ -34,7 +34,7 @@ export default function KnockoutCupBracketMakerPage() {
       parent={TOURNAMENT_TOOL}
       badge="FREE TOOL · KNOCKOUT CUP"
       h1="Knockout cup bracket maker"
-      intro="A single-elimination knockout tournament requires exactly N − 1 matches to determine a winner, because every fixture eliminates one team. For example, an 8-team cup requires 7 matches (plus 1 for an optional 3rd place play-off), while 16 teams require 15 matches. Generate your seeded bracket with automatic byes below."
+      intro="A single-elimination knockout needs N − 1 matches to find a winner, because every game knocks out one team. An 8-team cup has 7 matches (8 if you add a 3rd place play-off), and a 16-team cup has 15. The maker below draws a seeded bracket and adds byes for you."
       description={DESCRIPTION}
       appName="Free Knockout Cup Bracket Maker"
       alternateNames={['Single elimination bracket generator', 'Soccer cup draw maker', 'Knockout tournament bracket']}

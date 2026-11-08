@@ -15,36 +15,36 @@ export const metadata = pageMetadata({
   image: toolOgImage(guide.tool.path),
 });
 
-const ANSWER = 'To start a community football (soccer) club in Australia, you need to form a founding committee, adopt a constitution, incorporate as a non-profit association with your state fair trading authority, apply for affiliation with your local football district association, secure training grounds from your local council, and launch an official club website for player registration.';
+const ANSWER = 'To start a community football (soccer) club in Australia, get a founding committee together and adopt a constitution, then incorporate as a not-for-profit association with your state’s fair trading office. After that, apply to join your local football association, book grounds with the council, and put up a club website so players can register.';
 
 export default function HowToStartClubPage() {
   return (
     <GuidePage
       path={PATH}
-      badge="FOUNDING A CLUB · STEP-BY-STEP"
+      badge="STARTING A CLUB · STEP BY STEP"
       h1="How to start a football club in Australia: from constitution to kick-off"
       answer={ANSWER}
       answerMore={
         <p>
-          Starting a grassroots club takes about 3 to 6 months of lead time before the winter season commences in March/April. Here is the operational roadmap every founder must follow.
+          Give yourself 3 to 6 months before the winter season starts in March or April. These are the steps in the order most new clubs do them.
         </p>
       }
       sections={[
         {
           id: 'roadmap',
-          heading: 'The 6-step roadmap to founding a football club',
+          heading: 'The six steps, with timings',
           body: (
             <div className="guide-body">
               <GuideTable
-                caption="Operational roadmap for launching a new Australian football club"
-                head={['Stage', 'Action Required', 'Authority / Partner', 'Timeline']}
+                caption="Steps to start a new Australian football club"
+                head={['Step', 'What to do', 'Who you deal with', 'When']}
                 rows={[
-                  ['1. Founding Committee', 'Elect minimum 3 officers: President, Secretary, Treasurer', 'Founding members', '6 months before season'],
-                  ['2. Incorporation', 'Adopt Model Constitution; register as Incorporated Association', 'State Fair Trading / Consumer Affairs', '5 months before season'],
-                  ['3. Association Affiliation', 'Apply for membership with local Football District Association', 'District Football Association', '4–5 months before season'],
-                  ['4. Ground Allocation', 'Submit winter sportsground booking application for pitches', 'Local City / Shire Council', '4 months before season'],
-                  ['5. Banking & Kit Design', 'Open club bank account, connect Stripe, order kit samples', 'Financial Institution & Kit Supplier', '3 months before season'],
-                  ['6. Digital Club Launch', 'Launch official club website, open player registration, publish squad', 'itsfootball.club (Free platform)', '2 months before season'],
+                  ['1. Founding committee', 'Elect at least 3 officers: President, Secretary and Treasurer', 'Founding members', '6 months before the season'],
+                  ['2. Incorporation', 'Adopt the model constitution and register as an incorporated association', 'State Fair Trading / Consumer Affairs', '5 months before the season'],
+                  ['3. Affiliation', 'Apply to join your local football association', 'District football association', '4 to 5 months before the season'],
+                  ['4. Grounds', 'Apply to the council for winter sportsground bookings', 'Local city or shire council', '4 months before the season'],
+                  ['5. Bank account and kit', 'Open a club bank account, connect Stripe and order kit samples', 'Your bank and kit supplier', '3 months before the season'],
+                  ['6. Website and registrations', 'Put up the club website, open player registration and publish the squad', 'itsfootball.club (free)', '2 months before the season'],
                 ]}
               />
             </div>
@@ -52,48 +52,48 @@ export default function HowToStartClubPage() {
         },
         {
           id: 'legal-governance',
-          heading: 'Legal requirements and model constitution',
+          heading: 'Incorporation and the model constitution',
           body: (
             <div className="guide-body">
               <p>
-                In Australia, sports clubs operate as <strong>Incorporated Associations</strong> (Inc.) under state legislation (e.g. <em>Associations Incorporation Act 2009</em> in NSW). Incorporation protects committee members with limited liability and allows the club to hold bank accounts, sign lease agreements, and enter insurance contracts.
+                Most Australian sports clubs are incorporated associations (Inc.) under state law, such as the <em>Associations Incorporation Act 2009</em> in NSW. Incorporating gives committee members limited liability, and it lets the club hold a bank account, sign a lease and take out insurance in its own name.
               </p>
               <p>
-                Most state departments provide a standard &ldquo;Model Constitution&rdquo; that sets out:
+                Most states publish a &ldquo;model constitution&rdquo; you can adopt as is. It covers:
               </p>
               <ul>
-                <li>The club&apos;s non-profit sporting objective.</li>
-                <li>Annual General Meeting (AGM) voting procedures.</li>
-                <li>Rules for electing committee office-bearers.</li>
-                <li>Non-distribution clauses (all funds must be reinvested into the club).</li>
+                <li>What the club is for, as a not-for-profit sporting club.</li>
+                <li>How voting works at the Annual General Meeting (AGM).</li>
+                <li>How committee office-bearers are elected.</li>
+                <li>That profits can&apos;t be paid out to members and have to go back into the club.</li>
               </ul>
             </div>
           ),
         },
         {
           id: 'ground-affiliation',
-          heading: 'District affiliation and council pitch allocation',
+          heading: 'Joining an association and getting a ground',
           body: (
             <div className="guide-body">
               <p>
-                Your club cannot simply register players independently; you must affiliate with a recognized member association (such as Southern Districts SFA, Eastern Suburbs FA, or Football Victoria hubs) to enter sanctioned weekend leagues and receive Football Australia insurance coverage.
+                A club can&apos;t register players on its own. You need to affiliate with a member association, such as Southern Districts SFA, Eastern Suburbs FA or a Football Victoria hub, to play in its weekend leagues and be covered by Football Australia&apos;s insurance.
               </p>
               <p>
-                Simultaneously, liaise with your local municipal council&apos;s Sportsground &amp; Recreation team. Councils allocate seasonal licenses for fields (April to August for winter soccer), and applications generally close between October and December of the preceding year.
+                At the same time, get in touch with your council&apos;s sportsground or recreation team. Councils give out seasonal licences for grounds (April to August for winter football), and applications usually close between October and December the year before.
               </p>
             </div>
           ),
         },
         {
           id: 'launch-website',
-          heading: 'Setting up your club website and registrations',
+          heading: 'Your club website and registrations',
           body: (
             <div className="guide-body">
               <p>
-                Once your association accepts your affiliation, you need a public home on the web to attract players, showcase your sponsors, and announce trial dates.
+                Once the association accepts you, you&apos;ll want a website where new players can find you, your sponsors get seen and you can post trial dates.
               </p>
               <p>
-                With <Link href="/create-club" style={linkStyle}>itsfootball.club/create-club</Link>, you can launch a free official club website in 5 minutes with custom colours, club logo, fixtures, and mobile match centre at zero software cost.
+                At <Link href="/create-club" style={linkStyle}>itsfootball.club/create-club</Link> you can set up a free club website in about 5 minutes, with your colours, logo, fixtures and a match centre that works on phones.
               </p>
             </div>
           ),
@@ -101,21 +101,21 @@ export default function HowToStartClubPage() {
       ]}
       cta={{
         tool: LINEUP_TOOL,
-        text: 'Claim your new football club website and visual squad lineup board today, completely free.',
+        text: 'Once you have a squad, make your first lineup graphic for the team chat. It’s free and you don’t need an account.',
         more: [SEASON_FEE_TOOL],
       }}
       questions={[
         {
           q: 'How much does it cost to start a football club in Australia?',
-          a: 'Initial startup costs typically range from $1,500 to $4,000, covering incorporation filing fees ($150–$250), association bond/affiliation ($500–$1,500), initial training equipment and balls ($500–$1,000), and preliminary council pitch deposits.',
+          a: 'Expect around $1,500 to $4,000 to get going. That covers incorporation fees ($150 to $250), the association bond or affiliation fee ($500 to $1,500), training gear and balls ($500 to $1,000), and any deposit the council wants for the ground.',
         },
         {
           q: 'How many people do you need on a club committee?',
-          a: 'Under Australian state association incorporation rules, an incorporated club requires at least 3 distinct officers: a President/Chairperson, a Secretary, and a Treasurer.',
+          a: 'At least 3. Under state incorporation rules, an incorporated club needs three different people as President (or Chairperson), Secretary and Treasurer.',
         },
         {
           q: 'How long before the season should we start planning?',
-          a: 'At least 5 to 6 months. Council sportsground applications and association affiliation deadlines for the winter soccer season typically close between October and December.',
+          a: 'At least 5 to 6 months ahead. For the winter season, council ground applications and association affiliation usually close between October and December.',
         },
       ]}
       sources={[SOURCES.nswIncorporation, SOURCES.ascGovernance]}
