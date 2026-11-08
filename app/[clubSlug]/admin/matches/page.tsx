@@ -169,6 +169,8 @@ export default function AdminMatchesPage({
   const [fromInvitation, setFromInvitation] = useState<{ id: string; details: FriendlyDetails; senderName: string; returnOf?: string } | null>(null);
   // Email the person who sent the invitation: the confirmation for a new fixture, the change for an edit
   const [emailVisitor, setEmailVisitor] = useState(true);
+  // Sent for a club on itsfootball.club: offer the fixture to its site too
+  const [offerToThem, setOfferToThem] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posterMatch, setPosterMatch] = useState<Match | null>(null);
   // What the edit form opened with, to tell whether the visitor needs an update email
@@ -274,6 +276,7 @@ export default function AdminMatchesPage({
       opponent_logo: '',
     });
     setEmailVisitor(true);
+    setOfferToThem(true);
     setIsFormModalOpen(true);
   };
 
@@ -311,7 +314,7 @@ export default function AdminMatchesPage({
     const team = teams.find(t => t.id === item.team_id);
     const fill = fixtureFromInvitation(details, date, team, club.stadium_name || 'Home Ground');
     handleOpenAddModal({ date: fill.match_date, time: fill.match_time, ...(team ? { team: team.id } : {}) });
-    setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id, opponent_logo: details.crest || '' }));
+    setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id, opponent_logo: details.crest || details.crest_url || '' }));
     setFromInvitation({ id: item.id, details, senderName: item.sender_name });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAddMatch, inquiries, club.id]);
@@ -388,6 +391,22 @@ export default function AdminMatchesPage({
         : `Saved, but email isn’t set up for your club yet, so ${name} wasn’t emailed. It’s in the Inbox to send yourself.`);
     } catch {
       showToast(`The email to ${name} didn’t go. Check your connection.`);
+    }
+  };
+
+  /** The game on both clubs' sites: offered to the club the invitation came from (after the fixture saves) */
+  const offerFixture = async (inquiryId: string, matchId: string, theirClub: string) => {
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/api/admin/friendlies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ action: 'offer', clubId: club.id, inquiryId, matchId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      showToast(res.ok ? `Offered to ${theirClub}. Their admins can add it to their fixtures.` : data.error || `It couldn’t be offered to ${theirClub}.`);
+    } catch {
+      showToast(`It couldn’t be offered to ${theirClub}. Check your connection.`);
     }
   };
 
@@ -656,6 +675,7 @@ export default function AdminMatchesPage({
         const item = inquiries.find(i => i.id === fromInvitation.id);
         if (!item?.match_id) updateInquiry(fromInvitation.id, { match_id: created.id });
         if (emailVisitor) emailFriendly('confirm', fromInvitation.id, created.id, fromInvitation.senderName);
+        if (offerToThem && item?.visitor_club_id) offerFixture(fromInvitation.id, created.id, fromInvitation.details.their_club);
         setFromInvitation(null);
       }
       showToast(`Scheduled new match: ${created.title || cleanOpponent}`);
@@ -1038,6 +1058,10 @@ export default function AdminMatchesPage({
                       <span className="admin-pill"><Star size={10} aria-hidden="true" /> On the home page</span>
                     )}
 
+                    {m.linked_match_id && (
+                      <span className="admin-pill" title="This friendly is on the other club's site too, kept the same on both"><Handshake size={10} aria-hidden="true" /> On both sites</span>
+                    )}
+
                     {m.door_qr_checkin_enabled && (
                       <span className="admin-pill"><QrCode size={10} aria-hidden="true" /> Door QR, {m.checkin_count || 0} in</span>
                     )}
@@ -1295,6 +1319,12 @@ export default function AdminMatchesPage({
             )}
 
             <form onSubmit={handleSubmitMatch}>
+              {editingMatchId && clubMatches.find(x => x.id === editingMatchId)?.linked_match_id && (
+                <div className="fx-from" role="note">
+                  <Handshake size={17} aria-hidden="true" />
+                  <span>This friendly is on <b>{form.opponent_name}</b>&apos;s site too. A new date, time, ground, status or score changes there as well. Line-ups and scorers stay each club&apos;s own.</span>
+                </div>
+              )}
               {fromInvitation && !editingMatchId && (
                 <div className="fx-from" role="note">
                   {fromInvitation.returnOf ? <Repeat2 size={17} aria-hidden="true" /> : <Handshake size={17} aria-hidden="true" />}
@@ -1948,6 +1978,16 @@ export default function AdminMatchesPage({
                     {fromInvitation && !editingMatchId
                       ? <>Email {fromInvitation.senderName} the confirmation<small>Match page, add to calendar, directions and the ground guide.</small></>
                       : <>Email {linkedForEdit?.sender_name} about the change<small>{form.status === 'cancelled' ? 'That the game is called off.' : form.status === 'postponed' ? 'That the game is postponed.' : 'The new date, time or ground, with the match page link.'}</small></>}
+                  </span>
+                </label>
+              )}
+
+              {fromInvitation && !editingMatchId && inquiries.find(i => i.id === fromInvitation.id)?.visitor_club_id && (
+                <label className="fx-email">
+                  <input type="checkbox" checked={offerToThem} onChange={e => setOfferToThem(e.target.checked)} />
+                  <span>
+                    Offer it to {fromInvitation.details.their_club}&apos;s site
+                    <small>They&apos;re on itsfootball.club, so their admins can add it to their fixtures in one tap. Date, ground and score then stay the same on both sites.</small>
                   </span>
                 </label>
               )}

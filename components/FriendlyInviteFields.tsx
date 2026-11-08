@@ -21,7 +21,12 @@ export interface FriendlyForm {
   their_ground: string;
   /** Their crest as a small data URL, or '' */
   their_crest: string;
+  /** Sent on behalf of a club on itsfootball.club the sender runs ('' = typed in by hand) */
+  visitor_club_id: string;
 }
+
+/** A club the signed-in visitor runs, so the game can go on both clubs' sites */
+export interface VisitorClub { id: string; name: string; logo_url?: string | null }
 
 export function emptyFriendlyForm(team?: ClubTeam): FriendlyForm {
   return {
@@ -34,6 +39,7 @@ export function emptyFriendlyForm(team?: ClubTeam): FriendlyForm {
     host: 'either',
     their_ground: '',
     their_crest: '',
+    visitor_club_id: '',
   };
 }
 
@@ -47,7 +53,7 @@ export function friendlyPayload(f: FriendlyForm, teamName: string) {
     host: f.host,
     their_ground: f.host === 'us' ? '' : f.their_ground,
     team_name: teamName,
-    ...(f.their_crest ? { crest: f.their_crest } : {}),
+    ...(f.their_crest && !f.visitor_club_id ? { crest: f.their_crest } : {}),
   };
 }
 
@@ -58,8 +64,10 @@ const teamMeta = (t: ClubTeam) =>
  * The friendly-invitation part of the contact form: which of our teams, their team, the game, up
  * to three dates and who hosts. Name, email and phone stay in the contact form around it.
  */
-export default function FriendlyInviteFields({ teams, value, onChange, crest, lockTeam }: {
+export default function FriendlyInviteFields({ teams, value, onChange, crest, lockTeam, myClubs = [] }: {
   teams: ClubTeam[];
+  /** Clubs on itsfootball.club the signed-in visitor runs */
+  myClubs?: VisitorClub[];
   /** Opened from a team's page: that team only, no picker */
   lockTeam?: boolean;
   value: FriendlyForm;
@@ -107,8 +115,26 @@ export default function FriendlyInviteFields({ teams, value, onChange, crest, lo
       ) : null}
 
       <p className="fi-h">Your team</p>
-      <div className="form-row-2" style={{ gap: '1rem' }}>
+      {myClubs.length > 0 && (
         <div className="form-group">
+          <label htmlFor="fi-from" className="form-label">Sending for</label>
+          <select id="fi-from" className="form-select" value={value.visitor_club_id}
+            onChange={e => {
+              const mine = myClubs.find(c => c.id === e.target.value);
+              set(mine ? { visitor_club_id: mine.id, their_club: mine.name, their_crest: '' } : { visitor_club_id: '', their_club: '' });
+            }}>
+            {myClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">Another club</option>
+          </select>
+          <p className="text-note fi-help">
+            {value.visitor_club_id
+              ? 'You run this club on itsfootball.club, so once the game is on, it can go on both clubs’ sites.'
+              : 'Not on itsfootball.club? Type your club below.'}
+          </p>
+        </div>
+      )}
+      <div className="form-row-2" style={{ gap: '1rem' }}>
+        <div className="form-group" hidden={!!value.visitor_club_id}>
           <label htmlFor="fi-club" className="form-label">Your club *</label>
           <input id="fi-club" className="form-input" required maxLength={120} autoComplete="organization"
             placeholder="e.g. Hills Rovers FC" value={value.their_club} onChange={e => set({ their_club: e.target.value })} />
@@ -119,7 +145,7 @@ export default function FriendlyInviteFields({ teams, value, onChange, crest, lo
             placeholder="e.g. Reserves, U14 Girls" value={value.their_team} onChange={e => set({ their_team: e.target.value })} />
         </div>
       </div>
-      <div className="form-group">
+      <div className="form-group" hidden={!!value.visitor_club_id}>
         <span className="form-label" id="fi-crest-l">Your club crest (optional)</span>
         <div className="fi-crest">
           {value.their_crest

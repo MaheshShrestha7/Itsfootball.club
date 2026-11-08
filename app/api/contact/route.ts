@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { FRIENDLY_TYPE, friendlyMessage, parseFriendly } from '@/lib/friendlies';
 import { isUuid } from '@/lib/ids';
+import { requireClubPerm } from '@/lib/supabase/server-auth';
+import { getServiceClient } from '@/lib/supabase/service';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INQUIRY_TYPES = new Set([
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     // A friendly invitation: what the fixture needs, checked here and kept as `details`; the
     // message becomes a readable summary with their note under it (lib/friendlies.ts)
-    let friendly: { details: Record<string, unknown>; teamId: string } | null = null;
+    let friendly: { details: Record<string, unknown>; teamId: string; visitorClubId?: string } | null = null;
     if (inquiryType === FRIENDLY_TYPE) {
       if (!clubId || !name || !email) {
         return NextResponse.json({ success: false, error: 'Please fill in your name and email.' }, { status: 400 });
@@ -92,7 +94,29 @@ export async function POST(req: NextRequest) {
       }
       const note = message.slice(0, 1500);
       friendly = { details: { ...parsed.details, team_name: team.name }, teamId: team.id };
-      message = friendlyMessage({ ...parsed.details }, team.name, note);
+
+      // Sent for a club the sender runs on itsfootball.club (migration 20261159): checked here, so
+      // the game can go on both clubs' sites. The club's own name and logo replace what was typed.
+      const visitorClubId = (body as any).visitor_club_id;
+      if (visitorClubId) {
+        if (!isUuid(visitorClubId) || visitorClubId === clubId) {
+          return NextResponse.json({ success: false, error: 'Pick your club again.' }, { status: 400 });
+        }
+        const auth = await requireClubPerm(req, visitorClubId, ['matches'], 'edit');
+        if (!auth.ok) return NextResponse.json({ success: false, error: 'Sign in as an admin of your club to send it for them.' }, { status: 403 });
+        const service = getServiceClient();
+        const { data: theirs } = service
+          ? await service.from('clubs').select('id, name, logo_url').eq('id', visitorClubId).eq('is_active', true).maybeSingle()
+          : { data: null };
+        if (!theirs) return NextResponse.json({ success: false, error: 'Pick your club again.' }, { status: 400 });
+        const { crest: _crest, ...rest } = friendly.details; // eslint-disable-line @typescript-eslint/no-unused-vars
+        friendly = {
+          ...friendly,
+          visitorClubId: theirs.id,
+          details: { ...rest, their_club: theirs.name, ...(theirs.logo_url && /^https?:\/\//.test(theirs.logo_url) ? { crest_url: theirs.logo_url } : {}) },
+        };
+      }
+      message = friendlyMessage({ ...(friendly.details as unknown as typeof parsed.details) }, team.name, note);
     }
 
     if (!clubId || !name || !email || !message) {
@@ -132,7 +156,18 @@ export async function POST(req: NextRequest) {
       status: 'unread',
       ...(friendly ? { details: friendly.details, team_id: friendly.teamId } : {}),
     };
-    let { error } = await client.from('contact_inquiries').insert(row);
+    // From another club's admin: the server writes it, since the public can't set the sending club
+    const service = friendly?.visitorClubId ? getServiceClient() : null;
+    if (friendly?.visitorClubId && !service) {
+      return NextResponse.json({ success: false, error: 'Messages cannot be sent right now. Please try again later.' }, { status: 503 });
+    }
+    let { error } = service
+      ? await service.from('contact_inquiries').insert({ ...row, visitor_club_id: friendly!.visitorClubId })
+      : await client.from('contact_inquiries').insert(row);
+    // Before migration 20261159 there's no column for the sending club: it goes as a normal invitation
+    if (service && error && /visitor_club_id/.test(error.message || '')) {
+      ({ error } = await client.from('contact_inquiries').insert(row));
+    }
     // Their crest needs the bigger size limit from migration 20261158: until it runs, the
     // invitation still goes, just without the crest
     if (error?.code === '23514' && friendly && 'crest' in friendly.details) {
