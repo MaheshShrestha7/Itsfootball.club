@@ -182,7 +182,9 @@ interface ClubContextType {
   publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
 
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string) => Promise<{ success: boolean; error?: string }>;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown> }) => Promise<{ success: boolean; error?: string }>;
+  /** Changes an enquiry's fields (e.g. the fixture made from a friendly invitation); synced like any other row */
+  updateInquiry: (inquiryId: string, patch: Partial<Pick<ContactInquiry, 'status' | 'match_id'>>) => void;
   inquiries: ContactInquiry[];
   updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
@@ -1857,12 +1859,14 @@ export function ClubProvider({
   const submitInquiry = useCallback(async (
     inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
     honeypot?: string,
-    about?: string
+    about?: string,
+    friendly?: { team_id: string; details: Record<string, unknown> }
   ): Promise<{ success: boolean; error?: string }> => {
     const message = sanitizeText(inquiryData.message);
     const name = sanitizeText(inquiryData.sender_name);
     const email = sanitizeText(inquiryData.sender_email);
-    if (!name || !email || !message) return { success: false, error: 'Please fill in your name, email and message.' };
+    // A friendly invitation's note is optional: the server writes the summary
+    if (!name || !email || (!message && !friendly)) return { success: false, error: 'Please fill in your name, email and message.' };
     if (message.length > 4000) return { success: false, error: 'Your message is too long (4000 characters maximum).' };
 
     // Routed through /api/contact (not a direct Supabase insert) so the server can
@@ -1880,6 +1884,7 @@ export function ClubProvider({
           message,
           about: about || undefined,
           website: honeypot,
+          ...(friendly ? { team_id: friendly.team_id, friendly: friendly.details } : {}),
         }),
       });
       const data = await res.json().catch(() => ({ success: false }));
@@ -1894,6 +1899,10 @@ export function ClubProvider({
 
   const updateInquiryStatus = useCallback((inquiryId: string, status: ContactInquiry['status']) => {
     setInquiries(prev => prev.map(i => (i.id === inquiryId ? { ...i, status } : i)));
+  }, []);
+
+  const updateInquiry = useCallback((inquiryId: string, patch: Partial<Pick<ContactInquiry, 'status' | 'match_id'>>) => {
+    setInquiries(prev => prev.map(i => (i.id === inquiryId ? { ...i, ...patch } : i)));
   }, []);
 
   // 12. Pre-Match Availability & RSVP Hub
@@ -3586,6 +3595,7 @@ export function ClubProvider({
         gateScans,
         inquiries,
         updateInquiryStatus,
+        updateInquiry,
         loadClubAnalytics,
         resolveAvailabilityToken,
         respondToAvailabilityToken,

@@ -5,9 +5,11 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { ContactInquiry } from '@/lib/supabase/types';
 import { useUrlTab } from '@/lib/use-url-tab';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import MemberMessagesPanel from '@/components/MemberMessagesPanel';
-import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox, Send, CalendarDays } from 'lucide-react';
+import FriendlyInvitation, { DayCheckLine } from '@/components/admin/FriendlyInvitation';
+import { calendarFor, checkDay, dateLabel, friendlyOf, MAX_FRIENDLY_DATES, type FriendlyDate, type FriendlyDetails } from '@/lib/friendlies';
+import { Mail, Phone, Archive, CheckCheck, Reply, MessageSquare, Inbox, Send, CalendarDays, Plus, X } from 'lucide-react';
 import { DATE_LOCALE } from '@/lib/dates';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 
@@ -26,7 +28,20 @@ function splitAbout(message: string): { about: string | null; text: string } {
   return m ? { about: m[1], text: message.slice(m[0].length) } : { about: null, text: message };
 }
 
-type Filter = 'all' | ContactInquiry['status'];
+type Filter = 'all' | 'friendlies' | ContactInquiry['status'];
+
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+
+/** The reply that goes with dates the club suggests instead */
+function suggestText(item: ContactInquiry, details: FriendlyDetails, teamName: string, dates: FriendlyDate[]): string {
+  const picked = dates.filter(d => d.date);
+  const list = picked.length ? picked.map(dateLabel).join(', or ') : '[pick a date]';
+  return `Hi ${firstName(item.sender_name)}, thanks for the invite. Those dates don't quite work for ${teamName}. Would ${list} suit your ${details.their_team}?`;
+}
+
+function declineText(item: ContactInquiry, teamName: string): string {
+  return `Hi ${firstName(item.sender_name)}, thanks for thinking of us. We can't fit a game in for ${teamName} this time, so we'll have to say no for now. Good luck with the season.`;
+}
 
 const INBOX_TABS = ['members', 'contact'] as const;
 
@@ -36,10 +51,15 @@ export default function AdminInquiriesPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, memberMessages } = useClub();
+  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, memberMessages, matches, events, clubTeams } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const [filter, setFilter] = useState<Filter>('all');
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const router = useRouter();
+  const canAddFixture = can(club.id, 'matches', 'edit');
+  // Every game and event, to check the dates in friendly invitations
+  const calendar = useMemo(() => calendarFor({ clubId: club.id, matches, events, clubTeams }), [club.id, matches, events, clubTeams]);
+  const friendlyCount = inquiries.filter(i => i.club_id === club.id && i.status !== 'archived' && friendlyOf(i)).length;
   // ?tab= in the URL (the admin menu's Inbox sub-items); ?member= opens that member's conversation
   // (the Message button on Members)
   const [tab, setTab] = useUrlTab(INBOX_TABS);
@@ -51,12 +71,27 @@ export default function AdminInquiriesPage({
     () =>
       inquiries
         .filter(i => i.club_id === club.id)
-        .filter(i => filter === 'all' || i.status === filter)
+        .filter(i => filter === 'all' || (filter === 'friendlies' ? !!friendlyOf(i) && i.status !== 'archived' : i.status === filter))
         .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')),
     [inquiries, club.id, filter]
   );
 
-  const filters: Filter[] = ['all', 'unread', 'read', 'replied', 'archived'];
+  const filters: Filter[] = friendlyCount > 0
+    ? ['all', 'friendlies', 'unread', 'read', 'replied', 'archived']
+    : ['all', 'unread', 'read', 'replied', 'archived'];
+
+  // Friendly invitations: dates the club suggests instead, or a polite no (both go out as a reply)
+  const [suggesting, setSuggesting] = useState<{ id: string; dates: FriendlyDate[]; edited: boolean } | null>(null);
+  const [declining, setDeclining] = useState<string | null>(null);
+  const teamOf = (item: ContactInquiry, details: FriendlyDetails) => {
+    const team = clubTeams.find(t => t.id === item.team_id);
+    return { id: team?.id ?? item.team_id ?? null, name: team?.name || details.team_name || 'our team' };
+  };
+  const acceptDate = (item: ContactInquiry, date: FriendlyDate) => {
+    if (item.status === 'unread') updateInquiryStatus(item.id, 'read');
+    const q = new URLSearchParams({ friendly: item.id, date: date.date, ...(date.time ? { time: date.time } : {}) });
+    router.push(`/${club.slug}/admin/matches?${q}`);
+  };
 
   // Reply history (migration 20261119). Without the table the list is just empty and the mail app still works.
   const [replies, setReplies] = useState<InquiryReply[]>([]);
@@ -96,9 +131,11 @@ export default function AdminInquiriesPage({
         return;
       }
       setReplies(prev => [...prev, data.reply]);
-      updateInquiryStatus(item.id, 'replied');
+      updateInquiryStatus(item.id, declining === item.id ? 'archived' : 'replied');
       setReplyText('');
       setReplyingTo(null);
+      setSuggesting(null);
+      setDeclining(null);
       setReplyNote(data.emailed
         ? { id: item.id, ok: true, text: `Reply emailed to ${item.sender_email}.` }
         : { id: item.id, ok: false, text: `Reply saved, but email isn't set up for your club yet, so it wasn't sent. Send it from your mail app:` });
@@ -154,6 +191,7 @@ export default function AdminInquiriesPage({
             style={{ textTransform: 'capitalize' }}
           >
             {f}
+            {f === 'friendlies' && <span className="num">{friendlyCount}</span>}
           </button>
         ))}
       </div>
@@ -181,6 +219,23 @@ export default function AdminInquiriesPage({
               </div>
 
               {(() => {
+                const details = friendlyOf(item);
+                if (details) {
+                  const team = teamOf(item, details);
+                  return (
+                    <FriendlyInvitation
+                      club={club}
+                      item={item}
+                      details={details}
+                      teamName={team.name}
+                      teamId={team.id}
+                      calendar={calendar}
+                      fixture={item.match_id ? matches.find(m => m.id === item.match_id) : undefined}
+                      canAccept={canAddFixture}
+                      onAccept={d => acceptDate(item, d)}
+                    />
+                  );
+                }
                 const { about, text } = splitAbout(item.message);
                 return (
                   <>
@@ -227,21 +282,55 @@ export default function AdminInquiriesPage({
 
               {replyingTo === item.id && (
                 <div style={{ marginBottom: '0.75rem' }}>
+                  {suggesting?.id === item.id && (() => {
+                    const details = friendlyOf(item);
+                    if (!details) return null;
+                    const team = teamOf(item, details);
+                    const setDates = (dates: FriendlyDate[]) => {
+                      setSuggesting({ ...suggesting, dates });
+                      if (!suggesting.edited) setReplyText(suggestText(item, details, team.name, dates));
+                    };
+                    return (
+                      <div className="fr-suggest">
+                        <span className="form-label">Dates that suit {team.name}</span>
+                        {suggesting.dates.map((d, i) => (
+                          <div key={i} className="fr-suggest-row">
+                            <div className="fr-suggest-in">
+                              <input type="date" className="form-input" aria-label={`Suggested date ${i + 1}`} value={d.date}
+                                onChange={e => setDates(suggesting.dates.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)))} />
+                              <input type="time" className="form-input" aria-label={`Kick-off ${i + 1}`} value={d.time}
+                                onChange={e => setDates(suggesting.dates.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))} />
+                              {suggesting.dates.length > 1 && (
+                                <button type="button" className="fr-x" aria-label={`Remove date ${i + 1}`}
+                                  onClick={() => setDates(suggesting.dates.filter((_, j) => j !== i))}><X size={14} aria-hidden="true" /></button>
+                              )}
+                            </div>
+                            {d.date && <DayCheckLine check={checkDay(calendar, team.id, d.date, team.name)} />}
+                          </div>
+                        ))}
+                        {suggesting.dates.length < MAX_FRIENDLY_DATES && (
+                          <button type="button" className="fr-add" onClick={() => setDates([...suggesting.dates, { date: '', time: '' }])}>
+                            <Plus size={14} aria-hidden="true" /> Add another date
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <label htmlFor={`reply-${item.id}`} className="form-label">Reply to {item.sender_name}</label>
                   <textarea
                     id={`reply-${item.id}`}
                     rows={4}
                     className="form-textarea"
                     value={replyText}
-                    onChange={e => setReplyText(e.target.value)}
+                    onChange={e => { setReplyText(e.target.value); if (suggesting?.id === item.id && !suggesting.edited) setSuggesting({ ...suggesting, edited: true }); }}
                     placeholder="Write your reply. It's emailed to them and saved here."
                     maxLength={4000}
                   />
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                     <button type="button" className="btn btn-primary btn-sm" disabled={replySending || !replyText.trim()} onClick={() => sendReply(item)}>
-                      <Send size={14} aria-hidden="true" /> {replySending ? 'Sending…' : 'Send reply'}
+                      <Send size={14} aria-hidden="true" /> {replySending ? 'Sending…' : declining === item.id ? 'Send and archive' : 'Send reply'}
                     </button>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setReplyingTo(null); setReplyText(''); }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setReplyingTo(null); setReplyText(''); setSuggesting(null); setDeclining(null); }}>
                       Cancel
                     </button>
                   </div>
@@ -249,11 +338,34 @@ export default function AdminInquiriesPage({
               )}
 
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {replyingTo !== item.id && friendlyOf(item) && !item.match_id && (() => {
+                  const details = friendlyOf(item)!;
+                  const team = teamOf(item, details);
+                  return (
+                    <>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
+                        const dates = [{ date: '', time: '' }];
+                        setReplyingTo(item.id); setReplyNote(null); setDeclining(null);
+                        setSuggesting({ id: item.id, dates, edited: false });
+                        setReplyText(suggestText(item, details, team.name, dates));
+                      }}>
+                        <CalendarDays size={14} aria-hidden="true" /> Suggest another date
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
+                        setReplyingTo(item.id); setReplyNote(null); setSuggesting(null);
+                        setDeclining(item.id);
+                        setReplyText(declineText(item, team.name));
+                      }}>
+                        No thanks
+                      </button>
+                    </>
+                  );
+                })()}
                 {replyingTo !== item.id && (
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => { setReplyingTo(item.id); setReplyText(''); setReplyNote(null); }}
+                    className={friendlyOf(item) ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
+                    onClick={() => { setReplyingTo(item.id); setReplyText(''); setReplyNote(null); setSuggesting(null); setDeclining(null); }}
                   >
                     <Reply size={14} aria-hidden="true" /> Reply
                   </button>

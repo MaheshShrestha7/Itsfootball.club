@@ -18,7 +18,7 @@ export type EventCategory = 'match' | 'training' | 'social' | 'agm' | 'trial' | 
 export type SponsorTier = 'platinum' | 'gold' | 'silver' | 'bronze' | 'grassroots';
 export type SponsorSizeScale = 'auto' | 'xl' | 'lg' | 'md' | 'sm';
 export type SponsorPackageStatus = 'prospect' | 'confirmed' | 'paid' | 'expired' | 'cancelled';
-export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | 'Media Request' | 'Youth Academy';
+export type InquiryType = 'General Inquiry' | 'Player Trial' | 'Sponsorship' | 'Media Request' | 'Youth Academy' | 'Friendly Match';
 
 export type HeroPinType = 'event' | 'fixture' | 'news' | 'image';
 export type SeasonStatus = 'active' | 'completed' | 'upcoming';
@@ -531,6 +531,12 @@ export interface ContactInquiry {
   message: string;
   status: 'unread' | 'read' | 'replied' | 'archived';
   created_at?: string;
+  /** A friendly invitation's details (lib/friendlies.ts); migration 20261157 */
+  details?: Record<string, unknown> | null;
+  /** The team invited to a friendly */
+  team_id?: string | null;
+  /** The fixture the admin made from the invitation */
+  match_id?: string | null;
 }
 
 // ==============================================================================
@@ -751,6 +757,8 @@ export interface ClubTeam {
   match_format: ClubTeamFormat;
   /** The team's usual half length in minutes, copied onto its new fixtures; empty = the format's usual length */
   half_minutes?: number | null;
+  /** Shows "Invite us to a friendly" on the team page; undefined before migration 20261157 */
+  open_to_friendlies?: boolean;
   color?: string;
   logo_url?: string;
   description?: string;

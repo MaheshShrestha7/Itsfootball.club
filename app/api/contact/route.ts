@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { FRIENDLY_TYPE, friendlyMessage, parseFriendly } from '@/lib/friendlies';
+import { isUuid } from '@/lib/ids';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INQUIRY_TYPES = new Set([
@@ -9,7 +11,14 @@ const INQUIRY_TYPES = new Set([
   'Sponsorship',
   'Media Request',
   'Youth Academy',
+  FRIENDLY_TYPE,
 ]);
+
+/** Yesterday in Sydney: the earliest date an invitation may offer (allowing for clubs further west) */
+function earliestDate(): string {
+  const d = new Date(Date.now() - 86400000);
+  return d.toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+}
 
 function sanitizeText(text: unknown): string {
   if (typeof text !== 'string') return '';
@@ -59,9 +68,32 @@ export async function POST(req: NextRequest) {
     const phone = (body as any).sender_phone ? sanitizeText((body as any).sender_phone) : null;
     const rawInquiryType = (body as any).inquiry_type;
     const inquiryType = INQUIRY_TYPES.has(rawInquiryType) ? rawInquiryType : 'General Inquiry';
-    const message = sanitizeText((body as any).message);
+    let message = sanitizeText((body as any).message);
     // Sent from an event page: which event it's about, kept at the top of the message for the Inbox
     const about = sanitizeText((body as any).about).replace(/\s+/g, ' ').slice(0, 200);
+
+    // A friendly invitation: what the fixture needs, checked here and kept as `details`; the
+    // message becomes a readable summary with their note under it (lib/friendlies.ts)
+    let friendly: { details: Record<string, unknown>; teamId: string } | null = null;
+    if (inquiryType === FRIENDLY_TYPE) {
+      if (!clubId || !name || !email) {
+        return NextResponse.json({ success: false, error: 'Please fill in your name and email.' }, { status: 400 });
+      }
+      const teamId = (body as any).team_id;
+      const parsed = parseFriendly((body as any).friendly, earliestDate());
+      if (!parsed.ok) return NextResponse.json({ success: false, error: parsed.error }, { status: 400 });
+      if (!isUuid(teamId)) return NextResponse.json({ success: false, error: 'Pick the team you’d like to play.' }, { status: 400 });
+      const client = getServerSupabaseClient();
+      const { data: team } = client
+        ? await client.from('club_teams').select('id, name, is_active, open_to_friendlies').eq('id', teamId).eq('club_id', clubId).maybeSingle()
+        : { data: null };
+      if (!team || !team.is_active || team.open_to_friendlies !== true) {
+        return NextResponse.json({ success: false, error: 'That team isn’t taking friendly invitations right now.' }, { status: 400 });
+      }
+      const note = message.slice(0, 1500);
+      friendly = { details: { ...parsed.details, team_name: team.name }, teamId: team.id };
+      message = friendlyMessage({ ...parsed.details }, team.name, note);
+    }
 
     if (!clubId || !name || !email || !message) {
       return NextResponse.json(
@@ -96,8 +128,9 @@ export async function POST(req: NextRequest) {
       sender_email: email,
       sender_phone: phone,
       inquiry_type: inquiryType,
-      message: about ? `About: ${about}\n\n${message}` : message,
+      message: about && !friendly ? `About: ${about}\n\n${message}` : message,
       status: 'unread',
+      ...(friendly ? { details: friendly.details, team_id: friendly.teamId } : {}),
     });
 
     if (error) {

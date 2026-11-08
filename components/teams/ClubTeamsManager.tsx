@@ -30,6 +30,8 @@ interface TeamForm {
   half_minutes: string;
   is_junior: boolean;
   hide_public_scores: boolean;
+  /** Shows "Invite us to a friendly" on the team page (migration 20261157) */
+  open_to_friendlies: boolean;
   color: string;
   description: string;
   sort_order: number;
@@ -46,6 +48,7 @@ const EMPTY_FORM: TeamForm = {
   half_minutes: '',
   is_junior: false,
   hide_public_scores: false,
+  open_to_friendlies: true,
   color: '#10B981',
   description: '',
   sort_order: 100,
@@ -63,6 +66,7 @@ function formFor(team: ClubTeam): TeamForm {
     half_minutes: validHalfMinutes(team.half_minutes) ? String(team.half_minutes) : '',
     is_junior: team.is_junior,
     hide_public_scores: team.hide_public_scores,
+    open_to_friendlies: team.open_to_friendlies !== false,
     color: team.color || '#10B981',
     description: team.description || '',
     sort_order: team.sort_order,
@@ -118,6 +122,8 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
   const cutoff = ageGroupCutoff(getActiveSeason(club.id)?.start_date);
 
   const teams = useMemo(() => clubTeamsOf(clubTeams, club.id, { includeInactive: true }), [clubTeams, club.id]);
+  // The friendlies switch, once the database has the column (its rows then carry it)
+  const friendliesReady = teams.some(t => typeof t.open_to_friendlies === 'boolean');
   const clubMembers = useMemo(
     () => members
       .filter(m => m.club_id === club.id && (m.membership_status || 'approved') === 'approved')
@@ -180,6 +186,7 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
       ...(halfReady && halfMinutes !== (editing === 'new' || !editing ? null : validHalfMinutes(editing.half_minutes)) ? { half_minutes: halfMinutes } : {}),
       is_junior: form.is_junior,
       hide_public_scores: form.hide_public_scores,
+      ...(friendliesReady ? { open_to_friendlies: form.open_to_friendlies } : {}),
       color: form.color || undefined,
       description: form.description.replace(/[<>]/g, '').trim() || undefined,
       sort_order: Number.isFinite(form.sort_order) ? Math.round(form.sort_order) : 100,
@@ -534,6 +541,16 @@ export default function ClubTeamsManager({ clubSlug }: { clubSlug: string }) {
                 <span className="text-note" style={{ display: 'block' }}>Fixtures still show; results and scores don&apos;t. Usual for U7 to U11.</span>
               </span>
             </label>
+
+            {friendliesReady && (
+              <label className="row" style={{ alignItems: 'flex-start', cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.open_to_friendlies} onChange={e => setForm({ ...form, open_to_friendlies: e.target.checked })} style={{ marginTop: 3 }} />
+                <span>
+                  <strong className="text-primary" style={{ fontSize: '0.88rem' }}>Open to friendlies</strong>
+                  <span className="text-note" style={{ display: 'block' }}>Shows &quot;Invite us to a friendly&quot; on this team&apos;s page. Turn it off when the team&apos;s diary is full.</span>
+                </span>
+              </label>
+            )}
 
             <div className="form-group" style={{ margin: 0 }}>
               <span className="form-label">Team colour</span>
