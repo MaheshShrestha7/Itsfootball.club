@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { Mail, CheckCircle2, Send, X, Handshake } from 'lucide-react';
 import { useDialog } from '@/lib/use-escape-to-close';
-import FriendlyInviteFields, { emptyFriendlyForm, friendlyPayload, type FriendlyForm } from '@/components/FriendlyInviteFields';
+import FriendlyInviteFields, { emptyFriendlyForm, friendlyPayload, type FriendlyForm, type VisitorClub } from '@/components/FriendlyInviteFields';
+import { useAuth } from '@/lib/auth-context';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { FRIENDLY_TYPE, invitableTeams } from '@/lib/friendlies';
 
 interface ContactModalProps {
@@ -33,6 +35,30 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Signed in and running another club's fixtures: the invitation can come from that club, so the
+  // game can go on both clubs' sites once it's on (checked again by /api/contact)
+  const { user, can } = useAuth();
+  const [myClubs, setMyClubs] = useState<VisitorClub[]>([]);
+  const myClubIds = user ? Object.keys(user.club_roles).filter(id => id !== club.id && can(id, 'matches', 'edit')).sort().join(',') : '';
+  useEffect(() => {
+    const db = getSupabaseClient();
+    if (!isOpen || !myClubIds || !db) return;
+    let stale = false;
+    db.from('clubs').select('id, name, logo_url').in('id', myClubIds.split(',')).eq('is_active', true).order('name')
+      .then(({ data }) => {
+        if (stale || !data?.length) return;
+        setMyClubs(data as VisitorClub[]);
+        // Starts on their club; "Another club" is still there
+        setFriendly(f => (f.their_club || f.visitor_club_id ? f : { ...f, visitor_club_id: data[0].id, their_club: data[0].name }));
+      });
+    return () => { stale = true; };
+  }, [isOpen, myClubIds]);
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    setSenderName(n => n || user.full_name || '');
+    setSenderEmail(e => e || user.email || '');
+  }, [isOpen, user]);
+
   // Honeypot: hidden from real visitors via CSS + aria-hidden; bots that fill
   // every field they find trip it, and the submission is silently dropped.
   const [website, setWebsite] = useState('');
@@ -54,7 +80,9 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
 
   const isFriendly = inquiryType === FRIENDLY_TYPE && openTeams.length > 0;
   // The team the form opened on (or the only open one) once it starts empty
-  const friendlyForm = !friendly.team_id && startTeam ? emptyFriendlyForm(startTeam) : friendly;
+  const friendlyForm = !friendly.team_id && startTeam
+    ? { ...emptyFriendlyForm(startTeam), visitor_club_id: friendly.visitor_club_id, their_club: friendly.their_club }
+    : friendly;
   const friendlyTeam = openTeams.find(t => t.id === friendlyForm.team_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +103,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       inquiry_type: isFriendly ? FRIENDLY_TYPE : inquiryType === FRIENDLY_TYPE ? 'General Inquiry' : inquiryType,
       message,
     }, website, about, isFriendly && friendlyTeam
-      ? { team_id: friendlyTeam.id, details: friendlyPayload(friendlyForm, friendlyTeam.name) }
+      ? { team_id: friendlyTeam.id, details: friendlyPayload(friendlyForm, friendlyTeam.name), visitor_club_id: friendlyForm.visitor_club_id || undefined }
       : undefined);
     setSending(false);
 
@@ -230,7 +258,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                     </select>
                   </div>
                 )}
-                <FriendlyInviteFields teams={openTeams} value={friendlyForm} onChange={setFriendly} crest={club.logo_url || undefined} lockTeam={!!defaultTeamId} />
+                <FriendlyInviteFields teams={openTeams} value={friendlyForm} onChange={setFriendly} crest={club.logo_url || undefined} lockTeam={!!defaultTeamId} myClubs={myClubs} />
               </>
             )}
 

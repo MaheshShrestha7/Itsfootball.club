@@ -50,10 +50,11 @@ export default function FriendlyInvitation({ club, item, details, teamName, team
     <div className="fr">
       <div className="fr-pills">
         <span className="admin-pill is-ok"><Handshake size={12} aria-hidden="true" /> Friendly invitation</span>
+        {item.visitor_club_id && <span className="admin-pill" title="Sent by one of their club's admins, so the game can go on both clubs' sites">On itsfootball.club</span>}
       </div>
       <div className="fr-head">
-        {details.crest
-          ? <img className="fr-crest" src={details.crest} alt="" width={40} height={40} />
+        {details.crest || details.crest_url
+          ? <img className="fr-crest" src={details.crest || details.crest_url} alt="" width={40} height={40} />
           : <span className="fr-crest is-empty" aria-hidden="true">{details.their_club.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()}</span>}
         <p className="fr-who">{details.their_club}, {details.their_team}</p>
       </div>

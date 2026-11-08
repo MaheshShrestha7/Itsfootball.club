@@ -21,6 +21,9 @@ import { isUuid, secureToken } from '@/lib/ids';
 //        "It's on": the match page, add to calendar, directions and the ground guide.
 //   POST { action: 'update', clubId, inquiryId, matchId, expect, senderName }
 //        The date, time or ground changed, or the game was postponed or called off.
+//   POST { action: 'offer', clubId, inquiryId, matchId }
+//        The invitation came from a club on itsfootball.club (migration 20261159): offer the fixture
+//        to its site. Their admins add it from their dashboard (/api/admin/fixture-offers).
 // The fixture is saved from the admin's browser and reaches the database a moment later, so confirm
 // and update wait a few seconds for it (`expect` is what the admin just saved).
 // Every email is also saved to the enquiry's reply history, so the Inbox shows what was sent.
@@ -70,7 +73,7 @@ async function loadClub(db: SupabaseClient, clubId: string): Promise<FriendlyClu
 export async function POST(req: NextRequest) {
   const input = await req.json().catch(() => null);
   const action = input?.action;
-  if (!['suggest', 'confirm', 'update'].includes(action) || !isUuid(input?.clubId) || !isUuid(input?.inquiryId)) {
+  if (!['suggest', 'confirm', 'update', 'offer'].includes(action) || !isUuid(input?.clubId) || !isUuid(input?.inquiryId)) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
   if (action !== 'suggest' && !isUuid(input?.matchId)) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
@@ -162,6 +165,20 @@ export async function POST(req: NextRequest) {
     : undefined;
   const match = await waitForMatch(db, club.id, input.matchId, expect);
   if (!match) return NextResponse.json({ error: 'The fixture hasn’t saved yet. Try again in a moment.' }, { status: 409 });
+
+  if (action === 'offer') {
+    const { data: from, error: fromError } = await db.from('contact_inquiries').select('visitor_club_id').eq('id', inquiry.id).maybeSingle();
+    const toClub = fromError ? null : (from?.visitor_club_id as string | null);
+    if (!toClub || toClub === club.id) return NextResponse.json({ error: 'This invitation didn’t come from a club on itsfootball.club.' }, { status: 400 });
+    const { data: offer, error } = await db.from('fixture_offers').upsert({
+      from_club_id: club.id, from_match_id: match.id, to_club_id: toClub, inquiry_id: inquiry.id,
+    }, { onConflict: 'from_match_id,to_club_id', ignoreDuplicates: true }).select('id, status').maybeSingle();
+    if (error) {
+      console.error('[friendlies] offer failed:', error.message);
+      return NextResponse.json({ error: 'The fixture couldn’t be offered to their site.' }, { status: 500 });
+    }
+    return NextResponse.json({ offered: true, offer });
+  }
 
   const sentBefore = (raw.sent && typeof raw.sent === 'object' ? raw.sent : {}) as Record<string, Snapshot>;
   const pack = await matchdayPack(db, club, match, details, teamName);

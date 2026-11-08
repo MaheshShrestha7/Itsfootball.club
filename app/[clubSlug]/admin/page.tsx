@@ -6,6 +6,8 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import GettingStartedChecklist from '@/components/admin/GettingStartedChecklist';
 import NeedsYouCard from '@/components/admin/NeedsYouCard';
+import FixtureOffersCard from '@/components/admin/FixtureOffersCard';
+import { clubTeamsOf } from '@/lib/teams';
 import { useAdminAttention } from '@/lib/use-admin-attention';
 import { defaultFixture } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
@@ -26,7 +28,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants } = useClub();
+  const { clubs, selectClubBySlug, members, matches, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants, clubTeams } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const { can, isClubSuperUser } = useAuth();
   // Shortcuts only for the areas this person's roles cover (a Treasurer has no fixtures or scanner)
@@ -90,6 +92,9 @@ export default function AdminDashboardPage({
           </div>
 
           {isClubSuperUser(club.id) && <GettingStartedChecklist clubId={club.id} clubSlug={club.slug} />}
+
+          {/* Friendlies another club on itsfootball.club offered to our site */}
+          {canFixtures && <FixtureOffersCard club={club} teams={clubTeamsOf(clubTeams, club.id)} canAdd={canEditFixtures} />}
 
           {/* What's waiting on the committee, beside the club's next (or live) game; on phones the live game comes first */}
           <div className={liveMatch ? 'admin-dash-lead is-live' : 'admin-dash-lead'}>

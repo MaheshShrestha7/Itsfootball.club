@@ -182,11 +182,13 @@ interface ClubContextType {
   publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
 
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown> }) => Promise<{ success: boolean; error?: string }>;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string }) => Promise<{ success: boolean; error?: string }>;
   /** Changes an enquiry's fields (e.g. the fixture made from a friendly invitation); synced like any other row */
   updateInquiry: (inquiryId: string, patch: Partial<Pick<ContactInquiry, 'status' | 'match_id'>>) => void;
   /** Puts a row the server saved into the list without uploading it again */
   applyInquiryRow: (row: ContactInquiry) => void;
+  /** Puts a fixture the server saved (e.g. a friendly added from another club) into the list without uploading it again */
+  applyMatchRow: (row: Match) => void;
   inquiries: ContactInquiry[];
   updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
@@ -1862,7 +1864,7 @@ export function ClubProvider({
     inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
     honeypot?: string,
     about?: string,
-    friendly?: { team_id: string; details: Record<string, unknown> }
+    friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string }
   ): Promise<{ success: boolean; error?: string }> => {
     const message = sanitizeText(inquiryData.message);
     const name = sanitizeText(inquiryData.sender_name);
@@ -1874,9 +1876,11 @@ export function ClubProvider({
     // Routed through /api/contact (not a direct Supabase insert) so the server can
     // apply the honeypot check and a per-IP throttle ahead of the DB's own cooldown.
     try {
+      // Sent for the visitor's own club: the server checks they run it, so it needs who they are
+      const token = friendly?.visitor_club_id ? await getAccessToken() : null;
       const res = await fetch('/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           club_id: inquiryData.club_id,
           sender_name: name,
@@ -1886,7 +1890,7 @@ export function ClubProvider({
           message,
           about: about || undefined,
           website: honeypot,
-          ...(friendly ? { team_id: friendly.team_id, friendly: friendly.details } : {}),
+          ...(friendly ? { team_id: friendly.team_id, friendly: friendly.details, visitor_club_id: friendly.visitor_club_id } : {}),
         }),
       });
       const data = await res.json().catch(() => ({ success: false }));
@@ -1915,6 +1919,16 @@ export function ClubProvider({
       const existing = prev.find(i => i.id === row.id);
       const merged = (engine ? engine.applyRemote('inquiries', existing as any, row as any) : { ...existing, ...row }) as ContactInquiry;
       return existing ? prev.map(i => (i.id === row.id ? merged : i)) : prev;
+    });
+  }, []);
+
+  const applyMatchRow = useCallback((row: Match) => {
+    const engine = syncRef.current;
+    setMatches(prev => {
+      const existing = prev.find(m => m.id === row.id);
+      // linked_match_id is server-written, so it isn't a synced column: keep it on the local row
+      const merged = { ...(engine ? engine.applyRemote('matches', existing as any, row as any) : { ...existing, ...row }), linked_match_id: row.linked_match_id } as Match;
+      return existing ? prev.map(m => (m.id === row.id ? merged : m)) : [...prev, merged];
     });
   }, []);
 
@@ -3610,6 +3624,7 @@ export function ClubProvider({
         updateInquiryStatus,
         updateInquiry,
         applyInquiryRow,
+        applyMatchRow,
         loadClubAnalytics,
         resolveAvailabilityToken,
         respondToAvailabilityToken,

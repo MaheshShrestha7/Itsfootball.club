@@ -43,6 +43,8 @@ export interface FriendlyDetails {
   suggested?: FriendlyDate[];
   /** The suggested date the visitor picked, from their private link */
   picked?: FriendlyDate;
+  /** Sent for a club on itsfootball.club: its logo (set by the server, migration 20261159) */
+  crest_url?: string;
 }
 
 export const MAX_CREST_LENGTH = 16000;
@@ -152,10 +154,12 @@ export function friendlyOf(inquiry: Pick<ContactInquiry, 'inquiry_type' | 'detai
   const raw = inquiry.details as Record<string, unknown>;
   const suggested = savedDates(raw.suggested);
   const picked = savedDates(raw.picked ? [raw.picked] : [])[0];
+  const crestUrl = typeof raw.crest_url === 'string' && /^https?:\/\/\S+$/.test(raw.crest_url) ? raw.crest_url : null;
   return {
     ...parsed.details,
     ...(suggested.length ? { suggested } : {}),
     ...(picked ? { picked } : {}),
+    ...(crestUrl ? { crest_url: crestUrl } : {}),
   };
 }
 

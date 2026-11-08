@@ -4377,6 +4377,7 @@ dialog.form-dialog::backdrop {
 .fi-team small { display: block; color: var(--text-secondary); font-size: 0.78rem; }
 .fi-h { margin: 1.1rem 0 0.5rem; font: 800 0.68rem var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
 .fi-help { margin: 0.35rem 0 0; }
+.fi .form-group[hidden] { display: none; }
 .fi-crest { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
 .fi-crest img, .fi-crest-empty { width: 44px; height: 44px; border-radius: 10px; flex: none; }
 .fi-crest img { object-fit: contain; background: #FFFFFF; border: 1px solid var(--border-subtle); }

@@ -298,6 +298,8 @@ export interface Match {
   ground_id?: string | null;
   /** Which pitch at that ground, e.g. 'Pitch 2' */
   pitch_label?: string | null;
+  /** The other club's copy of the same friendly, kept in step by the database (migration 20261159; read only) */
+  linked_match_id?: string | null;
   /** Its readable URL (set by a database trigger; missing until migration 20261117_match_slugs.sql runs).
    *  Never written by the app, so not in TABLE_COLUMNS. */
   slug?: string | null;
@@ -537,6 +539,8 @@ export interface ContactInquiry {
   team_id?: string | null;
   /** The fixture the admin made from the invitation */
   match_id?: string | null;
+  /** The club on itsfootball.club it was sent for (set by the server; migration 20261159) */
+  visitor_club_id?: string | null;
 }
 
 // ==============================================================================
