@@ -37,7 +37,18 @@ export interface FriendlyDetails {
   their_ground?: string;
   /** Our team's name when they sent it, in case the team is renamed or deleted */
   team_name?: string;
+  /** Their crest, shrunk on their device to a small PNG/WebP/JPEG data URL (migration 20261158) */
+  crest?: string;
+  /** Dates the club suggested instead (set by the server when the club sends them) */
+  suggested?: FriendlyDate[];
+  /** The suggested date the visitor picked, from their private link */
+  picked?: FriendlyDate;
 }
+
+export const MAX_CREST_LENGTH = 16000;
+const CREST_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
+/** A crest the form made: a small inline image, nothing else */
+export const okCrest = (v: unknown): v is string => typeof v === 'string' && v.length <= MAX_CREST_LENGTH && CREST_RE.test(v);
 
 const clean = (v: unknown, max: number) =>
   (typeof v === 'string' ? v.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, max) : '');
@@ -90,21 +101,62 @@ export function parseFriendly(raw: unknown, today: string): { ok: true; details:
   if (dates.length > MAX_FRIENDLY_DATES) return { ok: false, error: `Up to ${MAX_FRIENDLY_DATES} dates, please.` };
   const host: FriendlyHost = r.host === 'us' || r.host === 'them' ? r.host : 'either';
   const their_ground = host === 'us' ? '' : clean(r.their_ground, 200);
+  if (r.crest !== undefined && r.crest !== null && r.crest !== '' && !okCrest(r.crest)) {
+    return { ok: false, error: 'The crest couldn’t be used. Try a smaller PNG or JPG.' };
+  }
   return {
     ok: true,
     details: {
       their_club, their_team, format, half_minutes: half, dates, host,
       ...(their_ground ? { their_ground } : {}),
       ...(clean(r.team_name, 128) ? { team_name: clean(r.team_name, 128) } : {}),
+      ...(okCrest(r.crest) ? { crest: r.crest } : {}),
     },
   };
+}
+
+/** Saved dates read back (no date window: they may be in the past by now) */
+function savedDates(raw: unknown): FriendlyDate[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap(d => {
+    if (!d || typeof d !== 'object') return [];
+    const date = clean((d as Record<string, unknown>).date, 10);
+    const time = clean((d as Record<string, unknown>).time, 5);
+    return DATE_RE.test(date) && (!time || TIME_RE.test(time)) ? [{ date, time }] : [];
+  }).slice(0, MAX_FRIENDLY_DATES);
+}
+
+/** Dates the club suggests: from today up to a year ahead, up to three, no repeats */
+export function parseSuggested(raw: unknown, today: string): { ok: true; dates: FriendlyDate[] } | { ok: false; error: string } {
+  const list = Array.isArray(raw) ? raw : [];
+  const dates: FriendlyDate[] = [];
+  for (const d of list) {
+    if (!d || typeof d !== 'object') continue;
+    const date = clean((d as Record<string, unknown>).date, 10);
+    const time = clean((d as Record<string, unknown>).time, 5);
+    if (!date) continue;
+    if (!okDate(date, today)) return { ok: false, error: 'Pick dates from today up to a year ahead.' };
+    if (time && !TIME_RE.test(time)) return { ok: false, error: 'Check the kick-off times.' };
+    if (!dates.some(x => x.date === date && x.time === time)) dates.push({ date, time });
+  }
+  if (dates.length === 0) return { ok: false, error: 'Pick at least one date to suggest.' };
+  if (dates.length > MAX_FRIENDLY_DATES) return { ok: false, error: `Up to ${MAX_FRIENDLY_DATES} dates, please.` };
+  return { ok: true, dates };
 }
 
 /** The details saved on an enquiry, or null when it isn't a usable invitation */
 export function friendlyOf(inquiry: Pick<ContactInquiry, 'inquiry_type' | 'details'>): FriendlyDetails | null {
   if (inquiry.inquiry_type !== FRIENDLY_TYPE || !inquiry.details) return null;
   const parsed = parseFriendly(inquiry.details, '');
-  return parsed.ok ? parsed.details : null;
+  if (!parsed.ok) return null;
+  const raw = inquiry.details as Record<string, unknown>;
+  const suggested = savedDates(raw.suggested);
+  const picked = savedDates(raw.picked ? [raw.picked] : [])[0];
+  return {
+    ...parsed.details,
+    ...(suggested.length ? { suggested } : {}),
+    ...(picked ? { picked } : {}),
+  };
 }
 
 /** "Sat 21 Nov, 3:00 pm" */
@@ -118,6 +170,14 @@ export function opponentName(details: Pick<FriendlyDetails, 'their_club' | 'thei
   const team = details.their_team.trim();
   if (!team || /^(first|1st)\s*(team|xi|grade)?$|^seniors?$|^men'?s$|^women'?s$/i.test(team)) return details.their_club;
   return details.their_club.toLowerCase().includes(team.toLowerCase()) ? details.their_club : `${details.their_club} ${team}`;
+}
+
+/** Our side as the other club reads it: "Riverside Rovers FC" for a first team, "Riverside Rovers Seniors", "Riverside Rovers FC U12 Girls" */
+export function ourSide(clubName: string, teamName: string | null | undefined): string {
+  const team = (teamName || '').trim();
+  if (!team || opponentName({ their_club: clubName, their_team: team }) === clubName) return clubName;
+  const first = clubName.trim().split(/\s+/)[0]?.toLowerCase() || '';
+  return first && team.toLowerCase().includes(first) ? team : `${clubName} ${team}`;
 }
 
 export function halfLabel(half: number | null, format: ClubTeamFormat): string {

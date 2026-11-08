@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { error } = await client.from('contact_inquiries').insert({
+    const row = {
       club_id: clubId,
       sender_name: name,
       sender_email: email,
@@ -131,7 +131,14 @@ export async function POST(req: NextRequest) {
       message: about && !friendly ? `About: ${about}\n\n${message}` : message,
       status: 'unread',
       ...(friendly ? { details: friendly.details, team_id: friendly.teamId } : {}),
-    });
+    };
+    let { error } = await client.from('contact_inquiries').insert(row);
+    // Their crest needs the bigger size limit from migration 20261158: until it runs, the
+    // invitation still goes, just without the crest
+    if (error?.code === '23514' && friendly && 'crest' in friendly.details) {
+      const { crest: _crest, ...details } = friendly.details; // eslint-disable-line @typescript-eslint/no-unused-vars
+      ({ error } = await client.from('contact_inquiries').insert({ ...row, details }));
+    }
 
     if (error) {
       const isCooldown = /rate limit|cooldown/i.test(error.message || '');

@@ -51,7 +51,7 @@ export default function AdminInquiriesPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, memberMessages, matches, events, clubTeams } = useClub();
+  const { clubs, selectClubBySlug, inquiries, updateInquiryStatus, applyInquiryRow, memberMessages, matches, events, clubTeams } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const [filter, setFilter] = useState<Filter>('all');
   const { user, can } = useAuth();
@@ -120,10 +120,14 @@ export default function AdminInquiriesPage({
     setUnsentBody(null);
     try {
       const token = await getAccessToken();
-      const res = await fetch('/api/admin/inquiries/reply', {
+      // Suggested dates go with a private link where they pick one (/api/admin/friendlies)
+      const suggested = suggesting?.id === item.id ? suggesting.dates.filter(d => d.date) : null;
+      const res = await fetch(suggested ? '/api/admin/friendlies' : '/api/admin/inquiries/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ clubId: club.id, inquiryId: item.id, body: text, senderName: adminName }),
+        body: JSON.stringify(suggested
+          ? { action: 'suggest', clubId: club.id, inquiryId: item.id, body: text, dates: suggested, senderName: adminName }
+          : { clubId: club.id, inquiryId: item.id, body: text, senderName: adminName }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.reply) {
@@ -131,6 +135,7 @@ export default function AdminInquiriesPage({
         return;
       }
       setReplies(prev => [...prev, data.reply]);
+      if (data.inquiry) applyInquiryRow(data.inquiry);
       updateInquiryStatus(item.id, declining === item.id ? 'archived' : 'replied');
       setReplyText('');
       setReplyingTo(null);
@@ -313,6 +318,9 @@ export default function AdminInquiriesPage({
                             <Plus size={14} aria-hidden="true" /> Add another date
                           </button>
                         )}
+                        <p className="text-note fr-suggest-help">
+                          {firstName(item.sender_name)} gets an email with {suggesting.dates.length > 1 ? 'a button to pick one' : 'an "Accept this date" button'}. When they do, it comes back here ready to accept.
+                        </p>
                       </div>
                     );
                   })()}
@@ -327,8 +335,8 @@ export default function AdminInquiriesPage({
                     maxLength={4000}
                   />
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                    <button type="button" className="btn btn-primary btn-sm" disabled={replySending || !replyText.trim()} onClick={() => sendReply(item)}>
-                      <Send size={14} aria-hidden="true" /> {replySending ? 'Sending…' : declining === item.id ? 'Send and archive' : 'Send reply'}
+                    <button type="button" className="btn btn-primary btn-sm" disabled={replySending || !replyText.trim() || (suggesting?.id === item.id && !suggesting.dates.some(d => d.date))} onClick={() => sendReply(item)}>
+                      <Send size={14} aria-hidden="true" /> {replySending ? 'Sending…' : declining === item.id ? 'Send and archive' : suggesting?.id === item.id ? 'Send dates' : 'Send reply'}
                     </button>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setReplyingTo(null); setReplyText(''); setSuggesting(null); setDeclining(null); }}>
                       Cancel

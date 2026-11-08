@@ -185,6 +185,8 @@ interface ClubContextType {
   submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown> }) => Promise<{ success: boolean; error?: string }>;
   /** Changes an enquiry's fields (e.g. the fixture made from a friendly invitation); synced like any other row */
   updateInquiry: (inquiryId: string, patch: Partial<Pick<ContactInquiry, 'status' | 'match_id'>>) => void;
+  /** Puts a row the server saved into the list without uploading it again */
+  applyInquiryRow: (row: ContactInquiry) => void;
   inquiries: ContactInquiry[];
   updateInquiryStatus: (inquiryId: string, status: ContactInquiry['status']) => void;
 
@@ -1905,6 +1907,17 @@ export function ClubProvider({
     setInquiries(prev => prev.map(i => (i.id === inquiryId ? { ...i, ...patch } : i)));
   }, []);
 
+  // A row the server just saved (e.g. dates suggested for a friendly): shown now, and not uploaded
+  // again, the same as a live update from the database
+  const applyInquiryRow = useCallback((row: ContactInquiry) => {
+    const engine = syncRef.current;
+    setInquiries(prev => {
+      const existing = prev.find(i => i.id === row.id);
+      const merged = (engine ? engine.applyRemote('inquiries', existing as any, row as any) : { ...existing, ...row }) as ContactInquiry;
+      return existing ? prev.map(i => (i.id === row.id ? merged : i)) : prev;
+    });
+  }, []);
+
   // 12. Pre-Match Availability & RSVP Hub
   const setPlayerAvailability = useCallback((
     matchId: string,
@@ -3596,6 +3609,7 @@ export function ClubProvider({
         inquiries,
         updateInquiryStatus,
         updateInquiry,
+        applyInquiryRow,
         loadClubAnalytics,
         resolveAvailabilityToken,
         respondToAvailabilityToken,

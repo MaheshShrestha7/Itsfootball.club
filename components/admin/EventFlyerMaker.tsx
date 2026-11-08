@@ -22,7 +22,7 @@ const sizeOf = (c: Choice): FlyerSize => (c === 'story' || c === 'post' ? c : 'p
  * event's own sponsors first). Paper sizes print (or save as PDF) to fit the page; Story and Post
  * download as images. "Use as the event's flyer" saves it to the event like an uploaded flyer.
  */
-export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSaveFlyer, onClose }: {
+export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSaveFlyer, onClose, fixtureUrl }: {
   club: Pick<Club, 'id' | 'name' | 'slug' | 'logo_url' | 'primary_color' | 'custom_domain'>;
   event: ClubEvent;
   /** The ticket price as money ("$25.00"), when the event sells tickets */
@@ -31,8 +31,12 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
   canSaveFlyer: boolean;
   onSaveFlyer: (url: string) => void;
   onClose: () => void;
+  /** A matchday poster for a fixture (Admin > Matches): `event` is drawn from the fixture, and the
+   *  QR goes straight to its match page (the tracked sponsor link only forwards to event pages) */
+  fixtureUrl?: string;
 }) {
-  const sponsors = useGroundSponsors(club.id, 'event_flyers', event.id);
+  const isFixture = !!fixtureUrl;
+  const sponsors = useGroundSponsors(club.id, 'event_flyers', isFixture ? null : event.id);
   const [choice, setChoice] = useState<Choice>('A4');
   const [showPrice, setShowPrice] = useState(!!price);
   const [showQr, setShowQr] = useState(true);
@@ -43,13 +47,13 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
   const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle');
   const qrRef = useRef<HTMLCanvasElement>(null);
 
-  const eventUrl = club.custom_domain ? `https://${club.custom_domain}/events/${event.id}` : `${SITE_URL}/${club.slug}/events/${event.id}`;
-  const shortLink = eventUrl.replace(/^https?:\/\//, '').replace(/\/events\/.*$/, '/events');
+  const eventUrl = fixtureUrl || (club.custom_domain ? `https://${club.custom_domain}/events/${event.id}` : `${SITE_URL}/${club.slug}/events/${event.id}`);
+  const shortLink = eventUrl.replace(/^https?:\/\//, '').replace(/\/(events|match)\/.*$/, isFixture ? '/fixtures' : '/events');
   const size = sizeOf(choice);
   const sponsorKey = JSON.stringify(showSponsors ? (sponsors || []).map(s => [s.logo_url || '', s.name]) : []);
   // With sponsors on it, the QR goes through a tracked link that counts the scan for them, then on to the event
   const withSponsors = showSponsors && !!sponsors?.length;
-  const qrValue = withSponsors ? posterQrLink(window.location.origin, club.id, 'event_flyers', { eventId: event.id }) : eventUrl;
+  const qrValue = withSponsors && !isFixture ? posterQrLink(window.location.origin, club.id, 'event_flyers', { eventId: event.id }) : eventUrl;
 
   useEffect(() => {
     if (sponsors === null) return;
@@ -75,7 +79,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
 
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
 
-  const fileName = `${club.slug}-${event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'event'}-flyer${size === 'paper' ? '' : `-${size}`}.png`;
+  const fileName = `${club.slug}-${event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'event'}-${isFixture ? 'poster' : 'flyer'}${size === 'paper' ? '' : `-${size}`}.png`;
 
   const saveAsFlyer = async () => {
     if (!image) return;
@@ -107,7 +111,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
   );
 
   return createPortal(
-    <div className="flyer-maker-overlay" role="dialog" aria-modal="true" aria-label={`Make a flyer for ${event.title}`}
+    <div className="flyer-maker-overlay" role="dialog" aria-modal="true" aria-label={`${isFixture ? 'Make a matchday poster' : 'Make a flyer'} for ${event.title}`}
       style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0, 0, 0, 0.88)', overflowY: 'auto', overscrollBehavior: 'contain', padding: '1.25rem' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <style>{`
@@ -129,15 +133,15 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
       <div className="flyer-maker-layout" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'center', alignItems: 'flex-start', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ flex: '1 1 340px', maxWidth: 560, display: 'flex', justifyContent: 'center' }}>
           {image
-            ? <img className="flyer-print" src={image.url} alt={`Flyer for ${event.title}`} style={{ width: '100%', maxHeight: '86vh', objectFit: 'contain', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }} />
-            : <p className="text-note no-print" role="status" style={{ padding: '3rem 0' }}>{error || 'Drawing your flyer…'}</p>}
+            ? <img className="flyer-print" src={image.url} alt={`${isFixture ? 'Poster' : 'Flyer'} for ${event.title}`} style={{ width: '100%', maxHeight: '86vh', objectFit: 'contain', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }} />
+            : <p className="text-note no-print" role="status" style={{ padding: '3rem 0' }}>{error || (isFixture ? 'Drawing your poster…' : 'Drawing your flyer…')}</p>}
         </div>
 
         <div className="glass-panel no-print" style={{ flex: '1 1 320px', maxWidth: 440, padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0 }}>Make a flyer</h2>
-              <p className="text-meta" style={{ margin: '0.25rem 0 0' }}>{event.title}. Filled in from the event.</p>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0 }}>{isFixture ? 'Matchday poster' : 'Make a flyer'}</h2>
+              <p className="text-meta" style={{ margin: '0.25rem 0 0' }}>{event.title}. Filled in from the {isFixture ? 'fixture' : 'event'}.</p>
             </div>
             <button type="button" onClick={onClose} aria-label="Close" className="btn btn-secondary btn-sm" style={{ minWidth: 40, minHeight: 40 }}><X size={16} /></button>
           </div>
@@ -152,9 +156,9 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
           </div>
           <p className="text-note" style={{ margin: '0.5rem 0 0' }}>Paper sizes print, or save as a PDF from the print window. Story and Post download as images for socials.</p>
 
-          <div className="form-label" style={{ marginTop: '1.25rem' }}>On the flyer</div>
-          {tick(showPrice, setShowPrice, price ? `Ticket price (${price})` : 'Ticket price (this event is free)', !price)}
-          {tick(showQr, setShowQr, price ? 'QR to buy tickets' : 'QR to the event page')}
+          <div className="form-label" style={{ marginTop: '1.25rem' }}>On the {isFixture ? 'poster' : 'flyer'}</div>
+          {!isFixture && tick(showPrice, setShowPrice, price ? `Ticket price (${price})` : 'Ticket price (this event is free)', !price)}
+          {tick(showQr, setShowQr, isFixture ? 'QR to the match page' : price ? 'QR to buy tickets' : 'QR to the event page')}
           {tick(showSponsors, setShowSponsors, sponsors === null ? 'Sponsors (loading…)' : `Sponsors (${sponsors.length} with "Event flyers" ticked)`, !sponsors?.length)}
           {sponsors !== null && !sponsors.length && (
             <p className="text-note" style={{ margin: '0 0 0.25rem' }}>Tick &quot;Event flyers&quot; on a package in Sponsors, Packages to put sponsors here.</p>
@@ -173,7 +177,7 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
 
           <div style={{ display: 'grid', gap: '0.6rem', marginTop: '1.5rem' }}>
             {size === 'paper' ? (
-              <button type="button" className="btn btn-primary" disabled={!image} onClick={() => { if (withSponsors) countPosterPrint(club.id, 'event_flyers', event.id); window.print(); }}
+              <button type="button" className="btn btn-primary" disabled={!image} onClick={() => { if (withSponsors && !isFixture) countPosterPrint(club.id, 'event_flyers', event.id); window.print(); }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 800 }}>
                 <Printer size={16} /> Print or save {choice} PDF
               </button>

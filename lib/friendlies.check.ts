@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { ClubEvent, ClubTeam, Match } from './supabase/types';
 import {
   calendarFor, checkDay, dateLabel, fixtureFromInvitation, friendlyMessage, friendlyNote, friendlyOf, invitableTeams,
-  opponentName, parseFriendly, shortName,
+  okCrest, opponentName, ourSide, parseFriendly, parseSuggested, shortName,
 } from './friendlies';
 
 const TODAY = '2026-11-08';
@@ -127,5 +127,43 @@ assert.deepEqual(invitableTeams([
   { ...other, id: 't4', open_to_friendlies: undefined },
   { ...other, id: 't5', club_id: 'c2' },
 ], 'c1').map(t => t.id), ['t1']);
+
+// Their crest: a small inline image only
+const CREST = 'data:image/png;base64,iVBORw0KGgo=';
+assert.ok(okCrest(CREST));
+assert.equal(okCrest('https://example.com/crest.png'), false);
+assert.equal(okCrest('data:image/svg+xml;base64,PHN2Zz4='), false, 'no SVG');
+assert.equal(okCrest(`data:image/png;base64,${'A'.repeat(20000)}`), false, 'too big');
+const withCrest = parseFriendly({ ...good, crest: CREST }, TODAY);
+assert.ok(withCrest.ok && withCrest.details.crest === CREST);
+assert.equal(bad({ crest: 'javascript:alert(1)' }).ok, false);
+assert.ok(bad({ crest: '' }).ok, 'no crest is fine');
+// The public can't slip in suggested or picked dates through the form
+const sneaky = parseFriendly({ ...good, suggested: [{ date: '2026-12-05', time: '' }], picked: { date: '2026-12-05', time: '' } }, TODAY);
+assert.ok(sneaky.ok && !('suggested' in sneaky.details) && !('picked' in sneaky.details));
+
+// Dates the club suggests
+const sug = parseSuggested([{ date: '2026-12-05', time: '15:00' }, { date: '2026-12-05', time: '15:00' }, { date: '', time: '' }], TODAY);
+assert.ok(sug.ok && sug.dates.length === 1, 'repeats and blanks dropped');
+assert.equal(parseSuggested([], TODAY).ok, false);
+assert.equal(parseSuggested([{ date: '2026-11-01', time: '' }], TODAY).ok, false, 'in the past');
+assert.equal(parseSuggested([{ date: '2026-12-05', time: '9am' }], TODAY).ok, false);
+
+// Read back from the enquiry, with what the club suggested and the visitor picked
+if (p.ok) {
+  const back = friendlyOf({
+    inquiry_type: 'Friendly Match',
+    details: { ...p.details, suggested: [{ date: '2026-12-05', time: '15:00' }, { date: 'nope', time: '' }], picked: { date: '2026-12-05', time: '15:00' } },
+  });
+  assert.deepEqual(back?.suggested, [{ date: '2026-12-05', time: '15:00' }]);
+  assert.deepEqual(back?.picked, { date: '2026-12-05', time: '15:00' });
+  assert.equal(friendlyOf({ inquiry_type: 'Friendly Match', details: { ...p.details } })?.picked, undefined);
+}
+
+// Our side, as the other club reads it
+assert.equal(ourSide('Riverside Rovers FC', 'First Team'), 'Riverside Rovers FC');
+assert.equal(ourSide('Riverside Rovers FC', 'Riverside Rovers Seniors'), 'Riverside Rovers Seniors');
+assert.equal(ourSide('Riverside Rovers FC', 'U12 Girls'), 'Riverside Rovers FC U12 Girls');
+assert.equal(ourSide('Riverside Rovers FC', ''), 'Riverside Rovers FC');
 
 console.log('friendlies: ok');
