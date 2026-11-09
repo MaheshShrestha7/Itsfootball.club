@@ -33,9 +33,16 @@ export interface AskTextOptions extends Omit<ConfirmOptions, 'alertOnly'> {
   required?: boolean;
 }
 
+/** A tick box in the dialog, e.g. "Keep Sam on as a Club Admin" */
+export interface ConfirmCheckOptions extends Omit<ConfirmOptions, 'alertOnly'> {
+  checkLabel: string;
+  defaultChecked?: boolean;
+}
+
 type Request = ConfirmOptions & {
   input?: Omit<AskTextOptions, keyof ConfirmOptions>;
-  resolve: (ok: boolean, value?: string) => void;
+  check?: { label: string; defaultChecked?: boolean };
+  resolve: (ok: boolean, value?: string, checked?: boolean) => void;
 };
 
 let show: ((req: Request) => void) | null = null;
@@ -55,6 +62,14 @@ export function askText({ label, placeholder, defaultValue, type, required, ...o
   });
 }
 
+/** null = cancelled, else whether the box was ticked */
+export function confirmWithCheck({ checkLabel, defaultChecked, ...options }: ConfirmCheckOptions): Promise<{ checked: boolean } | null> {
+  return new Promise(resolve => {
+    if (!show) return resolve(window.confirm(options.title) ? { checked: !!defaultChecked } : null);
+    show({ ...options, check: { label: checkLabel, defaultChecked }, resolve: (ok, _v, checked) => resolve(ok ? { checked: !!checked } : null) });
+  });
+}
+
 export function notify(title: string, message?: string): Promise<void> {
   return confirmAction({ title, message, alertOnly: true, confirmLabel: 'OK' }).then(() => undefined);
 }
@@ -62,6 +77,7 @@ export function notify(title: string, message?: string): Promise<void> {
 export function ConfirmRoot() {
   const [req, setReq] = useState<Request | null>(null);
   const [value, setValue] = useState('');
+  const [checked, setChecked] = useState(false);
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -74,11 +90,12 @@ export function ConfirmRoot() {
 
   useEffect(() => {
     setValue(req?.input?.defaultValue || '');
+    setChecked(!!req?.check?.defaultChecked);
     if (req && ref.current && !ref.current.open) ref.current.showModal();
   }, [req]);
 
   const close = (ok: boolean) => {
-    req?.resolve(ok, req.input ? value.trim() : undefined);
+    req?.resolve(ok, req.input ? value.trim() : undefined, checked);
     setReq(null);
     ref.current?.close();
   };
@@ -107,6 +124,12 @@ export function ConfirmRoot() {
                     inputMode={req.input.type === 'url' ? 'url' : undefined} placeholder={req.input.placeholder}
                     value={value} onChange={e => setValue(e.target.value)} />
                 </div>
+              )}
+              {req.check && (
+                <label className="row" style={{ marginTop: '1rem', gap: '0.55rem', alignItems: 'flex-start', fontSize: '0.88rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} style={{ marginTop: 3, accentColor: '#10B981' }} />
+                  <span>{req.check.label}</span>
+                </label>
               )}
             </div>
           </div>

@@ -9,6 +9,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAccessRoles, AccessRole } from '@/lib/access-roles';
 import { ACCESS_AREAS, ACCESS_LEVELS, AccessLevel, memberLabels } from '@/lib/permissions';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import NonMemberAdmins from '@/components/admin/NonMemberAdmins';
 
 const cell: React.CSSProperties = { padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left' };
 const groups = [...new Set(ACCESS_AREAS.map(a => a.group))];
@@ -267,6 +268,8 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
           </div>
         </div>
       )}
+
+      <NonMemberAdmins clubId={club.id} />
     </div>
   );
 }
