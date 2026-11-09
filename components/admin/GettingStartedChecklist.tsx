@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle, Copy, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, Copy, X } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { isPlayerMember } from '@/lib/supabase/types';
 
+import { SHARED_KEY } from '@/lib/use-welcome-pack';
+
 const DISMISS_KEY = (clubId: string) => `itsfootball_setup_dismissed_${clubId}`;
-const SHARED_KEY = (clubId: string) => `itsfootball_setup_shared_${clubId}`;
 
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === '1'; } catch { return false; }
@@ -98,6 +99,9 @@ export default function GettingStartedChecklist({ clubId, clubSlug }: { clubId: 
         <div>
           <h2 id="getting-started-title">Get your club ready</h2>
           <p className="admin-meta">{doneCount} of {total} done. Each step ticks itself off when it&apos;s set up.</p>
+          <Link href={`/${clubSlug}/admin/start`} className="admin-setup-guide">
+            What, where and how for every step <ArrowRight size={14} aria-hidden="true" />
+          </Link>
         </div>
         <button
           type="button"

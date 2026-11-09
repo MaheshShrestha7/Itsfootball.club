@@ -14,6 +14,7 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import WizardGroundSearch, { type WizardGround } from '@/components/grounds/WizardGroundSearch';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import { DEFAULT_CREST } from '@/lib/crest';
+import { sendWelcomePack } from '@/lib/use-welcome-pack';
 import {
   Shield,
   Sparkles,
@@ -219,6 +220,8 @@ export default function CreateClubPage() {
         body: JSON.stringify({ clubId: newClub.id, action: 'save', groundId: directoryGround.id, listed: false }),
       }).catch(() => undefined);
     }
+    // The new owner's setup guide (what, where and how); Start here shows the same steps
+    if (saved) void sendWelcomePack({ clubId: newClub.id });
     router.push(saved ? `/${newClub.slug}/admin` : '/my-clubs');
   };
 

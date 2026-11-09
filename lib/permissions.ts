@@ -64,6 +64,9 @@ export function areaFromPath(pathname: string): string | null {
   return pathname.match(/\/admin\/([^/?#]+)/)?.[1] ?? null;
 }
 
+/** Admin pages with no area of their own: "Start here" (the welcome pack) shows each person their own steps */
+export const OPEN_ADMIN_PAGES = ['start'] as const;
+
 /** People page tabs (?tab=) that show applications and passes; the rest of the page is the squad */
 export const PEOPLE_MEMBER_TABS = ['applications', 'passes', 'rejected'] as const;
 
@@ -73,6 +76,8 @@ export const PEOPLE_MEMBER_TABS = ['applications', 'passes', 'rejected'] as cons
  */
 export function areaFromLocation(pathname: string, tab: string | null): string | null {
   const area = areaFromPath(pathname);
+  // Pages for everyone with admin access, like the dashboard (each shows only what their roles allow)
+  if (area && (OPEN_ADMIN_PAGES as readonly string[]).includes(area)) return null;
   if (area !== 'people') return area;
   return (PEOPLE_MEMBER_TABS as readonly string[]).includes(tab || '') ? 'members' : 'squad';
 }

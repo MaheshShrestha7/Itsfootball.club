@@ -37,6 +37,8 @@ interface EmailContent {
   message?: string | null;
   /** Optional wide image (https only), e.g. a news article's cover */
   image?: string | null;
+  /** A numbered list of steps under the button (welcome pack), ticked when done */
+  checklist?: { title: string; sub: string; done: boolean }[];
   /** Footer unsubscribe link (club emails other than sign-in) */
   unsubscribeUrl?: string | null;
   /** Sponsor logos (or names) at the bottom of the card, under a small heading */
@@ -85,6 +87,16 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
     : '';
   const image = absolute(c.image);
 
+  const checklist = c.checklist?.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:separate;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">
+${c.checklist.map((st, i) => `<tr>
+<td width="24" style="padding:10px 0 10px 14px;${i ? 'border-top:1px solid #E2E8F0;' : ''}vertical-align:middle"><div style="width:24px;height:24px;border-radius:12px;background:${st.done ? '#D1FAE5' : '#E2E8F0'};color:${st.done ? '#047857' : '#334155'};font:700 12px/24px ${font};text-align:center">${st.done ? '&#10003;' : i + 1}</div></td>
+<td style="padding:10px 12px;${i ? 'border-top:1px solid #E2E8F0;' : ''}vertical-align:middle"><div style="font:700 14px/1.4 ${font};color:${st.done ? '#64748B' : '#0F172A'}">${esc(st.title)}</div><div style="font:12.5px/1.4 ${font};color:#64748B">${esc(st.sub)}</div></td>
+<td align="right" style="padding:10px 14px 10px 0;${i ? 'border-top:1px solid #E2E8F0;' : ''}vertical-align:middle;font:700 12px ${font};color:#047857">${st.done ? 'Done' : ''}</td>
+</tr>`).join('\n')}
+</table>`
+    : '';
+
   const sponsorCell = (sp: { name: string; logoUrl?: string | null; url?: string | null }) => {
     const src = absolute(sp.logoUrl);
     const inner = src
@@ -119,6 +131,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
   ${message}
   ${details}
   ${cta}
+  ${checklist}
   ${linkRow}
   ${c.note ? `<p style="margin:0 0 24px;font:13px/1.5 ${font};color:#64748B">${esc(c.note)}</p>` : ''}
   ${sponsors}
@@ -141,6 +154,7 @@ ${c.message.trim().split(/\n{2,}/).map(p => `<p style="margin:0 0 8px;font:15px/
     ...(c.message?.trim() ? [`Message from ${brand.name}:`, c.message.trim(), ''] : []),
     ...(c.details?.length ? [...c.details.map(([k, v]) => `${k}: ${v}`), ''] : []),
     ...(c.cta ? [`${c.cta.label}: ${c.cta.url}`, ''] : []),
+    ...(c.checklist?.length ? [...c.checklist.map((st, i) => `${st.done ? '[done]' : `${i + 1}.`} ${st.title} (${st.sub})`), ''] : []),
     ...(links.length ? [...links.map(l => `${l.label}: ${l.url}`), ''] : []),
     ...(c.note ? [c.note, ''] : []),
     ...(c.sponsors?.list.length ? [`${c.sponsors.heading}: ${c.sponsors.list.map(sp => sp.name).join(', ')}`, ''] : []),
@@ -777,5 +791,37 @@ export function clubAdminInvite(p: { clubName: string; role: 'owner' | 'admin'; 
     cta: { label: 'Accept the invite', url: p.link },
     note: `This link works once and expires on ${p.expires}. Didn't expect this? You can ignore it and nothing will happen.`,
     reason: `You're receiving this because a platform admin invited this email address to run ${p.clubName}.`,
+  });
+}
+
+/** The admin welcome pack: the setup steps this person can do, sent when they start running a club */
+export function welcomePack(p: {
+  firstName?: string | null;
+  clubName: string;
+  /** 'Owner', 'Club Admin', or their role names, e.g. 'Treasurer' */
+  roleName: string;
+  /** Sent because they just started (invite accepted, club made), or asked for it on Start here */
+  why: 'new' | 'asked';
+  steps: { title: string; where: string; done: boolean }[];
+  link: string;
+  canReply: boolean;
+}): RenderedEmail {
+  const hi = p.firstName ? `Welcome, ${p.firstName}.` : 'Welcome.';
+  const roleLine = /^(owner|club admin)$/i.test(p.roleName) ? `the ${p.roleName} of ${p.clubName}` : `${p.roleName} at ${p.clubName}`;
+  return renderEmail({
+    subject: `Welcome to ${p.clubName}'s admin: your setup guide`,
+    preheader: `What to set up, where to find it and how. ${p.steps.filter(s => s.done).length} of ${p.steps.length} done.`,
+    heading: p.why === 'new' ? `${hi} You're now ${roleLine}` : `Your setup guide for ${p.clubName}`,
+    paragraphs: [
+      p.why === 'new'
+        ? 'Here\'s everything you need to get the club up and running. Each step says what it is and where to find it in your admin. Do them in any order.'
+        : `Here are the setup steps for you as ${roleLine}, and where to find each one in your admin. Do them in any order.`,
+    ],
+    cta: { label: 'Open Start here', url: p.link },
+    checklist: p.steps.map(s => ({ title: s.title, sub: s.where, done: s.done })),
+    note: `The Start here page has the how for each step and ticks things off as you go.${p.canReply ? ' Stuck? Just reply to this email and someone from itsfootball.club will help.' : ''}`,
+    reason: p.why === 'new'
+      ? `You're receiving this because you became ${roleLine} on itsfootball.club.`
+      : `You're receiving this because you asked for your setup guide on ${p.clubName}'s admin.`,
   });
 }

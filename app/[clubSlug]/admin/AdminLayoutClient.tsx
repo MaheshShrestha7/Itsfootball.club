@@ -47,6 +47,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
+import { useWelcomePack } from '@/lib/use-welcome-pack';
 import { CALENDAR_AREAS } from '@/lib/admin-calendar';
 import { useClubAppIcons } from '@/lib/app-icons';
 import { clubTeamsOf } from '@/lib/teams';
@@ -94,6 +95,7 @@ export default function AdminLayout({
   const { clubs, selectClubBySlug, matches, getActiveSeason, members, clubTeams, inquiries, memberMessages, updateClubBranding, sponsors } = useClub();
   const { user, logout, getUserRoleForClub, can, isClubSuperUser, getClubAccess } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  const pack = useWelcomePack(club);
 
   // The club app's home-screen icons follow the crest (drawn here by whoever may edit the branding)
   useClubAppIcons(club, can(club.id, 'branding', 'edit'), icons => updateClubBranding(club.id, { app_icons: icons }));
@@ -253,6 +255,13 @@ export default function AdminLayout({
       title: 'Overview',
       items: [
         { label: 'Dashboard', href: `/${club.slug}/admin`, icon: LayoutDashboard },
+        // The welcome pack: this person's setup steps, with how many are done until they all are
+        ...(pack.groups.length > 0 ? [{
+          label: 'Start here',
+          href: `/${club.slug}/admin/start`,
+          icon: Flag,
+          note: pack.ready && pack.progress.done < pack.progress.total ? `${pack.progress.done} of ${pack.progress.total}` : undefined,
+        }] : []),
         {
           label: 'Inbox',
           area: 'inquiries',
