@@ -4150,7 +4150,7 @@ dialog.form-dialog::backdrop {
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
 :is(.tp-leader, .pp-band, .team-band) abbr { text-decoration: none; }
-/* The home page leader is a flat field of the club colour; the player and team bands keep their silk */
+/* The home page leader is a flat field of the club colour until its silk is on (see .silk-backdrop below) */
 .tp-leader { background: var(--tp-field); border: 0; box-shadow: none; }
 .tp-leader::before, .tp-leader::after { content: none; }
 .tp-leader .tp-rank1 { min-height: 0; padding: 0; background: none; color: #FFFFFF; }
@@ -4158,6 +4158,10 @@ dialog.form-dialog::backdrop {
 /* A new leader's details and a new table fade in; the silk behind them stays put */
 .tp-swap, .tp-table tbody { animation: tp-swap 150ms ease-out; }
 @keyframes tp-swap { from { opacity: 0; } }
+/* The shirt number's box for the silk to print into (SilkBackdrop reads its spot, size and tilt); never painted itself */
+.tp-leader-no { position: absolute; right: -1rem; top: 1rem; z-index: -2; visibility: hidden; pointer-events: none;
+  font: 900 13rem/1 var(--font-heading); letter-spacing: -0.07em; font-variant-numeric: tabular-nums; transform: rotate(-10deg); }
+.tp-leader-has-photo .tp-leader-no { right: 3rem; top: 4.5rem; }
 .tp-leader-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .tp-leader-photo { position: relative; z-index: 1; flex-shrink: 0; width: 112px; aspect-ratio: 4 / 5; overflow: hidden; padding: 4px; border-radius: 14px;
   background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.35);
@@ -4175,6 +4179,8 @@ dialog.form-dialog::backdrop {
 .tp-leader-go { display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; padding-bottom: 0.1rem; font: 700 0.88rem var(--font-heading); }
 @media (min-width: 960px) {
   .tp-leader { padding: 2.5rem; } .tp-leader-name { font-size: 3rem; } .tp-leader-photo { width: 150px; }
+  .tp-leader-no { font-size: 19rem; }
+  .tp-leader-has-photo .tp-leader-no { right: 7rem; top: 5rem; }
 }
 
 /* The silk background (components/SilkBackdrop.tsx): a canvas under everything, the club glow
@@ -4185,6 +4191,8 @@ dialog.form-dialog::backdrop {
   background: linear-gradient(to top, rgba(5, 8, 15, 0.62) 0%, rgba(5, 8, 15, 0.38) 40%, transparent 65%),
     linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
 :is(.pp-band, .team-band):has(> .silk-backdrop[data-on]) .pp-band-no { visibility: hidden; }
+/* The home page leader is flat until its silk is drawn, then takes the same shade and sheen as the player band */
+.tp-leader:has(> .silk-backdrop[data-on])::before, .tp-leader:has(> .silk-backdrop[data-on])::after { content: ''; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
