@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
 import { Mail, CheckCircle2, Send, X, Handshake } from 'lucide-react';
@@ -114,7 +115,10 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
     setIsSubmitted(true);
   };
 
-  return (
+  // Rendered on <body>: the club home's "Get in touch" sits in a scroll-animated section (.club-reveal),
+  // and its translate turns position: fixed into "fixed to that section", so the form was squashed
+  // into the section and faded with the scroll instead of covering the screen.
+  return createPortal(
     <div style={{
       position: 'fixed',
       inset: 0,
@@ -359,6 +363,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
