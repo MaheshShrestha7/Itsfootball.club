@@ -140,6 +140,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (owned.data || []).forEach(row => {
       roles[row.id] = 'owner';
     });
+    // Club Admins who aren't members (club_admin_grants, migration 20261160) have no member row
+    ((perms.data || []) as { club_id: string; is_admin: boolean }[]).forEach(row => {
+      if (row.is_admin && !roles[row.club_id]) roles[row.club_id] = 'admin';
+    });
     setDbRoles(roles);
     // Without the access-roles migration this errors and only Owner / Club Admin get in, as before
     const byClub: Record<string, ClubAccess> = {};

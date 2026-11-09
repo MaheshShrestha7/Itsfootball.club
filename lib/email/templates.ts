@@ -761,3 +761,21 @@ export function groundSuggestion(p: { clubName: string; ground: string; topic: s
     reason: `You're receiving this because ${p.clubName} looks after the ${p.ground} guide on itsfootball.club.`,
   });
 }
+
+/** Mission Control invited this email to own or run a club, without joining it (migration 20261160) */
+export function clubAdminInvite(p: { clubName: string; role: 'owner' | 'admin'; email: string; link: string; expires: string }): RenderedEmail {
+  const roleName = p.role === 'owner' ? 'Owner' : 'Club Admin';
+  return renderEmail({
+    subject: `You're invited to run ${p.clubName} on itsfootball.club`,
+    preheader: `Accept to become ${p.role === 'owner' ? 'the Owner' : 'a Club Admin'} of ${p.clubName}. No membership needed.`,
+    heading: p.role === 'owner' ? `You're invited to be the Owner of ${p.clubName}` : `You're invited to be a Club Admin of ${p.clubName}`,
+    paragraphs: [
+      `Hi, the itsfootball.club team has invited you to look after ${p.clubName}'s website and club admin.`,
+      'Sign in or create a free account with this email address and you\'ll go straight to the club\'s admin. You don\'t need to join the club or pay a membership fee.',
+    ],
+    details: [['Club', p.clubName], ['Role', roleName], ['Invite for', p.email]],
+    cta: { label: 'Accept the invite', url: p.link },
+    note: `This link works once and expires on ${p.expires}. Didn't expect this? You can ignore it and nothing will happen.`,
+    reason: `You're receiving this because a platform admin invited this email address to run ${p.clubName}.`,
+  });
+}

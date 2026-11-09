@@ -1246,6 +1246,35 @@ export interface PlatformClubPerson {
   is_owner: boolean;
   is_admin: boolean;
   last_sign_in_at: string | null;
+  /** Has a member row at the club (migration 20261160; undefined before it) */
+  is_member?: boolean;
+  /** Admin through club_admin_grants, i.e. without needing a membership (migration 20261160) */
+  has_grant?: boolean;
+}
+
+/** An Owner / Club Admin invite sent from Mission Control (club_admin_invites, migration 20261160) */
+export interface ClubAdminInvite {
+  id: string;
+  club_id: string;
+  email: string;
+  role: 'owner' | 'admin';
+  keep_old_owner: boolean;
+  invited_by_email: string | null;
+  created_at: string;
+  sent_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  cancelled_at: string | null;
+}
+
+/** Someone with admin access but no club membership, or an Owner with no member row (get_club_admin_grants) */
+export interface ClubAdminGrant {
+  user_id: string;
+  name: string | null;
+  email: string | null;
+  is_owner: boolean;
+  note: string | null;
+  since: string | null;
 }
 
 export interface PlatformClubNote {

@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           '/*/admin$', // each club's admin console, e.g. /ancc/admin/...
           '/*/admin/',
           '/api/',     // internal API endpoints
+          '/invite/',  // Owner / Club Admin invite links
         ],
       },
     ],
