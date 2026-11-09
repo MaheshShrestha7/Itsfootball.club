@@ -11,6 +11,7 @@ import { AuthAlert, InboxSent } from '@/components/auth/AuthBits';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { authReturnUrl } from '@/lib/slugs';
+import { sendWelcomePack } from '@/lib/use-welcome-pack';
 
 // An Owner / Club Admin invite from Mission Control (migration 20261160). The link's token is the
 // only key: the page shows what it's for, signs the person in with the invited email (a one-time
@@ -112,6 +113,8 @@ export default function InvitePage() {
     }
     const row = (Array.isArray(data) ? data[0] : data) as { club_slug: string } | null;
     await refreshRoles();
+    // Their setup guide, emailed while the page moves on to the admin
+    void sendWelcomePack({ clubSlug: row?.club_slug || invite.club_slug });
     setAccepting(false);
     setAccepted(true);
     setTimeout(() => router.push(`/${row?.club_slug || invite.club_slug}/admin`), 1800);
