@@ -1327,6 +1327,8 @@ export default function ClubPublicPage({
                 name={leader.full_name}
                 position={leader.player_position ? POSITION_NAMES[leader.player_position] || leader.player_position : null}
                 photoUrl={leader.photo_url || null}
+                primary={club.primary_color}
+                secondary={club.secondary_color}
                 joint={places[0]?.tied}
                 figures={view.leader.map(f => ({ label: f.label, abbr: f.abbr, n: statFor(leader.id)?.[f.key] ?? 0 }))}
                 line={squadFilter === 'GK' && (statFor(leader.id)?.appearances ?? 0) > 0

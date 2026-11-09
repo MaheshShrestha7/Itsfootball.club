@@ -4150,7 +4150,7 @@ dialog.form-dialog::backdrop {
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.02) 100%),
     linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.12) 45%, transparent 60%); }
 :is(.tp-leader, .pp-band, .team-band) abbr { text-decoration: none; }
-/* The home page leader is a flat field of the club colour; the player and team bands keep their silk */
+/* The home page leader is a flat field of the club colour until its silk is on (see .silk-backdrop below) */
 .tp-leader { background: var(--tp-field); border: 0; box-shadow: none; }
 .tp-leader::before, .tp-leader::after { content: none; }
 .tp-leader .tp-rank1 { min-height: 0; padding: 0; background: none; color: #FFFFFF; }
@@ -4185,6 +4185,8 @@ dialog.form-dialog::backdrop {
   background: linear-gradient(to top, rgba(5, 8, 15, 0.62) 0%, rgba(5, 8, 15, 0.38) 40%, transparent 65%),
     linear-gradient(160deg, rgba(5, 8, 15, 0.4) 0%, rgba(5, 8, 15, 0.05) 45%, rgba(5, 8, 15, 0.3) 100%); }
 :is(.pp-band, .team-band):has(> .silk-backdrop[data-on]) .pp-band-no { visibility: hidden; }
+/* The home page leader is flat until its silk is drawn, then takes the same shade and sheen as the player band */
+.tp-leader:has(> .silk-backdrop[data-on])::before, .tp-leader:has(> .silk-backdrop[data-on])::after { content: ''; }
 
 /* 2nd to 5th: a standings table, hairlines only */
 .tp-tabs { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 0.5rem; }
