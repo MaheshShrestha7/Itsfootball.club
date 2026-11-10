@@ -6,6 +6,7 @@ import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
 import { formatMatchWhen, formatWhen } from './format';
+import { authSignInLink } from './auth-link';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -164,7 +165,36 @@ async function main() {
     assert.ok(!expenseClaimUpdate({ ...claim, outcome: 'approved', reason: null }).text.includes('Reason:'), 'no empty reason line');
   }
 
-console.log('email: webhook signatures, unsubscribe tokens and templates OK');
+  // --- sign-in link destination (SEC11-1): a club domain only receives the token when it is live ---
+  {
+    const SUPA = 'https://proj.supabase.co';
+    // A sign-in asking to land on a club's own domain: redirect goes via SITE_URL/auth/confirm?to=<domain>
+    const toClub = `https://itsfootball.club/auth/confirm?to=${encodeURIComponent('https://rovers.example/rovers/member')}`;
+    const base = { supabaseUrl: SUPA, redirectTo: toClub, tokenHash: 'TH', type: 'magiclink', clubCustomDomain: 'rovers.example' };
+
+    // Live domain (DNS points at us, so our own /auth/confirm runs there): link may go to the domain.
+    const live = authSignInLink({ ...base, domainIsLive: true });
+    assert.ok(live.startsWith('https://rovers.example/auth/confirm?token_hash=TH'), 'live club domain gets the token');
+
+    // Not live (pending, or pointed at the owner's own server): the token must NOT go to the domain.
+    const pending = authSignInLink({ ...base, domainIsLive: false });
+    assert.ok(pending.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'a domain that is not live falls back to the platform link');
+    assert.ok(!pending.includes('rovers.example/auth/confirm'), 'no token is sent to a non-live domain (SEC11-1)');
+
+    // The attack: redirect names a domain the attacker set but that was never verified -> not live -> no token leak.
+    const attack = authSignInLink({ ...base, clubCustomDomain: 'rovers.example', domainIsLive: false });
+    assert.ok(!attack.includes('rovers.example/auth/confirm'), 'attacker-controlled domain never receives the token');
+
+    // A plain platform sign-in (no custom domain) always uses the verify link, live flag irrelevant.
+    const platform = authSignInLink({ supabaseUrl: SUPA, redirectTo: 'https://itsfootball.club/my-clubs', tokenHash: 'TH', type: 'magiclink', clubCustomDomain: null, domainIsLive: true });
+    assert.ok(platform.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'platform sign-in uses the verify link');
+
+    // A mismatch (redirect targets a different host than the club's stored domain) is not trusted either.
+    const mismatch = authSignInLink({ ...base, clubCustomDomain: 'other.example', domainIsLive: true });
+    assert.ok(mismatch.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'redirect host must match the club domain');
+  }
+
+console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

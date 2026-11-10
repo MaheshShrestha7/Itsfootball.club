@@ -5,6 +5,8 @@ import { authEmail, authRecipients, type AuthAction, type AuthHookData } from '@
 import { clubForUrl, clubBrand } from '@/lib/email/club-brand';
 import { sendEmail } from '@/lib/email/send';
 import { authReturnTarget } from '@/lib/slugs';
+import { authSignInLink } from '@/lib/email/auth-link';
+import { isCloudflareConfigured, isLive, findHostname } from '@/lib/cloudflare';
 
 // Supabase Auth "Send Email" hook: Supabase calls this instead of sending its own email, and we
 // send a branded one through Resend. Set up in Supabase -> Authentication -> Hooks (see docs/email.md).
@@ -55,12 +57,19 @@ export async function POST(req: NextRequest) {
   const club = db && redirectTo ? await clubForUrl(db, target?.href || redirectTo).catch(() => null) : null;
   const brand = club ? clubBrand(club) : undefined;
 
-  // A page on the club's own domain (see authReturnUrl) gets a link to that domain, which verifies
-  // the token itself; clubForUrl only found the club if the domain is really one of ours
-  const ownDomain = target && club?.custom_domain === target.host ? target : null;
-  const linkFor = (tokenHash: string) => ownDomain
-    ? `https://${ownDomain.host}/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(data.email_action_type)}&next=${encodeURIComponent(ownDomain.pathname + ownDomain.search)}`
-    : `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/verify?token=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(data.email_action_type)}&redirect_to=${encodeURIComponent(redirectTo)}`;
+  // A sign-in link only goes to a club's own domain when that domain is LIVE on our edge, so our own
+  // /auth/confirm receives the token - never a server the club owner merely pointed their DNS at.
+  // Otherwise the platform verify link is used, which hands the session to itsfootball.club. Without
+  // this, any owner could set custom_domain to a server they control and harvest other people's
+  // sign-in tokens (SEC11-1). An unreachable or unconfigured Cloudflare means "not live": fail safe.
+  const onClubDomain = !!target && club?.custom_domain === target.host;
+  const domainIsLive = onClubDomain && isCloudflareConfigured()
+    ? await findHostname(target!.host).then(isLive).catch(() => false)
+    : false;
+  const linkFor = (tokenHash: string) => authSignInLink({
+    supabaseUrl, redirectTo, tokenHash, type: data.email_action_type,
+    clubCustomDomain: club?.custom_domain, domainIsLive,
+  });
 
   const results = await Promise.all(recipients.map(r => {
     const email = authEmail(data.email_action_type, linkFor(r.tokenHash), r.token, brand, r.changeTo);
