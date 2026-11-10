@@ -7,7 +7,6 @@ import { useAuth } from '@/lib/auth-context';
 import { offerLineupAppearances } from '@/components/offerLineupAppearances';
 import { Match, MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
-import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import {
   Radio,
   Play,
@@ -17,7 +16,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Send,
   Trash2,
   ExternalLink,
   Layers,
@@ -49,7 +47,7 @@ import StatsFixModal from '@/components/StatsFixModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
 import { fixtureLabel } from '@/lib/fixture-label';
-import { getLiveMinute, RUNNING_PERIODS, useNowTick } from '@/lib/match-clock';
+import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, fullMinutes, halfMinutes, maxMinute, periodStartMinute, splitMinute } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
@@ -60,6 +58,7 @@ import { matchPath } from '@/lib/slugs';
 import { alertFor, type MatchState } from '@/lib/match-alerts';
 import { getAccessToken } from '@/lib/supabase/client';
 import PopupPanel from '@/components/PopupPanel';
+import MatchEventSheet, { type SheetMode, type SheetResult } from '@/components/admin/MatchEventSheet';
 
 // What the confirmation line says, in words rather than codes
 const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
@@ -69,6 +68,12 @@ const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
 const PERIOD_LABEL: Partial<Record<MatchPeriod, string>> = {
   pre_match: 'Back to before kick-off', first_half: 'First half started', halftime: 'Half time',
   second_half: 'Second half started', extra_time: 'Extra time started', penalties: 'Penalty shootout', full_time: 'Full time',
+};
+
+// The period as the scoreboard names it
+const PERIOD_NAME: Partial<Record<MatchPeriod, string>> = {
+  pre_match: 'Before kick-off', first_half: '1st half', halftime: 'Half time', second_half: '2nd half',
+  extra_time: 'Extra time', penalties: 'Penalties', full_time: 'Full time',
 };
 
 // Fixture picker order: live, upcoming, postponed, results, cancelled
@@ -88,9 +93,6 @@ function EventIcon({ type, size }: { type: MatchEventType; size: number }) {
 }
 
 const STATUS_ORDER: Record<string, number> = { live: 0, halftime: 0, upcoming: 1, postponed: 2, completed: 3, cancelled: 4 };
-// Event player chips: by shirt number, players without one last
-const byShirtNumber = (a: { jersey_number?: number | null; full_name: string }, b: { jersey_number?: number | null; full_name: string }) =>
-  (a.jersey_number || 999) - (b.jersey_number || 999) || a.full_name.localeCompare(b.full_name);
 
 export default function AdminMatchCenterControllerPage({
   params,
@@ -244,24 +246,54 @@ export default function AdminMatchCenterControllerPage({
   // Match Check-in & Scanner Modal
   const [isCheckinModalOpen, setIsCheckinModalOpen] = useState(false);
 
-  // Quick event form states
-  const [eventType, setEventType] = useState<MatchEventType>('goal');
+  // Each event button opens its own popup: which one, for which side, and the clock when it was tapped
+  const [sheet, setSheet] = useState<{ matchId: string; mode: SheetMode; type: MatchEventType; side: 'home' | 'away'; minute: number; fromPlus?: boolean } | null>(null);
   // Phones show the six most-used event buttons; the rest open with "More events"
   const [moreEvents, setMoreEvents] = useState(false);
-  // Each fixture starts on the club's own side (away games too), not always the home team
-  const [sidePick, setSidePick] = useState<{ matchId: string; side: 'home' | 'away' } | null>(null);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
-  const [customPlayerName, setCustomPlayerName] = useState('');
-  const [selectedSubOffId, setSelectedSubOffId] = useState<string>('');
-  const [selectedAssistId, setSelectedAssistId] = useState<string>('');
-  const [assistName, setAssistName] = useState('');
-  // The event minute follows the running clock unless the operator types one (for this match only)
-  const now = useNowTick();
-  const [minuteOverride, setMinuteOverride] = useState<{ matchId: string; minute: number } | null>(null);
-  const eventMinute = match && minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match, now);
-  const teamSide: 'home' | 'away' = match && sidePick?.matchId === match.id ? sidePick.side : match?.is_club_home === false ? 'away' : 'home';
-  const [eventDetail, setEventDetail] = useState('');
-  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
+  // End match asks first: the result goes public and followers get the full-time alert
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  // The small period buttons, for putting a wrong period right, stay folded behind "Change period"
+  const [showPeriods, setShowPeriods] = useState(false);
+  // Keep the phone's screen on while scoring (Screen Wake Lock); remembered on this device
+  const [keepAwake, setKeepAwake] = useState(false);
+  const [canWakeLock, setCanWakeLock] = useState(false);
+  useEffect(() => {
+    setCanWakeLock(typeof navigator !== 'undefined' && 'wakeLock' in navigator);
+    try { setKeepAwake(localStorage.getItem('mc-keep-awake') === '1'); } catch { /* off by default */ }
+  }, []);
+  useEffect(() => {
+    if (!keepAwake || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    let lock: { release: () => Promise<void> } | null = null;
+    let cancelled = false;
+    const acquire = async () => {
+      try {
+        const l = await (navigator as Navigator & { wakeLock: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock.request('screen');
+        if (cancelled) void l.release(); else lock = l;
+      } catch { /* low battery or not allowed: the screen just sleeps as usual */ }
+    };
+    // The browser drops the lock when the tab is hidden; take it again on return
+    const onVisible = () => { if (document.visibilityState === 'visible') void acquire(); };
+    void acquire();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      if (lock) void lock.release();
+    };
+  }, [keepAwake]);
+  const toggleKeepAwake = () => {
+    setKeepAwake(v => {
+      try { localStorage.setItem('mc-keep-awake', v ? '0' : '1'); } catch { /* this visit only */ }
+      return !v;
+    });
+  };
+  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error'; undoId?: string } | null>(null);
+  // Each new message gets its own few seconds (longer while Undo is on offer)
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), feedback.undoId ? 7000 : 3500);
+    return () => clearTimeout(t);
+  }, [feedback]);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
   // Phones: Draft and the public page fold into "More"; the score follows down the page once the scoreboard scrolls away
   const [moreActions, setMoreActions] = useState(false);
@@ -279,18 +311,9 @@ export default function AdminMatchCenterControllerPage({
   // Format switched on the tactics pitch but not saved yet (keyed by match, so it never leaks to another fixture)
   const [pitchFormat, setPitchFormat] = useState<{ matchId: string; format: MatchFormat } | null>(null);
 
-  // Picked players belong to one side's roster, so switching sides clears them
-  const chooseSide = (side: 'home' | 'away') => {
-    if (side === teamSide || !match) return;
-    setSidePick({ matchId: match.id, side });
-    setSelectedPlayerId('');
-    setSelectedSubOffId('');
-    setSelectedAssistId('');
-  };
-
-  const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setFeedback({ text, type });
-    setTimeout(() => setFeedback(null), 3000);
+  // A toast along the bottom (in view wherever the page is scrolled); a logged event can be undone from it
+  const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success', undoId?: string) => {
+    setFeedback({ text, type, undoId });
   };
 
   const handleCreateFixture = (e: React.FormEvent) => {
@@ -407,7 +430,6 @@ export default function AdminMatchCenterControllerPage({
     const updates: any = { period, status };
     if (typeof defaultMin === 'number') {
       updates.current_minute = defaultMin;
-      setMinuteOverride(null);
     }
     updateMatch(match.id, updates);
     showFeedback(PERIOD_LABEL[period] || 'Match updated');
@@ -451,7 +473,6 @@ export default function AdminMatchCenterControllerPage({
   const handleMinuteAdjust = (delta: number) => {
     const newMin = Math.max(0, Math.min(maxMinute(match), getLiveMinute(match) + delta));
     updateMatch(match.id, { current_minute: newMin });
-    setMinuteOverride(null);
   };
 
   // Pause/resume the live clock in place (injury or stoppage) without
@@ -472,85 +493,41 @@ export default function AdminMatchCenterControllerPage({
     showFeedback(`Stoppage time board set to +${minutes} minute${minutes > 1 ? 's' : ''}`);
   };
 
-  // Handle Event Logging
-  const handleLogEvent = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Open an event's popup; the minute comes from the clock as the button is tapped
+  const openSheet = (mode: SheetMode, type: MatchEventType, side: 'home' | 'away', fromPlus = false) => {
+    setSheet({ matchId: match.id, mode, type, side, minute: getLiveMinute(match), fromPlus });
+  };
 
-    if (inShootout && (eventType === 'goal' || eventType === 'penalty')) {
+  // Save what the popup picked, as the old form did: player names, the minute split into stoppage time
+  const handleSheetSave = (r: SheetResult) => {
+    if (inShootout && (r.eventType === 'goal' || r.eventType === 'penalty' || r.eventType === 'own_goal')) {
       showFeedback('During the shootout, count kicks in the shootout score instead.', 'error');
       return;
     }
-
-    const sideSquad = (teamSide === 'home' ? homePlayers : awayPlayers) ?? [];
-    const isClubSelected = (teamSide === 'home' ? homePlayers : awayPlayers) !== null;
-
-    let resolvedPlayerName = '';
-    if (isClubSelected) {
-      if (selectedPlayerId === 'custom') {
-        resolvedPlayerName = customPlayerName.trim();
-      } else {
-        const found = sideSquad.find(p => p.id === selectedPlayerId);
-        resolvedPlayerName = found ? found.full_name : customPlayerName.trim();
-      }
-    } else {
-      const oppTeamName = teamSide === 'home' ? match.home_team_name : match.away_team_name;
-      resolvedPlayerName = customPlayerName.trim() || `${oppTeamName} Player`;
-    }
-
-    if (!resolvedPlayerName) {
-      showFeedback('Please enter or select a player name.', 'error');
-      return;
-    }
-
-    let detail = eventDetail.trim();
-    let assist = '';
-    if (isClubSelected) {
-      if (selectedAssistId === 'custom') {
-        assist = assistName.trim();
-      } else if (selectedAssistId !== 'none') {
-        const foundAssist = sideSquad.find(p => p.id === selectedAssistId);
-        assist = foundAssist ? foundAssist.full_name : '';
-      }
-    } else {
-      assist = assistName.trim();
-    }
-
-    if (eventType === 'sub') {
-      const offPlayer = sideSquad.find(p => p.id === selectedSubOffId);
-      if (isClubSelected && !offPlayer) {
-        showFeedback('Please select the player coming off.', 'error');
-        return;
-      }
-      const offName = offPlayer ? offPlayer.full_name : (!isClubSelected && assist) || 'Player';
-      detail = `Substitution: ${resolvedPlayerName} ON, ${offName} OFF. ${detail}`.trim();
-      // The player coming off is in the detail, not an assist
-      assist = '';
-    }
-
-    // Read the clock now, not at the last re-render
-    const clockMinute = Number(minuteOverride?.matchId === match.id ? minuteOverride.minute : getLiveMinute(match));
     // Past the end of a half the minute is stoppage time: 14 in a 12-minute first half saves as 12+2
-    const split = splitMinute(match, match.period, clockMinute);
+    const split = splitMinute(match, match.period, r.minute);
     const minuteText = eventMinuteLabel({ minute: split.minute, added_minute: split.added });
-    addMatchEvent({
+    const saved = addMatchEvent({
       match_id: match.id,
       club_id: club.id,
       minute: split.minute,
       ...(split.added ? { added_minute: split.added } : {}),
-      event_type: eventType,
-      team_side: teamSide,
-      player_name: resolvedPlayerName,
-      assist_player_name: assist || undefined,
-      detail_text: detail || undefined,
+      event_type: r.eventType,
+      team_side: r.side,
+      player_name: r.playerName,
+      assist_player_name: r.assistName || undefined,
+      detail_text: r.detail || undefined,
     });
+    setSheet(null);
+    const what = (EVENT_LABEL[r.eventType] || r.eventType).replace(/^./, c => c.toUpperCase());
+    const who = r.eventType === 'commentary' || r.eventType === 'whistle' ? '' : `, ${r.playerName}`;
+    showFeedback(`${what}${who} ${minuteText}'`, 'success', saved?.id);
+  };
 
-    showFeedback(`Logged ${EVENT_LABEL[eventType] || eventType} for ${resolvedPlayerName} (${minuteText}')`);
-    setEventDetail('');
-    setAssistName('');
-    setSelectedAssistId('');
-    setSelectedPlayerId('');
-    setCustomPlayerName('');
-    setMinuteOverride(null);
+  // Undo from the toast: the same as deleting it from the match log (a goal comes off the score too)
+  const handleUndo = (eventId: string) => {
+    deleteMatchEvent(eventId);
+    setFeedback({ text: 'Undone. It is off the match log and the score.', type: 'info' });
   };
 
   // Delete event with automatic score reversal
@@ -577,6 +554,19 @@ export default function AdminMatchCenterControllerPage({
 
   // Full time and stats not saved yet: the one moment "Save Player Stats" should stand out
   const statsDue = match.status === 'completed' && !match.is_audited;
+
+  // The one big scoreboard button: the next whistle for where the game is (none once it's over)
+  const scoreText = `${match.home_score ?? 0}–${match.away_score ?? 0}`;
+  const nextStep: { label: string; hint: string; go: () => void } | null =
+    match.status === 'completed' || match.status === 'cancelled' || match.status === 'postponed' ? null
+    : match.status === 'upcoming' || !match.period || match.period === 'pre_match'
+      ? { label: 'Kick off', hint: 'Starts the clock and the live score', go: () => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half')) }
+    : match.status === 'halftime' || match.period === 'halftime'
+      ? { label: 'Start 2nd half', hint: `The clock restarts at ${periodStartMinute(match, 'second_half')}′`, go: () => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half')) }
+    : match.period === 'first_half'
+      ? { label: 'Half time', hint: `Stops the clock at ${halfMinutes(match)}′`, go: () => handlePeriodTransition('halftime', 'halftime', halfMinutes(match)) }
+      : { label: 'End match', hint: `Full time at ${scoreText}, then player stats`, go: () => setConfirmEnd(true) };
+  const endMinute = match.period === 'extra_time' || match.period === 'penalties' ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match);
 
   return (
     <div>
@@ -647,13 +637,18 @@ export default function AdminMatchCenterControllerPage({
         </div>
       </div>
 
-      {/* Feedback Banner */}
-      {feedback && (
-        <div role="status" className={feedback.type === 'error' ? 'admin-flash is-error' : 'admin-flash'}>
-          {feedback.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-          <span>{feedback.text}</span>
-        </div>
-      )}
+      {/* Feedback toast, along the bottom so it's in view wherever the page is scrolled */}
+      <div role="status" aria-live="polite" className="mc-toast-slot">
+        {feedback && (
+          <div className={feedback.type === 'error' ? 'mc-toast is-error' : 'mc-toast'}>
+            {feedback.type === 'error' ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}
+            <span>{feedback.text}</span>
+            {feedback.undoId && (
+              <button type="button" className="mc-toast-undo" onClick={() => handleUndo(feedback.undoId!)}>Undo</button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* A finished match: edits here change the public result, so say so, and let the admin keep followers' phones quiet */}
       {match.status === 'completed' && (
@@ -855,63 +850,105 @@ export default function AdminMatchCenterControllerPage({
 
           {/* The score and the clock */}
           <section ref={scoreboardRef} className="glass-panel mc-scoreboard" aria-label="Score and clock">
-            <div className="mc-clock-bar">
-              <div className="row row-loose row-wrap">
-                <div className={match.status === 'live' ? 'mc-clock is-live' : 'mc-clock'}>
-                  <Clock size={20} aria-hidden="true" />
-                  <span><LiveMinute match={match} />&prime;</span>
-                  {match.added_time > 0 && <small>+{match.added_time}&prime;</small>}
-                </div>
-
-                <div className="mc-clock-tools">
-                  <button type="button" onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" aria-label="Take a minute off the clock">
-                    <Minus size={13} aria-hidden="true" /> 1 min
-                  </button>
-                  <button type="button" onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" aria-label="Add a minute to the clock">
-                    <Plus size={13} aria-hidden="true" /> 1 min
-                  </button>
-                  {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
-                    <button
-                      type="button"
-                      onClick={handleTogglePause}
-                      className={match.is_paused ? 'btn btn-secondary btn-sm mc-pause is-paused' : 'btn btn-secondary btn-sm mc-pause'}
-                      aria-pressed={!!match.is_paused}
-                      title={match.is_paused ? 'Resume clock' : 'Pause clock (injury or stoppage)'}
-                    >
-                      {match.is_paused ? <><Play size={13} /> Resume</> : <><Pause size={13} /> Pause</>}
-                    </button>
-                  )}
-                </div>
+            <div className="mc-clock-head">
+              <div className={match.status === 'live' ? 'mc-clock is-live' : 'mc-clock'}>
+                <Clock size={20} aria-hidden="true" />
+                <span><LiveMinute match={match} />&prime;</span>
+                {match.added_time > 0 && <small>+{match.added_time}&prime;</small>}
               </div>
-
-              {/* Quick period changes */}
-              <div className="mc-periods" role="group" aria-label="Period">
-                <button type="button" className="mc-period" aria-pressed={match.period === 'first_half'} onClick={() => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half'))}>1st half</button>
-                <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', halfMinutes(match))}>Half time</button>
-                <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half'))}>2nd half</button>
-                <button type="button" className="mc-period" aria-pressed={match.status === 'completed'} onClick={handleFullTime}>Full time</button>
-              </div>
+              <span className={isLiveGame(match) ? 'mc-now is-live' : 'mc-now'}>
+                {isLiveGame(match) && <span className="mc-now-dot" aria-hidden="true" />}
+                {match.status === 'completed' ? 'Full time' : PERIOD_NAME[match.period] || 'Before kick-off'}
+              </span>
             </div>
+
+            <div className="mc-clock-tools">
+              <button type="button" onClick={() => handleMinuteAdjust(-1)} className="btn btn-secondary btn-sm" aria-label="Take a minute off the clock">
+                <Minus size={13} aria-hidden="true" /> 1 min
+              </button>
+              <button type="button" onClick={() => handleMinuteAdjust(1)} className="btn btn-secondary btn-sm" aria-label="Add a minute to the clock">
+                <Plus size={13} aria-hidden="true" /> 1 min
+              </button>
+              {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
+                <button
+                  type="button"
+                  onClick={handleTogglePause}
+                  className={match.is_paused ? 'btn btn-secondary btn-sm mc-pause is-paused' : 'btn btn-secondary btn-sm mc-pause'}
+                  aria-pressed={!!match.is_paused}
+                  title={match.is_paused ? 'Resume clock' : 'Pause clock (injury or stoppage)'}
+                >
+                  {match.is_paused ? <><Play size={13} /> Resume</> : <><Pause size={13} /> Pause</>}
+                </button>
+              )}
+            </div>
+
+            {/* Added time, without going to the Clock tab */}
+            {match.status === 'live' && (
+              <div className="mc-added-row" role="group" aria-label="Added time">
+                <span>Added time</span>
+                {Array.from(new Set([0, 1, 2, 3, 5, match.added_time || 0])).sort((a, b) => a - b).map(mins => (
+                  <button key={mins} type="button" className="mc-period" aria-pressed={(match.added_time || 0) === mins} onClick={() => handleSetAddedTime(mins)}>
+                    +{mins}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="mc-score">
-              {(['home', 'away'] as const).map((side, i) => (
-                <React.Fragment key={side}>
-                  {i === 1 && <div className="mc-score-sep" aria-hidden="true">:</div>}
-                  <div className="mc-score-side">
-                    <div className="mc-score-name">{side === 'home' ? match.home_team_name : match.away_team_name}</div>
-                    <div className="mc-score-ctrl">
-                      <button type="button" onClick={() => handleScoreAdjust(side, -1)} className="btn btn-secondary" aria-label={`Take a goal off ${side === 'home' ? match.home_team_name : match.away_team_name}`}>
-                        <Minus size={15} aria-hidden="true" />
-                      </button>
-                      <span className="mc-goals">{side === 'home' ? match.home_score : match.away_score}</span>
-                      <button type="button" onClick={() => handleScoreAdjust(side, 1)} className="btn btn-primary" aria-label={`Add a goal for ${side === 'home' ? match.home_team_name : match.away_team_name}`}>
-                        <Plus size={15} aria-hidden="true" />
-                      </button>
+              {(['home', 'away'] as const).map((side, i) => {
+                const name = side === 'home' ? match.home_team_name : match.away_team_name;
+                return (
+                  <React.Fragment key={side}>
+                    {i === 1 && <div className="mc-score-sep" aria-hidden="true">:</div>}
+                    <div className="mc-score-side">
+                      <div className="mc-score-name">{name}</div>
+                      <div className="mc-score-ctrl">
+                        <button type="button" onClick={() => handleScoreAdjust(side, -1)} className="btn btn-secondary" aria-label={`Take a goal off ${name}`}>
+                          <Minus size={15} aria-hidden="true" />
+                        </button>
+                        <span className="mc-goals">{side === 'home' ? match.home_score : match.away_score}</span>
+                        {/* A goal asks who scored, so it reaches the scorer's stats (the shootout keeps its own count below) */}
+                        <button type="button" onClick={() => (inShootout ? handleScoreAdjust(side, 1) : openSheet('goal', 'goal', side, true))} className="btn btn-primary" aria-label={`Add a goal for ${name}`}>
+                          <Plus size={15} aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </React.Fragment>
-              ))}
+                  </React.Fragment>
+                );
+              })}
             </div>
+
+            {/* One big button: always the next whistle. The small period buttons put a mistake right */}
+            <div className="mc-next-step">
+              {nextStep && (
+                <button type="button" className="btn btn-primary mc-next-step-btn" onClick={nextStep.go}>
+                  <span>{nextStep.label}</span>
+                  <small>{nextStep.hint}</small>
+                </button>
+              )}
+              <div className="mc-next-step-more">
+                <button type="button" className="mc-link-btn" aria-expanded={showPeriods} onClick={() => setShowPeriods(v => !v)}>
+                  {showPeriods ? 'Hide periods' : 'Change period'}
+                </button>
+              </div>
+              {showPeriods && (
+                <div className="mc-periods" role="group" aria-label="Period">
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'first_half'} onClick={() => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half'))}>1st half</button>
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', halfMinutes(match))}>Half time</button>
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half'))}>2nd half</button>
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'extra_time'} onClick={() => handlePeriodTransition('extra_time', 'live', periodStartMinute(match, 'extra_time'))}>Extra time</button>
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'penalties'} onClick={() => handlePeriodTransition('penalties', 'live', fullMinutes(match) + 2 * extraHalfMinutes(match))}>Penalties</button>
+                  <button type="button" className="mc-period" aria-pressed={match.status === 'completed'} onClick={() => setConfirmEnd(true)}>Full time</button>
+                </div>
+              )}
+            </div>
+
+            {canWakeLock && (
+              <label className="mc-awake">
+                <span>Keep this screen on during the game</span>
+                <input type="checkbox" role="switch" className="mc-switch" checked={keepAwake} onChange={toggleKeepAwake} data-view-ok />
+              </label>
+            )}
           </section>
 
           {/* Tournament day: straight on to the next game on this pitch */}
@@ -927,17 +964,10 @@ export default function AdminMatchCenterControllerPage({
             </button>
           )}
 
-          {/* Event Logger Form */}
+          {/* Event buttons: each opens a popup to tap the player (with photos) and save */}
           {(() => {
-            const selectedSquad = teamSide === 'home' ? homePlayers : awayPlayers;
-            const isClubSelected = selectedSquad !== null;
             const clubSides = (['home', 'away'] as const).filter(s => (s === 'home' ? homePlayers : awayPlayers) !== null);
             const sideName = (s: 'home' | 'away') => (s === 'home' ? match.home_team_name : match.away_team_name);
-            const sideTag = (s: 'home' | 'away') => {
-              const venue = s === 'home' ? 'Home' : 'Away';
-              if (clubSides.length !== 1) return venue;
-              return `${clubSides[0] === s ? 'Our Club' : 'Opponent'} - ${venue}`;
-            };
 
             type QuickAction = { key: string; label: string; eventType: MatchEventType; side: 'home' | 'away'; tone: 'good' | 'bad' | 'card' | 'sub'; team?: string };
             let quickActions: QuickAction[];
@@ -984,13 +1014,12 @@ export default function AdminMatchCenterControllerPage({
               : ['goal-home', 'goal-away', 'yellow_card-home', 'yellow_card-away', 'sub-home', 'sub-away']);
             const foldedCount = quickActions.filter(a => !PHONE_FIRST.has(a.key)).length + 2;
 
-            // One-tap player picking: the side's saved line-up (or a small squad), not a search box
-            const sideLineupIds = ((teamSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [])
-              .map(p => p.member_id).filter((id): id is string => !!id);
-            const chipPlayers = !selectedSquad || eventType === 'sub' || eventType === 'commentary' || eventType === 'whistle' ? []
-              : sideLineupIds.length ? sideLineupIds.map(id => selectedSquad.find(p => p.id === id)).filter((p): p is NonNullable<typeof p> => !!p)
-              : selectedSquad.length <= 20 ? [...selectedSquad].sort(byShirtNumber) : [];
-
+            // A button's popup: goals (an own goal counts for the other side), cards, a substitution
+            const modeFor = (t: MatchEventType): SheetMode => (t === 'goal' || t === 'penalty' || t === 'own_goal') ? 'goal'
+              : t === 'yellow_card' || t === 'red_card' ? 'card' : t === 'sub' ? 'sub' : 'note';
+            const openAction = (a: { eventType: MatchEventType; side: 'home' | 'away' }) =>
+              openSheet(modeFor(a.eventType), a.eventType, a.eventType === 'own_goal' ? (a.side === 'home' ? 'away' : 'home') : a.side);
+            const noteSide: 'home' | 'away' = clubSides[0] ?? 'home';
             const otherActions: { key: string; label: string; eventType: MatchEventType }[] = [
               { key: 'commentary', label: 'Commentary', eventType: 'commentary' },
               { key: 'whistle', label: 'Period whistle', eventType: 'whistle' },
@@ -1023,213 +1052,42 @@ export default function AdminMatchCenterControllerPage({
                   </div>
                 )}
 
-                <h3 id="mc-form-title">Log an event</h3>
+                <h3 id="mc-form-title">Log an event <small>Tap one, then the player</small></h3>
 
-                <form onSubmit={handleLogEvent}>
-                  {/* Quick Action Buttons */}
-                  <div className="form-group">
-                    <label className="form-label">Event</label>
-                    <div data-more={moreEvents ? 'open' : undefined} className="mc-events" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 120px), 1fr))', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      {quickActions.map(a => {
-                        const isActive = eventType === a.eventType && teamSide === a.side;
-                        return (
-                          <button
-                            key={a.key}
-                            type="button"
-                            onClick={() => { setEventType(a.eventType); chooseSide(a.side); }}
-                            aria-pressed={isActive}
-                            data-tone={a.tone}
-                            // A folded button stays in view while it's the one picked
-                            className={`mc-event-btn${PHONE_FIRST.has(a.key) || isActive ? '' : ' mc-more'}`}
-                          >
-                            <EventIcon type={a.eventType} size={20} />
-                            <span>{a.label}</span>
-                            {a.team && <small>{a.team}</small>}
-                          </button>
-                        );
-                      })}
-                    </div>
-
+                <div data-more={moreEvents ? 'open' : undefined} className="mc-events mc-event-grid">
+                  {quickActions.map(a => (
                     <button
+                      key={a.key}
                       type="button"
-                      className="btn btn-secondary btn-sm mc-more-toggle"
-                      aria-expanded={moreEvents}
-                      onClick={() => setMoreEvents(v => !v)}
+                      onClick={() => openAction(a)}
+                      data-tone={a.tone}
+                      className={`mc-event-btn${PHONE_FIRST.has(a.key) ? '' : ' mc-more'}`}
                     >
-                      {moreEvents ? 'Fewer events' : `More events (${foldedCount})`}
+                      <EventIcon type={a.eventType} size={20} />
+                      <span>{a.label}</span>
+                      {a.team && <small>{a.team}</small>}
                     </button>
+                  ))}
+                </div>
 
-                    {/* Less-common events */}
-                    <div data-more={moreEvents ? 'open' : undefined} className="mc-events mc-more" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                      {otherActions.map(a => {
-                        const isActive = eventType === a.eventType;
-                        return (
-                          <button
-                            key={a.key}
-                            type="button"
-                            onClick={() => setEventType(a.eventType)}
-                            aria-pressed={isActive}
-                            className="mc-event-btn is-inline"
-                          >
-                            <EventIcon type={a.eventType} size={16} />
-                            <span>{a.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm mc-more-toggle"
+                  aria-expanded={moreEvents}
+                  onClick={() => setMoreEvents(v => !v)}
+                >
+                  {moreEvents ? 'Fewer events' : `More events (${foldedCount})`}
+                </button>
 
-                  <div className="mc-side-minute" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem', margin: '1.25rem 0' }}>
-                    <div className="form-group m-0">
-                      <label htmlFor="match-center-team-side" className="form-label">Team</label>
-                      <select id="match-center-team-side"
-                        className="form-select"
-                        value={teamSide}
-                        onChange={e => chooseSide(e.target.value as 'home' | 'away')}
-                      >
-                        <option value="home">{match.home_team_name} ({sideTag('home')})</option>
-                        <option value="away">{match.away_team_name} ({sideTag('away')})</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group m-0">
-                      <label htmlFor="match-center-match-minute" className="form-label">Minute</label>
-                      <input id="match-center-match-minute"
-                        type="number"
-                        min={0}
-                        max={maxMinute(match)}
-                        className="form-input"
-                        value={eventMinute}
-                        aria-describedby="match-center-minute-note"
-                        onChange={e => setMinuteOverride({ matchId: match.id, minute: Number(e.target.value) })}
-                      />
-                      {clockLabel(match, match.period, eventMinute) !== String(eventMinute) && (
-                        <small id="match-center-minute-note" style={{ color: 'var(--text-muted)' }}>Stoppage time, saves as {clockLabel(match, match.period, eventMinute)}&prime;</small>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dynamic Player Selector */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
-                    {isClubSelected ? (
-                      <div className="form-group">
-                        <label className="form-label">
-                          {eventType === 'sub' ? 'Player coming on *' : 'Player *'}
-                        </label>
-                        {chipPlayers.length > 0 && (
-                          <div className="mc-player-chips" role="group" aria-label="Tap a player">
-                            {chipPlayers.map(p => (
-                              <button key={p.id} type="button" className="mc-player-chip touch-target" aria-pressed={selectedPlayerId === p.id} onClick={() => setSelectedPlayerId(p.id)}>
-                                {p.jersey_number != null && <span className="mc-player-chip-num">{p.jersey_number}</span>}
-                                <span className="mc-player-chip-name">{p.full_name.split(' ')[0]}{p.full_name.includes(' ') ? ` ${p.full_name.split(' ').slice(-1)[0][0]}.` : ''}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        <PlayerSearchSelect
-                          id="player-involved-search"
-                          players={selectedSquad ?? []}
-                          value={selectedPlayerId}
-                          onChange={setSelectedPlayerId}
-                          extraOptions={[{ value: 'custom', label: 'Someone else (type a name)' }]}
-                        />
-
-                        {selectedPlayerId === 'custom' && (
-                          <input aria-label="Player name"
-                            type="text"
-                            required
-                            className="form-input"
-                            placeholder="Enter player name"
-                            style={{ marginTop: '0.5rem' }}
-                            value={customPlayerName}
-                            onChange={e => setCustomPlayerName(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="form-group">
-                        <label htmlFor="match-center-opponent-player-name" className="form-label">Opponent player *</label>
-                        <input id="match-center-opponent-player-name"
-                          type="text"
-                          required
-                          className="form-input"
-                          placeholder="e.g. Leo Silva"
-                          value={customPlayerName}
-                          onChange={e => setCustomPlayerName(e.target.value)}
-                        />
-                      </div>
-                    )}
-
-                    {/* If Substitution: Select player coming OFF */}
-                    {eventType === 'sub' && isClubSelected ? (
-                      <div className="form-group">
-                        <label className="form-label">Player coming off *</label>
-                        <PlayerSearchSelect
-                          id="player-sub-off-search"
-                          players={selectedSquad ?? []}
-                          value={selectedSubOffId}
-                          onChange={setSelectedSubOffId}
-                        />
-                      </div>
-                    ) : (
-                      <div className="form-group">
-                        <label className="form-label">{eventType === 'sub' ? 'Player coming off (optional)' : 'Assist (optional)'}</label>
-                        {isClubSelected ? (
-                          <>
-                            <PlayerSearchSelect
-                              id="player-assist-search"
-                              players={selectedSquad ?? []}
-                              value={selectedAssistId}
-                              onChange={setSelectedAssistId}
-                              extraOptions={[
-                                { value: 'none', label: 'None' },
-                                { value: 'custom', label: 'Someone else (type a name)' },
-                              ]}
-                            />
-                            {selectedAssistId === 'custom' && (
-                              <input aria-label="Assist player name"
-                                type="text"
-                                className="form-input"
-                                placeholder="Enter player name"
-                                style={{ marginTop: '0.5rem' }}
-                                value={assistName}
-                                onChange={e => setAssistName(e.target.value)}
-                              />
-                            )}
-                          </>
-                        ) : (
-                          <input aria-label="Assist player name"
-                            type="text"
-                            className="form-input"
-                            placeholder="Player name"
-                            value={assistName}
-                            onChange={e => setAssistName(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <details className="form-group mc-note" open={!!eventDetail || undefined}>
-                    <summary className="form-label" style={{ cursor: 'pointer' }}>Add a note (optional)</summary>
-                    <label htmlFor="match-center-event-detail-tactical-notes" className="sr-only">Note</label>
-                    <input id="match-center-event-detail-tactical-notes"
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. Curling strike into top corner after neat combination play."
-                      value={eventDetail}
-                      onChange={e => setEventDetail(e.target.value)}
-                    />
-                  </details>
-
-                  {/* Stays in reach on phones while the form scrolls */}
-                  <div className="mc-log-submit" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                    <button type="submit" className="btn btn-primary touch-target" style={{ minWidth: 'min(180px, 100%)' }}>
-                      <Send size={16} aria-hidden="true" />
-                      <span>Log event</span>
+                {/* Less-common events */}
+                <div data-more={moreEvents ? 'open' : undefined} className="mc-events mc-more mc-event-extra">
+                  {otherActions.map(a => (
+                    <button key={a.key} type="button" onClick={() => openSheet('note', a.eventType, noteSide)} className="mc-event-btn is-inline">
+                      <EventIcon type={a.eventType} size={16} />
+                      <span>{a.label}</span>
                     </button>
-                  </div>
-                </form>
+                  ))}
+                </div>
               </section>
             );
           })()}
@@ -1354,12 +1212,62 @@ export default function AdminMatchCenterControllerPage({
                   <span className="admin-pill">{p.mark}</span>
                 </button>
               ))}
-              <button type="button" className="btn btn-primary mc-period-row" onClick={handleFullTime}>
+              <button type="button" className="btn btn-primary mc-period-row" onClick={() => setConfirmEnd(true)}>
                 <span>Full time, then save player stats</span>
                 <span className="admin-pill">FT</span>
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      {/* An event's popup: tap the player and save */}
+      {sheet && sheet.matchId === match.id && (
+        <MatchEventSheet
+          key={`${sheet.mode}-${sheet.type}-${sheet.side}`}
+          mode={sheet.mode}
+          initialType={sheet.type}
+          side={sheet.side}
+          names={{ home: match.home_team_name, away: match.away_team_name }}
+          squads={{ home: homePlayers, away: awayPlayers }}
+          lineupIds={{
+            home: (match.home_lineup_coords || []).map(p => p.member_id).filter((id): id is string => !!id),
+            away: (match.away_lineup_coords || []).map(p => p.member_id).filter((id): id is string => !!id),
+          }}
+          events={events}
+          score={{ home: match.home_score ?? 0, away: match.away_score ?? 0 }}
+          clockMinute={sheet.minute}
+          maxMinute={maxMinute(match)}
+          minuteLabel={m => clockLabel(match, match.period, m)}
+          onSave={handleSheetSave}
+          onScoreOnly={sheet.fromPlus ? () => { setSheet(null); handleScoreAdjust(sheet.side, 1); } : undefined}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {/* End match asks first: the result goes public and followers get the full-time alert */}
+      {confirmEnd && (
+        <div className="mc-sheet-wrap" onClick={() => setConfirmEnd(false)}>
+          <PopupPanel onClose={() => setConfirmEnd(false)} label="End the match?" className="mc-sheet" onClick={e => e.stopPropagation()}>
+            <div className="mc-sheet-grab" aria-hidden="true" />
+            <div className="mc-sheet-head"><h2>End the match?</h2></div>
+            <p className="mc-sheet-lead">Check the score first. This is the result people will see.</p>
+            <div className="mc-final">
+              <span>{match.home_team_name}</span>
+              <b>{scoreText}</b>
+              <span>{match.away_team_name}</span>
+            </div>
+            <ul className="mc-final-list">
+              <li><CheckCircle2 size={16} aria-hidden="true" />The clock stops at {endMinute}&prime; and the public page says Full time</li>
+              {!match.alerts_muted && <li><CheckCircle2 size={16} aria-hidden="true" />Followers get the full-time score alert</li>}
+              {isCupGame && <li><CheckCircle2 size={16} aria-hidden="true" />The result goes into the tournament</li>}
+              <li><CheckCircle2 size={16} aria-hidden="true" />Player stats open next, so you can save them</li>
+            </ul>
+            <div className="mc-sheet-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmEnd(false)}>Not yet</button>
+              <button type="button" className="btn btn-primary" onClick={() => { setConfirmEnd(false); handleFullTime(); }}>End match</button>
+            </div>
+          </PopupPanel>
         </div>
       )}
 

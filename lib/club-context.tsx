@@ -141,7 +141,8 @@ interface ClubContextType {
   addMatch: (matchData: Omit<Match, 'id' | 'created_at'>) => Match;
   deleteMatch: (matchId: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
-  addMatchEvent: (eventData: Omit<MatchEvent, 'id' | 'created_at'>) => void;
+  /** Returns the saved event, so the Match Centre can offer Undo */
+  addMatchEvent: (eventData: Omit<MatchEvent, 'id' | 'created_at'>) => MatchEvent;
   deleteMatchEvent: (eventId: string) => void;
   
   // Events Management
@@ -1554,6 +1555,7 @@ export function ClubProvider({
       event: newEvent,
       timestamp: Date.now(),
     });
+    return newEvent;
   }, []);
 
   const deleteMatchEvent = useCallback((eventId: string) => {
