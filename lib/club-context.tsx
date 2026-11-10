@@ -185,7 +185,7 @@ interface ClubContextType {
   publicEventCheckin: (eventId: string, attendee: { name?: string; email?: string; token?: string; doorCode?: string }) => Promise<{ success: boolean; message: string; attendeeName?: string }>;
 
   // Inquiries
-  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string }) => Promise<{ success: boolean; error?: string }>;
+  submitInquiry: (inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>, honeypot?: string, about?: string, friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string }, captchaToken?: string | null) => Promise<{ success: boolean; error?: string }>;
   /** Changes an enquiry's fields (e.g. the fixture made from a friendly invitation); synced like any other row */
   updateInquiry: (inquiryId: string, patch: Partial<Pick<ContactInquiry, 'status' | 'match_id'>>) => void;
   /** Puts a row the server saved into the list without uploading it again */
@@ -1887,7 +1887,8 @@ export function ClubProvider({
     inquiryData: Omit<ContactInquiry, 'id' | 'created_at' | 'status'>,
     honeypot?: string,
     about?: string,
-    friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string }
+    friendly?: { team_id: string; details: Record<string, unknown>; visitor_club_id?: string },
+    captchaToken?: string | null
   ): Promise<{ success: boolean; error?: string }> => {
     const message = sanitizeText(inquiryData.message);
     const name = sanitizeText(inquiryData.sender_name);
@@ -1913,6 +1914,7 @@ export function ClubProvider({
           message,
           about: about || undefined,
           website: honeypot,
+          captchaToken: captchaToken || undefined,
           ...(friendly ? { team_id: friendly.team_id, friendly: friendly.details, visitor_club_id: friendly.visitor_club_id } : {}),
         }),
       });
