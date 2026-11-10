@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requirePlatformAdmin } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { collectHealth } from '@/lib/platform-health';
+import { JOBS as JOB_INFO } from '@/lib/mission-control';
+import { logPlatformAction } from '@/lib/platform-audit';
 import { POST as runReminders } from '@/app/api/cron/reminders/route';
 import { POST as runIndexNow } from '@/app/api/cron/indexnow/route';
 import { POST as runHealth } from '@/app/api/cron/health/route';
@@ -42,5 +44,13 @@ export async function POST(req: NextRequest) {
     headers: { authorization: `Bearer ${secret}` },
   }));
   const body = await res.json().catch(() => ({}));
+  const db = getServiceClient();
+  if (db) {
+    await logPlatformAction(db, auth, {
+      action: 'job_run', table: 'platform_events',
+      summary: `Ran "${JOB_INFO[name]?.label || name}" by hand${res.ok ? '' : ' (it failed)'}`,
+      details: { job: name, status: res.status },
+    });
+  }
   return NextResponse.json({ ok: res.ok, status: res.status, result: body }, { status: res.ok ? 200 : 502 });
 }

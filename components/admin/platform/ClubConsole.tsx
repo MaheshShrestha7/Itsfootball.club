@@ -9,7 +9,8 @@ import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import { askText, confirmAction, confirmWithCheck, notify } from '@/components/ConfirmDialog';
 import { validateClubSlug } from '@/lib/club-context';
 import { platformApi, platformDownload } from '@/components/admin/platform/api';
-import { Check, Circle, Clock, Mail, Users, ClipboardList, History, StickyNote, Globe, Archive, Download } from 'lucide-react';
+import { Check, Circle, Clock, Download } from 'lucide-react';
+import { Avatar } from '@/components/admin/platform/McArt';
 
 /** The day a closing club is deleted for good */
 const closesOn = (closedAt: string) =>
@@ -21,18 +22,14 @@ interface Props {
   showToast: (msg: string) => void;
   /** The club list needs reloading (owner changed) */
   onChanged: () => void;
+  /** Sections the panel adds after Who runs it (money, members and games) */
+  middle?: React.ReactNode;
+  /** A section just before Data and closing (the home page demo) */
+  beforeClosing?: React.ReactNode;
+  /** Suspend or turn back on, at the top of Data and closing */
+  statusControl?: React.ReactNode;
 }
 
-const head: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
-const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-primary)' };
-const small: React.CSSProperties = { fontSize: '0.75rem', color: 'var(--text-muted)' };
-const subHead: React.CSSProperties = { fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', margin: '1.1rem 0 0.6rem', paddingTop: '0.9rem', borderTop: '1px solid var(--border-subtle)' };
-const tag = (tone: 'green' | 'grey' | 'amber'): React.CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999, marginLeft: 4, whiteSpace: 'nowrap', verticalAlign: 1,
-  ...(tone === 'green' ? { background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }
-    : tone === 'amber' ? { background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)' }
-    : { background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--text-secondary)' }),
-});
 const INVITE_COLS = 'id, club_id, email, role, keep_old_owner, invited_by_email, created_at, sent_at, expires_at, accepted_at, cancelled_at';
 /** "expires in 6 days" / "expired" */
 const expiresIn = (iso: string) => {
@@ -40,8 +37,9 @@ const expiresIn = (iso: string) => {
   return days <= 0 ? 'expired' : days === 1 ? 'expires tomorrow' : `expires in ${days} days`;
 };
 
-/** The working parts of the club drawer: setup, who runs it, emails, notes and history. */
-export default function ClubConsole({ club, onEmail, showToast, onChanged }: Props) {
+/** The working parts of the club panel, in the order they're used: setup, who runs it, (money,
+ *  members), web address, notes, history, then data and closing. */
+export default function ClubConsole({ club, onEmail, showToast, onChanged, middle, beforeClosing, statusControl }: Props) {
   const [people, setPeople] = useState<PlatformClubPerson[]>([]);
   const [notes, setNotes] = useState<PlatformClubNote[]>([]);
   const [history, setHistory] = useState<PlatformAuditRow[]>([]);
@@ -220,178 +218,173 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEmail({ club, to: 'owner', template: 'blank' })}><Mail size={14} /> Email owner</button>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEmail({ club, to: 'admins', template: 'blank' })}><Users size={14} /> Email all admins</button>
-      </div>
+      {loadError && <p role="alert" className="mc-cp-warn">{loadError}</p>}
 
-      {loadError && <p role="alert" style={{ margin: 0, fontSize: '0.8rem', color: 'var(--c-amber)' }}>{loadError}</p>}
-
-      <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><ClipboardList size={14} color="var(--text-secondary)" aria-hidden="true" /> Setup · {done} of {steps.length}</h3>
-        <div style={{ height: 6, borderRadius: 3, background: 'rgba(var(--tint-rgb), 0.08)', marginBottom: '0.85rem' }}>
-          <div style={{ width: `${Math.round((done / steps.length) * 100)}%`, height: 6, borderRadius: 3, background: 'var(--c-green)' }} />
-        </div>
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+      <section className="mc-cp-sec" aria-labelledby="mc-cp-setup">
+        <h3 id="mc-cp-setup">Setup <span className="mc-muted num">{done} of {steps.length}</span></h3>
+        <ul className="mc-steps">
           {steps.map(s => (
-            <li key={s.key} style={{ ...row, color: s.done ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-              {s.done ? <Check size={14} color="var(--c-green)" aria-label="Done" /> : <Circle size={14} color="var(--text-muted)" aria-label="Not done" />}
+            <li key={s.key} className={s.done ? 'done' : 'todo'}>
+              {s.done ? <Check size={14} aria-label="Done" /> : <Circle size={14} aria-label="Not done" />}
               {s.label}
             </li>
           ))}
         </ul>
         {done < steps.length && (
-          <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: '0.85rem' }} onClick={() => onEmail({ club, to: 'owner', template: 'needHand' })}>
+          <button type="button" className="mc-pill-btn ghost" style={{ marginTop: 12 }} onClick={() => onEmail({ club, to: 'owner', template: 'needHand' })}>
             Send a setup nudge
           </button>
         )}
       </section>
 
-      <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><Users size={14} color="var(--text-secondary)" aria-hidden="true" /> Who runs it</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-          {people.length === 0 && !loadError && <p style={small}>No Owner or admins found.</p>}
-          {people.map(p => {
-            const labels = p.is_owner ? ['Owner'] : memberLabels(p.role, p.roles);
-            return (
-              <div key={`${p.member_id}-${p.user_id}`} style={{ ...row, alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ minWidth: 0 }}>
-                  <b>{p.name}</b> <span style={small}>{labels.join(', ')}</span>
-                  {p.is_member !== undefined && <span style={tag(p.is_member ? 'green' : 'grey')}>{p.is_member ? 'Member' : 'Not a member'}</span>}
-                  <div style={small}>{p.email || 'no email'} · {p.last_sign_in_at ? `signed in ${timeAgo(p.last_sign_in_at)}` : 'never signed in'}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {!p.is_owner && (p.member_id || p.has_grant) && (
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => makeOwner(p)}>Make owner</button>
-                  )}
-                  {!p.is_owner && p.is_admin && (
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => removeAdmin(p)} style={{ color: 'var(--c-red)' }}>Remove admin</button>
-                  )}
-                </div>
+      <section className="mc-cp-sec" aria-labelledby="mc-cp-who">
+        <h3 id="mc-cp-who">Who runs it</h3>
+        {people.length === 0 && !loadError && <p className="mc-muted">No Owner or admins found.</p>}
+        {people.map(p => {
+          const labels = p.is_owner ? ['Owner'] : memberLabels(p.role, p.roles);
+          return (
+            <div key={`${p.member_id}-${p.user_id}`} className="mc-person">
+              <Avatar name={p.name} />
+              <div className="who">
+                <b>{p.name}</b> <span className="mc-muted">{labels.join(', ')}</span>
+                {p.is_member !== undefined && <span className={`mc-flag${p.is_member ? ' ok' : ''}`} style={{ marginLeft: 6 }}>{p.is_member ? 'Member' : 'Not a member'}</span>}
+                <small>{p.email || 'No email'}, {p.last_sign_in_at ? `signed in ${timeAgo(p.last_sign_in_at)}` : 'never signed in'}</small>
               </div>
-            );
-          })}
-        </div>
+              <div className="acts">
+                {!p.is_owner && (p.member_id || p.has_grant) && (
+                  <button type="button" className="mc-pill-btn ghost" disabled={busy} onClick={() => makeOwner(p)}>Make owner</button>
+                )}
+                {!p.is_owner && p.is_admin && (
+                  <button type="button" className="mc-pill-btn danger" disabled={busy} onClick={() => removeAdmin(p)}>Remove admin</button>
+                )}
+              </div>
+            </div>
+          );
+        })}
 
         {invites.length > 0 && (
           <>
-            <div style={subHead}>Waiting · {invites.length}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-              {invites.map(inv => (
-                <div key={inv.id} style={{ ...row, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <b style={{ wordBreak: 'break-all' }}>{inv.email}</b>
-                    <span style={tag('amber')}><Clock size={11} /> {inv.role === 'owner' ? 'Owner invite' : 'Club Admin invite'}</span>
-                    <div style={small}>Sent {timeAgo(inv.sent_at)}{inv.invited_by_email ? ` by ${inv.invited_by_email}` : ''} · {expiresIn(inv.expires_at)}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => resendInvite(inv)}>Resend</button>
-                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => cancelInvite(inv)} style={{ color: 'var(--c-red)' }}>Cancel</button>
-                  </div>
+            <h4 className="mc-cp-sub">Waiting <span className="num">{invites.length}</span></h4>
+            {invites.map(inv => (
+              <div key={inv.id} className="mc-person">
+                <span className="mc-sq tone-wait"><Clock size={14} /></span>
+                <div className="who">
+                  <b style={{ wordBreak: 'break-all' }}>{inv.email}</b> <span className="mc-muted">{inv.role === 'owner' ? 'Owner invite' : 'Club Admin invite'}</span>
+                  <small>Sent {timeAgo(inv.sent_at)}{inv.invited_by_email ? ` by ${inv.invited_by_email}` : ''}, {expiresIn(inv.expires_at)}</small>
                 </div>
-              ))}
-            </div>
+                <div className="acts">
+                  <button type="button" className="mc-pill-btn ghost" disabled={busy} onClick={() => resendInvite(inv)}>Resend</button>
+                  <button type="button" className="mc-pill-btn danger" disabled={busy} onClick={() => cancelInvite(inv)}>Cancel</button>
+                </div>
+              </div>
+            ))}
           </>
         )}
 
-        <div style={subHead}>Invite someone</div>
-        <form onSubmit={sendInvite} style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <div role="radiogroup" aria-label="Invite as" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid var(--border-medium)', borderRadius: 10, overflow: 'hidden' }}>
+        <h4 className="mc-cp-sub">Invite someone</h4>
+        <form onSubmit={sendInvite} className="mc-cp-form">
+          <div className="mc-seg" role="radiogroup" aria-label="Invite as">
             {(['admin', 'owner'] as const).map(r => (
-              <button key={r} type="button" role="radio" aria-checked={inviteRole === r} onClick={() => setInviteRole(r)}
-                style={{ background: inviteRole === r ? 'rgba(16, 185, 129, 0.16)' : 'transparent', color: inviteRole === r ? 'var(--c-green)' : 'var(--text-secondary)', border: 0, font: 'inherit', fontSize: '0.82rem', fontWeight: 700, padding: '0.55rem 0.5rem', cursor: 'pointer' }}>
+              <button key={r} type="button" role="radio" aria-checked={inviteRole === r} aria-pressed={inviteRole === r} onClick={() => setInviteRole(r)}>
                 {r === 'owner' ? 'Owner' : 'Club Admin'}
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="mc-cp-inline">
             <label htmlFor="mc-add-admin" className="sr-only">Email to invite as {inviteRole === 'owner' ? 'Owner' : 'Club Admin'}</label>
-            <input id="mc-add-admin" type="email" required className="form-input" placeholder="Their email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
-            <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>Send invite</button>
+            <input id="mc-add-admin" type="email" required className="mc-input" placeholder="Their email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} />
+            <button type="submit" className="mc-pill-btn" disabled={busy}>Send invite</button>
           </div>
-          <p style={{ ...small, margin: 0, lineHeight: 1.5 }}>
+          <p className="mc-muted">
             Any email works. They don&rsquo;t need to join the club or pay a fee, and they won&rsquo;t show in the squad or members list.
             {inviteRole === 'admin' ? ' An approved member becomes Club Admin straight away.' : ' The Owner only changes when they accept.'}
           </p>
         </form>
       </section>
 
-      <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><StickyNote size={14} color="var(--text-secondary)" aria-hidden="true" /> Notes and emails</h3>
-        <form onSubmit={addNote} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label htmlFor="mc-note" className="sr-only">Private note</label>
-          <textarea id="mc-note" className="form-input" rows={2} maxLength={4000} placeholder="Private note, only platform admins see it" value={noteText} onChange={e => setNoteText(e.target.value)} style={{ resize: 'vertical' }} />
-          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || !noteText.trim()} style={{ alignSelf: 'flex-end' }}>Save note</button>
+      {middle}
+
+      <section className="mc-cp-sec" aria-labelledby="mc-cp-web">
+        <h3 id="mc-cp-web">Web address</h3>
+        <form onSubmit={changeSlug} className="mc-cp-inline">
+          <label htmlFor="mc-slug" className="sr-only">Club web address</label>
+          <span className="mc-muted">itsfootball.club/</span>
+          <input id="mc-slug" className="mc-input" value={slug} onChange={e => setSlug(e.target.value)} />
+          <button type="submit" className="mc-pill-btn ghost" disabled={busy || slug.trim().toLowerCase() === club.slug}>Change</button>
         </form>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+        <p className="mc-muted" style={{ marginTop: 8 }}>The old address keeps working: it redirects to the new one.</p>
+        <dl className="mc-kv" style={{ marginTop: 10 }}>
+          <dt>Own domain</dt>
+          <dd>{club.custom_domain || 'None'}</dd>
+        </dl>
+        {club.custom_domain && <p className="mc-muted" style={{ marginTop: 6 }}>The domain needs a CNAME record pointing to cname.itsfootball.club.</p>}
+      </section>
+
+      <section className="mc-cp-sec" aria-labelledby="mc-cp-notes">
+        <h3 id="mc-cp-notes">Notes and emails</h3>
+        <form onSubmit={addNote} className="mc-cp-form">
+          <label htmlFor="mc-note" className="sr-only">Private note</label>
+          <textarea id="mc-note" className="mc-input" rows={2} maxLength={4000} placeholder="Private note, only platform admins see it" value={noteText} onChange={e => setNoteText(e.target.value)} />
+          <button type="submit" className="mc-pill-btn ghost" disabled={busy || !noteText.trim()} style={{ alignSelf: 'flex-end' }}>Save note</button>
+        </form>
+        <div className="mc-feed" style={{ marginTop: 8 }}>
           {notes.map(n => {
             const [first, ...rest] = n.body.split('\n');
             return (
-              <details key={n.id} style={{ fontSize: '0.83rem', color: 'var(--text-primary)' }}>
-                <summary style={{ cursor: 'pointer' }}>
-                  <span className="badge" style={{ fontSize: '0.65rem', marginRight: 6 }}>{n.kind === 'email' ? 'Email' : 'Note'}</span>
-                  {first}
-                  <span style={{ ...small, marginLeft: 6 }}>{timeAgo(n.created_at)}</span>
+              <details key={n.id} className="mc-feed-row">
+                <summary>
+                  <b>{n.kind === 'email' ? 'Email' : 'Note'}: {first}</b>
+                  <time dateTime={n.created_at}>{n.author_email || 'Platform admin'}, {timeAgo(n.created_at)}</time>
                 </summary>
-                {rest.length > 0 && <p style={{ ...small, whiteSpace: 'pre-wrap', margin: '0.4rem 0 0' }}>{rest.join('\n').trim()}</p>}
+                {rest.length > 0 && <p className="mc-muted" style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{rest.join('\n').trim()}</p>}
               </details>
             );
           })}
         </div>
       </section>
 
-      <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><Globe size={14} color="var(--text-secondary)" aria-hidden="true" /> Web address</h3>
-        <form onSubmit={changeSlug} style={{ display: 'flex', gap: '0.5rem' }}>
-          <label htmlFor="mc-slug" className="sr-only">Club web address</label>
-          <span style={{ ...small, alignSelf: 'center' }}>itsfootball.club/</span>
-          <input id="mc-slug" className="form-input" value={slug} onChange={e => setSlug(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
-          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || slug.trim().toLowerCase() === club.slug}>Change</button>
-        </form>
-        <p style={{ ...small, margin: '0.5rem 0 0' }}>The old address keeps working: it redirects to the new one.</p>
-      </section>
-
-      <section className="glass-panel" style={{ padding: '1.25rem', border: club.closed_at ? '1px solid rgba(239, 68, 68, 0.35)' : undefined }}>
-        <h3 style={head}><Archive size={14} color="var(--c-red)" aria-hidden="true" /> Data and closing</h3>
-        <button type="button" className="btn btn-secondary btn-sm" disabled={exporting} onClick={exportAll}>
-          <Download size={14} /> {exporting ? 'Preparing…' : exported ? 'Downloaded. Download again' : 'Download everything (ZIP)'}
-        </button>
-        <p style={{ ...small, margin: '0.5rem 0 1rem' }}>A spreadsheet for every kind of record the club has: members, fixtures, payments and more.</p>
-
-        {club.closed_at ? (
-          <>
-            <p style={{ fontSize: '0.85rem', color: 'var(--c-red)', margin: '0 0 0.6rem', fontWeight: 700 }}>
-              Closing. Deleted for good on {closesOn(club.closed_at)}. Payments are kept for accounting.
-            </p>
-            <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={reopen}>Reopen the club</button>
-          </>
-        ) : (
-          <>
-            <p style={{ ...small, margin: '0 0 0.6rem' }}>
-              Closing hides the club at once and deletes it for good after 30 days. Payments are kept for accounting. Download everything first.
-            </p>
-            <button type="button" className="btn btn-sm" disabled={busy || !exported} onClick={closeClub}
-              title={exported ? undefined : 'Download everything first'}
-              style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--c-red)', border: '1px solid rgba(239, 68, 68, 0.4)', fontWeight: 800 }}>
-              Close {club.name}
-            </button>
-          </>
-        )}
-      </section>
-
       {history.length > 0 && (
-        <section className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={head}><History size={14} color="var(--text-secondary)" aria-hidden="true" /> Recent admin changes</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <section className="mc-cp-sec" aria-labelledby="mc-cp-history">
+          <h3 id="mc-cp-history">Recent admin changes</h3>
+          <div className="mc-feed">
             {history.map(h => (
-              <div key={h.id} style={{ fontSize: '0.83rem', color: 'var(--text-primary)' }}>
-                {h.summary}
-                <div style={small}>{h.actor_email || 'system'} · {timeAgo(h.created_at)}</div>
+              <div key={h.id} className="mc-feed-row">
+                <div>
+                  <b>{h.summary}</b>
+                  <time dateTime={h.created_at}>{h.actor_email || 'System'}, {timeAgo(h.created_at)}</time>
+                </div>
               </div>
             ))}
           </div>
         </section>
       )}
+
+      {beforeClosing}
+
+      <section className="mc-cp-sec danger" aria-labelledby="mc-cp-close">
+        <h3 id="mc-cp-close">Data and closing</h3>
+        {statusControl}
+        <button type="button" className="mc-pill-btn ghost" disabled={exporting} onClick={exportAll}>
+          <Download size={14} /> {exporting ? 'Preparing…' : exported ? 'Downloaded. Download again' : 'Download everything (ZIP)'}
+        </button>
+        <p className="mc-muted" style={{ margin: '8px 0 14px' }}>A spreadsheet for every kind of record the club has: members, fixtures, payments and more.</p>
+
+        {club.closed_at ? (
+          <>
+            <p className="mc-cp-alert">Closing. Deleted for good on {closesOn(club.closed_at)}. Payments are kept for accounting.</p>
+            <button type="button" className="mc-pill-btn ghost" disabled={busy} onClick={reopen}>Reopen the club</button>
+          </>
+        ) : (
+          <>
+            <p className="mc-muted" style={{ marginBottom: 8 }}>
+              Closing hides the club at once and deletes it for good after 30 days. Payments are kept for accounting. Download everything first.
+            </p>
+            <button type="button" className="mc-pill-btn danger" disabled={busy || !exported} onClick={closeClub} title={exported ? undefined : 'Download everything first'}>
+              Close {club.name}
+            </button>
+          </>
+        )}
+      </section>
     </>
   );
 }

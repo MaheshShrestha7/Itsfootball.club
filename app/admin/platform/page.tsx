@@ -8,7 +8,7 @@ import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import ThemeToggle from '@/components/ThemeToggle';
 import { RailLogo } from '@/components/admin/platform/McArt';
-import type { MissionTab } from '@/lib/mission-control';
+import { readMissionUrl, missionUrl, type MissionTab } from '@/lib/mission-control';
 import './mission-control.css';
 import {
   PlatformMetrics,
@@ -16,7 +16,6 @@ import {
   PlatformAdmin,
 } from '@/lib/supabase/types';
 
-import CockpitTab from '@/components/admin/platform/CockpitTab';
 import OverviewTab from '@/components/admin/platform/OverviewTab';
 import ClubsTab from '@/components/admin/platform/ClubsTab';
 import UsersTab from '@/components/admin/platform/UsersTab';
@@ -45,6 +44,7 @@ import {
   ShieldCheck,
   Lock,
   LogOut,
+  MoreHorizontal,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import TwoStepSignIn from '@/components/TwoStepSignIn';
@@ -60,13 +60,39 @@ type TabType = MissionTab;
 export default function PlatformOwnerDashboard() {
   const { user, isAuthenticated, isLoading: authLoading, isPlatformAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<TabType>('today');
+  const [activeTab, setActiveTabState] = useState<TabType>('today');
+  const [moreOpen, setMoreOpen] = useState(false);
+  // The club panel
+  const [selectedClub, setSelectedClub] = useState<PlatformClubItem | null>(null);
+  // The club to open once the list has loaded (from the web address)
+  const [pendingClubId, setPendingClubId] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [peopleQuery, setPeopleQuery] = useState('');
   const [supportOpen, setSupportOpen] = useState(0);
   const [supportId, setSupportId] = useState<string | null>(null);
-  const searchPeople = useCallback((q: string) => { setPeopleQuery(q); setActiveTab('users'); }, []);
+
+  // The page, open club and support request live in the web address, so refresh, back and shared links work
+  const setActiveTab = useCallback((tab: TabType) => {
+    setActiveTabState(tab);
+    setMoreOpen(false);
+    if (tab !== 'support') setSupportId(null);
+    const next = missionUrl(window.location.search, { tab, request: tab === 'support' ? undefined : null });
+    if (next !== window.location.search) window.history.pushState(null, '', `${window.location.pathname}${next}`);
+  }, []);
+  useEffect(() => {
+    const apply = () => {
+      const u = readMissionUrl(window.location.search);
+      setActiveTabState(u.tab);
+      setSupportId(u.request);
+      setPendingClubId(u.club);
+      if (!u.club) setSelectedClub(null);
+    };
+    apply();
+    window.addEventListener('popstate', apply);
+    return () => window.removeEventListener('popstate', apply);
+  }, []);
+  const searchPeople = useCallback((q: string) => { setPeopleQuery(q); setActiveTab('users'); }, [setActiveTab]);
 
   // Ctrl+K / Cmd+K opens the palette anywhere in Mission Control
   useEffect(() => {
@@ -83,7 +109,6 @@ export default function PlatformOwnerDashboard() {
   const [loadingClubs, setLoadingClubs] = useState(true);
 
   // Club Detail Drawer
-  const [selectedClub, setSelectedClub] = useState<PlatformClubItem | null>(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
 
   // Admins modal
@@ -130,16 +155,17 @@ export default function PlatformOwnerDashboard() {
     if (!client) return;
     setLoadingClubs(true);
     try {
-      const { data, error } = await client.rpc('get_platform_clubs', {
-        p_search: query,
-        p_limit: 300,
-        p_offset: 0,
-      });
-      if (!error && data) {
-        setClubs((data || []) as PlatformClubItem[]);
-      } else if (error) {
-        console.warn('Could not load platform clubs:', error.message);
+      // Every club, 300 at a time, so Today and the counts never miss one
+      const PAGE = 300;
+      const all: PlatformClubItem[] = [];
+      for (let offset = 0; offset < 20000; offset += PAGE) {
+        const { data, error } = await client.rpc('get_platform_clubs', { p_search: query, p_limit: PAGE, p_offset: offset });
+        if (error) { console.warn('Could not load platform clubs:', error.message); break; }
+        const page = (data || []) as PlatformClubItem[];
+        all.push(...page);
+        if (page.length < PAGE) break;
       }
+      setClubs(all);
     } finally {
       setLoadingClubs(false);
     }
@@ -153,12 +179,31 @@ export default function PlatformOwnerDashboard() {
     setAdminsList((data || []) as PlatformAdmin[]);
   }, []);
 
+  // Changing the period only reloads the numbers, never the club list
   useEffect(() => {
-    if (isAuthenticated && isPlatformAdmin) {
-      fetchMetrics(periodDays);
-      fetchClubs('');
-    }
-  }, [isAuthenticated, isPlatformAdmin, periodDays, fetchMetrics, fetchClubs]);
+    if (isAuthenticated && isPlatformAdmin) fetchMetrics(periodDays);
+  }, [isAuthenticated, isPlatformAdmin, periodDays, fetchMetrics]);
+  useEffect(() => {
+    if (isAuthenticated && isPlatformAdmin) fetchClubs('');
+  }, [isAuthenticated, isPlatformAdmin, fetchClubs]);
+
+  // Open the club named in the web address once the list is in
+  useEffect(() => {
+    if (!pendingClubId || !clubs.length) return;
+    const c = clubs.find(x => x.id === pendingClubId || x.slug === pendingClubId);
+    if (c) setSelectedClub(c);
+    setPendingClubId(null);
+  }, [pendingClubId, clubs]);
+
+  // Does Mission Control have an owner yet? Only then is the first-run claim offered
+  const [hasAdmins, setHasAdmins] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!isAuthenticated || isPlatformAdmin) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+    // Before migration 20261163 this function doesn't exist: keep the claim hidden
+    client.rpc('platform_has_admins').then(({ data, error }) => setHasAdmins(error ? true : data !== false), () => setHasAdmins(true));
+  }, [isAuthenticated, isPlatformAdmin]);
 
   // The platform team card on the Cockpit shows who has access
   useEffect(() => {
@@ -322,140 +367,165 @@ export default function PlatformOwnerDashboard() {
   // 3. Unauthorized or not signed in
   if (!isAuthenticated || !isPlatformAdmin) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
-        <PlatformNavbar />
-        <main className="container" style={{ flex: 1, padding: '4rem 1rem', maxWidth: '640px', margin: 'auto' }}>
-          <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--c-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
-              <Lock size={32} />
-            </div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-              Platform Control Room
-            </h1>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.75rem' }}>
-              This operational console is reserved exclusively for the <strong>itsfootball.club</strong> platform founder and authorized operations staff.
-            </p>
-
-            {isAuthenticated ? (
-              <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--border-subtle)', textAlign: 'left' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '0.25rem' }}>
-                  Signed in as
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.email}</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--c-red)', marginTop: '0.5rem' }}>
-                  This account is not registered in the <code>platform_admins</code> table.
-                </div>
-                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.75rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleClaimInitialAdmin}
-                    disabled={claiming}
-                    className="btn btn-secondary btn-sm"
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', color: '#818CF8' }}
-                  >
-                    <ShieldCheck size={16} />
-                    <span>{claiming ? 'Verifying...' : 'Claim Initial Platform Super-Admin (Founder Bootstrap)'}</span>
-                  </button>
-                  <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem', textAlign: 'center' }}>
-                    Available only if no platform admins are registered yet.
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Please sign in with your platform owner credentials.
-                </p>
-              </div>
-            )}
-
-            <Link href="/" className="btn btn-primary btn-sm">
-              Return to Homepage
-            </Link>
+      <div className="mc mc-locked">
+        <section className="mc-card mc-locked-card">
+          <span className="mc-sq" style={{ background: 'var(--mc-amber-bg)', color: 'var(--mc-amber)', width: 44, height: 44 }}><Lock size={20} /></span>
+          <h1>Mission Control is for the itsfootball.club team</h1>
+          {isAuthenticated ? (
+            <>
+              <p>This account doesn&apos;t have access. If you think it should, ask the platform owner to add you.</p>
+              <div className="mc-locked-me"><small>Signed in as</small>{user?.email}</div>
+            </>
+          ) : (
+            <p>Sign in with the account the platform owner added.</p>
+          )}
+          <div className="mc-locked-acts">
+            {isAuthenticated
+              ? <Link href="/" className="mc-pill-btn">Back to the site</Link>
+              : <Link href="/login?next=/admin/platform" className="mc-pill-btn">Sign in</Link>}
+            {isAuthenticated && <Link href="/login?next=/admin/platform" className="mc-pill-btn ghost">Sign in with another account</Link>}
           </div>
-        </main>
-        <Footer />
+          {isAuthenticated && hasAdmins === false && (
+            <div className="mc-locked-first">
+              <h2>No one runs Mission Control yet</h2>
+              <p>Whoever claims it first becomes the platform owner and can add others.</p>
+              <div>
+                <button type="button" className="mc-pill-btn" onClick={handleClaimInitialAdmin} disabled={claiming}>
+                  <ShieldCheck size={14} /> {claiming ? 'Checking…' : 'Make me the platform owner'}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     );
   }
 
   const clubsNeedingAttention = clubs.filter(c => c.pending_count >= 5 || (c.membership_payment_policy === 'require_payment' && !c.stripe_ready)).length;
 
-  const RAIL: { id: TabType; label: string; icon: React.ElementType; dot?: boolean }[] = [
-    { id: 'today', label: 'Today', icon: ListChecks },
-    { id: 'support', label: supportOpen ? `Support (${supportOpen} open)` : 'Support', icon: Inbox, dot: supportOpen > 0 },
-    { id: 'overview', label: 'Overview', icon: Eye },
-    { id: 'clubs', label: `Clubs (${clubs.length})`, icon: Building, dot: clubsNeedingAttention > 0 },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'grounds', label: 'Grounds', icon: MapPin },
-    { id: 'health', label: 'System health', icon: Activity },
-    { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
-    { id: 'log', label: 'Action log', icon: History },
+  type NavItem = { id: TabType; label: string; icon: React.ElementType; count?: number; warn?: boolean };
+  const GROUPS: { label: string; items: NavItem[] }[] = [
+    { label: 'Work', items: [
+      { id: 'today', label: 'Today', icon: ListChecks },
+      { id: 'support', label: 'Support', icon: Inbox, count: supportOpen || undefined, warn: supportOpen > 0 },
+      { id: 'clubs', label: 'Clubs', icon: Building, count: clubs.length || undefined, warn: clubsNeedingAttention > 0 },
+      { id: 'users', label: 'People', icon: Users },
+    ] },
+    { label: 'Look', items: [
+      { id: 'overview', label: 'Overview', icon: Eye },
+      { id: 'grounds', label: 'Grounds', icon: MapPin },
+      { id: 'health', label: 'System health', icon: Activity },
+    ] },
+    { label: 'Tell and record', items: [
+      { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
+      { id: 'log', label: 'Action log', icon: History },
+    ] },
   ];
-  const openClub = (c: PlatformClubItem) => setSelectedClub(c);
+  const ALL_NAV = GROUPS.flatMap(g => g.items);
+  // The phone bar: the four daily pages, everything else under More
+  const BAR: TabType[] = ['today', 'support', 'clubs', 'users'];
+  const inMore = !BAR.includes(activeTab);
+
+  const go = (t: TabType) => { setActiveTab(t); window.scrollTo({ top: 0 }); };
+  const openClub = (c: PlatformClubItem) => {
+    setSelectedClub(c);
+    window.history.replaceState(null, '', `${window.location.pathname}${missionUrl(window.location.search, { club: c.id })}`);
+  };
+  const closeClub = () => {
+    setSelectedClub(null);
+    window.history.replaceState(null, '', `${window.location.pathname}${missionUrl(window.location.search, { club: null })}`);
+  };
+  const openSupport = (id: string | null) => {
+    setActiveTab('support');
+    setSupportId(id);
+    window.history.replaceState(null, '', `${window.location.pathname}${missionUrl(window.location.search, { tab: 'support', request: id })}`);
+  };
   // The open club, refreshed whenever the list reloads (e.g. after an owner change)
   const drawerClub = selectedClub ? clubs.find(c => c.id === selectedClub.id) || selectedClub : null;
 
+  const navButton = (item: NavItem, className: string) => {
+    const Icon = item.icon;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={className}
+        aria-current={activeTab === item.id ? 'page' : undefined}
+        onClick={() => go(item.id)}
+      >
+        <Icon size={18} aria-hidden="true" />
+        <span>{item.label}</span>
+        {item.count !== undefined && <em className={`mc-count num${item.warn ? ' warn' : ''}`}>{item.count}</em>}
+      </button>
+    );
+  };
+
   return (
-    <div className="mc">
+    <div className={`mc${moreOpen ? ' mc-more-open' : ''}`}>
       {/* Floating Save Toast */}
       {toastMessage && (
-        <div role="status" className="admin-save-toast" style={{
-          position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
-          background: 'var(--c-green)',
-          color: '#FFFFFF',
-          padding: '0.75rem 1.25rem',
-          borderRadius: '999px',
-          fontWeight: 700,
-          boxShadow: 'var(--shadow-lg)',
-          zIndex: 99999,
-        }}>
-          {toastMessage}
-        </div>
+        <div role="status" className="admin-save-toast mc-toast">{toastMessage}</div>
       )}
 
-      {/* ICON RAIL (a bottom bar on phones) */}
-      <nav className="mc-rail" aria-label="Mission Control">
-        <Link href="/" className="mc-rail-logo" aria-label="itsfootball.club home">
+      {/* SIDEBAR (desktop) */}
+      <nav className="mc-side" aria-label="Mission Control">
+        <Link href="/" className="mc-brand" aria-label="itsfootball.club home">
           <RailLogo />
+          <span><b>Mission Control</b><small>itsfootball.club</small></span>
         </Link>
-        {RAIL.map(item => {
+        {GROUPS.map(g => (
+          <div key={g.label} className="mc-side-group">
+            <div className="mc-group-label">{g.label}</div>
+            {g.items.map(item => navButton(item, 'mc-nav'))}
+          </div>
+        ))}
+        <span className="mc-side-spacer" />
+        <div className="mc-side-foot">
+          <button type="button" className="mc-nav" onClick={() => { fetchAdmins(); setAdminsModalOpen(true); }}>
+            <ShieldCheck size={18} aria-hidden="true" /><span>Manage admins</span>
+          </button>
+          <span className="mc-nav mc-theme-row"><span className="theme-toggle-slot"><ThemeToggle /></span><span>Light or dark</span></span>
+          <Link href="/" className="mc-nav"><LogOut size={18} aria-hidden="true" /><span>Back to the site</span></Link>
+        </div>
+      </nav>
+
+      {/* BOTTOM BAR + MORE (phones) */}
+      <nav className="mc-tabbar" aria-label="Mission Control">
+        {BAR.map(id => {
+          const item = ALL_NAV.find(i => i.id === id)!;
           const Icon = item.icon;
+          const badge = id === 'today' ? undefined : id === 'support' ? (supportOpen || undefined) : undefined;
           return (
-            <button
-              key={item.id}
-              type="button"
-              className="mc-nav"
-              aria-label={item.label}
-              aria-current={activeTab === item.id || (item.id === 'overview' && activeTab === 'cockpit') ? 'page' : undefined}
-              onClick={() => { setActiveTab(item.id); window.scrollTo({ top: 0 }); }}
-            >
-              <Icon size={18} />
-              {item.dot && <span className="mc-dot" aria-hidden="true" />}
-              <span className="mc-tip" aria-hidden="true">{item.label}</span>
+            <button key={id} type="button" className="mc-tab" aria-current={activeTab === id && !moreOpen ? 'page' : undefined} onClick={() => go(id)}>
+              <Icon size={19} aria-hidden="true" />
+              {item.label}
+              {badge !== undefined && <span className="mc-badge num">{badge}</span>}
             </button>
           );
         })}
-        <span className="mc-rail-spacer" />
-        <button
-          type="button"
-          className="mc-nav desk-only"
-          aria-label="Manage admins"
-          onClick={() => { fetchAdmins(); setAdminsModalOpen(true); }}
-        >
-          <ShieldCheck size={18} />
-          <span className="mc-tip" aria-hidden="true">Manage admins</span>
+        <button type="button" className="mc-tab" aria-expanded={moreOpen} aria-current={inMore || moreOpen ? 'page' : undefined} onClick={() => setMoreOpen(o => !o)}>
+          <MoreHorizontal size={19} aria-hidden="true" />
+          More
         </button>
-        <span className="theme-toggle-slot">
-          <ThemeToggle />
-        </span>
-        <Link href="/" className="mc-nav desk-only" aria-label="Back to the site">
-          <LogOut size={18} />
-          <span className="mc-tip" aria-hidden="true">Back to the site</span>
-        </Link>
       </nav>
+      {moreOpen && (
+        <div className="mc-sheet-scrim" onClick={() => setMoreOpen(false)}>
+          <div className="mc-sheet" role="dialog" aria-label="More" onClick={e => e.stopPropagation()}>
+            {GROUPS.slice(1).map(g => (
+              <div key={g.label}>
+                <div className="mc-group-label">{g.label}</div>
+                {g.items.map(item => navButton(item, 'mc-nav'))}
+              </div>
+            ))}
+            <div className="mc-group-label">You</div>
+            <button type="button" className="mc-nav" onClick={() => { setMoreOpen(false); fetchAdmins(); setAdminsModalOpen(true); }}>
+              <ShieldCheck size={18} aria-hidden="true" /><span>Manage admins</span>
+            </button>
+            <span className="mc-nav mc-theme-row"><span className="theme-toggle-slot"><ThemeToggle /></span><span>Light or dark</span></span>
+            <Link href="/" className="mc-nav"><LogOut size={18} aria-hidden="true" /><span>Back to the site</span></Link>
+          </div>
+        </div>
+      )}
 
       <main className="mc-main">
         {/* ACTIVE TAB CONTENT */}
@@ -467,10 +537,10 @@ export default function PlatformOwnerDashboard() {
             userEmail={user?.email}
             onSelectClub={openClub}
             onEmail={setEmailDraft}
-            onOpenLog={() => setActiveTab('log')}
+            onOpenLog={() => go('log')}
             onOpenPalette={() => setPaletteOpen(true)}
-            onOpenSupport={id => { setSupportId(id); setActiveTab('support'); }}
-            onOpenHealth={() => setActiveTab('health')}
+            onOpenSupport={id => openSupport(id)}
+            onOpenTab={go}
             showToast={showToast}
           />
         )}
@@ -484,38 +554,22 @@ export default function PlatformOwnerDashboard() {
             onSearchPeople={searchPeople}
             showToast={showToast}
             onOpenCount={setSupportOpen}
+            onSelectRequest={(id: string | null) => window.history.replaceState(null, '', `${window.location.pathname}${missionUrl(window.location.search, { request: id })}`)}
           />
         )}
 
-        {activeTab === 'log' && <LogTab />}
+        {activeTab === 'log' && <LogTab clubs={clubs} admins={adminsList} />}
 
         {activeTab === 'overview' && (
           <OverviewTab
             clubs={clubs}
-            periodDays={periodDays}
-            periodOptions={PERIOD_OPTIONS}
-            onPeriodChange={setPeriodDays}
-            onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
-            onSelectClub={openClub}
-            onRefreshClubs={() => fetchClubs('')}
-          />
-        )}
-
-        {activeTab === 'cockpit' && (
-          <CockpitTab
             metrics={metrics}
-            clubs={clubs}
-            admins={adminsList}
-            userName={user?.full_name}
-            userEmail={user?.email}
             periodDays={periodDays}
             periodOptions={PERIOD_OPTIONS}
             onPeriodChange={setPeriodDays}
-            refreshing={loadingMetrics || loadingClubs}
-            onRefresh={() => { fetchMetrics(periodDays); fetchClubs(''); fetchAdmins(); }}
-            onManageAdmins={() => { fetchAdmins(); setAdminsModalOpen(true); }}
-            onSelectTab={setActiveTab}
-            onSelectClub={c => setSelectedClub(c)}
+            onSelectTab={go}
+            onSelectClub={openClub}
+            onRefreshClubs={() => { fetchClubs(''); fetchMetrics(periodDays); }}
           />
         )}
 
@@ -523,9 +577,7 @@ export default function PlatformOwnerDashboard() {
           <ClubsTab
             clubs={clubs}
             loading={loadingClubs}
-            onSelectClub={c => setSelectedClub(c)}
-            onToggleStatus={handleToggleClubStatus}
-            statusUpdatingId={statusUpdatingId}
+            onSelectClub={openClub}
           />
         )}
 
@@ -546,10 +598,10 @@ export default function PlatformOwnerDashboard() {
         )}
       </main>
 
-      {/* CLUB INSPECT SLIDING DRAWER */}
+      {/* CLUB PANEL */}
       <ClubDetailDrawer
         club={drawerClub}
-        onClose={() => setSelectedClub(null)}
+        onClose={closeClub}
         onToggleStatus={handleToggleClubStatus}
         statusUpdating={statusUpdatingId === selectedClub?.id}
         onEmail={setEmailDraft}
@@ -563,9 +615,9 @@ export default function PlatformOwnerDashboard() {
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         clubs={clubs}
-        tabs={[...RAIL.map(r => ({ id: r.id, label: r.label.replace(/ \(.*\)$/, '') })), { id: 'cockpit' as TabType, label: 'More stats' }]}
+        tabs={ALL_NAV.map(r => ({ id: r.id, label: r.label }))}
         onSelectClub={openClub}
-        onSelectTab={t => { setActiveTab(t); window.scrollTo({ top: 0 }); }}
+        onSelectTab={go}
         onSearchPeople={searchPeople}
       />
 

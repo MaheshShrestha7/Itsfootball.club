@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePlatformAdmin } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
+import { logPlatformAction, type PlatformActor } from '@/lib/platform-audit';
 import { pingIndexNow } from '@/lib/indexnow';
 import { isUuid } from '@/lib/ids';
 import { MAP_USER_AGENT, councilFromPin } from '@/lib/council-lookup';
@@ -32,7 +33,7 @@ async function authorise(req: NextRequest, write: boolean) {
   if (!auth.ok) return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   const db = getServiceClient();
   if (!db) return { error: NextResponse.json({ error: 'Saving grounds is not configured on the server.' }, { status: 503 }) };
-  return { db };
+  return { db, actor: { userId: auth.userId, confirmedEmail: auth.confirmedEmail } as PlatformActor };
 }
 
 type Db = NonNullable<ReturnType<typeof getServiceClient>>;
@@ -121,7 +122,7 @@ async function withCouncil<T extends { lat: number | null; lng: number | null; c
 
 const pathsFor = (g: Pick<GroundRow, 'slug' | 'suburb_slug'>) => [groundPath(g), suburbPath(g.suburb_slug), GROUNDS_PATH];
 
-async function save(db: Db, body: Record<string, unknown>) {
+async function save(db: Db, body: Record<string, unknown>, actor: PlatformActor) {
   const cleaned = cleanGroundInput((body.ground || {}) as GroundInput);
   if ('error' in cleaned) return NextResponse.json({ error: cleaned.error }, { status: 400 });
   const row = await withCouncil(cleaned.row);
@@ -137,6 +138,10 @@ async function save(db: Db, body: Record<string, unknown>) {
     if (error) return NextResponse.json({ error: 'Could not add the ground. Check the details and try again.' }, { status: 500 });
     const saved = data as GroundRow;
     if (saved.is_published) await pingIndexNow(pathsFor(saved));
+    await logPlatformAction(db, actor, {
+      action: 'ground_added', table: 'grounds', targetId: saved.id,
+      summary: `Added ${saved.name}, ${saved.suburb}${saved.is_published ? '' : ' as a draft'}`,
+    });
     return NextResponse.json({ ground: saved });
   }
 
@@ -164,12 +169,16 @@ async function save(db: Db, body: Record<string, unknown>) {
   if (saved.is_published || current.is_published) {
     await pingIndexNow([...pathsFor(saved), ...(moved ? [`${GROUNDS_PATH}/${oldPath}`, suburbPath(current.suburb_slug)] : [])]);
   }
+  await logPlatformAction(db, actor, {
+    action: 'ground_edited', table: 'grounds', targetId: saved.id,
+    summary: `Edited ${saved.name}, ${saved.suburb}${moved ? ' (new web address)' : ''}`,
+  });
   return NextResponse.json({ ground: saved });
 }
 
 interface ImportItem { ref?: unknown; name?: unknown; suburb?: unknown; postcode?: unknown; lat?: unknown; lng?: unknown; pitches?: unknown }
 
-async function importGrounds(db: Db, body: Record<string, unknown>) {
+async function importGrounds(db: Db, body: Record<string, unknown>, actor: PlatformActor) {
   const council = (body.council || {}) as { key?: unknown; councilName?: unknown; state?: unknown };
   const state = typeof council.state === 'string' ? council.state : '';
   const items = (Array.isArray(body.items) ? body.items : []).slice(0, 150) as ImportItem[];
@@ -211,21 +220,29 @@ async function importGrounds(db: Db, body: Record<string, unknown>) {
     added.push({ id: data.id, name: data.name, ref });
     existing.push({ id: data.id, name: data.name, slug: data.slug, lat: data.lat, lng: data.lng, source_ref: ref });
   }
+  if (added.length) {
+    const councilName = typeof council.councilName === 'string' ? council.councilName : '';
+    await logPlatformAction(db, actor, {
+      action: 'ground_imported', table: 'grounds',
+      summary: `Imported ${added.length} ${added.length === 1 ? 'ground' : 'grounds'} as drafts${councilName ? ` from ${councilName}` : ''}`,
+      details: { added: added.length, skipped: skipped.length },
+    });
+  }
   return NextResponse.json({ added, skipped });
 }
 
 export async function POST(req: NextRequest) {
   const a = await authorise(req, true);
   if ('error' in a) return a.error;
-  const { db } = a;
+  const { db, actor } = a;
   const body = ((await req.json().catch(() => null)) || {}) as Record<string, unknown>;
 
-  if (body.action === 'save') return save(db, body);
-  if (body.action === 'import') return importGrounds(db, body);
+  if (body.action === 'save') return save(db, body, actor);
+  if (body.action === 'import') return importGrounds(db, body, actor);
 
   if (body.action === 'publish' || body.action === 'delete') {
     if (typeof body.id !== 'string' || !isUuid(body.id)) return NextResponse.json({ error: 'Unknown ground.' }, { status: 400 });
-    const { data: g } = await db.from('grounds').select('id, slug, suburb_slug, is_published').eq('id', body.id).maybeSingle();
+    const { data: g } = await db.from('grounds').select('id, name, suburb, slug, suburb_slug, is_published').eq('id', body.id).maybeSingle();
     if (!g) return NextResponse.json({ error: 'That ground no longer exists.' }, { status: 404 });
     if (body.action === 'delete') {
       if (g.is_published) return NextResponse.json({ error: 'Only drafts can be deleted. Take the ground down first.' }, { status: 400 });
@@ -236,12 +253,17 @@ export async function POST(req: NextRequest) {
       if ((clubs || 0) > 0 || (fixtures || 0) > 0) return NextResponse.json({ error: 'A club or fixture uses this ground, so it can’t be deleted.' }, { status: 400 });
       const { error } = await db.from('grounds').delete().eq('id', g.id);
       if (error) return NextResponse.json({ error: 'Could not delete the draft.' }, { status: 500 });
+      await logPlatformAction(db, actor, { action: 'ground_deleted', table: 'grounds', targetId: g.id, summary: `Deleted the draft ${g.name}, ${g.suburb}` });
       return NextResponse.json({ ok: true });
     }
     const published = !!body.published;
     const { error } = await db.from('grounds').update({ is_published: published, updated_at: new Date().toISOString() }).eq('id', g.id);
     if (error) return NextResponse.json({ error: 'Could not update the ground.' }, { status: 500 });
     await pingIndexNow(pathsFor(g));
+    await logPlatformAction(db, actor, {
+      action: published ? 'ground_published' : 'ground_unpublished', table: 'grounds', targetId: g.id,
+      summary: `${published ? 'Published' : 'Took down'} ${g.name}, ${g.suburb}`,
+    });
     return NextResponse.json({ ok: true });
   }
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildQueue, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
+import { readMissionUrl, missionUrl, buildQueue, queueItems, staleDoneKeys, isDoneSnooze, DONE_UNTIL, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
 import { pctChange, changeLabel, pageLabel, ranked, sparkBars, setupFunnel, quietClubs, FEATURES } from './mission-control';
 import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
 
@@ -86,11 +86,38 @@ assert.deepEqual(kinds([club({ membership_payment_policy: 'require_payment', log
 assert.deepEqual(kinds([club({ is_active: false })]), []);
 assert.deepEqual(kinds([club({})], ['stalled:c1']), []);
 
+// Done hides only the current backlog: a new one (a later oldest application) shows again
+const backlogClub = club({ pending_count: 6, oldest_pending_at: '2026-10-20T09:00:00Z', logo_url: 'x', team_count: 1, match_count: 1 });
+const backlogKey = queueItems([backlogClub], NOW)[0].key;
+assert.equal(backlogKey, 'backlog:c1:2026-10-20');
+assert.deepEqual(kinds([backlogClub], [backlogKey]), []);
+assert.deepEqual(kinds([club({ ...backlogClub, oldest_pending_at: '2026-11-20T09:00:00Z' })], [backlogKey]), ['backlog']);
+// An old-style key (before 20261163) no longer hides anything
+assert.deepEqual(kinds([backlogClub], ['backlog:c1']), ['backlog']);
+
+// Bank transfers and unread enquiries from get_platform_today, ahead of the rest
+const ready = club({ logo_url: 'x', team_count: 1, match_count: 1 });
+const extra = { transfers: [{ club_id: 'c1', count: 4, oldest: '2026-10-15T00:00:00Z' }], enquiries: [{ club_id: 'c1', count: 1, oldest: '2026-10-20T00:00:00Z' }] };
+const items = buildQueue([ready], new Set(), NOW, extra);
+assert.deepEqual(items.map(i => i.kind), ['transfers', 'enquiries']);
+assert.ok(items[0].title.includes('4 bank transfers'));
+assert.ok(items[1].title.includes('1 enquiry'));
+assert.equal(items[0].action.template, 'transfers');
+// Transfers for a club that isn't in the list are ignored
+assert.deepEqual(buildQueue([ready], new Set(), NOW, { transfers: [{ club_id: 'zz', count: 2, oldest: '2026-10-01T00:00:00Z' }] }).length, 0);
+
+// Done keys whose problem has gone are cleared; snoozes that aren't Today's are left alone
+assert.deepEqual(staleDoneKeys(['backlog:c1:2026-10-20', 'stalled:c2', 'crashes:2026-10-25', 'other:thing'], new Set(['stalled:c2'])), ['backlog:c1:2026-10-20', 'crashes:2026-10-25']);
+assert.equal(isDoneSnooze(DONE_UNTIL), true);
+assert.equal(isDoneSnooze('2026-11-17T00:00:00Z'), false);
+
 const t = emailTemplate('needHand', { name: 'Westvale FC', slug: 'westvale' }, 'Sam');
 assert.ok(t.subject.includes('Westvale FC'));
 assert.ok(t.message.startsWith('Hi Sam,'));
 assert.ok(t.message.includes('https://itsfootball.club/westvale/admin'));
 assert.ok(emailTemplate('blank', { name: 'X', slug: 'x' }).message.startsWith('Hi,'));
+assert.ok(emailTemplate('transfers', { name: 'Westvale FC', slug: 'westvale' }).message.includes('/westvale/admin/finance'));
+assert.ok(emailTemplate('enquiries', { name: 'Westvale FC', slug: 'westvale' }).message.includes('/westvale/admin/inquiries'));
 
 // Health lights
 const base: HealthInput = {
@@ -154,3 +181,16 @@ console.log('mission-control: ok');
   assert.deepEqual(f.map(s => s.clubs.length), [2, 1, 2, 1, 1, 1]);
   assert.deepEqual(quietClubs(list, now).map(c => c.id), ['b']);
 }
+
+// Where Mission Control is lives in the web address
+assert.deepEqual(readMissionUrl(''), { tab: 'today', club: null, request: null });
+assert.deepEqual(readMissionUrl('?tab=support&request=abc-1'), { tab: 'support', club: null, request: 'abc-1' });
+assert.deepEqual(readMissionUrl('?tab=clubs&club=c1&request=x'), { tab: 'clubs', club: 'c1', request: null });
+assert.equal(readMissionUrl('?tab=cockpit').tab, 'overview');
+assert.equal(readMissionUrl('?tab=nope').tab, 'today');
+assert.equal(readMissionUrl('?club=<script>').club, null);
+assert.equal(missionUrl('', { tab: 'clubs' }), '?tab=clubs');
+assert.equal(missionUrl('?tab=clubs', { club: 'c1' }), '?tab=clubs&club=c1');
+assert.equal(missionUrl('?tab=clubs&club=c1', { club: null }), '?tab=clubs');
+assert.equal(missionUrl('?tab=support&request=r1', { tab: 'today' }), '');
+assert.equal(missionUrl('?tab=support&request=r1', { tab: 'log' }), '?tab=log');

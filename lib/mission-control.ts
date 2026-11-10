@@ -105,8 +105,35 @@ export function softTint(hex: string | null | undefined, alpha = 0.22): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** The pages of Mission Control, in rail order. */
-export type MissionTab = 'today' | 'support' | 'overview' | 'cockpit' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
+/** The pages of Mission Control, in menu order. */
+export type MissionTab = 'today' | 'support' | 'overview' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
+export const MISSION_TABS: MissionTab[] = ['today', 'support', 'clubs', 'users', 'overview', 'grounds', 'health', 'broadcasts', 'log'];
+
+/** Where Mission Control is, from the web address: ?tab=support&request=<id>, ?tab=clubs&club=<id>.
+ *  Unknown or missing values fall back to Today with nothing open. ?tab=cockpit (an old link) opens the Overview. */
+export function readMissionUrl(search: string): { tab: MissionTab; club: string | null; request: string | null } {
+  const q = new URLSearchParams(search);
+  const raw = q.get('tab') || '';
+  const tab: MissionTab = raw === 'cockpit' ? 'overview' : (MISSION_TABS as string[]).includes(raw) ? raw as MissionTab : 'today';
+  const clean = (v: string | null) => (v && /^[A-Za-z0-9_-]{1,80}$/.test(v) ? v : null);
+  return { tab, club: clean(q.get('club')), request: tab === 'support' ? clean(q.get('request')) : null };
+}
+
+/** The search string for a change of place. `undefined` keeps a value, `null` removes it. Today has no ?tab. */
+export function missionUrl(search: string, change: { tab?: MissionTab; club?: string | null; request?: string | null }): string {
+  const q = new URLSearchParams(search);
+  if (change.tab !== undefined) {
+    if (change.tab === 'today') q.delete('tab'); else q.set('tab', change.tab);
+    if (change.tab !== 'support') q.delete('request');
+  }
+  for (const key of ['club', 'request'] as const) {
+    const v = change[key];
+    if (v === null) q.delete(key);
+    else if (v !== undefined) q.set(key, v);
+  }
+  const out = q.toString();
+  return out ? `?${out}` : '';
+}
 
 // ------------------------------------------------------------------------------------------------
 // Club setup and the Today queue
@@ -130,11 +157,17 @@ export function setupSteps(c: PlatformClubItem, now: number = Date.now()): Setup
   return steps;
 }
 
-export type QueueKind = 'backlog' | 'payments' | 'stalled' | 'welcome';
+export type QueueKind = 'backlog' | 'transfers' | 'enquiries' | 'payments' | 'stalled' | 'welcome';
 export type EmailAudience = 'owner' | 'admins';
 
+/** Which filter chip on Today a kind sits under */
+export const QUEUE_GROUP: Record<QueueKind, 'money' | 'clubs' | 'new'> = {
+  transfers: 'money', payments: 'money', backlog: 'clubs', enquiries: 'clubs', stalled: 'clubs', welcome: 'new',
+};
+
 export interface QueueItem {
-  /** Also the snooze key */
+  /** Also the snooze key. Keys that can come back (a new backlog, new transfers) carry the date the
+   *  current one started, so marking one done never hides the next. */
   key: string;
   kind: QueueKind;
   club: PlatformClubItem;
@@ -143,12 +176,19 @@ export interface QueueItem {
   action: { label: string; template: TemplateKey; to: EmailAudience };
 }
 
+/** Per-club counts from get_platform_today() (migration 20261163) */
+export interface ClubBacklog { club_id: string; count: number; oldest: string }
+export interface TodayExtras { transfers?: ClubBacklog[]; enquiries?: ClubBacklog[] }
+
 const days = (from: string | null | undefined, now: number) => (from ? Math.floor((now - new Date(from).getTime()) / DAY) : 0);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const dayOf = (v: string | null | undefined) => (v ? String(v).slice(0, 10) : 'none');
 
-/** Clubs that need the founder, most urgent first. `snoozed` holds keys whose snooze hasn't run out. */
-export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now: number = Date.now()): QueueItem[] {
+/** Every club item that applies right now, done or snoozed or not. */
+export function queueItems(clubs: PlatformClubItem[], now: number = Date.now(), extras: TodayExtras = {}): QueueItem[] {
   const out: QueueItem[] = [];
+  const transfers = new Map((extras.transfers || []).map(t => [t.club_id, t]));
+  const enquiries = new Map((extras.enquiries || []).map(t => [t.club_id, t]));
   for (const c of clubs) {
     if (!c.is_active) continue;
     const age = days(c.created_at, now);
@@ -156,10 +196,30 @@ export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now:
     const waitDays = days(c.oldest_pending_at, now);
     if (c.pending_count >= 5 || (c.pending_count > 0 && waitDays >= 7)) {
       out.push({
-        key: `backlog:${c.id}`, kind: 'backlog', club: c,
+        key: `backlog:${c.id}:${dayOf(c.oldest_pending_at)}`, kind: 'backlog', club: c,
         title: `${c.name} has ${plural(c.pending_count, 'person', 'people')} waiting for approval`,
-        detail: c.oldest_pending_at ? `Oldest has waited ${plural(waitDays, 'day')}.` : 'Applications are piling up.',
+        detail: c.oldest_pending_at ? `The oldest has waited ${plural(waitDays, 'day')}.` : 'Applications are piling up.',
         action: { label: 'Nudge the club admins', template: 'approvals', to: 'admins' },
+      });
+    }
+
+    const t = transfers.get(c.id);
+    if (t && t.count > 0) {
+      out.push({
+        key: `transfers:${c.id}:${dayOf(t.oldest)}`, kind: 'transfers', club: c,
+        title: `${c.name} has ${plural(Number(t.count), 'bank transfer')} to check`,
+        detail: `The oldest has waited ${plural(days(t.oldest, now), 'day')}. Members show as unpaid until a club admin ticks them off.`,
+        action: { label: 'Nudge the club admins', template: 'transfers', to: 'admins' },
+      });
+    }
+
+    const e = enquiries.get(c.id);
+    if (e && e.count > 0) {
+      out.push({
+        key: `enquiries:${c.id}:${dayOf(e.oldest)}`, kind: 'enquiries', club: c,
+        title: `${c.name} hasn't read ${plural(Number(e.count), 'enquiry', 'enquiries')}`,
+        detail: `Sent through the club's Message the club form. The oldest is ${plural(days(e.oldest, now), 'day')} old.`,
+        action: { label: 'Remind the club admins', template: 'enquiries', to: 'admins' },
       });
     }
 
@@ -191,8 +251,28 @@ export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now:
       });
     }
   }
-  const order: Record<QueueKind, number> = { backlog: 0, payments: 1, stalled: 2, welcome: 3 };
-  return out.filter(i => !snoozed.has(i.key)).sort((a, b) => order[a.kind] - order[b.kind]);
+  const order: Record<QueueKind, number> = { transfers: 0, backlog: 1, enquiries: 2, payments: 3, stalled: 4, welcome: 5 };
+  return out.sort((a, b) => order[a.kind] - order[b.kind]);
+}
+
+/** Clubs that need the founder, most urgent first. `snoozed` holds keys whose snooze hasn't run out. */
+export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now: number = Date.now(), extras: TodayExtras = {}): QueueItem[] {
+  return queueItems(clubs, now, extras).filter(i => !snoozed.has(i.key));
+}
+
+/** A snooze until this date or later means "done". */
+export const DONE_UNTIL = '2100-01-01T00:00:00Z';
+export const isDoneSnooze = (until: string) => new Date(until).getTime() >= new Date('2099-01-01T00:00:00Z').getTime();
+
+/** The site-wide Today items (not tied to one club) use these key prefixes */
+export const SITE_KEY_PREFIXES = ['crashes:', 'grounds:'];
+const CLUB_KEY_PREFIXES = ['backlog:', 'transfers:', 'enquiries:', 'payments:', 'stalled:', 'welcome:'];
+
+/** "Done" keys whose problem has gone away, so they can be cleared and the problem shows again if
+ *  it comes back. Only keys Today owns, and only once every source has loaded (`live` is complete). */
+export function staleDoneKeys(done: string[], live: Set<string>): string[] {
+  const ours = [...CLUB_KEY_PREFIXES, ...SITE_KEY_PREFIXES];
+  return done.filter(k => ours.some(p => k.startsWith(p)) && !live.has(k));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -283,7 +363,7 @@ export const SUPPORT_SNIPPETS: { label: string; text: string }[] = [
   { label: 'Fixed', text: 'Thanks for reporting this. It\'s fixed now. Let me know if you still see it.' },
 ];
 
-export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'suspended' | 'closing';
+export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'transfers' | 'enquiries' | 'suspended' | 'closing';
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   blank: 'Blank',
@@ -291,6 +371,8 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   needHand: 'Need a hand?',
   stripe: 'Stripe setup',
   approvals: 'People waiting',
+  transfers: 'Bank transfers to check',
+  enquiries: 'Unread enquiries',
   suspended: 'Club suspended',
   closing: 'Club closing',
 };
@@ -319,6 +401,16 @@ export function emailTemplate(key: TemplateKey, club: { name: string; slug: stri
       return {
         subject: `People are waiting to join ${club.name}`,
         message: `${hi}\n\nA few people have applied to join ${club.name} and are waiting for approval. You can approve them in a couple of clicks:\n\n${admin}/people?tab=applications\n\nCheers`,
+      };
+    case 'transfers':
+      return {
+        subject: `Bank transfers waiting at ${club.name}`,
+        message: `${hi}\n\nA few members of ${club.name} have paid by bank transfer and are waiting for someone to tick off their payment. Until then they show as unpaid.\n\nYou can check them in Finance:\n\n${admin}/finance\n\nCheers`,
+      };
+    case 'enquiries':
+      return {
+        subject: `Unread messages for ${club.name}`,
+        message: `${hi}\n\nA few people have sent ${club.name} a message through the club's website and haven't heard back yet. They might be new players or sponsors.\n\nYou can read and reply to them here:\n\n${admin}/inquiries\n\nCheers`,
       };
     case 'suspended':
       return {
