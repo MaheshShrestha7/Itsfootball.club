@@ -4110,6 +4110,11 @@ dialog.form-dialog::backdrop {
   color: var(--club-ink);
 }
 
+.prematch-facts { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.85rem; margin: 0; font-size: 0.9rem; }
+.prematch-facts > div { display: contents; }
+.prematch-facts dt { color: var(--text-muted); font-weight: 700; }
+.prematch-facts dd { margin: 0; color: var(--text-primary); font-weight: 700; overflow-wrap: anywhere; }
+
 /* ===== Top Players (club home) and the public player page (/club/squad/{id}) =====
    Redesigned with the Hallmark rules: the club colour as the one field, the shirt number set huge
    in type (or the player's photo), labels in sentence case, tables with hairlines, no boxes in boxes. */

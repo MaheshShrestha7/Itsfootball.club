@@ -81,6 +81,20 @@ export default function PreMatchPanel({ club, match, previous, previousScoreHidd
         )}
       </div>
 
+      {/* What the club typed on the fixture: when to be there, what to wear, and anything else for the day */}
+      {(match.meet_time || match.kit || match.description?.trim()) && (
+        <div className="glass-panel prematch-tile">
+          <div className="prematch-label">Matchday details</div>
+          {(match.meet_time || match.kit) && (
+            <dl className="prematch-facts">
+              {match.meet_time && <div><dt>Meet</dt><dd>{formatClock(match.meet_time)}</dd></div>}
+              {match.kit && <div><dt>Kit</dt><dd>{match.kit}</dd></div>}
+            </dl>
+          )}
+          {match.description?.trim() && <p className="text-note" style={{ margin: 0, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>{match.description.trim()}</p>}
+        </div>
+      )}
+
       {prev && prevResult && (
         <Link href={matchPath(club.slug, prev)} className="glass-panel glass-panel-interactive prematch-tile" style={{ color: 'inherit', textDecoration: 'none' }}>
           <div className="prematch-label">Last time we played {opponentOf(match)}</div>

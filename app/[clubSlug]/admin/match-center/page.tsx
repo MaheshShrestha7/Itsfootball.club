@@ -126,6 +126,8 @@ export default function AdminMatchCenterControllerPage({
     tournaments,
     loadMatchStatLines,
     fixMatchStats,
+    draftLineups,
+    saveDraftLineup,
   } = useClub();
   const { user } = useAuth();
 
@@ -548,6 +550,12 @@ export default function AdminMatchCenterControllerPage({
       // The format picked on the pitch (11v11 / 9v9 / 7v7), else the one already published
       match_format: pitchFormat?.matchId === match.id ? pitchFormat.format : match.match_format,
     });
+    // Lineup Draft opens on its own saved copy: keep that in step, so publishing from there later
+    // doesn't bring back the line-up from before this change (a cup team's draft covers its whole day, so not those)
+    if (!match.tournament_id && draftLineups.some(d => d.match_id === match.id)) {
+      saveDraftLineup({ club_id: club.id, match_id: match.id, formation: formationName, lineup_coords: positions,
+        ...(pitchFormat?.matchId === match.id ? { format: pitchFormat.format } : {}) });
+    }
     showFeedback(`Tactical lineup & ${formationName} formation published live to Match Centre!`);
     // Stats already saved for this match: offer the line-up players with no appearance one
     const savedMatch = match;
@@ -653,6 +661,31 @@ export default function AdminMatchCenterControllerPage({
           </div>
         )}
       </div>
+
+      {/* Before kick-off: who's coming and whether the team is picked, from the answers and line-up saved for this game */}
+      {match.status === 'upcoming' && !match.tournament_id && squadPlayers.length > 0 && (() => {
+        const answers = new Map(matchAvailabilities.map(a => [a.member_id, a.status]));
+        const count = (status: string) => squadPlayers.filter(p => (answers.get(p.id) || 'pending') === status).length;
+        const starters = ((lineupSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || []).filter(p => p.member_id).length;
+        const tiles: [number, string][] = [[count('available'), 'In'], [count('maybe'), 'Maybe'], [count('unavailable'), 'Out'], [count('pending'), 'No answer']];
+        return (
+          <section className="glass-panel mc-ready" aria-labelledby="mc-ready-title">
+            <h3 id="mc-ready-title">Ready for kick-off?</h3>
+            <dl className="mc-ready-counts">
+              {tiles.map(([n, label]) => <div key={label}><dt>{label}</dt><dd>{n}</dd></div>)}
+            </dl>
+            <p className="mc-ready-line">
+              {starters > 0
+                ? <><CheckCircle2 size={16} aria-hidden="true" /> Line-up published: {starters} {starters === 1 ? 'starter' : 'starters'}</>
+                : <><AlertCircle size={16} aria-hidden="true" /> No line-up published yet</>}
+            </p>
+            <div className="mc-ready-actions">
+              <Link href={`/${club.slug}/admin/availability`} className="btn btn-secondary btn-sm touch-target">Availability</Link>
+              <Link href={`/${club.slug}/admin/lineup/draft?match=${match.id}`} className="btn btn-secondary btn-sm touch-target">{starters > 0 ? 'Change the line-up' : 'Pick the line-up'}</Link>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* A finished match: edits here change the public result, so say so, and let the admin keep followers' phones quiet */}
       {match.status === 'completed' && (

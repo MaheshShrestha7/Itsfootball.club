@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
 import { confirmAction } from '@/components/ConfirmDialog';
+import { getAccessToken } from '@/lib/supabase/client';
+import { useMatchdayDetailsReady } from '@/lib/use-matchday-details-ready';
 
 export default function DraftLineupPage() {
   const params = useParams();
@@ -131,6 +133,8 @@ export default function DraftLineupPage() {
   }, [teamSquad, matchAvailabilities]);
 
   const currentDraft = draftLineups.find(d => d.match_id === activeMatch?.id);
+  // The published subs (migration 20261164): not sent until the database has the column
+  const detailsReady = useMatchdayDetailsReady();
 
   // The lineup a fixture opens with: its saved draft, else its published lineup, else a default XI
   const source = useMemo(() => {
@@ -251,10 +255,21 @@ export default function DraftLineupPage() {
     // Pass the lineup on screen: the save above hasn't reached `draftLineups` yet within this event
     const latest = { format: matchFormat, formation, lineup_coords: lineupCoords };
     // A tournament team's line-up goes on every game it plays that day, on its own side of each
-    const results = groupGames.map(g => publishDraftLineup(g.id, latest, sideIn(g)));
+    // The named subs go with it for the public match page (a cup game has two club sides, so none there)
+    const bench = detailsReady ? benchIdsFor(lineupCoords) : undefined;
+    const results = groupGames.map(g => publishDraftLineup(g.id, latest, sideIn(g), g.tournament_id ? undefined : bench));
     const res = results.find(r => !r.success) || results[0];
     setShowPublishModal(false);
     showFeedback(res && res.success && groupGames.length > 1 ? `Published to all ${groupGames.length} of ${activeGroup?.participant.name}'s games.` : res?.message || '', res?.success ? 'success' : 'error');
+    // Tell the club's followers the team is out (once a day per match; not for a match with alerts muted)
+    const first = groupGames[0];
+    if (res?.success && first && first.status === 'upcoming' && !first.alerts_muted) {
+      void getAccessToken().then(token => fetch('/api/push/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clubId: club.id, matchId: first.id, kind: 'lineup', home: 0, away: 0 }),
+      })).catch(() => undefined);
+    }
     // Games whose stats are already saved: offer the line-up players with no appearance one
     if (res?.success) {
       void offerLineupAppearances(groupGames, lineupCoords.map(p => p.member_id), {
@@ -426,6 +441,7 @@ export default function DraftLineupPage() {
               <h2 id="publish-lineup-title" style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--color-ink)' }}>Publish this line-up?</h2>
               <p style={{ margin: 'var(--space-2xs) 0 var(--space-md)', color: 'var(--color-ink-2)', fontSize: 'var(--text-sm)' }}>
                 It saves the line-up on the board and shows it in the public Match Centre straight away.
+                {activeMatch?.status === 'upcoming' && !activeMatch.alerts_muted ? ' People who follow the club get a "line-up is out" alert.' : ''}
               </p>
 
               <dl style={{ display: 'grid', gridTemplateColumns: 'max-content minmax(0, 1fr)', gap: 'var(--space-xs) var(--space-md)', margin: '0 0 var(--space-lg)', padding: 'var(--space-sm) var(--space-md)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-card)', background: 'var(--color-paper)', fontSize: 'var(--text-sm)' }}>

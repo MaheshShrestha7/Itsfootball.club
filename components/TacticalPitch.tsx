@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ClubMember, MatchEvent, PitchPosition, MatchFormat, isPlayerMember } from '@/lib/supabase/types';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { ClubMember, MatchEvent, PitchPosition, MatchFormat } from '@/lib/supabase/types';
 import PlayerAvatar from './PlayerAvatar';
 import {
   Move,
@@ -321,8 +321,20 @@ function occupantOf(member: ClubMember) {
     name: member.full_name,
     number: member.jersey_number || 0, // 0 = no number: shown blank
     position: member.player_position,
-    is_captain: !!member.is_executive && isPlayerMember(member),
+    // The coach picks the captain on the pitch (one per line-up); being on the committee doesn't make one
+    is_captain: false,
   };
+}
+
+/** One captain per line-up: lineups saved by older builds gave the armband to every committee player,
+ *  so only the first one marked keeps it */
+export function oneCaptain(list: PitchPosition[]): PitchPosition[] {
+  let seen = false;
+  return list.map(p => {
+    if (!p.is_captain) return p;
+    if (!seen) { seen = true; return p; }
+    return { ...p, is_captain: false };
+  });
 }
 
 /** Lays a preset's coordinates over the current lineup. Each slot keeps its player (preset slot order
@@ -358,7 +370,7 @@ export function buildLineupForPreset(players: ClubMember[], presetKey: string, c
 export function normalizeLineup(list: PitchPosition[]): PitchPosition[] {
   const ids = new Set<string>();
   const members = new Set<string>();
-  return list.map((p, idx) => {
+  return oneCaptain(list).map((p, idx) => {
     const id = p.id && !ids.has(p.id) ? p.id : uniqueSlotId(ids, idx);
     ids.add(id);
     if (p.member_id && members.has(p.member_id)) {
@@ -464,9 +476,10 @@ export default function TacticalPitch({
   }, [formation, isControlled]);
 
   const [internalPositions, setInternalPositions] = useState<PitchPosition[]>(() =>
-    savedPositions?.length ? savedPositions : buildLineupForPreset(players, initialPresetKey)
+    savedPositions?.length ? oneCaptain(savedPositions) : buildLineupForPreset(players, initialPresetKey)
   );
-  const positions = isControlled ? controlledPositions : internalPositions;
+  const rawPositions = isControlled ? controlledPositions : internalPositions;
+  const positions = useMemo(() => oneCaptain(rawPositions || []), [rawPositions]);
 
   // Always-current lineup, so several edits within one event compose instead of clobbering each other
   const positionsRef = useRef<PitchPosition[]>(positions);
@@ -493,7 +506,7 @@ export default function TacticalPitch({
   const savedKey = savedPositions?.length ? JSON.stringify(savedPositions) : '';
   useEffect(() => {
     if (isControlled || !savedKey) return;
-    setInternalPositions(JSON.parse(savedKey));
+    setInternalPositions(oneCaptain(JSON.parse(savedKey)));
     setSelectedFormationKeyState('Custom');
     setIsFreeFormMode(true);
   }, [savedKey, isControlled]);
@@ -1464,6 +1477,21 @@ export default function TacticalPitch({
                 ))}
               </select>
             </div>
+
+            {/* One captain: giving the armband to this player takes it off anyone else */}
+            {!isEmptySlot(activePlayer) && (
+              <button
+                type="button"
+                className={activePlayer.is_captain ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}
+                aria-pressed={!!activePlayer.is_captain}
+                onClick={() => {
+                  const makeCaptain = !activePlayer.is_captain;
+                  setPositions(prev => prev.map(p => ({ ...p, is_captain: makeCaptain && p.id === activePlayer.id })));
+                }}
+              >
+                {activePlayer.is_captain ? 'Captain (tap to remove)' : 'Make captain'}
+              </button>
+            )}
 
             {onSwapWithBench && (
               <button

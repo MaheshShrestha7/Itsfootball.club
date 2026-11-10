@@ -56,6 +56,9 @@ const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
 
 type Side = 'home' | 'away';
 
+/** The status as people say it (the stored value is "completed", "postponed"...) */
+const STATUS_WORD: Record<string, string> = { upcoming: 'Upcoming', completed: 'Full time', postponed: 'Postponed', cancelled: 'Cancelled' };
+
 export default function MatchCenterPage({
   params,
 }: {
@@ -324,8 +327,9 @@ export default function MatchCenterPage({
   const preMatch = match.status === 'upcoming' || match.status === 'postponed';
   const lineupAnnounced = lineupSides.some(({ side }) => ((side === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || []).length > 0);
   const previousMeeting = preMatch ? lastMeeting(match, matches.filter(m => m.club_id === club.id)) : undefined;
-  const visibleTabs = preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
-  const shownTab = preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
+  const cancelled = match.status === 'cancelled';
+  const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
+  const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
 
   // One team's crest and name. The club's crest only stands in on the club's own side.
   const teamBlock = (side: Side) => {
@@ -584,7 +588,7 @@ export default function MatchCenterPage({
               </span>
             ) : (
               <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-primary)' }}>
-                {match.status.toUpperCase()}
+                {STATUS_WORD[match.status] || match.status}
               </span>
             )}
             {matchTypeTag(match) && (
@@ -607,7 +611,7 @@ export default function MatchCenterPage({
               )}
             </span>
             <span className="text-note">
-              {(!match.competition || match.competition === 'Premier Regional League') ? (match.match_type ? `${match.match_type.toUpperCase()} FIXTURE` : 'CLUB FRIENDLY') : match.competition} • {match.venue}
+              {[match.competition && match.competition !== 'Premier Regional League' ? match.competition : null, match.venue].filter(Boolean).join(' • ')}
             </span>
           </div>
 
@@ -644,7 +648,19 @@ export default function MatchCenterPage({
                 alignItems: 'center',
                 gap: 'clamp(0.4rem, 1.5vw, 0.75rem)',
               }}>
-                {match.status === 'upcoming' ? (
+                {match.status === 'postponed' || match.status === 'cancelled' ? (
+                  /* A game that was called off has no score and no kick-off time to show */
+                  <span style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: 'clamp(1rem, 4vw, 1.5rem)',
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    fontFamily: 'var(--font-heading)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {match.status === 'postponed' ? 'Postponed' : 'Cancelled'}
+                  </span>
+                ) : match.status === 'upcoming' ? (
                   /* Before kick-off a 0 : 0 board says nothing: show when it starts (date and venue sit above) */
                   <span style={{
                     color: 'var(--text-primary)',
@@ -707,7 +723,7 @@ export default function MatchCenterPage({
                 marginTop: '8px',
                 textAlign: 'center',
               }}>
-                {match.status === 'upcoming' ? 'Kick-off' : periodLabel(match.period)}
+                {match.status === 'upcoming' ? 'Kick-off' : match.status === 'postponed' ? 'New date to come' : match.status === 'cancelled' ? 'Not played' : periodLabel(match.period)}
               </div>
             </div>
 
@@ -727,6 +743,13 @@ export default function MatchCenterPage({
             lineupAnnounced={lineupAnnounced}
             onShowLineup={() => document.getElementById('match-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           />
+        )}
+
+        {cancelled && (
+          <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' }}>
+            <p className="text-note" style={{ margin: 0 }}>This game was cancelled and won&apos;t be played.</p>
+            <Link href={`/${club.slug}/fixtures`} className="btn btn-secondary btn-sm" style={{ marginTop: '0.85rem' }}>See all fixtures</Link>
+          </div>
         )}
 
         {/* Full-time report in plain sentences, from the logged events (none when the team hides scores) */}
@@ -964,7 +987,24 @@ export default function MatchCenterPage({
             flexDirection: 'column',
             gap: '2rem',
           }}>
-            {lineupSides.map(({ side, teamName, color, players }) => (
+            {lineupSides.map(({ side, teamName, color, players: available }) => {
+              // Once a line-up is published the list follows it: the starters on the pitch, then the
+              // substitutes the coach named (or, with none named, the other players who said they're in).
+              // With no line-up yet it's everyone who said they're in.
+              const coords = (side === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
+              const starterIds = new Set(coords.map(c => c.member_id).filter((id): id is string => !!id));
+              const byId = new Map(allSquadPlayers.map(p => [p.id, p]));
+              const starters = [...starterIds].map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p);
+              const named = !match.tournament_id && match.bench_member_ids?.length
+                ? match.bench_member_ids.map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p)
+                : null;
+              const subs = (named || available).filter(p => !starterIds.has(p.id));
+              const hasLineup = starters.length > 0;
+              const players = hasLineup ? [...starters, ...subs] : available;
+              const groups = hasLineup
+                ? [{ label: 'Starting', list: starters }, { label: 'Substitutes', list: subs }].filter(g => g.list.length > 0)
+                : [{ label: '', list: available }];
+              return (
               <React.Fragment key={side}>
                 {/* The Tactical Pitch Component */}
                 <div>
@@ -994,7 +1034,14 @@ export default function MatchCenterPage({
                         No players have confirmed their availability for this match yet.
                       </p>
                     )}
-                    {players.map(p => (
+                    {groups.map(group => (
+                      <React.Fragment key={group.label || 'squad'}>
+                      {group.label && (
+                        <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--club-ink)', marginTop: group.label === 'Substitutes' ? '0.6rem' : 0 }}>
+                          {group.label}
+                        </div>
+                      )}
+                      {group.list.map(p => (
                       <div
                         key={p.id}
                         style={{
@@ -1022,11 +1069,14 @@ export default function MatchCenterPage({
                           {p.player_position}
                         </span>
                       </div>
+                      ))}
+                      </React.Fragment>
                     ))}
                   </div>
                 </div>
               </React.Fragment>
-            ))}
+              );
+            })}
             {lineupSides.length === 0 && (
               <p style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 No club lineups for this match.

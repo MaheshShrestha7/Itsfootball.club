@@ -300,6 +300,12 @@ export interface Match {
   ground_id?: string | null;
   /** Which pitch at that ground, e.g. 'Pitch 2' */
   pitch_label?: string | null;
+  /** When players should be at the ground, as "HH:MM" (migration 20261164; the form hides it until then) */
+  meet_time?: string | null;
+  /** What to wear, in the coach's words ("Away kit, white socks") */
+  kit?: string | null;
+  /** The club side's named substitutes, set when the line-up is published */
+  bench_member_ids?: string[];
   /** The other club's copy of the same friendly, kept in step by the database (migration 20261159; read only) */
   linked_match_id?: string | null;
   /** Its readable URL (set by a database trigger; missing until migration 20261117_match_slugs.sql runs).
