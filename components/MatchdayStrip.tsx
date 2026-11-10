@@ -9,6 +9,7 @@ import { downloadMatchIcs, directionsUrl } from '@/lib/match-ics';
 import LocalTime from '@/components/LocalTime';
 import { formatClock } from '@/lib/dates';
 import KickoffCountdown from '@/components/KickoffCountdown';
+import LiveMinute from '@/components/LiveMinute';
 
 /** The competition name worth showing (the old placeholder default isn't one) */
 const competitionOf = (m: Match) => (m.competition && m.competition !== 'Premier Regional League' ? m.competition : null);
@@ -31,10 +32,12 @@ export function KickoffTime({ m }: { m: Pick<Match, 'match_date' | 'match_time'>
  * Club home, straight under the hero: the next match (with a real countdown, calendar and
  * directions), or the live match while one is on. The hero slider moves on; this stays put.
  */
-export default function MatchdayStrip({ club, next, live }: {
+export default function MatchdayStrip({ club, next, live, hideScore }: {
   club: Club;
   next?: Match;
   live?: Match;
+  /** The live game's team keeps scores off public pages (junior grassroots rules) */
+  hideScore?: boolean;
 }) {
   const first = live || next;
   if (!first) return null;
@@ -46,7 +49,9 @@ export default function MatchdayStrip({ club, next, live }: {
           <div className="glass-panel matchday-tile matchday-tile-next">
             <div className="matchday-tile-head">
               {live ? (
-                <span className="badge badge-live"><span className="pulse-dot" /> Live now</span>
+                live.status === 'halftime'
+                  ? <span className="badge badge-gold">Half-time</span>
+                  : <span className="badge badge-live"><span className="pulse-dot" /> Live now{live.is_paused ? '' : <> · <LiveMinute match={live} />&prime;</>}</span>
               ) : (
                 <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>Next match</strong>
               )}
@@ -54,7 +59,7 @@ export default function MatchdayStrip({ club, next, live }: {
             </div>
             <div className="matchday-teams">
               <span className={first.is_club_home ? 'matchday-us' : undefined}>{first.home_team_name}</span>
-              {live ? (
+              {live && !hideScore ? (
                 <span className="matchday-score">{live.home_score ?? 0} - {live.away_score ?? 0}</span>
               ) : (
                 <span className="matchday-vs">vs</span>

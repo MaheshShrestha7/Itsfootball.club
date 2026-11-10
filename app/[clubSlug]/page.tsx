@@ -175,7 +175,8 @@ export default function ClubPublicPage({
   const executiveStaff = clubMembers.filter(m => m.is_executive).sort((a, b) => (a.executive_order ?? 99) - (b.executive_order ?? 99));
   // A junior or reserve game names our side after its team ("Rovers U12"), not the club
   const clubMatches = matches.filter(m => m.club_id === clubId).map(m => (club ? withTeamSide(m, club, clubTeams) : m));
-  const liveMatch = publicFixtures(clubMatches).find(m => m.status === 'live');
+  // Half-time is still the live game: it stays on the page through the break
+  const liveMatch = publicFixtures(clubMatches).find(m => m.status === 'live') || publicFixtures(clubMatches).find(m => m.status === 'halftime');
 
   const resolvedSeasonName = fixturesSeasonFilter === 'CURRENT'
     ? (activeSeason?.name || defaultSeasonLabel())
@@ -412,7 +413,7 @@ export default function ClubPublicPage({
   const heroMatch = currentSlide?.targetMatch;
   const heroNews = currentSlide?.targetNews;
   const heroEvent = currentSlide?.targetEvent;
-  const heroIsLive = heroMatch?.status === 'live';
+  const heroIsLive = heroMatch?.status === 'live' || heroMatch?.status === 'halftime';
   // A club with nothing posted and no photo: a flat field of its colour, so the text and buttons can't sit on a photo
   const heroIsFlat = currentSlide?.category === 'club' && !currentSlide.bgImage;
 
@@ -904,7 +905,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.15 MATCHDAY STRIP: the live or next match, always in view under the hero */}
-      <MatchdayStrip club={club} live={liveMatch} next={stripNextMatch} />
+      <MatchdayStrip club={club} live={liveMatch} next={stripNextMatch} hideScore={!!liveMatch && publicScoreHidden(liveMatch, clubTeams)} />
 
       {/* 4.2 DEDICATED CLUB IDENTITY SECTION (DYNAMIC SUM COUNTS FROM RAW DATASET) */}
       <ClubIdentitySection

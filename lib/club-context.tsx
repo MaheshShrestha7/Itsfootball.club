@@ -114,6 +114,8 @@ interface ClubContextType {
 
   // Supabase sync
   syncStatus: SyncStatus;
+  /** The live (realtime) feed: 'off' while the connection is dropped, so a live page can say it's reconnecting */
+  liveFeed: 'connecting' | 'on' | 'off';
   retrySync: () => void;
   /** Re-read everything from Supabase (e.g. after a member profile was linked) */
   reloadFromServer: () => void;
@@ -526,6 +528,9 @@ export function ClubProvider({
   const dirtyRef = useRef(false);
   const [syncReady, setSyncReady] = useState(false);
   const [loadNonce, setLoadNonce] = useState(0);
+  // The realtime feed: 'on' once subscribed, 'off' while it's dropped (pages show "Reconnecting")
+  const [liveFeed, setLiveFeed] = useState<'connecting' | 'on' | 'off'>('connecting');
+  const droppedRef = useRef(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     phase: isSupabaseConfigured ? 'loading' : 'off',
   });
@@ -790,6 +795,7 @@ export function ClubProvider({
       });
     };
 
+    let closing = false;
     const channel = client
       .channel('live-matchday')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clubs', filter: filterOn('id') }, payload =>
@@ -831,9 +837,24 @@ export function ClubProvider({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_inquiries', filter: filterOn('club_id') }, payload =>
         apply<ContactInquiry>('inquiries', setInquiries, payload)
       )
-      .subscribe();
+      // Say when the live feed drops (a phone on the sideline losing signal) and catch up when it's back:
+      // changes made while it was down never arrive on their own
+      .subscribe(status => {
+        if (closing) return;
+        if (status === 'SUBSCRIBED') {
+          if (droppedRef.current) setLoadNonce(n => n + 1);
+          droppedRef.current = false;
+          setLiveFeed('on');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          droppedRef.current = true;
+          setLiveFeed('off');
+        }
+      });
 
     return () => {
+      // Leaving on purpose (the page changing clubs or closing) isn't a dropped feed
+      closing = true;
+      droppedRef.current = false;
       client.removeChannel(channel);
     };
   }, [syncReady, clubIdsKey]);
@@ -3605,6 +3626,7 @@ export function ClubProvider({
         isHydrated,
         syncStatus,
         retrySync,
+        liveFeed,
         reloadFromServer,
         saveNow,
         waitForClubSaved,

@@ -1,5 +1,6 @@
 'use client';
 
+import { minutesOnPitch } from '@/lib/match-subs';
 import React, { useState, useMemo } from 'react';
 import { useDialog } from '@/lib/use-escape-to-close';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
@@ -116,19 +117,11 @@ export default function StatsAuditModal({
     const full = fullMinutes(match);
     const byName = (name: string) => squadPlayers.find(p => p.full_name.toLowerCase() === name.trim().toLowerCase())?.id;
     const coords = (clubSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || [];
-    const on = new Map<string, number>();
-    coords.forEach(c => { if (c.member_id) on.set(c.member_id, 0); });
-    const off = new Map<string, number>();
-    events.filter(e => e.event_type === 'sub' && e.team_side === clubSide).forEach(e => {
-      const minute = Math.min(Math.max(e.minute, 0), full);
-      const inId = byName(e.player_name || '');
-      if (inId && !on.has(inId)) on.set(inId, minute);
-      const offName = /,\s*(.+?) OFF\./.exec(e.detail_text || '')?.[1];
-      const offId = offName ? byName(offName) : undefined;
-      if (offId) off.set(offId, minute);
-    });
+    // Starters play the whole match unless taken off or sent off; a sub plays from the minute they came on
+    const starters = coords.map(c => squadPlayers.find(p => p.id === c.member_id)?.full_name).filter((n): n is string => !!n);
+    const byNameKey = minutesOnPitch(starters, events.filter(e => e.team_side === clubSide), full);
     const minutes: Record<string, number> = {};
-    on.forEach((start, id) => { minutes[id] = Math.max(0, (off.get(id) ?? full) - start); });
+    Object.entries(byNameKey).forEach(([name, played]) => { const id = byName(name); if (id) minutes[id] = played; });
     return minutes;
   }, [match, clubSide, events, squadPlayers]);
 

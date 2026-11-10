@@ -4087,6 +4087,19 @@ dialog.form-dialog::backdrop {
   color: var(--club-ink);
 }
 
+/* Match page timeline: the whistles (kick-off, half-time, full time) between the events */
+.timeline-marker { position: relative; z-index: 1; display: flex; justify-content: center; }
+.timeline-marker span {
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 /* ===== Match page before kick-off ===== */
 .prematch {
   display: grid;

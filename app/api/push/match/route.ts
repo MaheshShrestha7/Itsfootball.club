@@ -4,7 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { pushConfigured, pushToClub } from '@/lib/push';
 import { matchAlert, type AlertKind } from '@/lib/match-alerts';
-import { publicScoreHidden } from '@/lib/teams';
+import { isJuniorFixture, publicScoreHidden } from '@/lib/teams';
 import { matchPath } from '@/lib/slugs';
 import { isUuid } from '@/lib/ids';
 import type { ClubTeam, Match } from '@/lib/supabase/types';
@@ -43,8 +43,12 @@ export async function POST(req: NextRequest) {
   const key = `match-push:${match.id}:${body.kind}${body.kind === 'goal' ? `:${home}-${away}` : ''}`;
   if (!(await durableRateLimit(key, 1, 24 * 60 * 60 * 1000))) return NextResponse.json({ pushed: 0, alreadySent: true });
   const minute = Number.isInteger(body.minute) ? body.minute : undefined;
+  // The scorer's name, for a goal. Never for a junior team's game, where names are shortened in public.
+  const scorer = body.kind === 'goal' && typeof body.scorer === 'string' && !isJuniorFixture(match as Match, (teams || []) as ClubTeam[])
+    ? body.scorer.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60) || undefined
+    : undefined;
   const pushed = await pushToClub(db, body.clubId, {
-    ...matchAlert(body.kind, match, home, away, minute),
+    ...matchAlert(body.kind, match, home, away, minute, scorer),
     url: matchPath(club.slug, match),
     tag: `match-${match.id}`, // one notification per match on the lock screen, updated as it goes
   });

@@ -15,5 +15,7 @@ assert.equal(alertFor(s('upcoming'), s('completed', 3, 0)), 'fulltime', 'result 
 
 const m = { home_team_name: 'Penrith', away_team_name: 'Eastwood' };
 assert.deepEqual(matchAlert('goal', m, 2, 1, 67), { title: 'Goal! Penrith 2–1 Eastwood', body: "67'" });
+assert.deepEqual(matchAlert('goal', m, 2, 1, 67, 'Chris Nguyen'), { title: 'Goal! Penrith 2–1 Eastwood', body: "Chris Nguyen 67'" });
+assert.equal(matchAlert('goal', m, 1, 0).body, 'Follow it live');
 assert.equal(matchAlert('fulltime', m, 2, 1).title, 'Full time: Penrith 2–1 Eastwood');
 console.log('match-alerts checks passed');
