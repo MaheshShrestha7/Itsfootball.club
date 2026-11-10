@@ -965,12 +965,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
       after = top + pitchH;
     } else {
       const top = story ? 670 : 470;
-      // A "SUBS" row of its own between the starters and the substitutes
-      const rows: { number: number; name: string; divider?: boolean }[] = [
-        ...xi.map(p => ({ number: p.number, name: `${p.name}${p.is_captain ? ' (C)' : ''}` })),
-        ...(listSubs.length ? [{ number: 0, name: 'SUBS', divider: true }] : []),
-        ...listSubs.map(p => ({ number: p.number, name: p.name })),
-      ];
+      const rows = [...xi.map(p => ({ number: p.number, name: `${p.name}${p.is_captain ? ' (C)' : ''}` })), ...listSubs.map(p => ({ number: p.number, name: p.name }))];
       const bottom = hasExtras || listSubs.length ? floor : H;
       const fitRows = (n: number) => Math.min(story ? 74 : 64, Math.floor((bottom - top - 48) / Math.max(1, n)));
       // A long squad goes into two columns rather than shrinking each row past reading
@@ -992,16 +987,6 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
         if (i > 0) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
           ctx.fillRect(x0 + (cols === 2 ? 28 : 40), y - rowH / 2, colW - (cols === 2 ? 56 : 80), 2);
-        }
-        if (p.divider) {
-          ctx.fillStyle = ink;
-          ctx.textAlign = 'center';
-          spaced(ctx, 4);
-          ctx.font = `800 ${Math.min(story ? 26 : 22, Math.round(rowH * 0.42))}px ${body}`;
-          ctx.fillText(p.name, x0 + colW / 2, y);
-          spaced(ctx, 0);
-          ctx.textAlign = 'left';
-          return;
         }
         ctx.fillStyle = ink;
         ctx.font = `900 ${Math.min(story ? 44 : 38, Math.round(rowH * 0.7))}px ${heading}`;
