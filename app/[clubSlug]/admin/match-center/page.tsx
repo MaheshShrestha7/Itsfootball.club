@@ -52,11 +52,10 @@ import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, ful
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { squadForMatch } from '@/lib/teams';
+import { goalScoringSide, squadForMatch } from '@/lib/teams';
+import LocalTime from '@/components/LocalTime';
 import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
-import { alertFor, type MatchState } from '@/lib/match-alerts';
-import { getAccessToken } from '@/lib/supabase/client';
 import PopupPanel from '@/components/PopupPanel';
 import MatchEventSheet, { type SheetMode, type SheetResult } from '@/components/admin/MatchEventSheet';
 
@@ -192,24 +191,8 @@ export default function AdminMatchCenterControllerPage({
     : [];
   const nextGameOnPitch = match && (isLiveGame(match) || match.status === 'completed') ? nextOnPitch(match, tournamentGames) : undefined;
 
-  // Followers' live-score alerts: kick-off, each goal, full time, as this screen sees them happen
-  // (whichever button or event caused it). The first look at a match only records where it stands;
-  // the server sends each alert once even with several admins on the match.
-  const alertSeen = useRef<Record<string, MatchState>>({});
-  useEffect(() => {
-    if (!match) return;
-    const now: MatchState = { status: match.status, home: match.home_score ?? 0, away: match.away_score ?? 0 };
-    const prev = alertSeen.current[match.id];
-    alertSeen.current[match.id] = now;
-    const kind = prev ? alertFor(prev, now) : null;
-    if (!kind) return;
-    void getAccessToken().then(token => fetch('/api/push/match', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ clubId: club.id, matchId: match.id, kind, home: now.home, away: now.away, minute: getLiveMinute(match) }),
-    })).catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match?.id, match?.status, match?.home_score, match?.away_score]);
+  // Followers' live-score alerts (kick-off, each goal, full time) are sent by the admin layout
+  // (lib/use-match-alerts.ts), so they also go out when a result is entered on another admin page.
   const events = matchEvents.filter(e => e.match_id === match?.id).sort((a, b) => compareEventMinute(b, a));
   // The fixture's team squad once the club has several teams (everyone otherwise)
   const squadPlayers = squadForMatch(members.filter(m => m.club_id === club.id && isPlayerMember(m)), match, clubTeams, clubTeamMembers);
@@ -258,6 +241,8 @@ export default function AdminMatchCenterControllerPage({
   const [moreEvents, setMoreEvents] = useState(false);
   // End match asks first: the result goes public and followers get the full-time alert
   const [confirmEnd, setConfirmEnd] = useState(false);
+  // Kick off asks first only when the game isn't due now
+  const [confirmKickoff, setConfirmKickoff] = useState(false);
   // The small period buttons, for putting a wrong period right, stay folded behind "Change period"
   const [showPeriods, setShowPeriods] = useState(false);
   // Keep the phone's screen on while scoring (Screen Wake Lock); remembered on this device
@@ -420,6 +405,17 @@ export default function AdminMatchCenterControllerPage({
 
   // Adjust score
   const handleScoreAdjust = (side: 'home' | 'away', delta: number) => {
+    // Taking a goal off: the latest goal logged for that side goes with it, so the match log, the
+    // public timeline and the report never list more goals than the score. (Deleting the event
+    // lowers the score itself.) With no goal logged for that side, only the number changes.
+    if (delta < 0) {
+      const lastGoal = events.find(e => goalScoringSide(e) === side);
+      if (lastGoal) {
+        deleteMatchEvent(lastGoal.id);
+        showFeedback(`Took off ${lastGoal.player_name}'s goal (${eventMinuteLabel(lastGoal)}'). It is off the match log too.`, 'info');
+        return;
+      }
+    }
     if (side === 'home') {
       const newScore = Math.max(0, match.home_score + delta);
       updateMatch(match.id, { home_score: newScore });
@@ -567,12 +563,19 @@ export default function AdminMatchCenterControllerPage({
   // Full time and stats not saved yet: the one moment "Save Player Stats" should stand out
   const statsDue = match.status === 'completed' && !match.is_audited;
 
+  // Kick-off goes straight to followers' phones. On the day it's one tap; for a game set for another
+  // time (more than two hours away, or more than six hours ago) it asks first, since Match Centre
+  // opens on the next fixture and a stray tap would start it.
+  const kickOff = () => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half'));
+  const untilKickoff = kickoff(match) - Date.now();
+  const kickoffIsOffSchedule = untilKickoff > 2 * 3600000 || untilKickoff < -6 * 3600000;
+
   // The one big scoreboard button: the next whistle for where the game is (none once it's over)
   const scoreText = `${match.home_score ?? 0}–${match.away_score ?? 0}`;
   const nextStep: { label: string; hint: string; go: () => void } | null =
     match.status === 'completed' || match.status === 'cancelled' || match.status === 'postponed' ? null
     : match.status === 'upcoming' || !match.period || match.period === 'pre_match'
-      ? { label: 'Kick off', hint: 'Starts the clock and the live score', go: () => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half')) }
+      ? { label: 'Kick off', hint: 'Starts the clock and the live score', go: () => (kickoffIsOffSchedule ? setConfirmKickoff(true) : kickOff()) }
     : match.status === 'halftime' || match.period === 'halftime'
       ? { label: 'Start 2nd half', hint: `The clock restarts at ${periodStartMinute(match, 'second_half')}′`, go: () => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half')) }
     : match.period === 'first_half'
@@ -1303,6 +1306,28 @@ export default function AdminMatchCenterControllerPage({
             <div className="mc-sheet-actions">
               <button type="button" className="btn btn-secondary" onClick={() => setConfirmEnd(false)}>Not yet</button>
               <button type="button" className="btn btn-primary" onClick={() => { setConfirmEnd(false); handleFullTime(); }}>End match</button>
+            </div>
+          </PopupPanel>
+        </div>
+      )}
+
+      {/* Kick off for a game that isn't due now: check it's the right one before followers are told */}
+      {confirmKickoff && (
+        <div className="mc-sheet-wrap" onClick={() => setConfirmKickoff(false)}>
+          <PopupPanel onClose={() => setConfirmKickoff(false)} label="Kick off this game now?" className="mc-sheet" onClick={e => e.stopPropagation()}>
+            <div className="mc-sheet-grab" aria-hidden="true" />
+            <div className="mc-sheet-head"><h2>Kick off this game now?</h2></div>
+            <p className="mc-sheet-lead">
+              {match.home_team_name} v {match.away_team_name} is set for{' '}
+              <LocalTime value={match.match_date} format="both" options={{ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }} />.
+            </p>
+            <ul className="mc-final-list">
+              <li><CheckCircle2 size={16} aria-hidden="true" />The clock starts and the public page shows it as live</li>
+              {!match.alerts_muted && <li><CheckCircle2 size={16} aria-hidden="true" />Followers get the kick-off alert straight away</li>}
+            </ul>
+            <div className="mc-sheet-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirmKickoff(false)}>Not yet</button>
+              <button type="button" className="btn btn-primary" onClick={() => { setConfirmKickoff(false); kickOff(); }}>Kick off</button>
             </div>
           </PopupPanel>
         </div>

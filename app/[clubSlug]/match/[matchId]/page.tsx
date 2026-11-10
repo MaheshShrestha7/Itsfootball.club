@@ -32,10 +32,12 @@ import {
   Calendar,
   Wifi,
   Star,
-  Target
+  Target,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
-import { compareEventMinute, eventMinuteLabel, lengthLabel, validHalfMinutes } from '@/lib/match-length';
+import { compareEventMinute, eventMinuteLabel, halfMinutes, lengthLabel, validHalfMinutes } from '@/lib/match-length';
 import MatchShareButton from '@/components/MatchShareButton';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
@@ -48,6 +50,7 @@ import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden, withTeamSide } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 import { matchForParam } from '@/lib/slugs';
+import { subDetail, subPlayers } from '@/lib/match-subs';
 
 // Only needed once the lineups tab opens
 const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
@@ -59,13 +62,19 @@ type Side = 'home' | 'away';
 /** The status as people say it (the stored value is "completed", "postponed"...) */
 const STATUS_WORD: Record<string, string> = { upcoming: 'Upcoming', completed: 'Full time', postponed: 'Postponed', cancelled: 'Cancelled' };
 
+/** Event types as people say them */
+const EVENT_WORD: Record<string, string> = {
+  goal: 'Goal', penalty: 'Penalty goal', own_goal: 'Own goal', yellow_card: 'Yellow card', red_card: 'Red card',
+  sub: 'Substitution', var: 'VAR', commentary: 'Commentary', whistle: 'Whistle',
+};
+
 export default function MatchCenterPage({
   params,
 }: {
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers } = useClub();
+  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, liveFeed, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers } = useClub();
 
   // No fallback to another club, and only this club's own fixtures: a match cached from another
   // club's site must not show under this club's name
@@ -98,7 +107,11 @@ export default function MatchCenterPage({
     ? matchEvents
         .filter(e => e.match_id === match.id && !(scoreHidden && GOAL_EVENT_TYPES.includes(e.event_type)))
         .map(e => juniorFixture
-          ? { ...e, player_name: juniorPublicName(e.player_name), assist_player_name: e.assist_player_name ? juniorPublicName(e.assist_player_name) : e.assist_player_name }
+          ? {
+              ...e, player_name: juniorPublicName(e.player_name), assist_player_name: e.assist_player_name ? juniorPublicName(e.assist_player_name) : e.assist_player_name,
+              // A substitution's sentence names both players in full: shortened like every other name here
+              ...(subPlayers(e) ? { detail_text: subDetail(juniorPublicName(subPlayers(e)!.on), juniorPublicName(subPlayers(e)!.off)) } : {}),
+            }
           : e)
         .sort((a, b) => compareEventMinute(b, a))
     : [];
@@ -331,6 +344,32 @@ export default function MatchCenterPage({
   const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
   const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
 
+  // The shootout score, once one has been entered for a level game (never for a team that hides scores)
+  const shootout = !scoreHidden && match.status !== 'upcoming' && match.home_score === match.away_score
+    && match.home_penalty_score != null && match.away_penalty_score != null
+    && (match.home_penalty_score > 0 || match.away_penalty_score > 0 || match.period === 'penalties')
+    ? { home: match.home_penalty_score, away: match.away_penalty_score } : null;
+
+  // The timeline, newest first, with the whistles in their place: full time, half-time and kick-off
+  // come from where the match is up to, so they show without anyone logging them
+  const started = match.status === 'live' || match.status === 'halftime' || match.status === 'completed';
+  const pastHalf = match.status === 'halftime' || match.status === 'completed'
+    || (match.status === 'live' && match.period !== 'first_half' && match.period !== 'pre_match');
+  const half = halfMinutes(match);
+  const timelineRows: (typeof events[number] | { marker: string })[] = [];
+  if (started) {
+    if (match.status === 'completed') timelineRows.push({ marker: 'Full time' });
+    let halfShown = !pastHalf;
+    for (const evt of events) {
+      if (!halfShown && evt.minute <= half) { timelineRows.push({ marker: 'Half-time' }); halfShown = true; }
+      timelineRows.push(evt);
+    }
+    if (!halfShown) timelineRows.push({ marker: 'Half-time' });
+    timelineRows.push({ marker: 'Kick-off' });
+  } else {
+    timelineRows.push(...events);
+  }
+
   // One team's crest and name. The club's crest only stands in on the club's own side.
   const teamBlock = (side: Side) => {
     const name = side === 'home' ? match.home_team_name : match.away_team_name;
@@ -427,10 +466,13 @@ export default function MatchCenterPage({
                 minHeight: '44px',
                 transition: 'all 0.3s ease',
               }}
-              title="Updates as the club enters goals and cards"
+              title={liveFeed === 'off' ? 'The connection dropped. The score catches up as soon as it is back.' : 'Updates as the club enters goals and cards'}
+              role="status"
             >
-              <span className="pulse-dot" style={{ background: 'var(--club-primary)', width: '7px', height: '7px' }} />
-              <span>LIVE UPDATES</span>
+              {liveFeed === 'off'
+                ? <Wifi size={13} aria-hidden="true" style={{ opacity: 0.6 }} />
+                : <span className="pulse-dot" style={{ background: 'var(--club-primary)', width: '7px', height: '7px' }} />}
+              <span>{liveFeed === 'off' ? 'Reconnecting…' : 'Live updates'}</span>
             </div>}
 
             {/* No Door Check-In button for the public: the QR code at the entrance opens self check-in */}
@@ -725,6 +767,12 @@ export default function MatchCenterPage({
               }}>
                 {match.status === 'upcoming' ? 'Kick-off' : match.status === 'postponed' ? 'New date to come' : match.status === 'cancelled' ? 'Not played' : periodLabel(match.period)}
               </div>
+              {/* A cup game settled (or being settled) on penalties: the shootout score, kept apart from the match score */}
+              {shootout && (
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--c-amber)', marginTop: '6px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  {shootout.home}–{shootout.away} on penalties
+                </div>
+              )}
             </div>
 
             {teamBlock('away')}
@@ -906,13 +954,24 @@ export default function MatchCenterPage({
                 zIndex: 0,
               }} />
 
-              {events.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                  No match events recorded yet. Updates will appear in real time as logged by club officials.
+              {events.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', position: 'relative', zIndex: 1, background: 'var(--bg-pitch)' }}>
+                  Nothing logged yet. Goals, cards and substitutions show here as {club.name} enters them.
                 </div>
-              ) : (
-                events.map(evt => {
+              )}
+              {timelineRows.map(row => {
+                  if ('marker' in row) {
+                    return (
+                      <div key={row.marker} className="timeline-marker">
+                        <span>{row.marker}</span>
+                      </div>
+                    );
+                  }
+                  const evt = row;
                   const isGoal = GOAL_EVENT_TYPES.includes(evt.event_type);
+                  const sub = subPlayers(evt);
+                  // Commentary and whistles carry the team's name, not a player's: the line itself is the text
+                  const isNote = evt.event_type === 'commentary' || evt.event_type === 'whistle';
                   return (
                   <div
                     key={evt.id}
@@ -954,19 +1013,27 @@ export default function MatchCenterPage({
                           backgroundColor: isGoal ? 'rgba(var(--club-primary-rgb), 0.2)' : evt.event_type === 'yellow_card' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.1)',
                           color: isGoal ? 'var(--c-green)' : evt.event_type === 'yellow_card' ? 'var(--c-amber)' : 'var(--text-primary)',
                         }}>
-                          {evt.event_type.toUpperCase().replace(/_/g, ' ')}
+                          {EVENT_WORD[evt.event_type] || evt.event_type.replace(/_/g, ' ')}
                         </span>
                         <span className="text-meta">
                           {evt.team_side === 'home' ? match.home_team_name : match.away_team_name}
                         </span>
                       </div>
 
+                      {sub ? (
+                        /* Who came on and who went off, each on its own line */
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'grid', gap: '0.15rem' }}>
+                          <span><ArrowUp size={14} color="var(--c-green)" aria-hidden="true" /> <span className="sr-only">On: </span>{playerLink(sub.on, evt.team_side)}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}><ArrowDown size={14} color="var(--c-red)" aria-hidden="true" /> <span className="sr-only">Off: </span>{playerLink(sub.off, evt.team_side)}</span>
+                        </h4>
+                      ) : !isNote && (
                       <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
                         {playerLink(evt.player_name, evt.team_side)}
                         {evt.assist_player_name && <> (Assist: {playerLink(evt.assist_player_name, evt.team_side)})</>}
                       </h4>
+                      )}
 
-                      {evt.detail_text && (
+                      {evt.detail_text && !sub && (
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                           {evt.detail_text}
                         </p>
@@ -974,8 +1041,7 @@ export default function MatchCenterPage({
                     </div>
                   </div>
                   );
-                })
-              )}
+                })}
             </div>
           </div>
         )}
@@ -1110,7 +1176,7 @@ export default function MatchCenterPage({
                 Match Statistics
               </h3>
               <p style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
-                Live-tracked from the official event log
+                From the goals, cards and substitutions {club.name} logged
               </p>
 
               {/* Home vs Away header */}
