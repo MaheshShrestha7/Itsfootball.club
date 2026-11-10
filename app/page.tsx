@@ -5,7 +5,7 @@ import { fitDescription, pageMetadata } from '@/lib/seo';
 import { homeSchema } from '@/lib/schema';
 import JsonLd from '@/components/JsonLd';
 import HomeClient from './HomeClient';
-import { findHomeDemoClub, listLatestClubContent } from '@/lib/supabase/club-lookup';
+import { findHomeDemoClub, listLatestClubContent, listLatestResults } from '@/lib/supabase/club-lookup';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Free Football & Soccer Club Websites | itsfootball.club',
@@ -20,11 +20,11 @@ export default async function Page() {
   // The hero background is the page's largest paint; fetch the one for the current theme early (same cookie as the root layout)
   const light = (await cookies()).get('theme')?.value === 'light';
   preload(light ? '/images/stadium_hero_daytime.webp' : '/images/stadium_hero_bg.webp', { as: 'image', fetchPriority: 'high' });
-  const [latest, demoClub] = await Promise.all([listLatestClubContent(), findHomeDemoClub()]);
+  const [latest, demoClub, results] = await Promise.all([listLatestClubContent(), findHomeDemoClub(), listLatestResults()]);
   return (
     <>
       <JsonLd data={homeSchema()} />
-      <HomeClient latestNews={latest.news} latestPhotos={latest.photos} demoClub={demoClub} />
+      <HomeClient latestNews={latest.news} latestPhotos={latest.photos} results={results} demoClub={demoClub} />
     </>
   );
 }

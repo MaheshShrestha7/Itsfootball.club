@@ -1,8 +1,8 @@
 import type { CalendarEvent, CalendarMatch } from '../calendar';
 import { fetchPaged } from '../paged';
 import type { SummaryMatch } from '../public-tournaments';
-import { squadPlayerIds } from '../teams';
-import type { ClubMember, ClubTeamMember } from './types';
+import { squadPlayerIds, teamOfMatch } from '../teams';
+import type { ClubMember, ClubTeam, ClubTeamMember, MatchType } from './types';
 
 // Lightweight server-side lookups for <title>/OG metadata (findClubBySlug and friends) and the sitemap.
 // Mirrors the slug/previous_slugs matching logic in lib/club-context.tsx's selectClubBySlug.
@@ -361,6 +361,53 @@ export async function listLatestClubContent(limit = 12): Promise<{ news: LatestN
     publicRows<LatestPhotoRow>(`media_gallery?select=id,club_id,title,media_url,thumbnail_url,album_name,created_at&media_type=eq.image&order=created_at.desc.nullslast&limit=${limit}`, 300),
   ]);
   return { news: news || [], photos: photos || [] };
+}
+
+/** A club game for the platform home page's results board */
+export interface HomeResultRow {
+  id: string;
+  club_id: string;
+  slug?: string | null;
+  team_id: string | null;
+  match_type: MatchType | null;
+  tournament_id: string | null;
+  status: 'live' | 'halftime' | 'completed';
+  home_score: number;
+  away_score: number;
+  home_team_name: string;
+  away_team_name: string;
+  home_team_logo: string | null;
+  away_team_logo: string | null;
+  match_date: string;
+  current_minute: number | null;
+  /** The club team playing it ('Under 9s'), when the club has teams */
+  team_name: string | null;
+  /** The team keeps its scores off the public site (junior rules): show the game, never the score */
+  scores_hidden: boolean;
+}
+
+const RESULT_COLUMNS = 'id,club_id,slug,team_id,match_type,tournament_id,status,home_score,away_score,home_team_name,away_team_name,home_team_logo,away_team_logo,match_date,current_minute';
+// Club games only: in-house games and tournament fixtures aren't the club's results
+const CLUB_GAMES = 'tournament_id=is.null&or=(match_type.is.null,match_type.neq.internal)';
+
+/**
+ * Live games first, then the latest finished ones, across every club, for the platform home page.
+ * Each row says whether its team hides scores, using the same rule as the club's own pages.
+ */
+export async function listLatestResults(limit = 40): Promise<HomeResultRow[]> {
+  type Row = Omit<HomeResultRow, 'team_name' | 'scores_hidden'>;
+  const [live, done] = await Promise.all([
+    publicRows<Row>(`matches?select=${RESULT_COLUMNS}&status=in.(live,halftime)&${CLUB_GAMES}&order=match_date.desc&limit=20`, 30),
+    publicRows<Row>(`matches?select=${RESULT_COLUMNS}&status=eq.completed&match_date=lte.${new Date().toISOString().slice(0, 13)}:59:59Z&${CLUB_GAMES}&order=match_date.desc&limit=${limit}`, 120),
+  ]);
+  const rows = [...(live || []), ...(done || [])];
+  if (!rows.length) return [];
+  const clubIds = [...new Set(rows.map(r => r.club_id))].filter(id => /^[0-9a-f-]{36}$/i.test(id));
+  const teams = (await publicRows<ClubTeam>(`club_teams?select=id,club_id,name,short_name,is_default,hide_public_scores&club_id=in.(${clubIds.join(',')})&is_active=eq.true`, 300)) || [];
+  return rows.map(r => {
+    const team = teamOfMatch({ club_id: r.club_id, team_id: r.team_id, match_type: r.match_type ?? undefined, tournament_id: r.tournament_id ?? undefined }, teams);
+    return { ...r, team_name: team ? team.short_name || team.name : null, scores_hidden: !!team?.hide_public_scores };
+  });
 }
 
 export interface NewsArticleRow extends NewsMetadataRow {
