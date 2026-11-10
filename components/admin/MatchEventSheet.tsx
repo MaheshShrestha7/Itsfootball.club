@@ -75,6 +75,8 @@ function PlayerPicker({ id, squad, lineup, value, onChange, layout = 'tiles', al
   placeholder?: string;
 }) {
   const [typing, setTyping] = useState(false);
+  // The squad search stays folded while there are tiles to tap, so the popup opens on the photos, not a list
+  const [searching, setSearching] = useState(false);
   // An outside team: their players aren't on the club's list, so a name (or shirt number) is typed
   if (!squad) {
     return (
@@ -106,12 +108,17 @@ function PlayerPicker({ id, squad, lineup, value, onChange, layout = 'tiles', al
           ))}
         </div>
       )}
+      {tiles.length > 0 && !searching && !(value.id && !inTiles) && !typing ? (
+        <div className="mc-pick-more">
+          <button type="button" className="mc-sheet-link" onClick={() => setSearching(true)}>Someone else? Search the squad</button>
+        </div>
+      ) : (
       <div className="mc-pick-more">
         <PlayerSearchSelect
           id={id}
           players={squad}
           value={searchValue}
-          placeholder={tiles.length ? 'Someone else? Search the squad' : 'Search the squad'}
+          placeholder="Search the squad by name or number"
           onChange={v => {
             if (v === 'custom') { setTyping(true); onChange({ id: '', name: '' }); return; }
             setTyping(false);
@@ -125,6 +132,7 @@ function PlayerPicker({ id, squad, lineup, value, onChange, layout = 'tiles', al
             value={value.name} onChange={e => onChange({ id: '', name: e.target.value })} />
         )}
       </div>
+      )}
     </>
   );
 }

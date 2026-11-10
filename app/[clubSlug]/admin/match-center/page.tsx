@@ -222,8 +222,12 @@ export default function AdminMatchCenterControllerPage({
   // If attendance was never tracked for it, fall back to the full squad.
   const matchAvailabilities = match ? getMatchAvailabilities(match.id) : [];
   const attendingIds = new Set(matchAvailabilities.filter(a => a.status === 'available').map(a => a.member_id));
+  // Anyone in the saved line-up or named in the match log played too, even if they never said "available"
+  // (else a goal by them shows as "not linked to a player" when the stats are saved)
+  for (const pos of [...(match?.home_lineup_coords || []), ...(match?.away_lineup_coords || [])]) if (pos.member_id) attendingIds.add(pos.member_id);
+  const loggedNames = new Set(events.flatMap(e => [e.player_name, e.assist_player_name]).filter(Boolean).map(n => String(n).toLowerCase()));
   const attendingSquadPlayers = matchAvailabilities.length > 0
-    ? squadPlayers.filter(p => attendingIds.has(p.id))
+    ? squadPlayers.filter(p => attendingIds.has(p.id) || loggedNames.has(p.full_name.toLowerCase()))
     : squadPlayers;
 
   // Active Admin Sub-Tab
