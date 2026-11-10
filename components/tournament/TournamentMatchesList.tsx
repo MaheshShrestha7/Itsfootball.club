@@ -86,9 +86,9 @@ export default function TournamentMatchesList({
             style={{
               padding: '0.35rem 0.75rem',
               borderRadius: '8px',
-              border: stageFilter === 'all' ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
-              background: stageFilter === 'all' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
-              color: stageFilter === 'all' ? 'var(--c-green)' : 'var(--text-primary)',
+              border: stageFilter === 'all' ? '1px solid var(--club-primary)' : '1px solid rgba(var(--tint-rgb), 0.1)',
+              background: stageFilter === 'all' ? 'rgba(var(--club-primary-rgb), 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
+              color: stageFilter === 'all' ? 'var(--club-ink)' : 'var(--text-primary)',
               fontSize: '0.78rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -119,9 +119,9 @@ export default function TournamentMatchesList({
                 style={{
                   padding: '0.35rem 0.75rem',
                   borderRadius: '8px',
-                  border: stageFilter === stage ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
-                  background: stageFilter === stage ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
-                  color: stageFilter === stage ? 'var(--c-green)' : 'var(--text-primary)',
+                  border: stageFilter === stage ? '1px solid var(--club-primary)' : '1px solid rgba(var(--tint-rgb), 0.1)',
+                  background: stageFilter === stage ? 'rgba(var(--club-primary-rgb), 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
+                  color: stageFilter === stage ? 'var(--club-ink)' : 'var(--text-primary)',
                   fontSize: '0.78rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -176,13 +176,13 @@ export default function TournamentMatchesList({
               style={{
                 background: 'rgba(var(--dk-15-23-42), 0.75)',
                 border: isLive
-                  ? '1.5px solid #EF4444'
+                  ? '1.5px solid var(--c-red)'
                   : '1px solid rgba(var(--tint-rgb), 0.08)',
                 borderRadius: '12px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: isLive ? '0 0 15px rgba(239, 68, 68, 0.2)' : 'none',
+                
               }}
             >
               {/* Card Header */}
@@ -219,7 +219,7 @@ export default function TournamentMatchesList({
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          background: '#EF4444',
+                          background: 'var(--c-red)',
                           animation: 'pulse 1.5s infinite',
                         }}
                       />
@@ -229,9 +229,9 @@ export default function TournamentMatchesList({
                   {isCompleted && (
                     <span
                       style={{
-                        color: 'var(--c-green)',
+                        color: 'var(--club-ink)',
                         fontWeight: 800,
-                        background: 'rgba(16, 185, 129, 0.1)',
+                        background: 'rgba(var(--club-primary-rgb), 0.1)',
                         padding: '1px 6px',
                         borderRadius: '4px',
                       }}
@@ -284,7 +284,7 @@ export default function TournamentMatchesList({
                           {match.home_score} - {match.away_score}
                         </div>
                         {match.home_penalty_score !== undefined && match.away_penalty_score !== undefined && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
                             ({match.home_penalty_score} - {match.away_penalty_score} pens)
                           </div>
                         )}
@@ -379,7 +379,7 @@ export default function TournamentMatchesList({
                         cursor: 'pointer',
                       }}
                     >
-                      <Edit3 size={12} color="var(--c-green)" />
+                      <Edit3 size={12} color="var(--club-ink)" />
                       <span>Update Score</span>
                     </button>
                   )}

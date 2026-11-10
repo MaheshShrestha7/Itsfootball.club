@@ -126,13 +126,12 @@ export default function PublicTournamentDetailPage({
                   width: '64px',
                   height: '64px',
                   borderRadius: '16px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '2px solid rgba(245, 158, 11, 0.4)',
+                  background: 'rgba(var(--club-primary-rgb), 0.12)',
+                  border: '1px solid rgba(var(--club-primary-rgb), 0.45)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--c-amber)',
-                  boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
+                  color: 'var(--club-ink)',
                 }}
               >
                 <Trophy size={32} />
@@ -152,7 +151,7 @@ export default function PublicTournamentDetailPage({
                         borderRadius: '6px',
                         background: 'rgba(239, 68, 68, 0.2)',
                         color: 'var(--c-red)',
-                        border: '1px solid #EF4444',
+                        border: '1px solid var(--c-red)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '3px',
@@ -163,7 +162,7 @@ export default function PublicTournamentDetailPage({
                           width: '6px',
                           height: '6px',
                           borderRadius: '50%',
-                          background: '#EF4444',
+                          background: 'var(--c-red)',
                           animation: 'pulse 1.5s infinite',
                         }}
                       />
@@ -173,7 +172,7 @@ export default function PublicTournamentDetailPage({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', columnGap: '1.25rem', rowGap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--club-ink)', fontWeight: 700 }}>
                     <Layers size={14} />
                     <span>{formatLabel}</span>
                   </span>
@@ -195,25 +194,6 @@ export default function PublicTournamentDetailPage({
               </div>
             </div>
 
-            {/* Live Feed Synced Pill */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                padding: '0.4rem 0.85rem',
-                borderRadius: '20px',
-                color: 'var(--c-green)',
-                fontSize: '0.75rem',
-                fontWeight: 800,
-                letterSpacing: '0.04em',
-              }}
-            >
-              <Sparkles size={13} />
-              <span>LIVE BRACKET SYNCED</span>
-            </div>
           </div>
         </div>
       </section>
@@ -241,7 +221,7 @@ export default function PublicTournamentDetailPage({
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === 'bracket' ? '2px solid var(--club-primary)' : '2px solid transparent',
-                color: activeTab === 'bracket' ? 'var(--c-green)' : 'var(--text-secondary)',
+                color: activeTab === 'bracket' ? 'var(--club-ink)' : 'var(--text-secondary)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -264,7 +244,7 @@ export default function PublicTournamentDetailPage({
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === 'standings' ? '2px solid var(--club-primary)' : '2px solid transparent',
-                color: activeTab === 'standings' ? 'var(--c-green)' : 'var(--text-secondary)',
+                color: activeTab === 'standings' ? 'var(--club-ink)' : 'var(--text-secondary)',
                 fontWeight: 800,
                 fontSize: '0.92rem',
                 cursor: 'pointer',
@@ -286,7 +266,7 @@ export default function PublicTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'fixtures' ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: activeTab === 'fixtures' ? 'var(--c-green)' : 'var(--text-secondary)',
+              color: activeTab === 'fixtures' ? 'var(--club-ink)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.92rem',
               cursor: 'pointer',
@@ -307,7 +287,7 @@ export default function PublicTournamentDetailPage({
               background: 'transparent',
               border: 'none',
               borderBottom: activeTab === 'teams' ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: activeTab === 'teams' ? 'var(--c-green)' : 'var(--text-secondary)',
+              color: activeTab === 'teams' ? 'var(--club-ink)' : 'var(--text-secondary)',
               fontWeight: 800,
               fontSize: '0.92rem',
               cursor: 'pointer',
@@ -404,9 +384,9 @@ export default function PublicTournamentDetailPage({
                         borderRadius: '4px',
                         background:
                           part.team_type === 'internal'
-                            ? 'rgba(16, 185, 129, 0.15)'
+                            ? 'rgba(var(--club-primary-rgb), 0.15)'
                             : 'rgba(59, 130, 246, 0.15)',
-                        color: part.team_type === 'internal' ? 'var(--c-green)' : 'var(--c-sky)',
+                        color: part.team_type === 'internal' ? 'var(--club-ink)' : 'var(--c-sky)',
                       }}
                     >
                       {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
@@ -417,7 +397,7 @@ export default function PublicTournamentDetailPage({
                       </span>
                     )}
                     {part.group && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
                         Group {part.group}
                       </span>
                     )}

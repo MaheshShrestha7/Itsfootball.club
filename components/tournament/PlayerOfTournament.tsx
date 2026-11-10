@@ -73,8 +73,8 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
     <div style={{
       display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '1rem',
       padding: '1rem 1.25rem', marginBottom: '1.5rem', borderRadius: '14px',
-      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(var(--dk-15-23-42), 0.75))',
-      border: '1px solid rgba(245, 158, 11, 0.35)',
+      background: 'rgba(var(--club-primary-rgb), 0.06)',
+      border: '1px solid rgba(var(--club-primary-rgb), 0.45)',
     }}>
       {editing ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem', width: '100%' }}>
@@ -105,13 +105,13 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
       ) : (
         <>
           {winnerName ? (
-            <PlayerAvatar photoUrl={winner?.photo_url} name={winnerName} size={56} style={{ borderRadius: '14px', border: '2px solid #F59E0B' }} />
+            <PlayerAvatar photoUrl={winner?.photo_url} name={winnerName} size={56} style={{ borderRadius: '14px', border: '2px solid var(--club-primary)' }} />
           ) : (
-            <Award size={40} color="var(--c-amber)" />
+            <Award size={40} color="var(--club-ink)" aria-hidden="true" />
           )}
           {/* At least ~170px for the text; below that the button moves to its own line */}
           <div style={{ flex: '1 1 170px', minWidth: 0 }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--c-amber)', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--club-ink)' }}>
               Player of the Tournament
             </div>
             <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{winnerName || 'Not awarded yet'}</div>

@@ -226,41 +226,41 @@ export default function ClubDetailDrawer({
 
           {/* Section 1: Footprint & Activity */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Trophy size={14} color="var(--c-amber)" />
-              <span>Footprint &amp; Traction</span>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Trophy size={14} color="var(--text-secondary)" aria-hidden="true" />
+              <span>Members and games</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Registered Members</span>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Members</span>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {club.member_count}
                 </div>
                 {club.pending_count > 0 && (
                   <span style={{ fontSize: '0.72rem', color: 'var(--c-amber)', fontWeight: 700 }}>
-                    ⚠️ {club.pending_count} pending approvals
+                    {club.pending_count} waiting for approval
                   </span>
                 )}
               </div>
 
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Squads &amp; Matches</span>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Teams and games</span>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {club.team_count} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>teams</span> · {club.match_count} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>fixtures</span>
                 </div>
               </div>
 
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>30-Day Visitors</span>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#818CF8' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Visitors, last 30 days</span>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {club.visits_30d.toLocaleString()}
                 </div>
               </div>
 
               <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Lifetime GMV</span>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--c-green)' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Paid through the site, all time</span>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {formatMoney(club.gmv_cents, 'AUD')}
                 </div>
               </div>
@@ -269,9 +269,9 @@ export default function ClubDetailDrawer({
 
           {/* Section 2: Club Owner & Leadership */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Users size={14} color="var(--c-blue)" />
-              <span>Club Leadership</span>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Users size={14} color="var(--text-secondary)" aria-hidden="true" />
+              <span>Who runs it</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -312,9 +312,9 @@ export default function ClubDetailDrawer({
 
           {/* Section 3: Domain & Network Settings */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Globe size={14} color="#818CF8" />
-              <span>Domain &amp; Network Route</span>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Globe size={14} color="var(--text-secondary)" aria-hidden="true" />
+              <span>Web address and domain</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -347,9 +347,9 @@ export default function ClubDetailDrawer({
 
           {/* Section 4: Payments & Monetization */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <CreditCard size={14} color="var(--c-green)" />
-              <span>Payment &amp; Financial Policy</span>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <CreditCard size={14} color="var(--text-secondary)" aria-hidden="true" />
+              <span>Payments</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -409,15 +409,15 @@ export default function ClubDetailDrawer({
               background: club.is_active ? 'rgba(var(--tint-rgb), 0.02)' : 'rgba(239, 68, 68, 0.05)',
             }}
           >
-            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: club.is_active ? 'var(--text-muted)' : 'var(--c-red)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: club.is_active ? 'var(--text-primary)' : 'var(--c-red)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <AlertTriangle size={14} color={club.is_active ? 'var(--c-amber)' : 'var(--c-red)'} />
-              <span>Platform Operator Actions</span>
+              <span>Club status</span>
             </div>
 
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
               {club.is_active
-                ? 'Suspending this club will make its public portal return a maintenance notice and temporarily prevent member check-ins.'
-                : 'This club is currently suspended. Reactivating it will restore public access and tournament appearances.'}
+                ? 'Suspend the club while it\'s being fixed. Its pages show a short notice and member check-ins stop until you turn it back on.'
+                : 'This club is suspended. Turn it back on to open its pages and tournaments again.'}
             </p>
 
             <button
@@ -433,7 +433,7 @@ export default function ClubDetailDrawer({
                 fontWeight: 800,
               }}
             >
-              {statusUpdating ? 'Updating Status...' : club.is_active ? 'Suspend Club (Put in Maintenance)' : 'Reactivate Club'}
+              {statusUpdating ? 'Saving…' : club.is_active ? 'Suspend club' : 'Turn club back on'}
             </button>
           </div>
 

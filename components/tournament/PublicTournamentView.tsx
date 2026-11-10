@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Trophy, Calendar, Layers, Users, MapPin, Clock, Sparkles, Share2, Code2, UserRound, ArrowRight, Copy, X, Check, Settings, Flag,
+  Trophy, Calendar, Layers, Users, MapPin, Clock, Share2, Code2, UserRound, ArrowRight, Copy, X, Check, Settings, Flag,
 } from 'lucide-react';
 import LocalTime from '@/components/LocalTime';
 import TournamentBracketView from '@/components/tournament/TournamentBracketView';
@@ -35,8 +35,8 @@ const tabStyle = (active: boolean): React.CSSProperties => ({
   padding: '0.85rem 1.1rem',
   background: 'transparent',
   border: 'none',
-  borderBottom: active ? '2px solid var(--club-primary, #10B981)' : '2px solid transparent',
-  color: active ? 'var(--c-green)' : 'var(--text-secondary)',
+  borderBottom: active ? '2px solid var(--club-primary)' : '2px solid transparent',
+  color: active ? 'var(--club-ink)' : 'var(--text-secondary)',
   fontWeight: 800,
   fontSize: '0.92rem',
   cursor: 'pointer',
@@ -123,7 +123,7 @@ function TournamentTabs({
               <img loading="lazy" decoding="async" width={40} height={40} src={p.logo_url || DEFAULT_CREST} alt="" style={{ width: 40, height: 40, objectFit: 'contain' }} />
               <div className="min-w-0">
                 <div style={{ fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                {p.group && <span style={{ fontSize: '0.72rem', color: 'var(--c-amber)', fontWeight: 700 }}>Group {p.group}</span>}
+                {p.group && <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 700 }}>Group {p.group}</span>}
               </div>
             </div>
           ))}
@@ -134,7 +134,7 @@ function TournamentTabs({
 }
 
 function LiveDot({ size = 6 }: { size?: number }) {
-  return <span style={{ width: size, height: size, borderRadius: '50%', background: '#EF4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />;
+  return <span style={{ width: size, height: size, borderRadius: '50%', background: 'var(--c-red)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />;
 }
 
 const STAGE_NAMES: Record<string, string> = {
@@ -295,15 +295,15 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
       <section style={{
         background: tournament.banner_url
           ? `linear-gradient(180deg, rgba(var(--dk-9-13-22), 0.75) 0%, rgba(var(--dk-9-13-22), 0.96) 100%), url(${tournament.banner_url}) center/cover no-repeat`
-          : 'linear-gradient(180deg, rgba(var(--club-primary-rgb, 16, 185, 129), 0.12) 0%, rgba(var(--dk-9-13-22), 0.95) 100%)',
+          : 'linear-gradient(180deg, rgba(var(--club-primary-rgb), 0.12) 0%, rgba(var(--dk-9-13-22), 0.95) 100%)',
         borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
         padding: '2.5rem 1.5rem 1.5rem',
       }}>
         <div style={{ maxWidth: '1300px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: 0 }}>
             <div style={{
-              width: 64, height: 64, flexShrink: 0, borderRadius: 16, background: 'rgba(245, 158, 11, 0.15)', border: '2px solid rgba(245, 158, 11, 0.4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-amber)', boxShadow: '0 0 25px rgba(245, 158, 11, 0.25)',
+              width: 64, height: 64, flexShrink: 0, borderRadius: 16, background: 'rgba(var(--club-primary-rgb), 0.12)', border: '1px solid rgba(var(--club-primary-rgb), 0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--club-ink)',
             }}>
               <Trophy size={32} />
             </div>
@@ -311,13 +311,13 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                 <h1 style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', fontWeight: 900, margin: 0 }}>{tournament.name}</h1>
                 {live.length > 0 && (
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid #EF4444', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: 'rgba(239, 68, 68, 0.2)', color: 'var(--c-red)', border: '1px solid var(--c-red)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                     <LiveDot /> {live.length} LIVE
                   </span>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', columnGap: '1.25rem', rowGap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.85rem', flexWrap: 'wrap' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--c-green)', fontWeight: 700 }}><Layers size={14} /><span>{formatLabel}</span></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--club-ink)', fontWeight: 700 }}><Layers size={14} /><span>{formatLabel}</span></span>
                 <span className="row row-tight"><Clock size={14} /><span>{start ? <LocalTime value={start} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date to be confirmed'}</span></span>
                 {tournament.venue && <span className="row row-tight"><MapPin size={14} /><span>{tournament.venue}</span></span>}
                 {config.organiser && <span className="row row-tight"><UserRound size={14} /><span>Organised by {config.organiser}</span></span>}
@@ -328,12 +328,8 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <ShareButton title={tournament.name} slug={club.slug} />
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEmbedOpen(true)}><Code2 size={14} /> Embed</button>
-            {canManage ? (
+            {canManage && (
               <Link href={tournamentManagePath(club.slug)} className="btn btn-secondary btn-sm"><Settings size={14} /> Manage</Link>
-            ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.4rem 0.85rem', borderRadius: 20, color: 'var(--c-green)', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.04em' }}>
-                <Sparkles size={13} /><span>LIVE BRACKET</span>
-              </span>
             )}
           </div>
         </div>
@@ -415,9 +411,9 @@ export function TournamentEmbedView({ slug, view }: { slug: string; view: string
     <div style={{ padding: '1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <div style={{ fontWeight: 900, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Trophy size={18} color="var(--c-amber)" /> {tournament.name}
+          <Trophy size={18} color="var(--club-ink)" aria-hidden="true" /> {tournament.name}
         </div>
-        <a href={`${SITE_URL}${tournamentPagePath(club.slug)}`} target="_blank" rel="noopener" style={{ color: 'var(--c-green)', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+        <a href={`${SITE_URL}${tournamentPagePath(club.slug)}`} target="_blank" rel="noopener" style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
           Live on itsfootball.club <ArrowRight size={12} />
         </a>
       </div>

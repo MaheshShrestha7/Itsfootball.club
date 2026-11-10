@@ -338,8 +338,8 @@ export default function PlatformOwnerDashboard() {
 
             {isAuthenticated ? (
               <div style={{ background: 'rgba(var(--tint-rgb), 0.04)', padding: '1.25rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--border-subtle)', textAlign: 'left' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.25rem' }}>
-                  Current Account
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '0.25rem' }}>
+                  Signed in as
                 </div>
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.email}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--c-red)', marginTop: '0.5rem' }}>
