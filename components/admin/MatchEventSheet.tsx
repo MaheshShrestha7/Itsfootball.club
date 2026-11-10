@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { subDetail, subPlayers } from '@/lib/match-subs';
 import type { ClubMember, MatchEvent, MatchEventType } from '@/lib/supabase/types';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
@@ -54,7 +55,6 @@ const shortName = (full: string) => {
   return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
 };
 // "Substitution: Ruby Day ON, Noah Tran OFF. ..." as the Match Centre has always written it
-const SUB_RE = /^Substitution: (.+?) ON, (.+?) OFF\./;
 
 /** The players worth showing as photo tiles: the line-up if there is one, else a squad small enough to scan */
 function tilePlayers(squad: ClubMember[], lineup: string[]): ClubMember[] {
@@ -170,10 +170,10 @@ export default function MatchEventSheet(props: Props) {
     if (lineupIds[side].length) {
       const on = new Set(lineupIds[side]);
       for (const e of [...events].filter(ev => ev.event_type === 'sub' && ev.team_side === side).reverse()) {
-        const m = SUB_RE.exec(e.detail_text || '');
-        if (!m) continue;
-        const onP = sideSquad.find(p => p.full_name === m[1]);
-        const offP = sideSquad.find(p => p.full_name === m[2]);
+        const names = subPlayers(e);
+        if (!names) continue;
+        const onP = sideSquad.find(p => p.full_name === names.on);
+        const offP = sideSquad.find(p => p.full_name === names.off);
         if (offP) on.delete(offP.id);
         if (onP) on.add(onP.id);
       }
@@ -214,7 +214,7 @@ export default function MatchEventSheet(props: Props) {
       if (sideSquad && (!offPlayer.name || !player.name)) return setError('Tap who comes off and who goes on.');
       const onName = player.name.trim() || fallback;
       const offName = offPlayer.name.trim() || 'Player';
-      return onSave({ eventType: 'sub', side, minute, playerName: onName, detail: `Substitution: ${onName} ON, ${offName} OFF.` });
+      return onSave({ eventType: 'sub', side, minute, playerName: onName, detail: subDetail(onName, offName) });
     }
     if (!text.trim()) return setError(noteKind === 'whistle' ? 'Say what the whistle was for.' : 'Type the commentary line.');
     return onSave({ eventType: noteKind, side, minute, playerName: names[side], detail: text.trim() });

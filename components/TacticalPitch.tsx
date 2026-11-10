@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ClubMember, MatchEvent, PitchPosition, MatchFormat } from '@/lib/supabase/types';
+import { wasSubbedOff } from '@/lib/match-subs';
 import PlayerAvatar from './PlayerAvatar';
 import {
   Move,
@@ -808,15 +809,14 @@ export default function TacticalPitch({
   // Check card/substitution status from live match events
   const getPlayerMatchBadges = (playerName: string) => {
     if (!playerName) return { hasYellow: false, hasRed: false, hasGoal: false, isSubbedOff: false };
-    const playerEvents = matchEvents.filter(
-      e => e.player_name.toLowerCase().includes(playerName.toLowerCase())
-    );
+    // The whole name ("Sam" isn't "Samuel"); the events are this side's only
+    const wanted = playerName.trim().toLowerCase();
+    const playerEvents = matchEvents.filter(e => (e.player_name || '').trim().toLowerCase() === wanted);
     const hasYellow = playerEvents.some(e => e.event_type === 'yellow_card');
     const hasRed = playerEvents.some(e => e.event_type === 'red_card');
     const hasGoal = playerEvents.some(e => e.event_type === 'goal' || e.event_type === 'penalty');
-    const isSubbedOff = playerEvents.some(
-      e => e.event_type === 'sub' && e.detail_text?.toLowerCase().includes('off')
-    );
+    // A substitution's own player is the one coming ON; the player taken off is named in its sentence
+    const isSubbedOff = wasSubbedOff(matchEvents, playerName);
     return { hasYellow, hasRed, hasGoal, isSubbedOff };
   };
 
