@@ -38,15 +38,17 @@ export async function generateMetadata({
     // Same teams can meet twice (home and away, or a group game and a semi-final on one day), so the title
     // carries the cup stage, or else the date, to keep every match's title unique
     const which = tournamentMatchLabel(match) || date;
+    // The old placeholder default isn't a competition (the match page hides it too)
+    const competition = match.competition && match.competition !== 'Premier Regional League' ? match.competition : null;
 
     return pageMetadata({
       title: fitTitle(fixture, which, isLive ? 'Live Score' : played ? 'Result' : 'Match Preview', clubName(club)),
       description: fitDescription(
         isLive
-          ? `Live: ${score}${match.competition ? ` in the ${match.competition}` : ''}.`
+          ? `Live: ${score}${competition ? ` in the ${competition}` : ''}.`
           : played
-          ? `Full time: ${score}${match.competition ? ` in the ${match.competition}` : ''}.`
-          : `${fixture}${match.competition ? `, ${match.competition}` : ''}${date ? ` on ${date}` : ''}.`,
+          ? `Full time: ${score}${competition ? ` in the ${competition}` : ''}.`
+          : `${fixture}${competition ? `, ${competition}` : ''}${date ? ` on ${date}` : ''}.`,
         `Follow live goals, cards, lineups and the matchday squad on the ${club.name} match centre.`,
         'Get live goals, cards and lineups on the match centre.',
         isLive ? 'Tune in now.' : played ? 'See the full report.' : 'Set a reminder now.'

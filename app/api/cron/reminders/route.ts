@@ -12,7 +12,7 @@ import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
 import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/format';
-import { clubTimeZone } from '@/lib/dates';
+import { clubTimeZone, formatClock } from '@/lib/dates';
 import { logEvent } from '@/lib/platform-events';
 
 // Daily reminder emails, triggered by the Cloudflare cron in worker.ts (or by hand:
@@ -42,7 +42,8 @@ async function clubsWith(db: SupabaseClient, setting: ReminderSetting, ids?: str
 async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   const now = new Date();
   const { data: matches } = await db.from('matches')
-    .select('id, club_id, title, competition, home_team_name, away_team_name, match_date, match_time, venue')
+    // Every column: meet_time and kit only exist once migration 20261164 has run
+    .select('*')
     .eq('status', 'upcoming')
     .gt('match_date', now.toISOString())
     .lte('match_date', new Date(now.getTime() + 48 * 3600000).toISOString());
@@ -80,6 +81,9 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
         competition: match.title || match.competition, // tournament games carry their stage here, e.g. "Group A • Round 4"
         when: formatMatchWhen(match.match_date, match.match_time, clubTimeZone(club)),
         venue: match.venue,
+        meet: match.meet_time ? formatClock(match.meet_time) : null,
+        kit: match.kit || null,
+        details: match.description || null,
         link: `${clubBaseUrl(club)}/availability?token=${encodeURIComponent(r.response_token)}`,
       }),
     }];

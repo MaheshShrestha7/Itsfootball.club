@@ -1092,3 +1092,18 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
   .mc-pick:hover, .mc-pick-row:hover { border-color: var(--color-rule-strong); }
 }
 .mc-pick-more > .mc-sheet-link { padding: 0; min-height: 36px; }
+
+/* Match Centre before kick-off: answers and line-up for the open game */
+.mc-ready { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm) var(--space-md); align-items: center; padding: var(--space-md); margin-bottom: var(--space-md); }
+.mc-ready h3 { grid-column: 1 / -1; margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
+.mc-ready-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-xs); margin: 0; grid-column: 1 / -1; }
+.mc-ready-counts > div { display: flex; flex-direction: column-reverse; padding: var(--space-xs) var(--space-2xs); border: 1px solid var(--color-rule); border-radius: var(--radius-control); text-align: center; }
+.mc-ready-counts dd { margin: 0; font-family: var(--font-heading); font-size: var(--text-xl); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-ink); }
+.mc-ready-counts dt { font-size: var(--text-xs); color: var(--color-muted); }
+.mc-ready-line { display: flex; align-items: center; gap: var(--space-2xs); margin: 0; font-size: var(--text-sm); color: var(--color-ink-2); }
+.mc-ready-line svg { flex: none; color: var(--color-muted); }
+.mc-ready-actions { display: flex; flex-wrap: wrap; gap: var(--space-2xs); justify-content: flex-end; }
+@media (max-width: 640px) {
+  .mc-ready { grid-template-columns: minmax(0, 1fr); }
+  .mc-ready-actions { justify-content: flex-start; }
+}

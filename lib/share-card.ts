@@ -741,7 +741,14 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
   if (kind === 'lineup' || kind === 'lineup-list') {
     const home = match.is_club_home ?? true;
-    const xi = [...((home ? match.home_lineup_coords : match.away_lineup_coords) || [])]
+    // One armband: older saved line-ups can mark several players captain, so the first one keeps it (as on the pitch)
+    let captainSeen = false;
+    const xi = ((home ? match.home_lineup_coords : match.away_lineup_coords) || [])
+      .map(p => {
+        if (!p.is_captain) return p;
+        if (!captainSeen) { captainSeen = true; return p; }
+        return { ...p, is_captain: false };
+      })
       .sort((a, b) => (opts.keepOrder ? 0 : a.x - b.x || a.y - b.y)) // the pitch runs left to right: goalkeeper first, then back to front
       .slice(0, 11);
     const opponent = home ? match.away_team_name : match.home_team_name;

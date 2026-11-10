@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import LiveMinute from '@/components/LiveMinute';
 import { DEFAULT_HALF_MINUTES, validHalfMinutes } from '@/lib/match-length';
+import { useMatchdayDetailsReady } from '@/lib/use-matchday-details-ready';
 import HalfLengthField, { parseHalfMinutes, useHalfLengthReady } from '@/components/HalfLengthField';
 import { defaultSeasonLabel } from '@/lib/season';
 import { todayIso } from '@/lib/finance';
@@ -190,6 +191,8 @@ export default function AdminMatchesPage({
     venue: string;
     match_flyer_url: string;
     description: string;
+    meet_time: string;
+    kit: string;
     competition: string;
     season: string;
     status: MatchStatus;
@@ -221,6 +224,8 @@ export default function AdminMatchesPage({
     venue: club.stadium_name || '',
     match_flyer_url: '',
     description: '',
+    meet_time: '',
+    kit: '',
     competition: 'Club Friendly',
     season: activeSeason?.name || defaultSeasonLabel(),
     status: 'upcoming',
@@ -260,6 +265,8 @@ export default function AdminMatchesPage({
       venue: club.stadium_name || '',
       match_flyer_url: '',
       description: '',
+      meet_time: '',
+      kit: '',
       competition: 'Club Friendly',
       season: activeSeason?.name || defaultSeasonLabel(),
       status: 'upcoming',
@@ -443,6 +450,8 @@ export default function AdminMatchesPage({
       venue: m.venue || club.stadium_name,
       match_flyer_url: m.match_flyer_url || '',
       description: m.description || '',
+      meet_time: m.meet_time || '',
+      kit: m.kit || '',
       competition: m.competition || (m.match_type === 'internal' ? 'Intra-Squad Match' : 'Club Friendly'),
       season: m.season || activeSeason?.name || defaultSeasonLabel(),
       status: m.status || 'upcoming',
@@ -501,6 +510,8 @@ export default function AdminMatchesPage({
   // Half length (migration 20261151): a fixture follows its team's usual length unless the admin
   // changes it for this game. Hidden, and never sent, until the database has the column.
   const halfReady = useHalfLengthReady();
+  // Meet time and kit (migration 20261164): hidden, and never sent, until the database has the columns
+  const detailsReady = useMatchdayDetailsReady();
   const formTeamId = (form: { match_type: Match['match_type']; team_id: string }) =>
     isTeamFixture({ match_type: form.match_type }) ? (form.team_id || mainTeamId || null) : null;
   const teamHalfOf = (teamId: string | null) => validHalfMinutes(teams.find(t => t.id === teamId)?.half_minutes);
@@ -536,6 +547,7 @@ export default function AdminMatchesPage({
     // An empty venue falls back to the home ground only for home games
     const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim() || (form.is_club_home ? club.stadium_name : '');
     const cleanDescription = form.description.replace(/<[^>]*>?/gm, '').trim();
+    const cleanKit = form.kit.replace(/<[^>]*>?/gm, '').trim().slice(0, 80);
     const cleanCompetition = form.competition.replace(/<[^>]*>?/gm, '').trim() || (form.match_type === 'internal' ? 'Intra-Squad Match' : form.match_type === 'tournament' ? 'Cup Tournament' : 'Club Friendly');
 
     if (!cleanOpponent) {
@@ -621,6 +633,8 @@ export default function AdminMatchesPage({
         ...(groundId !== (editingMatch?.ground_id ?? null) ? { ground_id: groundId } : {}),
         ...(pitchLabel !== (editingMatch?.pitch_label ?? null) ? { pitch_label: pitchLabel } : {}),
         ...(halfReady && halfMinutes !== validHalfMinutes(editingMatch?.half_minutes) ? { half_minutes: halfMinutes } : {}),
+        ...(detailsReady && form.meet_time !== (editingMatch?.meet_time || '') ? { meet_time: form.meet_time } : {}),
+        ...(detailsReady && cleanKit !== (editingMatch?.kit || '') ? { kit: cleanKit } : {}),
         // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -670,6 +684,8 @@ export default function AdminMatchesPage({
         ...(newMatchFormat(teamId) ? { match_format: newMatchFormat(teamId) } : {}),
         // The team's usual half length (or this game's own), so the clock and minutes played follow it
         ...(halfReady && halfMinutes !== null ? { half_minutes: halfMinutes } : {}),
+        ...(detailsReady && form.meet_time ? { meet_time: form.meet_time } : {}),
+        ...(detailsReady && cleanKit ? { kit: cleanKit } : {}),
       });
       if (fromInvitation) {
         // A return fixture leaves the invitation linked to the first game
@@ -1752,10 +1768,26 @@ export default function AdminMatchesPage({
                 </div>
               </div>
 
+              {/* When to be there and what to wear: shown to players and on the match page before kick-off */}
+              {detailsReady && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" htmlFor="form-meet-time">Meet time (optional)</label>
+                    <input id="form-meet-time" type="time" className="form-input" value={form.meet_time}
+                      onChange={e => setForm({ ...form, meet_time: e.target.value })} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" htmlFor="form-kit">Kit to wear (optional)</label>
+                    <input id="form-kit" type="text" className="form-input" maxLength={80} placeholder="Away kit, white socks" value={form.kit}
+                      onChange={e => setForm({ ...form, kit: e.target.value })} />
+                  </div>
+                </div>
+              )}
+
               {/* Match Description */}
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <label className="form-label" htmlFor="form-description">
-                  Description & Matchday Details
+                  Matchday details
                 </label>
                 <textarea
                   id="form-description"
@@ -1765,6 +1797,9 @@ export default function AdminMatchesPage({
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                 />
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                  Shown on the match page before kick-off and in the availability reminder email.
+                </p>
               </div>
 
 

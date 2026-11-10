@@ -306,7 +306,9 @@ interface ClubEmailExtras {
   message?: string | null;
 }
 
-export function availabilityReminder(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; link: string }): RenderedEmail {
+export function availabilityReminder(p: ClubEmailExtras & ForGuardian & { brand: EmailBrand; memberName: string; fixture: string; competition?: string | null; when: string; venue: string; meet?: string | null; kit?: string | null; details?: string | null; link: string }): RenderedEmail {
+  // What the club typed on the fixture, cut to a few lines so the email stays short
+  const blurb = p.details?.trim().replace(/\s+/g, ' ');
   return renderEmail({
     brand: p.brand, unsubscribeUrl: p.unsubscribeUrl, message: p.message,
     subject: p.childName ? `Is ${firstName(p.childName)} available? ${p.fixture}` : `Are you available? ${p.fixture}`,
@@ -315,7 +317,12 @@ export function availabilityReminder(p: ClubEmailExtras & ForGuardian & { brand:
     paragraphs: [p.childName
       ? `Hi ${firstName(p.memberName)}, ${p.brand.name} is picking the squad and hasn't heard back about ${p.childName}. Let the coaches know if they're in, out or maybe.`
       : `Hi ${firstName(p.memberName)}, ${p.brand.name} is picking the squad and hasn't heard from you yet. Let the coaches know if you're in, out or maybe.`],
-    details: [['Match', p.fixture], ...(p.competition ? [['Competition', p.competition] as [string, string]] : []), ['When', p.when], ['Where', p.venue]],
+    details: [
+      ['Match', p.fixture], ...(p.competition ? [['Competition', p.competition] as [string, string]] : []), ['When', p.when], ['Where', p.venue],
+      ...(p.meet ? [['Meet', p.meet] as [string, string]] : []),
+      ...(p.kit ? [['Kit', p.kit] as [string, string]] : []),
+      ...(blurb ? [['Details', blurb.length > 280 ? `${blurb.slice(0, 277)}...` : blurb] as [string, string]] : []),
+    ],
     cta: { label: p.childName ? `Reply for ${firstName(p.childName)}` : 'Reply with my availability', url: p.link },
     note: 'It takes one tap. This link is personal to you, so please don\'t forward it.',
     reason: p.childName
