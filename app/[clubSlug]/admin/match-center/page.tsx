@@ -59,6 +59,7 @@ import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtur
 import { matchPath } from '@/lib/slugs';
 import { alertFor, type MatchState } from '@/lib/match-alerts';
 import { getAccessToken } from '@/lib/supabase/client';
+import PopupPanel from '@/components/PopupPanel';
 
 // What the confirmation line says, in words rather than codes
 const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
@@ -353,7 +354,7 @@ export default function AdminMatchCenterControllerPage({
             zIndex: 9999,
             padding: '1rem',
           }}>
-            <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
+            <PopupPanel onClose={() => setIsCreateFixtureOpen(false)} label="New fixture" className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Schedule New Fixture</h3>
                 <button onClick={() => setIsCreateFixtureOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}><X size={20} /></button>
@@ -381,7 +382,7 @@ export default function AdminMatchCenterControllerPage({
                   <button type="submit" className="btn btn-primary">Schedule Fixture</button>
                 </div>
               </form>
-            </div>
+            </PopupPanel>
           </div>
         )}
       </div>
@@ -1412,7 +1413,7 @@ export default function AdminMatchCenterControllerPage({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setIsCreateFixtureOpen(false)} label="New fixture" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: '560px',
@@ -1540,7 +1541,7 @@ export default function AdminMatchCenterControllerPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
     </div>

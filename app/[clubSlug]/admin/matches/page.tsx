@@ -63,6 +63,7 @@ import { Handshake } from 'lucide-react';
 import { crestFile } from '@/lib/crest-image';
 import { getAccessToken } from '@/lib/supabase/client';
 import { SITE_URL } from '@/lib/seo';
+import PopupPanel from '@/components/PopupPanel';
 
 // Still to be played: listed first, soonest at the top
 const AHEAD: MatchStatus[] = ['upcoming', 'live', 'halftime', 'postponed'];
@@ -217,7 +218,7 @@ export default function AdminMatchesPage({
     is_club_home: true,
     match_date: defaultDate,
     match_time: '15:00',
-    venue: club.stadium_name || 'Home Ground',
+    venue: club.stadium_name || '',
     match_flyer_url: '',
     description: '',
     competition: 'Club Friendly',
@@ -256,7 +257,7 @@ export default function AdminMatchesPage({
       is_club_home: true,
       match_date: prefill?.date || todayIso(new Date(Date.now() + 3 * 86400000)),
       match_time: prefill?.time || '15:00',
-      venue: club.stadium_name || 'Home Ground',
+      venue: club.stadium_name || '',
       match_flyer_url: '',
       description: '',
       competition: 'Club Friendly',
@@ -312,7 +313,7 @@ export default function AdminMatchesPage({
       return;
     }
     const team = teams.find(t => t.id === item.team_id);
-    const fill = fixtureFromInvitation(details, date, team, club.stadium_name || 'Home Ground');
+    const fill = fixtureFromInvitation(details, date, team, club.stadium_name || '');
     handleOpenAddModal({ date: fill.match_date, time: fill.match_time, ...(team ? { team: team.id } : {}) });
     setForm(f => ({ ...f, ...fill, team_id: fill.team_id || f.team_id, opponent_logo: details.crest || details.crest_url || '' }));
     setFromInvitation({ id: item.id, details, senderName: item.sender_name });
@@ -353,7 +354,7 @@ export default function AdminMatchesPage({
       opponent_short_name: m.opponent_short_name || '',
       is_club_home: home,
       // Our ground when we host; theirs is where we played them last time
-      venue: home ? (club.stadium_name || 'Home Ground') : (details?.their_ground || (m.is_club_home ? '' : m.venue) || ''),
+      venue: home ? (club.stadium_name || '') : (details?.their_ground || (m.is_club_home ? '' : m.venue) || ''),
       half_text: validHalfMinutes(m.half_minutes) ? String(m.half_minutes) : '',
       half_custom: validHalfMinutes(m.half_minutes) !== null && validHalfMinutes(m.half_minutes) !== teamHalfOf(m.team_id || null),
       opponent_logo: opponentLogoOf(m),
@@ -488,7 +489,7 @@ export default function AdminMatchesPage({
       title: `${club.name} Intra-Squad: First Team vs ${presetName}`,
       competition: 'Intra-Squad Friendly',
       is_club_home: true,
-      venue: club.stadium_name || 'Training Ground'
+      venue: club.stadium_name || prev.venue
     }));
   };
 
@@ -1275,7 +1276,7 @@ export default function AdminMatchesPage({
             if (e.target === e.currentTarget) setIsFormModalOpen(false);
           }}
         >
-          <div
+          <PopupPanel onClose={() => setIsFormModalOpen(false)} label="Fixture details"
             className="glass-panel"
             style={{
               maxWidth: 'min(780px, calc(100vw - 2rem))',
@@ -1549,7 +1550,7 @@ export default function AdminMatchesPage({
                     value={form.is_club_home ? 'home' : 'away'}
                     onChange={e => {
                       const home = e.target.value === 'home';
-                      const homeVenue = club.stadium_name || 'Home Ground';
+                      const homeVenue = club.stadium_name || '';
                       setForm({
                         ...form,
                         is_club_home: home,
@@ -2011,7 +2012,7 @@ export default function AdminMatchesPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

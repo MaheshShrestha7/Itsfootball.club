@@ -4,6 +4,7 @@ import { CONTACT_EMAIL, FEE_PHRASE } from './faq';
 import { matchPath, newsPath } from './slugs';
 import { isPlayed } from './public-tournaments';
 import { groundPath, type GroundRow } from './grounds';
+import { clubTimeZone } from './dates';
 import type {
   ClubMetadataRow,
   EventMetadataRow,
@@ -311,7 +312,7 @@ const MATCH_STATUS: Record<string, string> = {
 };
 
 /** Combines match date and local kick-off time into ISO 8601 strings with timezone offset and calculates match end time */
-export function matchIsoDates(matchDate: string, matchTime?: string | null): { startDate: string; endDate: string } {
+export function matchIsoDates(matchDate: string, matchTime?: string | null, timeZone = 'Australia/Sydney'): { startDate: string; endDate: string } {
   const d = new Date(matchDate);
   if (isNaN(d.getTime())) return { startDate: matchDate, endDate: matchDate };
   const timeParts = matchTime?.match(/^(\d{1,2}):(\d{2})$/);
@@ -322,14 +323,15 @@ export function matchIsoDates(matchDate: string, matchTime?: string | null): { s
     const hours = Number(timeParts[1]);
     const mins = Number(timeParts[2]);
 
-    // Australia/Sydney timezone offset (AEST +10:00 or AEDT +11:00)
+    // The club's UTC offset that day, e.g. Sydney +10:00 / +11:00, Adelaide +09:30 / +10:30
     const testDate = new Date(`${year}-${month}-${day}T12:00:00Z`);
-    const offsetPart = new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', timeZoneName: 'shortOffset' })
+    const offsetPart = new Intl.DateTimeFormat('en-AU', { timeZone, timeZoneName: 'shortOffset' })
       .formatToParts(testDate)
       .find(p => p.type === 'timeZoneName')?.value;
-    const offsetMatch = offsetPart?.match(/GMT([+-]\d+)/);
-    const offsetHours = offsetMatch ? Number(offsetMatch[1]) : 11;
-    const offsetStr = `${offsetHours >= 0 ? '+' : '-'}${String(Math.abs(offsetHours)).padStart(2, '0')}:00`;
+    const offsetMatch = offsetPart?.match(/GMT([+-])(\d+)(?::(\d{2}))?/);
+    const offsetStr = offsetMatch
+      ? `${offsetMatch[1]}${offsetMatch[2].padStart(2, '0')}:${offsetMatch[3] || '00'}`
+      : '+11:00';
 
     const startIso = `${year}-${month}-${day}T${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00${offsetStr}`;
     const totalMinutes = hours * 60 + mins + 105; // 90 min match + 15 min halftime
@@ -354,7 +356,7 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground
   const isLive = match.status === 'live' || match.status === 'halftime';
   const venue = match.venue || club.stadium_name;
 
-  const { startDate, endDate } = matchIsoDates(match.match_date, match.match_time);
+  const { startDate, endDate } = matchIsoDates(match.match_date, match.match_time, clubTimeZone(club));
 
   let locationNode: Json | undefined = undefined;
   if (ground) {

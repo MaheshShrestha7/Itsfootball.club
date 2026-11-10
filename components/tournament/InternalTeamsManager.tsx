@@ -9,6 +9,7 @@ import CoverPresetPicker from '@/components/CoverPresetPicker';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
+import PopupPanel from '@/components/PopupPanel';
 
 interface InternalTeamsManagerProps {
   clubSlug: string;
@@ -442,7 +443,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
           }}
           onClick={() => setModalOpen(false)}
         >
-          <div
+          <PopupPanel onClose={() => setModalOpen(false)} label="Team details"
             style={{
               background: 'rgb(var(--dk-17-24-39))',
               border: '1px solid rgba(var(--tint-rgb), 0.12)',
@@ -756,7 +757,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
     </div>

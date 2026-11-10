@@ -27,7 +27,7 @@ import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
 import { newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
-import type { LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
+import type { HomeDemoClub, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
 
 interface DugoutEvent {
   id: string;
@@ -218,7 +218,7 @@ const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silv
 /** Club blocks shown before "See all clubs" takes the last slot */
 const HOME_CLUB_BLOCKS = 12;
 
-export default function PlatformHomePage({ latestNews = [], latestPhotos = [] }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[] }) {
+export default function PlatformHomePage({ latestNews = [], latestPhotos = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; demoClub?: HomeDemoClub | null }) {
   const router = useRouter();
   const { clubs: allClubs, sponsors, matches } = useClub();
   // Tournament-only clubs (public tournament pages) aren't clubs to show off
@@ -375,8 +375,8 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [] }:
 
   const openAuth = (mode: 'login' | 'signup') => { setAuthMode(mode); setAuthModalOpen(true); };
 
-  // ponytail: the first listed club doubles as the demo; add a demo flag on clubs if it needs curating
-  const demoClub = clubs[0];
+  // The club picked in Mission Control (F10-9); until one is picked, the first listed club
+  const demoClub: HomeDemoClub | undefined = pickedDemo || clubs[0];
 
   const [audIdx, setAudIdx] = useState(0);
   const aud = AUDIENCES[audIdx];

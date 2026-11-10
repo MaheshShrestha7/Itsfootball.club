@@ -24,6 +24,7 @@ import { confirmAction } from '@/components/ConfirmDialog';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
+import PopupPanel from '@/components/PopupPanel';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   prospect: 'Prospect (In Talks)',
@@ -1127,7 +1128,7 @@ export default function AdminSponsorsPage({
           justifyContent: 'center',
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setModalOpen(false)} label="Sponsor details" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: '540px',
@@ -1477,7 +1478,7 @@ export default function AdminSponsorsPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

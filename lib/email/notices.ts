@@ -5,6 +5,7 @@ import { eventNotice, matchNotice, newsNotice, renewalReminder } from './templat
 import { clubBaseUrl, clubBrand, type ClubBrandRow } from './club-brand';
 import { memberRecipient, MEMBER_RECIPIENT_COLUMNS, normalizeEmail, type EmailDraft } from './club-emails';
 import { formatDay, formatMatchWhen, formatWhen, localDate } from './format';
+import { clubTimeZone } from '@/lib/dates';
 import { articleText } from '@/lib/article-text';
 import type { PushMessage } from '@/lib/push';
 
@@ -144,7 +145,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
       const fixture = `${match.home_team_name} vs ${match.away_team_name}`;
       return {
         ok: true, label: `Match notice: ${fixture}`, skippedNoEmail,
-        push: req.audience === 'players' ? undefined : { title: fixture, body: `${match.title || match.competition || club.name} · ${formatMatchWhen(match.match_date, match.match_time)}`, url: `/${club.slug}/match/${match.id}`, tag: `match:${match.id}` },
+        push: req.audience === 'players' ? undefined : { title: fixture, body: `${match.title || match.competition || club.name} · ${formatMatchWhen(match.match_date, match.match_time, clubTimeZone(club))}`, url: `/${club.slug}/match/${match.id}`, tag: `match:${match.id}` },
         drafts: audience.map(m => ({
           key: `notice_match:${match.id}:${normalizeEmail(m.to)}`,
           club, kind: 'notice_match', refId: match.id, to: m.to,
@@ -153,7 +154,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
             recipientName: m.name,
             fixture,
             competition: match.title || match.competition,
-            when: formatMatchWhen(match.match_date, match.match_time),
+            when: formatMatchWhen(match.match_date, match.match_time, clubTimeZone(club)),
             venue: match.venue,
             link: `${base}/match/${match.id}`,
           }),
@@ -169,7 +170,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
       if (new Date(event.start_time).getTime() < Date.now()) return { ok: false, status: 400, error: 'That event has already started.' };
       return {
         ok: true, label: `Event notice: ${event.title}`, skippedNoEmail,
-        push: { title: event.title, body: `${club.name} · ${formatWhen(event.start_time)}`, url: `/${club.slug}/events/${event.id}`, tag: `event:${event.id}` },
+        push: { title: event.title, body: `${club.name} · ${formatWhen(event.start_time, clubTimeZone(club))}`, url: `/${club.slug}/events/${event.id}`, tag: `event:${event.id}` },
         drafts: everyone.map(m => ({
           key: `notice_event:${event.id}:${normalizeEmail(m.to)}`,
           club, kind: 'notice_event', refId: event.id, to: m.to,
@@ -178,7 +179,7 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
             recipientName: m.name,
             event: event.title,
             description: event.description,
-            when: formatWhen(event.start_time),
+            when: formatWhen(event.start_time, clubTimeZone(club)),
             venue: event.location,
             link: `${base}/events/${event.id}`,
           }),

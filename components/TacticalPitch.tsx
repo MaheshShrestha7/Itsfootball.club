@@ -142,7 +142,7 @@ export const FORMAT_PRESETS: Record<MatchFormat, Record<string, { name: string; 
   },
   '9v9': {
     '3-2-3': {
-      name: '3-2-3 Attacking Youth',
+      name: '3-2-3 Attacking',
       description: 'Dynamic academy shape with twin wingers and central midfield balance.',
       coords: [
         { position: 'GK', x: 8, y: 50, role: 'Sweeper Keeper' },
@@ -157,7 +157,7 @@ export const FORMAT_PRESETS: Record<MatchFormat, Record<string, { name: string; 
       ],
     },
     '3-3-2': {
-      name: '3-3-2 Balanced Academy',
+      name: '3-3-2 Balanced',
       description: 'Disciplined 3-line shape with twin central strikers.',
       coords: [
         { position: 'GK', x: 8, y: 50, role: 'Traditional Shot-Stopper' },
@@ -189,7 +189,7 @@ export const FORMAT_PRESETS: Record<MatchFormat, Record<string, { name: string; 
   },
   '7v7': {
     '2-3-1': {
-      name: '2-3-1 Grassroots Standard',
+      name: '2-3-1 Standard',
       description: 'The global standard formation for mini-soccer and junior player development.',
       coords: [
         { position: 'GK', x: 8, y: 50, role: 'Sweeper Keeper' },
@@ -202,7 +202,7 @@ export const FORMAT_PRESETS: Record<MatchFormat, Record<string, { name: string; 
       ],
     },
     '3-2-1': {
-      name: '3-2-1 Junior Fortress',
+      name: '3-2-1 Defensive',
       description: 'Defensive stability with three backline anchors and twin midfielders.',
       coords: [
         { position: 'GK', x: 8, y: 50, role: 'Traditional Shot-Stopper' },
@@ -1070,7 +1070,7 @@ export default function TacticalPitch({
             textTransform: 'uppercase',
             pointerEvents: 'none',
           }}>
-            <span>{activeFormat === '7v7' ? '⚡ 7v7 Mini-Soccer' : activeFormat === '9v9' ? '🏆 9v9 Academy' : '⭐ 11v11 Senior'}</span>
+            <span>{activeFormat === '7v7' ? '7-a-side' : activeFormat === '9v9' ? '9-a-side' : '11-a-side'}</span>
           </div>
 
           <div style={{

@@ -185,10 +185,12 @@ export default function PublicTournamentDetailPage({
                     <Clock size={14} />
                     <span>{parseTournamentDate(tournament.start_date) ? <LocalTime value={parseTournamentDate(tournament.start_date)!} format="both" options={{ dateStyle: 'medium', timeStyle: 'short' }} /> : 'Date TBC'}</span>
                   </span>
-                  <span className="row row-tight">
-                    <MapPin size={14} />
-                    <span>{tournament.venue || 'Stadium Arena'}</span>
-                  </span>
+                  {tournament.venue && (
+                    <span className="row row-tight">
+                      <MapPin size={14} />
+                      <span>{tournament.venue}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

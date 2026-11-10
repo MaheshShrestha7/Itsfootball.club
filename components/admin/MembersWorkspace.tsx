@@ -36,6 +36,7 @@ import { DATE_LOCALE } from '@/lib/dates';
 import { formatMoney, parseMoneyToCents, policyAllowsWaiver, MEMBERSHIP_PAYMENT_POLICIES } from '@/lib/finance';
 import { useMemberHealth } from '@/lib/use-member-health';
 import MedicalNote from '@/components/admin/MedicalNote';
+import PopupPanel from '@/components/PopupPanel';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
@@ -927,7 +928,7 @@ export default function MembersWorkspace({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+          <PopupPanel onClose={() => setRejectModalMember(null)} label="Turn down application" className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <XCircle size={20} color="var(--c-red)" />
@@ -985,7 +986,7 @@ export default function MembersWorkspace({
                 {reviewing ? 'Rejecting…' : 'Reject application'}
               </button>
             </div>
-          </div>
+          </PopupPanel>
         </div>
       )}
 
@@ -1003,7 +1004,7 @@ export default function MembersWorkspace({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+          <PopupPanel onClose={() => setWaiveModalMember(null)} label="Waive fee" className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '440px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Gift size={20} color="var(--color-accent-ink)" aria-hidden="true" />
@@ -1061,7 +1062,7 @@ export default function MembersWorkspace({
                 {reviewing ? 'Approving…' : 'Waive the fee and approve'}
               </button>
             </div>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

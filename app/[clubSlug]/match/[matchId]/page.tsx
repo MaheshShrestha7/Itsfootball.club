@@ -41,7 +41,7 @@ import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
 import { matchReport } from '@/lib/match-report';
 import { DATE_LOCALE } from '@/lib/dates';
-import { TIME_ZONE } from '@/lib/email/format';
+import { clubTimeZone } from '@/lib/dates';
 import GettingThere from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
@@ -742,7 +742,7 @@ export default function MatchCenterPage({
               competition: match.competition && match.competition !== 'Premier Regional League' ? match.competition : undefined,
               venue: match.venue,
               // The club's time zone, so the server's HTML and the browser agree on the day
-              dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
+              dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: clubTimeZone(club), weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
               goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
               redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name })),
               playerOfTheMatch: motmMember?.full_name,

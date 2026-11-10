@@ -114,6 +114,8 @@ export interface ClubConfig {
   team_size?: string;
   /** Public tournament pages: shown in a "Thanks to our sponsors" row */
   sponsors?: { name: string; url?: string }[];
+  /** The club's time zone (lib/dates.ts CLUB_TIME_ZONES), picked in Admin -> Branding. Unset: Sydney */
+  time_zone?: string;
   [key: string]: unknown;
 }
 
