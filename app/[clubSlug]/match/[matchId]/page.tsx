@@ -39,6 +39,7 @@ import {
 import LiveMinute from '@/components/LiveMinute';
 import { compareEventMinute, eventMinuteLabel, halfMinutes, lengthLabel, validHalfMinutes } from '@/lib/match-length';
 import MatchShareButton from '@/components/MatchShareButton';
+import { lineupBench } from '@/lib/lineup-bench';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
 import { matchReport } from '@/lib/match-report';
@@ -354,6 +355,11 @@ export default function MatchCenterPage({
     }))
     .filter((s): s is typeof s & { players: NonNullable<typeof s.players> } => s.players !== null);
 
+  // The share graphic's Team list: the side it draws (the club's), its starters then these substitutes
+  const shareSide: Side = (match.is_club_home ?? true) ? 'home' : 'away';
+  const shareSubs = lineupBench(match, shareSide, allSquadPlayers, lineupSides.find(s => s.side === shareSide)?.players || [])
+    .map(p => ({ number: p.jersey_number || 0, name: juniorFixture ? juniorPublicName(p.full_name) : p.full_name }));
+
   // Before kick-off there's nothing for Timeline or Stats yet: a pre-match panel instead, and the
   // Lineups tab only once a line-up is saved for one of the club's sides
   const preMatch = match.status === 'upcoming' || match.status === 'postponed';
@@ -510,7 +516,7 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
-            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} photos={memberPhotos} autoOpen={shareOnArrival}
+            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} photos={memberPhotos} subs={shareSubs} autoOpen={shareOnArrival}
               motm={motmMember ? { name: motmMember.full_name, photo: memberPhotos[motmMember.id] } : undefined} />
 
             {isClubAdmin && (
@@ -1084,10 +1090,7 @@ export default function MatchCenterPage({
               const starterIds = new Set(coords.map(c => c.member_id).filter((id): id is string => !!id));
               const byId = new Map(allSquadPlayers.map(p => [p.id, p]));
               const starters = [...starterIds].map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p);
-              const named = !match.tournament_id && match.bench_member_ids?.length
-                ? match.bench_member_ids.map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p)
-                : null;
-              const subs = (named || available).filter(p => !starterIds.has(p.id));
+              const subs = lineupBench(match, side, allSquadPlayers, available);
               const hasLineup = starters.length > 0;
               const players = hasLineup ? [...starters, ...subs] : available;
               const groups = hasLineup

@@ -6,7 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
-import { Match, MatchType, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
+import { Match, MatchType, isPlayerMember, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
 import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone, { uploadImage } from '@/components/ImageUploadZone';
 import EventFlyerMaker from '@/components/admin/EventFlyerMaker';
@@ -15,6 +15,7 @@ import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import MatchShareButton from '@/components/MatchShareButton';
+import { lineupBench } from '@/lib/lineup-bench';
 import CheckinPoster from '@/components/admin/CheckinPoster';
 import {
   Calendar,
@@ -109,6 +110,7 @@ export default function AdminMatchesPage({
     inquiries,
     updateInquiry,
     applyInquiryRow,
+    getMatchAvailabilities,
   } = useClub();
 
   const { can, user } = useAuth();
@@ -150,6 +152,18 @@ export default function AdminMatchesPage({
       juniorFixture || (p.member_id && juniorIds.has(p.member_id)) ? { ...p, name: juniorPublicName(p.name) } : p);
     return [m.id, { ...m, home_lineup_coords: shorten(m.home_lineup_coords), away_lineup_coords: shorten(m.away_lineup_coords) }];
   })), [clubMatches, clubTeams, juniorIds]);
+
+  // The share graphic's Team list: the substitutes after the starters, as the match page lists them
+  // (the named bench, else the other players who said they're in), with the same public names
+  const shareSquad = useMemo(() => members.filter(p => p.club_id === club.id && isPlayerMember(p)).map(p => publicMember(p, juniorIds)), [members, club.id, juniorIds]);
+  const shareSubs = (m: Match) => {
+    const juniorFixture = isJuniorFixture(m, clubTeams);
+    const squad = shareSquad;
+    const inIds = new Set(getMatchAvailabilities(m.id).filter(a => a.status === 'available').map(a => a.member_id));
+    const side = (m.is_club_home ?? true) ? 'home' : 'away';
+    return lineupBench(m, side, squad, squad.filter(p => inIds.has(p.id)))
+      .map(p => ({ number: p.jersey_number || 0, name: juniorFixture ? juniorPublicName(p.full_name) : p.full_name }));
+  };
 
   // Filters state
   const [statusTab, setStatusTab] = useState<'all' | 'upcoming' | 'completed' | 'live'>('all');
@@ -1155,6 +1169,7 @@ export default function AdminMatchesPage({
                     hideScore={publicScoreHidden(m, clubTeams)}
                     events={goalsByMatch.get(m.id)}
                     photos={memberPhotos}
+                    subs={shareSubs(m)}
                     motm={motmByMatch.get(m.id)}
                     trigger={open => (
                       <button
