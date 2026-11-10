@@ -40,6 +40,7 @@ import {
   Mic,
   Megaphone,
   AlertTriangle,
+  Share2,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -689,6 +690,25 @@ export default function AdminMatchCenterControllerPage({
           </section>
         );
       })()}
+
+      {/* Stats are saved: the result is ready to post. The graphics are made on the public match page,
+          where names and photos already follow the club's rules for juniors. */}
+      {match.status === 'completed' && match.is_audited && (
+        <section className="glass-panel mc-next" aria-labelledby="mc-next-title">
+          <div>
+            <h3 id="mc-next-title">Player stats are saved</h3>
+            <p>Post the result while it&apos;s fresh. The result graphic and the Player of the Match card are ready to share.</p>
+          </div>
+          <div className="mc-next-actions">
+            <Link href={`${matchPath(club.slug, match)}?share=1`} target="_blank" className="btn btn-primary btn-sm touch-target">
+              <Share2 size={15} aria-hidden="true" /> Share the result
+            </Link>
+            <Link href={matchPath(club.slug, match)} target="_blank" className="btn btn-secondary btn-sm touch-target">
+              <ExternalLink size={14} aria-hidden="true" /> Match report
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* A finished match: edits here change the public result, so say so, and let the admin keep followers' phones quiet */}
       {match.status === 'completed' && (

@@ -17,6 +17,10 @@ export interface ReportInput {
   goals: ReportGoal[];
   redCards: { side: 'home' | 'away'; player: string; minute: number; added?: number }[];
   playerOfTheMatch?: string;
+  /** Neither side is at home (a tournament or in-house game), so nobody "won away" */
+  neutral?: boolean;
+  /** The shootout score of a level cup game */
+  shootout?: { home: number; away: number };
 }
 
 const minuteText = (m: { minute: number; added?: number }) => `${m.minute}${m.added ? `+${m.added}` : ''}'`;
@@ -39,9 +43,15 @@ export function matchReport(r: ReportInput): string[] {
   const [hs, as] = [r.homeScore, r.awayScore];
   const result = hs === as
     ? `${r.home} and ${r.away} drew ${hs}–${as}`
-    : hs > as ? `${r.home} beat ${r.away} ${hs}–${as}` : `${r.away} won ${as}–${hs} away at ${r.home}`;
+    : hs > as ? `${r.home} beat ${r.away} ${hs}–${as}`
+    : r.neutral ? `${r.away} beat ${r.home} ${as}–${hs}` : `${r.away} won ${as}–${hs} away at ${r.home}`;
   const where = [r.competition && `in the ${r.competition}`, r.venue && `at ${r.venue}`, r.dateLabel && `on ${r.dateLabel}`].filter(Boolean).join(' ');
   const out = [`${result}${where ? ` ${where}` : ''}.`];
+  // A level cup game settled on penalties: who went through, and the shootout score
+  const so = r.shootout;
+  if (so && hs === as && so.home !== so.away) {
+    out[0] += ` ${so.home > so.away ? r.home : r.away} won ${Math.max(so.home, so.away)}–${Math.min(so.home, so.away)} on penalties.`;
+  }
 
   // An own goal counts for the other side, so it's listed with the team it was scored for
   const forSide = (side: 'home' | 'away') => r.goals.filter(g => (g.ownGoal ? (g.side === 'home' ? 'away' : 'home') : g.side) === side);

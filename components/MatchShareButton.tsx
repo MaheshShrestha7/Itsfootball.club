@@ -20,7 +20,7 @@ const motmFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 's
 // events: the match's events with public names (junior players shortened); goals list the scorers
 // photos: player photos by member id for the lineup pitch, as the public site shows them
 // motm: the Player of the Match, as the public site names them: adds a Player of the Match card
-export default function MatchShareButton({ match, club, hideScore = false, events, photos, motm, trigger }: {
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, motm, trigger, autoOpen }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
@@ -29,6 +29,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   motm?: { name: string; photo?: string | null };
   /** Draws the button that opens the dialog, for places with their own button style */
   trigger?: (open: () => void) => React.ReactNode;
+  /** Opens the dialog once on arrival (the link Match Centre gives after the stats are saved) */
+  autoOpen?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<CardKind>('score');
@@ -90,6 +92,14 @@ export default function MatchShareButton({ match, club, hideScore = false, event
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
+
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!autoOpen || opened.current || !ref.current) return;
+    opened.current = true;
+    setOpen(true);
+    ref.current.showModal();
+  }, [autoOpen]);
 
   const share = async () => {
     if (!image) return;
