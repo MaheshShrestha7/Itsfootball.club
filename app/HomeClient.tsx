@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { isListedClub } from '@/lib/public-tournaments';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,17 +17,16 @@ import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import './home.css';
 import {
-  Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
-  CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
-  Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer, RotateCcw, Clock, Link2,
+  ArrowRight, ArrowLeftRight, AlertCircle, BarChart3, Bell, CalendarCheck, Check, CheckCircle2, ClipboardList, Clock,
+  DoorOpen, Flame, Gift, Goal, Heart, Megaphone, QrCode, Radio, RotateCcw, Shield, Ticket, Trophy, User, Users,
+  UsersRound, Wallet, X,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
-import { newsPath } from '@/lib/slugs';
+import { matchPath, newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
-import type { HomeDemoClub, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
+import type { HomeDemoClub, HomeResultRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
 
 interface DugoutEvent {
   id: string;
@@ -108,26 +107,6 @@ const TACTICAL_ROSTER: TacticalPlayer[] = [
   { num: 11, label: '11', name: 'S. Adebayo', role: 'Left Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, zone: 'att' },
 ];
 
-// The availability tile: a sample of replies, not everyone says yes
-const AVAILABILITY = [
-  { num: 1, name: 'S. Turner', role: 'Goalkeeper', status: 'in' },
-  { num: 4, name: 'L. Davies', role: 'Center Back', status: 'in' },
-  { num: 8, name: 'J. Silva', role: 'Playmaker', status: 'in' },
-  { num: 15, name: 'R. Grant', role: 'Winger', status: 'maybe' },
-  { num: 7, name: 'D. Okafor', role: 'Right Winger', status: 'in' },
-  { num: 9, name: 'J. Park', role: 'Striker', status: 'in' },
-  { num: 18, name: 'T. Moss', role: 'Striker', status: 'out' },
-  { num: 6, name: 'K. Phillips', role: 'Defensive Mid', status: 'in' },
-] as const;
-const AVAIL_LABEL = { in: 'In', maybe: 'Maybe', out: 'Out' };
-
-const BENCH_SQUAD = [
-  { num: 14, name: 'E. Dier', role: 'Sub · CB' },
-  { num: 16, name: 'B. White', role: 'Sub · FB' },
-  { num: 17, name: 'O. Watkins', role: 'Sub · ST' },
-  { num: 19, name: 'C. Wilson', role: 'Sub · MID' },
-];
-
 type Formation = '4-3-3' | '4-4-2' | '3-5-2';
 
 // Coordinates line up with TACTICAL_ROSTER order: GK, RB, CB, CB, LB, three midfielders, three forwards
@@ -144,68 +123,81 @@ const TACTICAL_LINKS: Record<Formation, [number, number, boolean][]> = {
   '3-5-2': [[1, 2, false], [2, 3, false], [2, 7, true], [7, 6, true], [7, 8, true], [6, 9, true], [8, 10, true], [5, 6, true]],
 };
 
-const PASS_TIERS = [
-  { id: 'player', label: 'Player', name: 'Alex Morgan', role: 'Senior Squad #10', color: '#10B981', num: '10', type: 'MATCHDAY PASS' },
-  { id: 'supporter', label: 'Member', name: 'Jordan Davies', role: 'Grandstand West', color: '#F59E0B', num: 'SEA', type: 'SEASON TICKET' },
-  { id: 'official', label: 'Official', name: 'Sarah Chen', role: 'All-Area Access', color: '#A78BFA', num: 'COM', type: 'COMMITTEE' },
-] as const;
-
-type PassTierId = typeof PASS_TIERS[number]['id'];
-
 // The free tools teased on the homepage; the rest are on /tools
 const HOME_TOOLS = [
-  { tool: LINEUP_TOOL, Icon: ClipboardList, color: 'var(--c-blue)', text: 'Pick a formation and download a team sheet.' },
-  { tool: PLAYING_TIME_TOOL, Icon: Timer, color: 'var(--c-green)', text: 'Equal minutes for everyone, with a sub plan.' },
-  { tool: RESULT_TOOL, Icon: Images, color: 'var(--c-red)', text: 'Turn the final score into an Instagram post.' },
-  { tool: TOURNAMENT_TOOL, Icon: Trophy, color: 'var(--c-amber)', text: 'Fixtures, tables and a bracket on one live page.' },
+  { tool: LINEUP_TOOL, text: 'Pick a formation and download a team sheet.' },
+  { tool: PLAYING_TIME_TOOL, text: 'Equal minutes for everyone, with a sub plan.' },
+  { tool: RESULT_TOOL, text: 'Turn the final score into an Instagram post.' },
+  { tool: TOURNAMENT_TOOL, text: 'Fixtures, tables and a bracket on one live page.' },
 ];
 
-// "I'm a..." switcher: each role gets its own pitch and the action that role can actually take.
+// "I'm a..." switcher: each role gets its own pitch, the features it uses, and the action that role can take.
 // secondary: 'demo' links to a live club site, 'share' sends this page to whoever runs the club.
-const AUDIENCES = [
+const ROLES = [
   {
-    id: 'coach', tab: 'Managers & coaches', Icon: ClipboardList, color: 'var(--c-amber)',
+    id: 'coach', tab: 'Coach', Icon: ClipboardList,
     headline: 'Know your XI before Thursday.',
     body: 'Send one availability link, see who is in, and drag them onto the pitch. On matchday, log goals, cards and subs from the touchline.',
     points: [
       'Players reply in a tap, so no chasing in the group chat',
       'Lineup builder on a tactical pitch, published to the club site',
-      'A live match centre you run from your phone',
-      'ClubScore rewards turning up, so attendance looks after itself',
+      'Other clubs can invite your team to a friendly',
     ],
     cta: { label: 'Set up your team', href: '/create-club' }, secondary: 'demo',
   },
   {
-    id: 'committee', tab: 'Committee', Icon: Shield, color: 'var(--c-green)',
+    id: 'committee', tab: 'Committee', Icon: Shield,
     headline: 'One dashboard instead of five apps.',
     body: 'Squad, fixtures, members, money, merch, content and sponsors in one place, with roles for your president, secretary and treasurer.',
     points: [
       'Memberships paid by card or bank transfer, with receipts',
       'A club shop for kits and merch, with every order in one ledger',
-      'Bulk member import and a QR member pass for everyone',
+      'Give a volunteer only the gate scanner or shop orders',
       'A club website with your crest, colours and own domain',
     ],
     cta: { label: 'Claim your club', href: '/create-club' }, secondary: 'demo',
   },
   {
-    id: 'player', tab: 'Players', Icon: Users, color: 'var(--c-sky)',
+    id: 'player', tab: 'Player', Icon: User,
     headline: 'Your pass, your stats, your streak.',
     body: 'Players never set anything up. Your club adds you, and you get a member pass on your phone, availability in a tap and your goals on the board.',
     points: [
       'A digital member pass with your own QR code',
       'Reply to availability in one tap',
       'Goals, assists and attendance streaks on the ClubScore leaderboard',
-      'Nothing to install',
     ],
     cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
   },
   {
-    id: 'sponsor', tab: 'Sponsors', Icon: Megaphone, color: 'var(--c-purple)',
+    id: 'parent', tab: 'Parent', Icon: UsersRound,
+    headline: 'All your kids, one app.',
+    body: 'Answer for each child, pay their fees and keep up with their games, all in one place.',
+    points: [
+      'Say In or Out for each of your children',
+      'Add a brother or sister with the same join form',
+      'Fee reminders come to you, and you pay by card or bank transfer',
+      'Junior teams can keep their scores off the public site',
+    ],
+    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
+  },
+  {
+    id: 'supporter', tab: 'Supporter', Icon: Heart,
+    headline: 'Never miss a goal.',
+    body: 'Follow your club and your phone tells you when it kicks off, every goal and the final score. Nothing to install.',
+    points: [
+      'Kick-off, goal, line-up and full-time alerts',
+      'The live match page opens in any browser',
+      'Buy tickets and club kit, and RSVP to events',
+      "Member perks from the club's sponsors",
+    ],
+    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'demo',
+  },
+  {
+    id: 'sponsor', tab: 'Sponsor', Icon: Megaphone,
     headline: 'Proof your money worked.',
     body: 'Back a local club and see what it bought: your logo across their site and events, with every impression and click tracked.',
     points: [
       'Tiered placements across the club site and event pages',
-      'Impressions and clicks tracked for you',
       'Sign up and pay online from the club sponsor page',
       'A report ready for renewal talks',
     ],
@@ -213,12 +205,185 @@ const AUDIENCES = [
   },
 ] as const;
 
+type RoleId = typeof ROLES[number]['id'];
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+/** A small pass, the same shape on the Committee and Player tabs */
+function MiniPass({ clubName }: { clubName: string }) {
+  return (
+    <div className="hm-pass">
+      <small>Player pass, {clubName}</small>
+      <span className="hm-pass-qr" aria-hidden="true"><QRCodeSVG value="https://itsfootball.club" size={48} /></span>
+      <b>Alex Morgan</b>
+      <small>Senior squad, valid 2026/27</small>
+    </div>
+  );
+}
+
+/** Each role's features, with a small example of each. Sample data is always captioned Example. */
+function RoleFeatures({ id, clubName }: { id: RoleId; clubName: string }) {
+  switch (id) {
+    case 'coach':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><Radio size={18} aria-hidden="true" /> Live match centre</h4>
+            <p>Run the clock from the touchline. Supporters follow on the club site in real time.</p>
+            <figure>
+              <div className="hm-score"><b>2 - 1</b><span className="hm-game-live">Live 67&apos;</span></div>
+              <div className="hm-timeline" aria-hidden="true"><i /><b style={{ left: '25%' }} /><b className="y" style={{ left: '45%' }} /><b style={{ left: '64%' }} /><b style={{ left: '72%' }} /></div>
+              <figcaption>Example match</figcaption>
+            </figure>
+          </article>
+          <article className="hm-feat">
+            <h4><Users size={18} aria-hidden="true" /> Availability</h4>
+            <table className="hm-table"><tbody>
+              <tr><td>#8 J. Silva</td><td className="is-in">In</td></tr>
+              <tr><td>#15 R. Grant</td><td className="is-maybe">Maybe</td></tr>
+              <tr><td>#18 T. Moss</td><td className="is-out">Out</td></tr>
+            </tbody></table>
+            <figcaption>Example replies</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Trophy size={18} aria-hidden="true" /> Tournaments</h4>
+            <p>Brackets, round-robins and group tables update as you enter scores.</p>
+            <table className="hm-table"><tbody>
+              <tr><td><b>Lions</b></td><td><b>2</b></td></tr>
+              <tr><td>United</td><td>1</td></tr>
+            </tbody></table>
+            <figcaption>Example cup</figcaption>
+          </article>
+        </div>
+      );
+    case 'committee':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><Wallet size={18} aria-hidden="true" /> Subs, shop and money</h4>
+            <figure>
+              <div className="hm-score"><b>$2,340</b><span>of $3,000 season subs</span></div>
+              <div className="hm-bar" aria-hidden="true"><i /></div>
+              <table className="hm-table"><tbody>
+                <tr><td>Senior membership, J. Park</td><td>$120</td></tr>
+                <tr><td>Shop, home shirt x2</td><td>$90</td></tr>
+              </tbody></table>
+              <figcaption>Example ledger</figcaption>
+            </figure>
+          </article>
+          <article className="hm-feat">
+            <h4><QrCode size={18} aria-hidden="true" /> Member passes</h4>
+            <MiniPass clubName={clubName} />
+            <figcaption>Example pass</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><DoorOpen size={18} aria-hidden="true" /> Door check-in</h4>
+            <p>Scan member passes at the door with any phone.</p>
+          </article>
+        </div>
+      );
+    case 'player':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><Flame size={18} aria-hidden="true" /> ClubScore</h4>
+            <p>Points for goals, assists, clean sheets and, most of all, showing up.</p>
+            <table className="hm-table"><tbody>
+              <tr><td>1 Marco Silva <small>5 games in a row</small></td><td><b>412</b></td></tr>
+              <tr><td>2 Dami Okafor</td><td><b>388</b></td></tr>
+              <tr><td>3 Jae Park</td><td><b>351</b></td></tr>
+            </tbody></table>
+            <figcaption>Example leaderboard</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><QrCode size={18} aria-hidden="true" /> Your pass</h4>
+            <MiniPass clubName={clubName} />
+            <figcaption>Example pass</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><CalendarCheck size={18} aria-hidden="true" /> This Sunday</h4>
+            <div className="hm-kid"><span>Are you in?</span><span className="hm-seg" aria-hidden="true"><span className="on">In</span><span>Out</span></span></div>
+            <figcaption>Example</figcaption>
+          </article>
+        </div>
+      );
+    case 'parent':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><CalendarCheck size={18} aria-hidden="true" /> This Saturday</h4>
+            <div className="hm-kid"><span>Mia, Under 10s</span><span className="hm-seg" aria-hidden="true"><span className="on">In</span><span>Out</span></span></div>
+            <div className="hm-kid"><span>Leo, Under 7s</span><span className="hm-seg" aria-hidden="true"><span>In</span><span className="on">Out</span></span></div>
+            <figcaption>Example family</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Wallet size={18} aria-hidden="true" /> Fees</h4>
+            <table className="hm-table"><tbody>
+              <tr><td>Mia, winter season</td><td className="is-in">Paid</td></tr>
+              <tr><td>Leo, winter season</td><td className="is-maybe">Due</td></tr>
+            </tbody></table>
+            <figcaption>Example</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Shield size={18} aria-hidden="true" /> Junior results</h4>
+            <p>When a junior team hides scores, the public site shows the game but not the score.</p>
+          </article>
+        </div>
+      );
+    case 'supporter':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><Bell size={18} aria-hidden="true" /> Alerts on your phone</h4>
+            <div className="hm-alert"><i aria-hidden="true" /><span><b>Goal! {clubName} 2 - 1 Riverside</b><small>67 minutes</small></span></div>
+            <div className="hm-alert"><i aria-hidden="true" /><span><b>Kick-off: {clubName} v Riverside</b><small>Follow it live</small></span></div>
+            <figcaption>Example alerts</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Ticket size={18} aria-hidden="true" /> Tickets and shop</h4>
+            <table className="hm-table"><tbody>
+              <tr><td>Grand final ticket</td><td>$10</td></tr>
+              <tr><td>Home shirt</td><td>$45</td></tr>
+            </tbody></table>
+            <figcaption>Example prices</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Gift size={18} aria-hidden="true" /> Member perks</h4>
+            <p>Deals from local sponsors, shown to members with their pass.</p>
+          </article>
+        </div>
+      );
+    case 'sponsor':
+      return (
+        <div className="hm-feats">
+          <article className="hm-feat hm-feat-wide">
+            <h4><BarChart3 size={18} aria-hidden="true" /> Season report</h4>
+            <table className="hm-table"><tbody>
+              <tr><td>Impressions</td><td><b>12,400</b></td></tr>
+              <tr><td>Clicks</td><td><b>486</b></td></tr>
+              <tr><td>Click rate</td><td><b>3.9%</b></td></tr>
+            </tbody></table>
+            <figcaption>Example report</figcaption>
+          </article>
+          <article className="hm-feat">
+            <h4><Megaphone size={18} aria-hidden="true" /> Placements</h4>
+            <p>Your logo on the club site, match pages and event pages, by tier.</p>
+          </article>
+          <article className="hm-feat">
+            <h4><Gift size={18} aria-hidden="true" /> Member perks</h4>
+            <p>Offer a deal to the club&apos;s members, shown with their pass.</p>
+          </article>
+        </div>
+      );
+  }
+}
+
 const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
 
 /** Club blocks shown before "See all clubs" takes the last slot */
 const HOME_CLUB_BLOCKS = 12;
 
-export default function PlatformHomePage({ latestNews = [], latestPhotos = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; demoClub?: HomeDemoClub | null }) {
+export default function PlatformHomePage({ latestNews = [], latestPhotos = [], results = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; results?: HomeResultRow[]; demoClub?: HomeDemoClub | null }) {
   const router = useRouter();
   const { clubs: allClubs, sponsors, matches } = useClub();
   // Tournament-only clubs (public tournament pages) aren't clubs to show off
@@ -228,8 +393,30 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
   const clubBlocks = clubs.length > HOME_CLUB_BLOCKS ? clubs.slice(0, HOME_CLUB_BLOCKS - 1) : clubs;
   // News and photos only from clubs the page lists, 3 of each
   const clubOf = (id: string) => clubs.find(c => c.id === id);
-  const homeNews = latestNews.filter(n => clubOf(n.club_id)).slice(0, 3);
-  const homePhotos = latestPhotos.filter(p => clubOf(p.club_id)).slice(0, 3);
+  // The newest three posts, news or photos, from clubs the page lists
+  const latestPosts = [
+    ...latestNews.flatMap(n => {
+      const club = clubOf(n.club_id);
+      return club ? [{ kind: 'news' as const, id: n.id, at: n.published_at, href: newsPath(club.slug, n.slug), image: n.cover_image_url || club.banner_url || DEFAULT_BANNER, title: n.title, clubName: club.short_name || club.name }] : [];
+    }),
+    ...latestPhotos.flatMap(p => {
+      const club = clubOf(p.club_id);
+      return club ? [{ kind: 'photo' as const, id: p.id, at: p.created_at, href: `/${club.slug}/gallery`, image: p.thumbnail_url || p.media_url, title: p.title || p.album_name || 'New photos', clubName: club.short_name || club.name }] : [];
+    }),
+  ].sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 3);
+  // The results board: each listed club's newest game (live ones come first), three clubs at most
+  const boardGames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { game: HomeResultRow; club: (typeof clubs)[number] }[] = [];
+    for (const game of results) {
+      const club = clubs.find(c => c.id === game.club_id);
+      if (!club || seen.has(club.id)) continue;
+      seen.add(club.id);
+      out.push({ game, club });
+      if (out.length === 3) break;
+    }
+    return out;
+  }, [results, clubs]);
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -338,18 +525,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
   const isDugoutModified = events !== DEFAULT_EVENTS || matchStatus !== 'live' || refCardActive !== null;
   const isLive = matchStatus === 'live';
 
-  // Holographic Pass & Turnstile state
-  const [passTier, setPassTier] = useState<PassTierId>('player');
-  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'granted'>('idle');
-
-  const triggerGateScan = () => {
-    if (scanState === 'scanning') return;
-    setScanState('scanning');
-    setTimeout(() => {
-      setScanState('granted');
-    }, 850);
-  };
-
   const claim = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams({ palette: String(paletteIdx) });
@@ -378,30 +553,14 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
   // The club picked in Mission Control (F10-9); until one is picked, the first listed club
   const demoClub: HomeDemoClub | undefined = pickedDemo || clubs[0];
 
-  const [audIdx, setAudIdx] = useState(0);
-  const aud = AUDIENCES[audIdx];
+  const [roleIdx, setRoleIdx] = useState(0);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  // One marker slides between tabs; measured from the selected tab, re-measured when the row reflows
-  const tabListRef = useRef<HTMLDivElement>(null);
-  const [ind, setInd] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  useLayoutEffect(() => {
-    const list = tabListRef.current;
-    if (!list || !('ResizeObserver' in window)) return;
-    const place = () => {
-      const t = tabRefs.current[audIdx];
-      if (t) setInd({ x: t.offsetLeft, y: t.offsetTop, w: t.offsetWidth, h: t.offsetHeight });
-    };
-    place();
-    const ro = new ResizeObserver(place);
-    ro.observe(list);
-    return () => ro.disconnect();
-  }, [audIdx]);
   const onTabKey = (e: React.KeyboardEvent) => {
     const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
     if (!step) return;
     e.preventDefault();
-    const next = (audIdx + step + AUDIENCES.length) % AUDIENCES.length;
-    setAudIdx(next);
+    const next = (roleIdx + step + ROLES.length) % ROLES.length;
+    setRoleIdx(next);
     tabRefs.current[next]?.focus();
   };
 
@@ -419,27 +578,8 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
     } catch { /* share sheet dismissed or clipboard blocked */ }
   };
 
-  // Bento visuals play once when they scroll into view. "armed" is only set once JS runs, so without it
-  // (or with reduced motion) the visuals simply render in their finished state.
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || !('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(entries => {
-      for (const en of entries) {
-        if (!en.isIntersecting) continue;
-        en.target.classList.add('is-in');
-        io.unobserve(en.target);
-      }
-    }, { threshold: 0.5 });
-    root.querySelectorAll('.lp-play').forEach(el => io.observe(el));
-    setArmed(true);
-    return () => io.disconnect();
-  }, []);
-
   return (
-    <div ref={rootRef} className={`lp${armed ? ' lp-armed' : ''}`} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="lp" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <PlatformNavbar />
 
       {/* ================= HERO ================= */}
@@ -871,597 +1011,243 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
         </div>
       </div>
 
-      {/* ================= HOW MATCHDAY WORKS ================= */}
-      <section className="lp-section">
+      {/* ================= WHO'S PLAYING: the core loop, as one colour block ================= */}
+      <section className="hm-sec">
         <div className="container">
-          <div className="lp-head lp-head-center lp-reveal">
-            <h2 className="lp-h2">Who&apos;s playing Sunday, sorted before Friday.</h2>
-            <p className="lp-lede" style={{ maxWidth: 640, margin: '0.65rem auto 0' }}>
-              No more counting thumbs-up in the group chat. Players answer from a link, you pick the team from their answers, and everyone sees it on your club site.
-            </p>
-          </div>
-
-          <ol className="lp-steps3 lp-reveal">
-            <li className="glass-panel">
-              <span className="lp-steps3-n">1</span>
-              <h3>Players answer</h3>
-              <p>Each player gets a link by email or WhatsApp and taps one button.</p>
-              <div className="lp-steps3-ans" aria-hidden="true">
-                <span className="on">In</span><span>Maybe</span><span>Out</span>
-              </div>
-            </li>
-            <li className="glass-panel">
-              <span className="lp-steps3-n">2</span>
-              <h3>You pick the team</h3>
-              <p>The line-up builder starts from the players who said In.</p>
-              <div className="lp-steps3-pitch" aria-hidden="true">
-                {[[12, 50], [30, 22], [30, 50], [30, 78], [55, 35], [55, 65], [80, 50]].map(([x, y]) => (
-                  <b key={`${x}-${y}`} style={{ left: `${x}%`, top: `${y}%` }} />
-                ))}
-              </div>
-            </li>
-            <li className="glass-panel">
-              <span className="lp-steps3-n">3</span>
-              <h3>Everyone sees it</h3>
-              <p>The line-up goes on your club site at a link anyone can open.</p>
-              <div className="lp-steps3-link" aria-hidden="true">
-                <Link2 size={14} />
-                <span>itsfootball.club/your-club/match/&hellip;</span>
-              </div>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      {/* ================= FEATURE BENTO ================= */}
-      <section className="lp-section" id="features" style={{ paddingTop: 0 }}>
-        <div className="container">
-          <div className="lp-head lp-reveal">
-            <div className="lp-matchday-tag">
-              Club Operating System
-            </div>
-            <h2 className="lp-h2">From kick-off to the clubhouse, in one place.</h2>
-            <p className="lp-lede">Everything below is live in the product today. Your committee switches it on; supporters, players and sponsors just open a link.</p>
-          </div>
-
-          <div className="lp-bento">
-            {/* Match centre */}
-            <article className="lp-tile lp-tile-wide lp-reveal" style={{ '--tc': '#F87171' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><Radio size={19} /></div>
-                <h3>Live match centre</h3>
-                <p>Run the clock from the touchline and log goals, assists, cards and subs as they happen. Supporters follow on the club site in real time, with the published lineup on a tactical pitch.</p>
-              </div>
-              <div className="lp-viz lp-play">
-                <div className="lp-mc">
-                  <div className="lp-mc-score"><small>● LIVE 67&apos;</small>2 – 1</div>
-                  <div>
-                    <div className="lp-mc-track">
-                      <div className="lp-mc-line" />
-                      <div className="lp-mc-ht" />
-                      <div className="lp-mc-pin" style={{ left: '25%', '--d': '405ms' } as React.CSSProperties}><Goal size={12} /></div>
-                      <div className="lp-mc-pin y" style={{ left: '45%', '--d': '730ms' } as React.CSSProperties}><span className="lp-card-yellow m-0" /></div>
-                      <div className="lp-mc-pin s" style={{ left: '64%', '--d': '1040ms' } as React.CSSProperties}><ArrowLeftRight size={11} /></div>
-                      <div className="lp-mc-pin" style={{ left: '72%', '--d': '1170ms' } as React.CSSProperties}><Goal size={12} /></div>
-                    </div>
-                    <div className="lp-mc-legend"><span>0&apos;</span><span>HT</span><span>90&apos;</span></div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* 3D Holographic Member Pass & Gate Scanner */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#34D399' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><QrCode size={19} /></div>
-                <h3>Digital member passes</h3>
-                <p>Every member gets a pass on their phone with their own QR code. Scan it at the gate or turnstile in under a second.</p>
-                <div className="lp-tier-pills" role="group" aria-label="Pass tier">
-                  {PASS_TIERS.map(t => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`lp-tier-pill ${passTier === t.id ? 'is-active' : ''}`}
-                      onClick={() => { setPassTier(t.id); setScanState('idle'); }}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="lp-viz lp-pass-stage">
-                {(() => {
-                  const currentTier = PASS_TIERS.find(t => t.id === passTier) || PASS_TIERS[0];
-                  return (
-                    <div className="lp-pass-3d-wrap">
-                      <div
-                        className={`lp-holo-pass ${scanState === 'granted' ? 'is-granted' : ''}`}
-                        style={{ '--tier-color': currentTier.color } as React.CSSProperties}
-                      >
-                        <div className="lp-holo-sheen" aria-hidden="true" />
-                        <div className="lp-holo-head">
-                          <div>
-                            <span className="lp-holo-type">{currentTier.type}</span>
-                            <div className="lp-holo-club">{displayName}</div>
-                          </div>
-                          <span className="lp-holo-num">{currentTier.num}</span>
-                        </div>
-
-                        <div className="lp-holo-body">
-                          <div>
-                            <div className="lp-holo-name">{currentTier.name}</div>
-                            <div className="lp-holo-role">{currentTier.role}</div>
-                          </div>
-                          <div className="lp-holo-qr-wrap">
-                            <QRCodeSVG value={`https://itsfootball.club/${previewSlug}/verify`} size={46} />
-                            {scanState === 'scanning' && <div className="lp-laser-sweep" />}
-                          </div>
-                        </div>
-
-                        <div className="lp-holo-footer">
-                          <span className="lp-holo-valid">VALID 2026/27</span>
-                          <span className="lp-holo-chip"><Check size={10} /> VERIFIED</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Gate Scanner Controller */}
-                <div className="lp-turnstile-bar">
-                  <button
-                    type="button"
-                    className={`lp-scan-btn ${scanState === 'scanning' ? 'is-scanning' : ''}`}
-                    onClick={triggerGateScan}
-                  >
-                    <Zap size={13} /> {scanState === 'scanning' ? 'Scanning...' : 'Simulate Gate Scan'}
-                  </button>
-                  <div className={`lp-turnstile-indicator ${scanState}`}>
-                    <span className="lp-turnstile-lamp" />
-                    <span>
-                      {scanState === 'idle' && 'Turnstile ready'}
-                      {scanState === 'scanning' && 'Verifying pass...'}
-                      {scanState === 'granted' && 'Gate unlocked'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* Squad Availability & Match Sheets */}
-            <article className="lp-tile lp-tile-wide lp-reveal" style={{ '--tc': '#60A5FA' } as React.CSSProperties}>
-              <div className="lp-tile-head-row">
-                <div>
-                  <div className="lp-tile-ico"><Users size={19} /></div>
-                  <h3>1-tap availability &amp; official team sheets</h3>
-                  <p>Send one link before Thursday. As players tap in, you pick the XI, publish the lineup to the club site, and the bench knows where they stand.</p>
-                </div>
-              </div>
-
-              <div className="lp-viz lp-avail-stage">
-                <div className="lp-avail-grid">
-                  {AVAILABILITY.map(player => (
-                    <div key={player.num} className="lp-avail-card">
-                      <div className="lp-avail-card-num">#{player.num}</div>
-                      <div className="lp-avail-card-info">
-                        <div className="lp-avail-card-name">{player.name}</div>
-                        <div className="lp-avail-card-role">{player.role}</div>
-                      </div>
-                      <span className={`lp-avail-card-status is-${player.status}`}>
-                        {player.status === 'in' ? <Check size={12} /> : player.status === 'out' ? <X size={12} /> : <Clock size={12} />} {AVAIL_LABEL[player.status]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="lp-tactical-footer">
-                  <div className="lp-avail-badges">
-                    <span className="lp-avail-badge in">
-                      <Check size={12} /> 15 In
-                    </span>
-                    <span className="lp-avail-badge maybe">
-                      <Clock size={12} /> 1 Maybe
-                    </span>
-                    <span className="lp-avail-badge out">
-                      <X size={12} /> 2 Out
-                    </span>
-                  </div>
-                  <div className="lp-bench-row">
-                    <span className="lp-bench-heading">Bench:</span>
-                    <div className="lp-bench-tags">
-                      {BENCH_SQUAD.map(b => (
-                        <span key={b.num} className="lp-bench-tag" title={b.role}>
-                          #{b.num} {b.name.split(' ')[1]}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-
-            {/* Payments */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#FBBF24' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><Wallet size={19} /></div>
-                <h3>Subs, shop &amp; finances</h3>
-                <p>Membership plans paid by card (Stripe) or bank transfer, with automatic receipts, and a club shop for kits and merch. Every payment lands in one ledger.</p>
-              </div>
-              <div className="lp-viz lp-play">
-                <div className="lp-money">
-                  <div className="lp-money-top"><b>$2,340</b><small>of $3,000 season subs</small></div>
-                  <div className="lp-bar"><i /></div>
-                  <div className="lp-tx"><span>Senior membership · J. Park</span><em>+$120</em></div>
-                  <div className="lp-tx"><span>Kit sponsor · Northside Motors</span><em>+$800</em></div>
-                  <div className="lp-tx"><span>Shop · Home shirt (M) ×2</span><em>+$90</em></div>
-                </div>
-              </div>
-            </article>
-
-            {/* Sponsors */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#A78BFA' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><BarChart3 size={19} /></div>
-                <h3>Sponsor hub</h3>
-                <p>Tiered sponsor spots across your site, with tracked impressions and clicks. Export the report when it&apos;s time to renew.</p>
-              </div>
-              <div className="lp-viz lp-play">
-                <div className="lp-spark">
-                  {[30, 42, 38, 55, 48, 62, 58, 75, 70, 88, 82, 96].map((h, i) => <i key={i} style={{ height: `${h}%`, '--i': i } as React.CSSProperties} />)}
-                </div>
-                <div className="lp-kpis">
-                  <div className="lp-kpi"><b>12.4k</b><small>Impressions</small></div>
-                  <div className="lp-kpi"><b>486</b><small>Clicks</small></div>
-                  <div className="lp-kpi"><b>3.9%</b><small>CTR</small></div>
-                </div>
-              </div>
-            </article>
-
-            {/* Tournaments */}
-            <article className="lp-tile lp-reveal" style={{ '--tc': '#2DD4BF' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><Trophy size={19} /></div>
-                <h3>Tournaments &amp; cups</h3>
-                <p>Knockout brackets, round-robin leagues and group stages. Tables update themselves as you enter scores.</p>
-              </div>
-              <div className="lp-viz">
-                <div className="lp-bracket">
-                  <div className="lp-bracket-col">
-                    <div className="lp-bm"><div className="w"><span>Lions</span><b>3</b></div><div><span>Eagles</span><b>1</b></div></div>
-                    <div className="lp-bm"><div><span>Rovers</span><b>0</b></div><div className="w"><span>United</span><b>2</b></div></div>
-                  </div>
-                  <div className="lp-bracket-col">
-                    <div className="lp-bm"><div className="w"><span>Lions</span><b>2</b></div><div><span>United</span><b>1</b></div></div>
-                  </div>
-                  <div className="lp-trophy"><Trophy size={28} />Lions</div>
-                </div>
-              </div>
-            </article>
-
-            {/* ClubScore */}
-            <article className="lp-tile lp-tile-wide lp-reveal" style={{ '--tc': '#FB923C' } as React.CSSProperties}>
-              <div>
-                <div className="lp-tile-ico"><Flame size={19} /></div>
-                <h3>ClubScore: turn up, climb up</h3>
-                <p>Points for goals, assists, clean sheets and, most of all, showing up. Attendance streaks earn badges, and the leaderboard does the motivating so the coach doesn&apos;t have to.</p>
-              </div>
-              <div className="lp-viz">
-                <div className="lp-lb">
-                  <div className="lp-lb-row"><span className="lp-lb-rank">01</span><b>Marco Silva</b><span className="lp-lb-badge"><Flame size={11} /> Iron Man 5-Streak</span><span className="lp-lb-pts">412</span></div>
-                  <div className="lp-lb-row"><span className="lp-lb-rank">02</span><b>Dami Okafor</b><span className="lp-lb-badge"><Flame size={11} /> 3-Streak</span><span className="lp-lb-pts">388</span></div>
-                  <div className="lp-lb-row"><span className="lp-lb-rank">03</span><b>Jae Park</b><span /><span className="lp-lb-pts">351</span></div>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <div className="lp-chips lp-reveal">
-            {[
-              [Newspaper, 'News, reports & video'],
-              [Images, 'Homepage hero carousel'],
-              [CalendarCheck, 'Events & socials'],
-              [DoorOpen, 'Door self check-in'],
-              [Layers, 'Seasons'],
-              [Crown, 'Committee showcase'],
-              [Palette, 'Crest, colours & kit'],
-              [Globe, 'Custom domain'],
-              [BarChart3, 'Visitor analytics'],
-              [Mail, 'Contact inbox'],
-              [Upload, 'Bulk member import'],
-              [Search, 'Built for Google'],
-            ].map(([Icon, label]) => {
-              const I = Icon as typeof Globe;
-              return <span key={label as string} className="lp-chip"><I size={15} /> {label as string}</span>;
-            })}
+          <div className="hm-block">
+            <h2 className="hm-h2">Who&apos;s playing Sunday, sorted before Friday.</h2>
+            <p className="hm-lede">No more counting thumbs-up in the group chat.</p>
+            <ol className="hm-steps hm-steps-row">
+              <li><h3>Players answer</h3><p>Each player gets a link by email or WhatsApp and taps one button.</p></li>
+              <li><h3>You pick the team</h3><p>The line-up builder starts from the players who said In.</p></li>
+              <li><h3>Everyone sees it</h3><p>The line-up goes on your club site at a link anyone can open.</p></li>
+            </ol>
           </div>
         </div>
       </section>
 
-      {/* ================= AUDIENCE SWITCHER ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      {/* ================= FEATURES BY ROLE: one switcher; every panel stays in the HTML ================= */}
+      <section className="hm-sec" id="features" aria-labelledby="hm-features-h">
         <div className="container">
-          <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-matchday-tag">
-              Every Matchday Role
-            </div>
-            <h2 className="lp-h2">What&apos;s in it for you?</h2>
-          </div>
-          <div className="lp-reveal">
-            <div ref={tabListRef} className={`lp-aud-tabs${ind ? ' has-ind' : ''}`} role="tablist" aria-label="I am a" onKeyDown={onTabKey}>
-              {ind && (
-                <span
-                  className="lp-aud-ind"
-                  aria-hidden="true"
-                  style={{ transform: `translate(${ind.x}px, ${ind.y}px)`, width: ind.w, height: ind.h, '--rc': aud.color } as React.CSSProperties}
-                />
-              )}
-              {AUDIENCES.map((a, i) => (
+          <h2 id="hm-features-h" className="hm-h2">From kick-off to the clubhouse, in one place.</h2>
+          <p className="hm-lede">Everything here is live in the product today.</p>
+          <div className="hm-pick">
+            <span id="hm-pick-label">I&apos;m a</span>
+            <div className="hm-tabs" role="tablist" aria-labelledby="hm-pick-label" onKeyDown={onTabKey}>
+              {ROLES.map((r, i) => (
                 <button
-                  key={a.id}
+                  key={r.id}
                   ref={el => { tabRefs.current[i] = el; }}
                   type="button"
                   role="tab"
-                  id={`lp-aud-tab-${a.id}`}
-                  aria-selected={i === audIdx}
-                  aria-controls="lp-aud-panel"
-                  tabIndex={i === audIdx ? 0 : -1}
-                  className="lp-aud-tab"
-                  style={{ '--rc': a.color } as React.CSSProperties}
-                  onClick={() => setAudIdx(i)}
+                  id={`hm-tab-${r.id}`}
+                  aria-selected={i === roleIdx}
+                  aria-controls={`hm-panel-${r.id}`}
+                  tabIndex={i === roleIdx ? 0 : -1}
+                  className="hm-tab"
+                  onClick={() => setRoleIdx(i)}
                 >
-                  <a.Icon size={16} /> {a.tab}
+                  <r.Icon size={18} aria-hidden="true" /> {r.tab}
                 </button>
               ))}
             </div>
+          </div>
+          {ROLES.map((r, i) => (
             <div
-              key={aud.id}
-              id="lp-aud-panel"
+              key={r.id}
+              id={`hm-panel-${r.id}`}
               role="tabpanel"
-              aria-labelledby={`lp-aud-tab-${aud.id}`}
-              className="lp-aud-panel"
-              style={{ '--rc': aud.color } as React.CSSProperties}
+              aria-labelledby={`hm-tab-${r.id}`}
+              hidden={i !== roleIdx}
+              className="hm-panel"
             >
               <div>
-                <div className="lp-role-who"><aud.Icon size={14} /> {aud.tab}</div>
-                <h3>{aud.headline}</h3>
-                <p>{aud.body}</p>
-                <div className="lp-aud-actions">
-                  <Link href={aud.cta.href} className="btn btn-primary">
-                    {aud.cta.label} <ArrowRight size={16} />
-                  </Link>
-                  {aud.secondary === 'share' ? (
+                <h3 className="hm-role-h">{r.headline}</h3>
+                <p className="hm-role-body">{r.body}</p>
+                <ul className="hm-points">
+                  {r.points.map(pt => <li key={pt}>{pt}</li>)}
+                </ul>
+                <div className="hm-actions">
+                  <Link href={r.cta.href} className="btn btn-primary">{r.cta.label}</Link>
+                  {r.secondary === 'share' ? (
                     <button type="button" className="btn btn-secondary" onClick={shareLink}>
-                      <Share2 size={16} /> <span aria-live="polite">{copied ? 'Link copied' : 'Send this to your committee'}</span>
+                      <span aria-live="polite">{copied ? 'Link copied' : 'Send this to your committee'}</span>
                     </button>
                   ) : demoClub && (
                     <Link href={`/${demoClub.slug}`} className="btn btn-secondary">See a live club site</Link>
                   )}
                 </div>
               </div>
-              <ul className="lp-aud-points">
-                {aud.points.map(pt => <li key={pt}><Check size={16} /><span>{pt}</span></li>)}
-              </ul>
+              <RoleFeatures id={r.id} clubName={displayName} />
             </div>
+          ))}
+          <div className="hm-also">
+            <h3>Also in every club site</h3>
+            <ul>
+              {['News and match reports', 'Homepage photo carousel', 'Events and socials', 'Door check-in', 'Seasons', 'Committee page', 'Your crest, colours and domain', 'Visitor numbers', 'Contact inbox', 'Bulk member import', 'Search-friendly pages'].map(x => <li key={x}>{x}</li>)}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* ================= HOW IT WORKS ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      {/* ================= FREE TOOLS (no club needed): one slim band ================= */}
+      <section className="hm-sec" aria-labelledby="hm-tools-h">
         <div className="container">
-          <div className="lp-head lp-reveal">
-            <div className="lp-matchday-tag">
-              3-Minute Setup
-            </div>
-            <h2 className="lp-h2">Live before your next training session.</h2>
-          </div>
-          <div className="lp-steps">
-            {CREATE_CLUB_STEPS.map((s, i) => (
-              <div key={s.name} className="lp-step lp-reveal">
-                <div className="lp-step-marker">
-                  <span className="lp-step-badge">STEP 0{i + 1}</span>
-                  <span className="lp-step-milestone">{s.milestone}</span>
-                </div>
-                <h3>{s.name}</h3>
-                <p>{s.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ================= FREE TOOLS (no club needed) ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-tools-h">
-        <div className="container">
-          <div className="lp-head lp-head-split lp-reveal">
+          <div className="hm-tools">
             <div>
-              <div className="lp-matchday-tag">Free tools</div>
-              <h2 id="lp-tools-h" className="lp-h2">Not ready for a club site? Start with a tool.</h2>
+              <h2 id="hm-tools-h">Not ready for a club site? Start with a free tool.</h2>
+              <Link href={TOOLS_HUB.path} className="hm-link">See all free tools</Link>
             </div>
-            <Link href={TOOLS_HUB.path} className="btn btn-secondary lp-head-link">
-              All free tools <ArrowRight size={16} />
-            </Link>
-          </div>
-          <div className="lp-tools">
-            {HOME_TOOLS.map(t => (
-              <Link key={t.tool.path} href={t.tool.path} className="lp-tile lp-tool lp-reveal" style={{ '--tc': t.color } as React.CSSProperties}>
-                <div className="lp-tile-ico"><t.Icon size={20} /></div>
-                <div>
-                  <h3>{t.tool.label} <ArrowRight size={14} className="lp-tool-arrow" /></h3>
-                  <p>{t.text}</p>
-                </div>
-              </Link>
-            ))}
+            <ul>
+              {HOME_TOOLS.map(t => (
+                <li key={t.tool.path}>
+                  <Link href={t.tool.path}><b>{t.tool.label}</b><span>{t.text}</span></Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* ================= PROOF: real clubs and their sponsors ================= */}
+      {/* ================= PROOF: real clubs, their latest games, sponsors and posts ================= */}
       {clubs.length > 0 && (
-        <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-clubs-h">
+        <section className="hm-sec" aria-labelledby="hm-clubs-h">
           <div className="container">
-            <div className="lp-head lp-head-split lp-reveal">
+            <div className="hm-head">
               <div>
-                <div className="lp-matchday-tag">On the network</div>
-                <h2 id="lp-clubs-h" className="lp-h2">Clubs already on the pitch.</h2>
-                <p className="lp-lede">
+                <h2 id="hm-clubs-h" className="hm-h2">Clubs already on the pitch.</h2>
+                <p className="hm-lede">
                   {clubs.length} {clubs.length === 1 ? 'club runs' : 'clubs run'} on itsfootball.club
                   {allSponsors.length > 0 && <>, backed by {allSponsors.length} local {allSponsors.length === 1 ? 'sponsor' : 'sponsors'}</>}.
                 </p>
               </div>
-              <Link href="/clubs" className="btn btn-secondary lp-head-link">
-                Browse all clubs <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="lp-clubblocks">
-              {clubBlocks.map(club => (
-                <Link
-                  key={club.id}
-                  href={`/${club.slug}`}
-                  className="lp-clubblock lp-reveal"
-                  style={{ '--cc': club.primary_color } as React.CSSProperties}
-                >
-                  {liveClubIds.has(club.id) && <span className="badge badge-live lp-clubblock-live"><span className="pulse-dot" /> LIVE</span>}
-                  <img className="lp-clubblock-crest" src={club.logo_url || DEFAULT_CREST} alt="" width={60} height={60} loading="lazy" decoding="async" />
-                  <h3>{club.name}</h3>
-                  {club.stadium_name && <div className="lp-clubblock-meta">{club.stadium_name}</div>}
-                </Link>
-              ))}
-              {clubBlocks.length < clubs.length && (
-                <Link href="/clubs" className="lp-clubblock lp-clubblock-more lp-reveal">
-                  <span className="lp-clubblock-count">+{clubs.length - clubBlocks.length}</span>
-                  <span>See all clubs</span>
-                </Link>
-              )}
+              <Link href="/clubs" className="hm-link">Browse all clubs</Link>
             </div>
 
+            {boardGames.length > 0 ? (
+              <div className="hm-board">
+                {boardGames.map(({ game, club }) => {
+                  const live = game.status === 'live' || game.status === 'halftime';
+                  const hidden = game.scores_hidden;
+                  const homeWon = game.home_score > game.away_score;
+                  const awayWon = game.away_score > game.home_score;
+                  const side = (name: string, logo: string | null, score: number, dim: boolean, showScore: boolean) => (
+                    <div className={`hm-game-row${dim ? ' is-dim' : ''}`}>
+                      {logo ? <img src={logo} alt="" width={26} height={26} loading="lazy" decoding="async" /> : <i aria-hidden="true">{initials(name)}</i>}
+                      <span>{name}</span>
+                      {showScore && <b>{score}</b>}
+                    </div>
+                  );
+                  return (
+                    <Link key={game.id} href={matchPath(club.slug, game)} className="hm-game">
+                      <div className="hm-game-top">
+                        <span>{game.team_name || club.short_name || club.name}</span>
+                        {live ? (
+                          <span className="hm-game-live">{game.status === 'halftime' ? 'Half time' : `Live ${game.current_minute ?? ''}'`}</span>
+                        ) : (
+                          <span><LocalTime value={game.match_date} /></span>
+                        )}
+                      </div>
+                      {side(game.home_team_name, game.home_team_logo, game.home_score, !hidden && !live && awayWon, !hidden)}
+                      {side(game.away_team_name, game.away_team_logo, game.away_score, !hidden && !live && homeWon, !hidden)}
+                      {hidden && <div className="hm-game-hidden">Scores hidden</div>}
+                    </Link>
+                  );
+                })}
+                <Link href="/clubs" className="hm-game-more">
+                  See all {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'}
+                  <small>Fixtures, results and squads</small>
+                </Link>
+              </div>
+            ) : (
+              <div className="hm-crests">
+                {clubBlocks.map(club => (
+                  <Link key={club.id} href={`/${club.slug}`} className="hm-crest">
+                    <img src={club.logo_url || DEFAULT_CREST} alt="" width={30} height={30} loading="lazy" decoding="async" />
+                    {club.name}
+                    {liveClubIds.has(club.id) && <span className="hm-game-live">Live</span>}
+                  </Link>
+                ))}
+                {clubBlocks.length < clubs.length && (
+                  <Link href="/clubs" className="hm-crest hm-crest-more">+{clubs.length - clubBlocks.length} more</Link>
+                )}
+              </div>
+            )}
+
             {allSponsors.length > 0 && (
-              <>
-                <h3 className="lp-subhead lp-reveal">Backed by local sponsors</h3>
-                <div className="sponsor-scroll-strip">
+              <div className="hm-sponsors">
+                <h3>Backed by local sponsors</h3>
+                <div className="hm-sponsor-row">
                   {allSponsors.map(({ sponsor, club }) => {
                     const href = sponsorClickHref(sponsor.website_url, club.slug);
-                    const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
-                    const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
                     return (
                       <a
                         key={sponsor.id}
                         href={href || `/${club.slug}`}
                         target={href ? '_blank' : undefined}
                         rel={href ? 'sponsored noopener' : undefined}
-                        className="glass-panel glass-panel-interactive sponsor-scroll-card lp-sponsor"
-                        style={{ '--sc': isPlatinum ? '#F59E0B' : club.primary_color } as React.CSSProperties}
+                        className="hm-sponsor"
+                        title={`${sponsor.name}, ${club.short_name || club.name}`}
                       >
-                        <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={isPlatinum ? 56 : isGold ? 46 : 38} style={{ maxWidth: '100%' }} />
-                        <div className="lp-sponsor-name">{sponsor.name}</div>
-                        <div className="lp-sponsor-club">
-                          <img loading="lazy" decoding="async" width={18} height={18} src={club.logo_url || DEFAULT_CREST} alt="" />
-                          <span className="text-meta">{club.short_name} · <span className="lp-sponsor-tier">{sponsor.tier}</span></span>
-                        </div>
+                        <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={34} style={{ maxWidth: 140 }} />
                       </a>
                     );
                   })}
                 </div>
-              </>
+              </div>
+            )}
+
+            {latestPosts.length > 0 && (
+              <div className="hm-posts">
+                {latestPosts.map(p => (
+                  <Link key={`${p.kind}-${p.id}`} href={p.href} className="hm-post">
+                    <img src={p.image} alt="" loading="lazy" decoding="async" />
+                    <span>
+                      <small>{p.clubName}, {p.kind === 'news' ? 'news' : 'photos'}</small>
+                      <span className="hm-post-title">{p.title}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         </section>
       )}
 
-      {/* ================= FROM THE CLUBS: latest news and photos ================= */}
-      {(homeNews.length > 0 || homePhotos.length > 0) && (
-        <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-latest-h">
-          <div className="container">
-            <div className="lp-head lp-reveal">
-              <div className="lp-matchday-tag">From the clubs</div>
-              <h2 id="lp-latest-h" className="lp-h2">Latest news and photos.</h2>
-            </div>
-            {homeNews.length > 0 && (
-              <>
-                <h3 className="lp-subhead lp-latest-sub">Club news</h3>
-                <div className="lp-latest-grid">
-                  {homeNews.map(n => {
-                    const club = clubOf(n.club_id)!;
-                    return (
-                      <Link key={n.id} href={newsPath(club.slug, n.slug)} className="lp-newscard lp-reveal" style={{ '--cc': club.primary_color } as React.CSSProperties}>
-                        <div className="lp-newscard-cover">
-                          <img src={n.cover_image_url || club.banner_url || DEFAULT_BANNER} alt="" loading="lazy" decoding="async" />
-                        </div>
-                        <div className="lp-newscard-body">
-                          <div className="lp-latest-club">
-                            <img src={club.logo_url || DEFAULT_CREST} alt="" width={20} height={20} loading="lazy" decoding="async" />
-                            <span>{club.short_name || club.name} · <LocalTime value={n.published_at} /></span>
-                          </div>
-                          <h4>{n.title}</h4>
-                          {n.summary && <p>{n.summary}</p>}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            {homePhotos.length > 0 && (
-              <>
-                <h3 className="lp-subhead lp-latest-sub">From the gallery</h3>
-                <div className="lp-latest-grid">
-                  {homePhotos.map(p => {
-                    const club = clubOf(p.club_id)!;
-                    return (
-                      <Link key={p.id} href={`/${club.slug}/gallery`} className="lp-photo lp-reveal">
-                        <img src={p.thumbnail_url || p.media_url} alt={p.title || `${club.name} photo`} loading="lazy" decoding="async" />
-                        <span className="lp-latest-club lp-photo-cap">
-                          <img src={club.logo_url || DEFAULT_CREST} alt="" width={20} height={20} loading="lazy" decoding="async" />
-                          <span>{club.short_name || club.name}{p.album_name ? ` · ${p.album_name}` : ''}</span>
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+      {/* ================= FAQ: two columns; every question stays on the page (FAQPage schema) ================= */}
+      <section className="hm-sec" aria-labelledby="hm-faq-h">
+        <div className="container hm-faq">
+          <div>
+            <h2 id="hm-faq-h" className="hm-h2">Frequently asked questions.</h2>
+            <p className="hm-lede">What committees, volunteers and managers ask before they start.</p>
+            <Link href="/faq" className="hm-link">Read all 30+ answers</Link>
           </div>
-        </section>
-      )}
-
-      {/* ================= FREQUENTLY ASKED QUESTIONS ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }} aria-labelledby="lp-faq-h">
-        <div className="container lp-faq">
-          <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-matchday-tag">Committee FAQ</div>
-            <h2 id="lp-faq-h" className="lp-h2">Frequently asked questions.</h2>
-            <p className="lp-lede">Everything club committees, volunteers, and managers ask before getting started.</p>
-          </div>
-          <div className="lp-faq-list">
+          <div className="hm-faq-list">
             {HOMEPAGE_FAQS.map(f => (
-              <details key={f.q} className="glass-panel lp-faq-item">
-                <summary>
-                  <span>{f.q}</span>
-                  <span className="lp-faq-icon" aria-hidden="true" />
-                </summary>
+              <details key={f.q}>
+                <summary>{f.q}</summary>
                 <p>{f.a}</p>
               </details>
             ))}
           </div>
-          <div className="lp-faq-more">
-            <Link href="/faq">Read the full FAQ with all 30+ answers <ArrowRight size={15} /></Link>
-          </div>
         </div>
       </section>
 
-      {/* ================= FINAL CTA ================= */}
-      <section className="lp-section" style={{ paddingTop: 0 }}>
+      {/* ================= CLOSE: the setup steps and the one action, as a colour block ================= */}
+      <section className="hm-sec hm-sec-last">
         <div className="container">
-          <div className="lp-final lp-reveal" data-theme="dark">
-            <div className="lp-matchday-tag" style={{ justifyContent: 'center' }}><Zap size={13} /> Free to set up &middot; No credit card required</div>
-            <h2 className="lp-h2">Give your club the matchday it deserves.</h2>
-            <p>Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
-            <div className="lp-final-actions">
-              <Link href="/create-club" className="btn btn-primary btn-lg lp-head-link">
-                Create your club <ArrowRight size={18} />
-              </Link>
+          <div className="hm-block hm-close">
+            <div>
+              <h2 className="hm-h2">Give your club the matchday it deserves.</h2>
+              <p className="hm-lede">Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
+              <Link href="/create-club" className="hm-block-btn">Create your club</Link>
+              <p className="hm-small">Free to set up. No credit card needed.</p>
             </div>
+            <ol className="hm-steps hm-steps-list">
+              {CREATE_CLUB_STEPS.map(s => (
+                <li key={s.name}><h3>{s.name}</h3><p>{s.text}</p></li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
