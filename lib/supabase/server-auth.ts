@@ -31,14 +31,23 @@ export async function requireUser(request: Request): Promise<AuthCheck> {
   return { ok: true, userId: data.user.id, token, supabase, confirmedEmail };
 }
 
-/** requireUser, and the caller is the club's Owner (not just a Club Admin) */
+/**
+ * requireUser, and the caller is the club's Owner (not just a Club Admin), with a two-step (aal2)
+ * session if their account has an authenticator - the same mfa_ok() rule admin rights use
+ * (migration 20261129). Owners without two-step sign-in pass as before.
+ */
 export async function requireClubOwner(request: Request, clubId: string): Promise<AuthCheck> {
   const auth = await requireUser(request);
   if (!auth.ok) return auth;
   const { data } = await auth.supabase.from('clubs').select('owner_id').eq('id', clubId).maybeSingle();
-  return data?.owner_id && data.owner_id === auth.userId
-    ? auth
-    : { ok: false, status: 403, error: 'Only the club Owner can do this.' };
+  if (!data?.owner_id || data.owner_id !== auth.userId) {
+    return { ok: false, status: 403, error: 'Only the club Owner can do this.' };
+  }
+  const { data: mfaOk, error } = await auth.supabase.rpc('mfa_ok');
+  if (error || mfaOk !== true) {
+    return { ok: false, status: 403, error: 'Sign in with your two-step code to do this.' };
+  }
+  return auth;
 }
 
 /**

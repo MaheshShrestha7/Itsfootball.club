@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { rateLimit, durableRateLimit, getClientIp } from '@/lib/rate-limit';
+import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 import { FRIENDLY_TYPE, friendlyMessage, parseFriendly } from '@/lib/friendlies';
 import { isUuid } from '@/lib/ids';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
@@ -62,6 +63,18 @@ export async function POST(req: NextRequest) {
     // Pretend success so bots don't learn their submission was rejected.
     if (typeof (body as any).website === 'string' && (body as any).website.trim().length > 0) {
       return NextResponse.json({ success: true });
+    }
+
+    // Bot check, as on the sponsor form (enforced only once both Turnstile keys are set), and a
+    // per-IP ceiling shared by every Workers isolate
+    if (!(await verifyTurnstile((body as Record<string, unknown>).captchaToken, ip))) {
+      return NextResponse.json({ success: false, error: TURNSTILE_FAILED }, { status: 400 });
+    }
+    if (!(await durableRateLimit(`contact-ip:${ip}`, 20, 60 * 60 * 1000))) {
+      return NextResponse.json(
+        { success: false, error: 'Too many messages sent. Please try again later.' },
+        { status: 429 }
+      );
     }
 
     const clubId = typeof (body as any).club_id === 'string' ? (body as any).club_id : '';
@@ -180,7 +193,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: isCooldown
+          error: /lot of messages/i.test(error.message || '')
+            ? 'This club has had a lot of messages in the last hour. Please try again later.'
+            : isCooldown
             ? 'You already sent a message recently. Please wait a few minutes before sending another.'
             : 'Your message could not be sent. Please try again in a moment.',
         },

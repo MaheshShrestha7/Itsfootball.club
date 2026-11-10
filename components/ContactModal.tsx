@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Club, InquiryType } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -10,6 +10,7 @@ import FriendlyInviteFields, { emptyFriendlyForm, friendlyPayload, type Friendly
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FRIENDLY_TYPE, invitableTeams } from '@/lib/friendlies';
+import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 
 interface ContactModalProps {
   club: Club;
@@ -63,6 +64,9 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
   // Honeypot: hidden from real visitors via CSS + aria-hidden; bots that fill
   // every field they find trip it, and the submission is silently dropped.
   const [website, setWebsite] = useState('');
+  // Bot check (Cloudflare Turnstile); renders nothing until the site key is set
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captcha = useRef<CaptchaHandle>(null);
 
   const handleResetAndClose = () => {
     setIsSubmitted(false);
@@ -93,6 +97,11 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       setSendError('Pick the team you’d like to play.');
       return;
     }
+    const notReady = captchaError(captchaToken);
+    if (notReady) {
+      setSendError(notReady);
+      return;
+    }
 
     setSending(true);
     setSendError(null);
@@ -105,8 +114,9 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
       message,
     }, website, about, isFriendly && friendlyTeam
       ? { team_id: friendlyTeam.id, details: friendlyPayload(friendlyForm, friendlyTeam.name), visitor_club_id: friendlyForm.visitor_club_id || undefined }
-      : undefined);
+      : undefined, captchaToken);
     setSending(false);
+    captcha.current?.reset();
 
     if (!result.success) {
       setSendError(result.error || 'Your message could not be sent.');
@@ -339,6 +349,10 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                 value={message}
                 onChange={e => setMessage(e.target.value)}
               />
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <Captcha ref={captcha} onToken={setCaptchaToken} />
             </div>
 
             {sendError && (

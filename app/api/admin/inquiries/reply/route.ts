@@ -5,6 +5,7 @@ import { CLUB_BRAND_COLUMNS, clubBrand, type ClubBrandRow } from '@/lib/email/cl
 import { sendClubEmails, looksLikeEmail } from '@/lib/email/club-emails';
 import { inquiryReply } from '@/lib/email/templates';
 import { isUuid } from '@/lib/ids';
+import { durableRateLimit } from '@/lib/rate-limit';
 
 // Replies to a contact-form enquiry from the Inbox (migration 20261119).
 //   POST { clubId, inquiryId, body, senderName }   club admins who can edit the Inbox
@@ -24,6 +25,14 @@ export async function POST(req: NextRequest) {
 
   const auth = await requireClubPerm(req, input.clubId, ['inquiries'], 'edit');
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  // Each reply emails the enquirer, whose address anyone could have typed into the contact form, so
+  // cap replies per club and per enquiry (shared across Workers isolates). Normal use never gets near.
+  const perClub = await durableRateLimit(`inquiry-reply:${input.clubId}`, 30, 60 * 60 * 1000);
+  const perInquiry = perClub && await durableRateLimit(`inquiry-reply:${input.clubId}:${input.inquiryId}`, 5, 60 * 60 * 1000);
+  if (!perClub || !perInquiry) {
+    return NextResponse.json({ error: 'That\'s a lot of replies in an hour. Please wait a while before sending more.' }, { status: 429 });
+  }
 
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'Replies cannot be saved right now.' }, { status: 503 });
