@@ -11,6 +11,7 @@ import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
 import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Pin, CheckCircle2 } from 'lucide-react';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
+import PopupPanel from '@/components/PopupPanel';
 
 export default function AdminContentPage({
   params,
@@ -240,7 +241,7 @@ export default function AdminContentPage({
           justifyContent: 'center',
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setModalOpen(false)} label="News article" className="glass-panel" style={{
             width: '100%',
             maxWidth: '820px',
             maxHeight: '90vh',
@@ -362,7 +363,7 @@ export default function AdminContentPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

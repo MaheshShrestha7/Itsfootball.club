@@ -3,7 +3,8 @@ import { SITE_URL } from '@/lib/seo';
 import { clubSlugFromPath, isPlatformHost } from '@/lib/slugs';
 import type { EmailBrand } from './templates';
 
-export const CLUB_BRAND_COLUMNS = 'id, slug, name, logo_url, primary_color, custom_domain';
+// config: the club's time zone (config.time_zone) for dates in its emails
+export const CLUB_BRAND_COLUMNS = 'id, slug, name, logo_url, primary_color, custom_domain, config';
 
 export interface ClubBrandRow {
   id: string;
@@ -12,6 +13,7 @@ export interface ClubBrandRow {
   logo_url: string | null;
   primary_color: string | null;
   custom_domain: string | null;
+  config?: { time_zone?: unknown } | null;
 }
 
 /** Public base URL of a club's site: its own domain when it has one */

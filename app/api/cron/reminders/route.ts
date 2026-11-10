@@ -12,6 +12,7 @@ import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@
 import { filterDrafts, looksLikeEmail, materialize, memberRecipient, MEMBER_RECIPIENT_COLUMNS, sendClubEmails, type EmailDraft } from '@/lib/email/club-emails';
 import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
 import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/format';
+import { clubTimeZone } from '@/lib/dates';
 import { logEvent } from '@/lib/platform-events';
 
 // Daily reminder emails, triggered by the Cloudflare cron in worker.ts (or by hand:
@@ -77,7 +78,7 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
         childName: recipient.childName,
         fixture: `${match.home_team_name} vs ${match.away_team_name}`,
         competition: match.title || match.competition, // tournament games carry their stage here, e.g. "Group A • Round 4"
-        when: formatMatchWhen(match.match_date, match.match_time),
+        when: formatMatchWhen(match.match_date, match.match_time, clubTimeZone(club)),
         venue: match.venue,
         link: `${clubBaseUrl(club)}/availability?token=${encodeURIComponent(r.response_token)}`,
       }),
@@ -114,7 +115,7 @@ async function eventDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
         unsubscribeUrl,
         attendeeName: a.attendee_name,
         event: event.title,
-        when: formatWhen(event.start_time),
+        when: formatWhen(event.start_time, clubTimeZone(club)),
         venue: event.location,
         link: `${clubBaseUrl(club)}/events/${event.id}`,
       }),

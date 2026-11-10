@@ -23,6 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
+import PopupPanel from '@/components/PopupPanel';
 
 /** "2026-07-01" -> "1 Jul 2026" (read as a calendar date, so no time-zone shift); anything else shown as stored */
 const seasonDay = (date: string | null | undefined) => {
@@ -418,7 +419,7 @@ export default function AdminSeasonsPage({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setIsModalOpen(false)} label="Season details" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: '560px',
@@ -567,7 +568,7 @@ export default function AdminSeasonsPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 
@@ -586,7 +587,7 @@ export default function AdminSeasonsPage({
           zIndex: 9999,
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setSeasonToDelete(null)} label="Delete season" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: '480px',
@@ -637,7 +638,7 @@ export default function AdminSeasonsPage({
                 Delete the season
               </button>
             </div>
-          </div>
+          </PopupPanel>
         </div>
       )}
     </div>

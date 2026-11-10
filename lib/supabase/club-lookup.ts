@@ -20,7 +20,7 @@ export interface ClubMetadataRow {
   stadium_address: string | null;
   founded_year: number | null;
   /** config.kind 'event': a tournament-only club (lib/public-tournaments.ts) */
-  config: { kind?: string; organiser?: string; team_size?: string } | null;
+  config: { kind?: string; organiser?: string; team_size?: string; time_zone?: string } | null;
 }
 
 async function fetchActiveClubs(): Promise<ClubMetadataRow[] | null> {
@@ -341,6 +341,19 @@ export interface LatestPhotoRow { id: string; club_id: string; title: string | n
  * The newest published news and photos across every club, for the platform home page.
  * Over-fetches so the page can drop rows of clubs it doesn't list (tournament-only clubs) and still show 3.
  */
+export interface HomeDemoClub { slug: string; name: string }
+
+/**
+ * The club the platform home page links to as its demo (F10-9, migration 20261162), picked in
+ * Mission Control. null: none picked yet (or before that migration), so the page keeps its old pick.
+ */
+export async function findHomeDemoClub(): Promise<HomeDemoClub | null> {
+  const rows = await publicRows<{ clubs: { slug: string; name: string; is_active: boolean } | null }>(
+    'platform_home_demo?select=clubs(slug,name,is_active)&club_id=not.is.null&limit=1', 300);
+  const club = rows?.[0]?.clubs;
+  return club?.is_active && club.slug ? { slug: club.slug, name: club.name } : null;
+}
+
 export async function listLatestClubContent(limit = 12): Promise<{ news: LatestNewsRow[]; photos: LatestPhotoRow[] }> {
   const now = `${new Date().toISOString().slice(0, 13)}:59:59Z`;
   const [news, photos] = await Promise.all([

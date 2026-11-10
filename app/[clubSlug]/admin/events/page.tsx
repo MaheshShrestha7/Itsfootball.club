@@ -34,6 +34,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney } from '@/lib/finance';
 import { toDateTimeLocal } from '@/lib/tournament-engine';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
+import PopupPanel from '@/components/PopupPanel';
 
 const MAX_REPEAT_WEEKS = 26;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -455,7 +456,7 @@ export default function AdminEventsPage({
           justifyContent: 'center',
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setModalOpen(false)} label="Event details" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: '560px',
@@ -655,7 +656,7 @@ export default function AdminEventsPage({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

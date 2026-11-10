@@ -22,7 +22,7 @@ export async function findSponsorByKey(db: SupabaseClient, key: unknown): Promis
   if (!isSponsorKey(key)) return null;
   const { data: sponsor } = await db.from('sponsors').select('*').eq('access_key', key).maybeSingle();
   if (!sponsor) return null;
-  const { data: club } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email, stadium_address, config`).eq('id', sponsor.club_id).maybeSingle();
+  const { data: club } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email, stadium_address`).eq('id', sponsor.club_id).maybeSingle();
   if (!club) return null;
   return { sponsor: sponsor as PortalSponsorRow, club: club as PortalClub };
 }

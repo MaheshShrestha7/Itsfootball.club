@@ -222,7 +222,7 @@ export default function AdminHeroSliderPage({
       image_url: customImageForm.image_url,
       title: customImageForm.title,
       subtitle: customImageForm.subtitle,
-      badge: customImageForm.badge || 'SPOTLIGHT',
+      badge: customImageForm.badge || '',
       cta_label: customImageForm.cta_label || 'Find out more',
       cta_link: customImageForm.cta_link || `/${club.slug}`,
       is_active: true,
@@ -381,7 +381,7 @@ export default function AdminHeroSliderPage({
 
                 <div className="row row-loose row-wrap">
                   <div className="btn btn-primary btn-sm" style={{ pointerEvents: 'none', fontWeight: 700 }}>
-                    {currentPreview.cta_label || 'Explore Action'}
+                    {currentPreview.cta_label || 'Find out more'}
                   </div>
                   <span className="text-note" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                     Links to: {currentPreview.cta_link || `/${club.slug}`}

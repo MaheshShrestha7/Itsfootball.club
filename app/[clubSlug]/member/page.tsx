@@ -2020,10 +2020,10 @@ export default function MemberPortalPage({
                           >
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.35rem' }}>
                               <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isAdmin ? 'var(--c-sky)' : 'var(--c-green)' }}>
-                                {isAdmin ? `🏛️ ${msg.sender_name}`
+                                {isAdmin ? `${msg.sender_name} · ${club.name}`
                                   // A parent or guardian can write about this member too
-                                  : msg.sender_email && activeMember.email && msg.sender_email.toLowerCase() !== activeMember.email.toLowerCase() ? `👤 ${msg.sender_name}`
-                                  : `👤 You (${activeMember.full_name})`}
+                                  : msg.sender_email && activeMember.email && msg.sender_email.toLowerCase() !== activeMember.email.toLowerCase() ? msg.sender_name
+                                  : `You (${activeMember.full_name})`}
                               </span>
                               <span className="text-meta">
                                 {new Date(msg.created_at).toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' })}

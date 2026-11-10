@@ -25,7 +25,33 @@ export default function ClubShop({ club, embedded = false }: { club: Club; embed
   const [buyer, setBuyer] = useState({ name: '', email: '' });
   const [checkout, setCheckout] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
-  // ponytail: the cart lives in memory, so a cancelled card checkout starts over; sessionStorage if buyers mind
+
+  // The cart is kept for this tab (F10-4), so Back from a cancelled card payment finds it as it was.
+  // A paid order empties it. sessionStorage can be missing or full (private windows): then it just isn't kept.
+  const cartKey = `itsfootball_shop_cart_${club.id}`;
+  const [cartLoaded, setCartLoaded] = useState(false);
+  useEffect(() => {
+    const paid = !embedded && new URLSearchParams(window.location.search).get('payment') === 'success';
+    try {
+      if (paid) sessionStorage.removeItem(cartKey);
+      else {
+        const saved = JSON.parse(sessionStorage.getItem(cartKey) || '[]');
+        if (Array.isArray(saved)) {
+          setCart(saved.filter((l): l is CartLine =>
+            !!l && typeof l.productId === 'string' && typeof l.size === 'string'
+            && Number.isInteger(l.quantity) && l.quantity >= 1 && l.quantity <= MAX_QUANTITY));
+        }
+      }
+    } catch { /* not kept */ }
+    setCartLoaded(true);
+  }, [cartKey, embedded]);
+  useEffect(() => {
+    if (!cartLoaded) return;
+    try {
+      if (cart.length) sessionStorage.setItem(cartKey, JSON.stringify(cart));
+      else sessionStorage.removeItem(cartKey);
+    } catch { /* not kept */ }
+  }, [cart, cartKey, cartLoaded]);
 
   useEffect(() => {
     if (!embedded) setPaymentNotice(new URLSearchParams(window.location.search).get('payment'));

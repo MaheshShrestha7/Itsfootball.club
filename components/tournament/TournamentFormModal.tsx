@@ -11,6 +11,7 @@ import { COVER_PRESETS } from '@/lib/cover-presets';
 import { defaultSeasonLabel } from '@/lib/season';
 import { STAGE_TITLES, effectiveGroupRules, knockoutStageFor, toDateTimeLocal } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
+import PopupPanel from '@/components/PopupPanel';
 
 type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'>;
 
@@ -160,7 +161,7 @@ export default function TournamentFormModal({
       }}
       onClick={onClose}
     >
-      <div
+      <PopupPanel onClose={onClose} label="Tournament details"
         style={{
           background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
           border: '1px solid rgba(var(--tint-rgb), 0.12)',
@@ -463,7 +464,7 @@ export default function TournamentFormModal({
             </button>
           </div>
         </form>
-      </div>
+      </PopupPanel>
     </div>
   );
 }

@@ -276,9 +276,11 @@ export default function AdminTournamentsPage({
                         <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                       </div>
 
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                        {tourn.description || 'Official club championship tournament.'}
-                      </p>
+                      {tourn.description && (
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                          {tourn.description}
+                        </p>
+                      )}
 
                       <div
                         style={{

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
+import { useDialog } from '@/lib/use-escape-to-close';
 
 export type PosterPaper = 'A5' | 'A4' | 'A3';
 const PAPERS: [PosterPaper, string][] = [['A5', 'Table card'], ['A4', 'Home printer'], ['A3', 'Gate or fence']];
@@ -23,8 +24,13 @@ export default function PrintablePoster({ accent, zoom, onClose, onPrint, contro
   children: React.ReactNode;
 }) {
   const [paper, setPaper] = useState<PosterPaper>('A4');
+  const dialogRef = useDialog<HTMLDivElement>(true, onClose);
   return createPortal(
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Poster"
       className="printable-poster-overlay"
       style={{
         position: 'fixed', inset: 0, overflowY: 'auto', overscrollBehavior: 'contain', background: 'rgba(0, 0, 0, 0.9)',

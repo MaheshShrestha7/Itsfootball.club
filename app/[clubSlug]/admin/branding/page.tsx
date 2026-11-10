@@ -10,6 +10,7 @@ import ImageUploadZone from '@/components/ImageUploadZone';
 import KitDesignerPreview from '@/components/KitDesignerPreview';
 import RichTextEditor from '@/components/RichTextEditor';
 import { isArticleEmpty } from '@/lib/article-text';
+import { CLUB_TIME_ZONES, clubTimeZone } from '@/lib/dates';
 import { confirmAction } from '@/components/ConfirmDialog';
 import type { Club } from '@/lib/supabase/types';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
@@ -47,6 +48,8 @@ function formFromClub(club: Club | undefined) {
     slide_ground: slides[1] || '',
     contact_email: club?.contact_email || '',
     contact_phone: club?.contact_phone || '',
+    // Where the club plays (F10-1): match times in emails, page titles and Google's event data
+    time_zone: clubTimeZone(club),
   };
 }
 type BrandingForm = ReturnType<typeof formFromClub>;
@@ -56,6 +59,7 @@ const FORM_SECTIONS: [string, (keyof BrandingForm)[]][] = [
   ['Name, crest and photos', ['name', 'slug', 'short_name', 'founded_year', 'motto', 'logo_url', 'banner_url', 'slide_matchday', 'slide_ground']],
   ['Club colours', ['primary_color', 'secondary_color', 'accent_color']],
   ['Contact details', ['contact_email', 'contact_phone']],
+  ['Time zone', ['time_zone']],
 ];
 /** A field still as saved. Colours compare without case (a preset writes #10B981, the picker #10b981);
  *  everything else exactly, so renaming "Ancc" to "ANCC" still counts as a change */
@@ -191,8 +195,11 @@ export default function AdminBrandingPage({
     const cleanStory = isArticleEmpty(story) ? '' : story;
     const storyChanged = cleanStory !== (club.about_story || '');
 
+    // Kept in config, so it never depends on a new column; only sent when it changed
+    const zoneChanged = formData.time_zone !== clubTimeZone(club);
     updateClubBranding(club.id, {
       name, short_name, motto, primary_color, secondary_color, accent_color, logo_url, banner_url, contact_email, contact_phone,
+      ...(zoneChanged ? { config: { ...(club.config || {}), time_zone: formData.time_zone } } : {}),
       ...(founded_year ? { founded_year } : {}),
       slider_images: slides,
       slug: newSlug,
@@ -561,7 +568,7 @@ export default function AdminBrandingPage({
             <Mail size={20} aria-hidden="true" /> Contact details
           </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            Shown in your club site&apos;s footer and in replies to people who contact the club.
+            Your email and phone show in your club site&apos;s footer and in replies to people who contact the club.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
@@ -574,6 +581,13 @@ export default function AdminBrandingPage({
               <label htmlFor="branding-phone" className="form-label">Phone</label>
               <input id="branding-phone" type="tel" name="contact_phone" className="form-input" placeholder="e.g. 0400 000 000"
                 value={formData.contact_phone} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="branding-time-zone" className="form-label">Time zone</label>
+              <select id="branding-time-zone" name="time_zone" className="form-input" value={formData.time_zone} onChange={handleChange}>
+                {CLUB_TIME_ZONES.map(z => <option key={z.zone} value={z.zone}>{z.label}</option>)}
+              </select>
+              <p style={hintStyle}>Kick-off times in emails, reminders and search results use this.</p>
             </div>
           </div>
         </section>

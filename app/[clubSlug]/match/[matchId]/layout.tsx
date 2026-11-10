@@ -4,7 +4,7 @@ import { findClubMatch } from '@/lib/supabase/club-lookup';
 import { matchPath } from '@/lib/slugs';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { tournamentMatchLabel } from '@/lib/tournament-engine';
-import { TIME_ZONE } from '@/lib/email/format';
+import { clubTimeZone } from '@/lib/dates';
 
 export async function generateMetadata({
   params,
@@ -33,7 +33,7 @@ export async function generateMetadata({
     // A team that hides its scores publicly: the description names the fixture, never the score
     const score = match.score_hidden ? fixture : `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}`;
     const date = match.match_date
-      ? new Date(match.match_date).toLocaleDateString('en-AU', { timeZone: TIME_ZONE, day: 'numeric', month: 'short', year: 'numeric' })
+      ? new Date(match.match_date).toLocaleDateString('en-AU', { timeZone: clubTimeZone(club), day: 'numeric', month: 'short', year: 'numeric' })
       : null;
     // Same teams can meet twice (home and away, or a group game and a semi-final on one day), so the title
     // carries the cup stage, or else the date, to keep every match's title unique

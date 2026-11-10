@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { isUuid } from '@/lib/ids';
 import { FORMAT_LABEL, halfLabel, ourSide, shortName } from '@/lib/friendlies';
 import { formatMatchWhen } from '@/lib/email/format';
+import { clubTimeZone } from '@/lib/dates';
 import { DEFAULT_CREST } from '@/lib/crest';
 import type { ClubTeamFormat } from '@/lib/supabase/types';
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   if (error || !offers?.length) return NextResponse.json({ offers: [] });
 
   const [{ data: clubs }, { data: matches }, { data: inquiries }] = await Promise.all([
-    db.from('clubs').select('id, name, logo_url').in('id', [...new Set(offers.map(o => o.from_club_id))]),
+    db.from('clubs').select('id, name, logo_url, config').in('id', [...new Set(offers.map(o => o.from_club_id))]),
     db.from('matches').select(`${MATCH_COLUMNS}, match_format`).in('id', offers.map(o => o.from_match_id)),
     db.from('contact_inquiries').select('id, sender_name, details').in('id', offers.map(o => o.inquiry_id).filter(Boolean)),
   ]);
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
       sender: inq?.sender_name || null,
       /** The team the invitation was for on our side, to start the picker on */
       our_team_hint: details.their_team || null,
-      when: formatMatchWhen(m.match_date, m.match_time),
+      when: formatMatchWhen(m.match_date, m.match_time, clubTimeZone(from)),
       // From our side: their home game is away for us
       we_host: !m.is_club_home,
       venue: m.venue,

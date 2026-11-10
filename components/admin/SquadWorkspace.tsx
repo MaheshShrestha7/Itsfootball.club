@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import BulkMemberModal from '@/components/BulkMemberModal';
 import { confirmAction } from '@/components/ConfirmDialog';
+import PopupPanel from '@/components/PopupPanel';
 
 const ALL_POSITIONS: { value: PlayerPosition; label: string; desc: string }[] = [
   { value: 'GK', label: 'GK', desc: 'Goalkeeper' },
@@ -516,7 +517,7 @@ export default function SquadWorkspace({
           padding: '1rem',
           overflowY: 'auto',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setModalOpen(false)} label="Member details" className="glass-panel" style={{
             width: '100%',
             maxWidth: 'min(680px, calc(100vw - 2rem))',
             maxHeight: '90vh',
@@ -1059,7 +1060,7 @@ export default function SquadWorkspace({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 
@@ -1078,7 +1079,7 @@ export default function SquadWorkspace({
           justifyContent: 'center',
           padding: '1rem',
         }}>
-          <div className="glass-panel" style={{
+          <PopupPanel onClose={() => setStatsModalOpen(false)} label="Edit stats" className="glass-panel" style={{
             margin: 'auto',
             width: '100%',
             maxWidth: 'min(480px, calc(100vw - 2rem))',
@@ -1191,7 +1192,7 @@ export default function SquadWorkspace({
                 </button>
               </div>
             </form>
-          </div>
+          </PopupPanel>
         </div>
       )}
 

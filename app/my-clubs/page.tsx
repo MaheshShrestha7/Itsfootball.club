@@ -249,7 +249,7 @@ export default function MyClubsPage() {
                         {/* Owner Badge */}
                         <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
                           <span className="badge badge-gold" style={{ fontSize: '0.7rem', padding: '0.2rem 0.6rem', fontWeight: 800 }}>
-                            👑 OWNER
+                            Owner
                           </span>
                         </div>
 

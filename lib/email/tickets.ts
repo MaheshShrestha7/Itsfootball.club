@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
 import { formatWhen } from '@/lib/email/format';
+import { clubTimeZone } from '@/lib/dates';
 import { sendEmail } from '@/lib/email/send';
 import { ticketsEmail } from '@/lib/email/templates';
 import type { Payment } from '@/lib/supabase/types';
@@ -23,7 +24,7 @@ export async function emailTickets(db: SupabaseClient, pay: Payment): Promise<bo
     buyerName: pay.payer_name || '',
     event: event.title,
     quantity,
-    when: formatWhen(event.start_time),
+    when: formatWhen(event.start_time, clubTimeZone(club as ClubBrandRow)),
     venue: event.location,
     link: `${clubBaseUrl(club as ClubBrandRow)}/tickets/${pay.id}`,
     sponsors: sponsors.map(sp => ({ name: sp.name, logoUrl: sp.logo_url, url: sp.website_url })),

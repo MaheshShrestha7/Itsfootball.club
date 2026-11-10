@@ -7,6 +7,8 @@ import { formatMoney } from '@/lib/finance';
 import { formatDate } from '@/lib/dates';
 import ClubConsole from '@/components/admin/platform/ClubConsole';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
+import PopupPanel from '@/components/PopupPanel';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import {
   X,
   Building,
@@ -46,8 +48,29 @@ export default function ClubDetailDrawer({
 }: ClubDetailDrawerProps) {
   const [copiedEmail, setCopiedEmail] = React.useState(false);
   const [copiedSlug, setCopiedSlug] = React.useState(false);
+  // The home page's "See a live club site" (F10-9): undefined while loading, 'missing' before migration 20261162
+  const [demoId, setDemoId] = React.useState<string | null | 'missing' | undefined>(undefined);
+  const [demoSaving, setDemoSaving] = React.useState(false);
+  React.useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !club) return;
+    client.from('platform_home_demo').select('club_id').maybeSingle()
+      .then(({ data, error }) => setDemoId(error ? 'missing' : (data?.club_id as string | null) ?? null));
+  }, [club]);
 
   if (!club) return null;
+
+  const isDemo = demoId === club.id;
+  const setDemo = async (on: boolean) => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    setDemoSaving(true);
+    const { error } = await client.rpc('platform_set_home_demo', { p_club_id: on ? club.id : null });
+    setDemoSaving(false);
+    if (error) return showToast(error.message.includes('Operators') ? 'Only Super admins and Operators can change this.' : 'Could not change the home page demo.');
+    setDemoId(on ? club.id : null);
+    showToast(on ? `${club.name} is now the home page demo. The home page shows it within 5 minutes.` : 'The home page demo is cleared.');
+  };
 
   const copyToClipboard = (text: string, type: 'email' | 'slug') => {
     navigator.clipboard.writeText(text);
@@ -75,7 +98,7 @@ export default function ClubDetailDrawer({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <PopupPanel onClose={onClose} label="Club details"
         className="glass-panel"
         style={{
           width: '100%',
@@ -352,6 +375,31 @@ export default function ClubDetailDrawer({
             </div>
           </div>
 
+          {/* The club itsfootball.club's home page sends visitors to as a live example */}
+          {demoId !== undefined && (
+            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Home page demo</div>
+              {demoId === 'missing' ? (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Run the 20261162_home_demo_club.sql migration to choose which club the home page shows.
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                    {isDemo
+                      ? 'The home page links to this club as "See a live club site".'
+                      : demoId
+                        ? 'Another club is the home page demo. Using this one replaces it.'
+                        : 'No club is chosen yet, so the home page links to the first club in the list.'}
+                  </p>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={demoSaving || !club.is_active} onClick={() => setDemo(!isDemo)}>
+                    {demoSaving ? 'Saving…' : isDemo ? 'Stop using as the demo' : 'Use as the home page demo'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Section 5: Operator Security & Status Controls */}
           <div
             className="glass-panel"
@@ -393,7 +441,7 @@ export default function ClubDetailDrawer({
             Club registered on {formatDate(club.created_at)}
           </div>
         </div>
-      </div>
+      </PopupPanel>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { PlatformAdmin } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
 import { ShieldCheck, X, UserPlus, Trash2 } from 'lucide-react';
+import PopupPanel from '@/components/PopupPanel';
 
 interface PlatformAdminsModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export default function PlatformAdminsModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
+      <PopupPanel onClose={onClose} label="Platform admins" className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ShieldCheck size={22} color="#818CF8" />
@@ -181,7 +182,7 @@ export default function PlatformAdminsModal({
             </button>
           </div>
         </form>
-      </div>
+      </PopupPanel>
     </div>
   );
 }

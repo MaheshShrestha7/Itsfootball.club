@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { findEventById } from '@/lib/supabase/club-lookup';
-import { DATE_LOCALE, SITE_TIME_ZONE } from '@/lib/dates';
+import { DATE_LOCALE, clubTimeZone } from '@/lib/dates';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
@@ -24,7 +24,7 @@ export async function generateMetadata({
       });
     }
     const date = event.start_time
-      ? new Date(event.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: SITE_TIME_ZONE })
+      ? new Date(event.start_time).toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: clubTimeZone(club) })
       : null;
     return pageMetadata({
       title: fitTitle(event.title, clubName(club)),

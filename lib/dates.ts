@@ -7,8 +7,28 @@ export const DATE_LOCALE = 'en-AU';
 
 /** The time zone pages are first drawn in, before the visitor's own takes over (components/LocalTime).
  *  Search engines and link previews only ever see this one, so it's where most clubs play.
- *  ponytail: one zone for every club; store a time zone per club if Perth or Brisbane clubs see the wrong first draw. */
+ *  A club that plays somewhere else picks its own in Admin -> Branding (clubTimeZone below). */
 export const SITE_TIME_ZONE = 'Australia/Sydney';
+
+/** The time zones a club can pick (F10-1), saved in clubs.config.time_zone */
+export const CLUB_TIME_ZONES = [
+  { zone: 'Australia/Sydney', label: 'Sydney and Canberra (NSW, ACT)' },
+  { zone: 'Australia/Melbourne', label: 'Melbourne (VIC)' },
+  { zone: 'Australia/Brisbane', label: 'Brisbane (QLD, no daylight saving)' },
+  { zone: 'Australia/Adelaide', label: 'Adelaide (SA)' },
+  { zone: 'Australia/Hobart', label: 'Hobart (TAS)' },
+  { zone: 'Australia/Darwin', label: 'Darwin (NT)' },
+  { zone: 'Australia/Perth', label: 'Perth (WA)' },
+  { zone: 'Pacific/Auckland', label: 'New Zealand' },
+] as const;
+
+const CLUB_ZONE_SET = new Set<string>(CLUB_TIME_ZONES.map(z => z.zone));
+
+/** The club's own time zone, or the site's when it hasn't picked one (or the value isn't one we offer) */
+export function clubTimeZone(club?: { config?: { time_zone?: unknown } | null } | null): string {
+  const zone = club?.config?.time_zone;
+  return typeof zone === 'string' && CLUB_ZONE_SET.has(zone) ? zone : SITE_TIME_ZONE;
+}
 
 export function formatDate(value: string | null | undefined): string {
   if (!value) return '—';

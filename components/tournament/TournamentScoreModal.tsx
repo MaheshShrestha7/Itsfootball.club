@@ -270,7 +270,7 @@ export default function TournamentScoreModal({
                     cursor: 'pointer',
                   }}
                 >
-                  {st === 'live' ? '🔴 LIVE' : st === 'completed' ? '✓ FULL TIME' : 'UPCOMING'}
+                  {st === 'live' ? 'Live' : st === 'completed' ? 'Full time' : 'Upcoming'}
                 </button>
               ))}
             </div>
