@@ -46,4 +46,11 @@ assert.deepEqual(
 // 0-0: no "not logged" line
 assert.deepEqual(matchReport({ ...base, homeScore: 0, awayScore: 0 }), ['Riverside FC and Parramatta City drew 0–0.']);
 
+// A tournament or in-house game has no away side
+assert.equal(matchReport({ ...base, homeScore: 0, awayScore: 2, neutral: true, goals: [{ minute: 5, side: 'away', player: 'A' }, { minute: 9, side: 'away', player: 'A' }] })[0],
+  'Parramatta City beat Riverside FC 2–0.');
+// A level cup game settled on penalties
+assert.equal(matchReport({ ...base, homeScore: 1, awayScore: 1, neutral: true, venue: 'Riverside Oval', shootout: { home: 3, away: 4 }, goals: [] })[0],
+  'Riverside FC and Parramatta City drew 1–1 at Riverside Oval. Parramatta City won 4–3 on penalties.');
+assert.equal(matchReport({ ...base, homeScore: 1, awayScore: 1, shootout: { home: 0, away: 0 }, goals: [] })[0], 'Riverside FC and Parramatta City drew 1–1.');
 console.log('match-report checks passed');

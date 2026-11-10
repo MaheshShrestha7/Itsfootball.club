@@ -114,7 +114,20 @@ export default function MatchCenterPage({
 
   // Man of the Match, resolved from the verified audit ledger for this fixture
   const motmLog = match ? activityLogs.find(l => l.event_type === 'match_motm' && l.reference_id === match.id) : undefined;
-  const motmMember = motmLog ? members.find(m => m.id === motmLog.member_id) : undefined;
+  // The stats saved at full time hold it too, also when ClubScore is switched off and the points log
+  // has no row (public_match_motm, migration 20261165; without it the log alone is used, as before)
+  const [savedMotmId, setSavedMotmId] = useState<{ matchId: string; memberId: string | null } | null>(null);
+  const motmMatchId = match?.status === 'completed' ? match.id : undefined;
+  const motmAudited = match?.is_audited;
+  useEffect(() => {
+    if (!motmMatchId || !isSupabaseConfigured) return;
+    let live = true;
+    getSupabaseClient()?.rpc('public_match_motm', { p_match_id: motmMatchId })
+      .then(({ data, error }) => { if (live && !error) setSavedMotmId({ matchId: motmMatchId, memberId: typeof data === 'string' ? data : null }); });
+    return () => { live = false; };
+  }, [motmMatchId, motmAudited]);
+  const motmId = (savedMotmId && savedMotmId.matchId === match?.id ? savedMotmId.memberId : null) || motmLog?.member_id;
+  const motmMember = motmId ? members.find(m => m.id === motmId) : undefined;
   const goalEvents = events.filter(e => GOAL_EVENT_TYPES.includes(e.event_type)).slice().sort(compareEventMinute);
 
   // Each side's color: the club's goes to the club's own side, not simply to "home"
@@ -139,6 +152,12 @@ export default function MatchCenterPage({
     const id = memberId && pageIds.has(memberId) ? memberId : ownSide ? idsByName.get(name.trim().toLowerCase()) : undefined;
     return id ? <Link href={`/${club.slug}/squad/${id}`} className="player-name-link">{name}</Link> : name;
   };
+
+  // "?share=1" (the link Match Centre gives once the stats are saved) opens the share graphic straight away
+  const [shareOnArrival, setShareOnArrival] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('share') === '1') setShareOnArrival(true);
+  }, []);
 
   const [logoFailed, setLogoFailed] = useState({ home: false, away: false });
   const [activeTab, setActiveTab] = useState<'timeline' | 'lineups' | 'stats'>('timeline');
@@ -447,12 +466,12 @@ export default function MatchCenterPage({
               {audioEnabled ? <Volume2 size={15} aria-hidden="true" /> : <VolumeX size={15} aria-hidden="true" />}
             </button>
 
-            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} photos={memberPhotos}
+            <MatchShareButton match={match} club={club} hideScore={scoreHidden} events={events} photos={memberPhotos} autoOpen={shareOnArrival}
               motm={motmMember ? { name: motmMember.full_name, photo: memberPhotos[motmMember.id] } : undefined} />
 
             {isClubAdmin && (
               <Link
-                href={`/${club.slug}/admin/match-center`}
+                href={`/${club.slug}/admin/match-center?match=${match.id}`}
                 className="btn btn-secondary btn-sm scroll-pill-item touch-target"
                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minHeight: '44px' }}
               >
@@ -769,6 +788,8 @@ export default function MatchCenterPage({
               goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
               redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name })),
               playerOfTheMatch: motmMember?.full_name,
+              neutral: !!match.tournament_id || match.match_type === 'internal',
+              shootout: match.home_penalty_score != null && match.away_penalty_score != null ? { home: match.home_penalty_score, away: match.away_penalty_score } : undefined,
             })}
           />
           <SupportedBy clubId={club.id} />
@@ -911,7 +932,8 @@ export default function MatchCenterPage({
                   No match events recorded yet. Updates will appear in real time as logged by club officials.
                 </div>
               ) : (
-                events.map(evt => {
+                // Live, the newest event is on top; once it's over the match reads from kick-off down
+                (match.status === 'completed' ? [...events].reverse() : events).map(evt => {
                   const isGoal = GOAL_EVENT_TYPES.includes(evt.event_type);
                   return (
                   <div
