@@ -6,14 +6,15 @@ import { platformApi } from '@/components/admin/platform/api';
 import { Crest, Avatar } from '@/components/admin/platform/McArt';
 import { formatMoney } from '@/lib/finance';
 import type { HealthReport } from '@/lib/platform-health';
-import type { PlatformClubItem, PlatformClubMember, PlatformOverview, OverviewClubRef } from '@/lib/supabase/types';
+import type { PlatformClubItem, PlatformClubMember, PlatformMetrics, PlatformOverview, OverviewClubRef } from '@/lib/supabase/types';
+import OverviewPulse from '@/components/admin/platform/OverviewPulse';
 import {
   FEATURES, GROUP_LABEL, KIND_LABEL, METHOD_LABEL, SOURCE_LABEL,
   changeLabel, pageLabel, quietClubs, ranked, setupFunnel, sparkBars, timeAgo,
   type Light, type MissionTab,
 } from '@/lib/mission-control';
 import {
-  Wallet, TrendingUp, LayoutGrid, Globe, AlertTriangle, ChevronRight, ChevronLeft, RefreshCw, Lock, Search, ExternalLink, Gauge,
+  Wallet, TrendingUp, LayoutGrid, Globe, AlertTriangle, ChevronRight, ChevronLeft, RefreshCw, Lock, Search, ExternalLink,
 } from 'lucide-react';
 
 type Screen =
@@ -24,6 +25,8 @@ type Screen =
 
 interface OverviewTabProps {
   clubs: PlatformClubItem[];
+  /** get_platform_metrics, for the week strip and the live feed */
+  metrics: PlatformMetrics | null;
   periodDays: number;
   periodOptions: { days: number; label: string }[];
   onPeriodChange: (days: number) => void;
@@ -43,7 +46,7 @@ const shortMoney = (cents: number | null | undefined) => {
 const dayLabel = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '');
 
 /** Mission Control -> Overview: money, club growth, feature usage, site traffic and problems, with drill-down. */
-export default function OverviewTab({ clubs, periodDays, periodOptions, onPeriodChange, onSelectTab, onSelectClub, onRefreshClubs }: OverviewTabProps) {
+export default function OverviewTab({ clubs, metrics, periodDays, periodOptions, onPeriodChange, onSelectTab, onSelectClub, onRefreshClubs }: OverviewTabProps) {
   const [data, setData] = useState<PlatformOverview | null>(null);
   const [health, setHealth] = useState<HealthReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -223,13 +226,8 @@ export default function OverviewTab({ clubs, periodDays, periodOptions, onPeriod
             </div>
             <div className="mc-ov-foot"><span>Same lights as System health</span><span className="go">Open <ChevronRight size={13} /></span></div>
           </button>
+          <OverviewPulse metrics={metrics} periodDays={periodDays} />
         </div>
-
-        <p className="mc-muted" style={{ marginTop: 16, textAlign: 'center' }}>
-          <button type="button" className="mc-pill-btn ghost" onClick={() => onSelectTab('cockpit')}>
-            <Gauge size={13} /> More stats: platform team, live activity, top clubs
-          </button>
-        </p>
       </div>
     );
   }

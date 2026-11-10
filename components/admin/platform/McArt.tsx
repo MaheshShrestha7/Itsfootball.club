@@ -24,7 +24,7 @@ export function LogoArt({ id }: { id: string }) {
 export function RailLogo() {
   return (
     <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
-      <path d="M7 30V11h26v19" fill="none" stroke="#F8FAFC" strokeWidth="3.2" strokeLinecap="square" />
+      <path d="M7 30V11h26v19" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="square" />
       <circle cx="14" cy="24" r="3.6" fill="#10B981" />
     </svg>
   );

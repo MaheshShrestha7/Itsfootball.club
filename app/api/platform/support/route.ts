@@ -3,6 +3,7 @@ import { requirePlatformAdmin } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
 import { isUuid } from '@/lib/ids';
 import { sendEmail } from '@/lib/email/send';
+import { logPlatformAction } from '@/lib/platform-audit';
 
 // Mission Control -> Support: answer a request (components/admin/platform/SupportTab.tsx).
 //   POST { requestId, body, status: 'waiting' | 'done' }   Operators and Super admins
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!isUuid(input?.requestId)) return NextResponse.json({ error: 'Missing request.' }, { status: 400 });
   if (!body || body.length > 4000) return NextResponse.json({ error: 'Write a reply (4000 characters at most).' }, { status: 400 });
 
-  const { data: request } = await db.from('support_requests').select('id, from_email, from_name, topic, message').eq('id', input.requestId).maybeSingle();
+  const { data: request } = await db.from('support_requests').select('id, club_id, from_email, from_name, topic, message').eq('id', input.requestId).maybeSingle();
   if (!request) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
 
   const quoted = request.message.split('\n').map((l: string) => `> ${l}`).join('\n');
@@ -45,5 +46,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Saved, but the email could not be sent. Try again or email them yourself.' }, { status: 502 });
   }
   await db.from('support_requests').update({ status, updated_at: new Date().toISOString() }).eq('id', request.id);
+  await logPlatformAction(db, auth, {
+    clubId: request.club_id, action: 'support_reply', table: 'support_requests', targetId: request.id,
+    summary: `Replied to the support request "${request.topic.slice(0, 120)}"${status === 'done' ? ' and closed it' : ''}`,
+  });
   return NextResponse.json({ ok: true });
 }

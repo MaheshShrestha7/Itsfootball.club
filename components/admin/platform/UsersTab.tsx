@@ -28,32 +28,45 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async (query: string = '') => {
+  const [query, setQuery] = useState(initialQuery.trim());
+  const [total, setTotal] = useState<number | null>(null);
+  const reqId = React.useRef(0);
+  const PAGE = 100;
+
+  // Search once typing stops, not on every key
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(searchQuery.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const fetchUsers = useCallback(async (q: string, offset = 0) => {
     const client = getSupabaseClient();
     if (!client) return;
+    const id = ++reqId.current;
     setLoading(true);
     try {
-      const { data, error } = await client.rpc('get_platform_users', {
-        p_search: query,
-        p_limit: 100,
-        p_offset: 0,
-      });
-
+      const [{ data, error }, count] = await Promise.all([
+        client.rpc('get_platform_users', { p_search: q, p_limit: PAGE, p_offset: offset }),
+        // Before migration 20261163 there's no count: the "of N" is left off
+        offset === 0 ? client.rpc('get_platform_people_count', { p_search: q }) : Promise.resolve(null),
+      ]);
+      if (id !== reqId.current) return;
       if (!error && data) {
-        setUsers(data as PlatformUserItem[]);
+        setUsers(prev => (offset ? [...prev, ...(data as PlatformUserItem[])] : (data as PlatformUserItem[])));
       } else if (error) {
         console.warn('Could not load platform users via RPC:', error.message);
       }
+      if (count) setTotal(count.error ? null : Number(count.data));
     } catch (err) {
       console.error('Error fetching platform users:', err);
     } finally {
-      setLoading(false);
+      if (id === reqId.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchUsers(searchQuery);
-  }, [fetchUsers, searchQuery]);
+    fetchUsers(query);
+  }, [fetchUsers, query]);
 
   const copyText = (text: string, id: string) => {
     navigator.clipboard?.writeText(text).catch(() => null);
@@ -74,12 +87,11 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
     <div>
       <div className="mc-page-h">
         <div>
-          <h1>Users</h1>
-          <p>Look up anyone with an account, across every club.</p>
+          <h1>People</h1>
+          <p>Look up anyone with an account, across every club{total != null && !query ? `. ${total.toLocaleString('en-AU')} people.` : '.'}</p>
         </div>
         <div className="right">
-          <span className="mc-eyebrow num">{users.length} shown</span>
-          <button type="button" className="mc-pill-btn ghost" onClick={() => fetchUsers(searchQuery)} disabled={loading}>
+          <button type="button" className="mc-pill-btn ghost" onClick={() => fetchUsers(query)} disabled={loading}>
             <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
         </div>
@@ -92,14 +104,19 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
             <input
               type="text"
               placeholder="Search email or full name"
-              aria-label="Search users"
+              aria-label="Search people"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </label>
+          <p className="mc-muted mc-list-note" role="status">
+            {loading ? 'Searching…' : query
+              ? `${(total ?? users.length).toLocaleString('en-AU')} ${(total ?? users.length) === 1 ? 'person matches' : 'people match'} "${query}"`
+              : total != null ? `Showing ${users.length.toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')}` : `Showing ${users.length}`}
+          </p>
           <div className="mc-ulist">
-            {loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>Loading users…</p>}
-            {!loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>No users match that search.</p>}
+            {loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>Loading people…</p>}
+            {!loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>No one matches that search.</p>}
             {users.map(u => (
               <button key={u.id} type="button" className="mc-urow" aria-pressed={selected?.id === u.id} onClick={() => setSelectedId(u.id)}>
                 <Avatar name={u.full_name || u.email} url={u.avatar_url} />
@@ -110,6 +127,13 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
               </button>
             ))}
           </div>
+          {users.length > 0 && users.length % PAGE === 0 && (total == null || users.length < total) && (
+            <div className="mc-more">
+              <button type="button" className="mc-pill-btn ghost" disabled={loading} onClick={() => fetchUsers(query, users.length)}>
+                {loading ? 'Loading…' : `Show ${total != null ? Math.min(PAGE, total - users.length) : PAGE} more`}
+              </button>
+            </div>
+          )}
         </div>
 
         {selected ? (

@@ -1299,6 +1299,10 @@ export interface PlatformAuditRow {
   summary: string;
   details: Record<string, unknown>;
   created_at: string;
+  /** From migration 20261163: clubs | people | support | broadcasts | grounds | jobs | admins */
+  kind?: string;
+  /** From migration 20261163: how many rows match the filters */
+  total_count?: number;
 }
 
 /** support_requests / support_replies (migration 20261146) */

@@ -17,6 +17,8 @@ interface Props {
   showToast: (msg: string) => void;
   /** Open requests, for the rail badge */
   onOpenCount: (n: number) => void;
+  /** The request picked in the list, so the web address can follow it */
+  onSelectRequest?: (id: string | null) => void;
 }
 
 const FILTERS: { id: Status; label: string }[] = [
@@ -26,7 +28,7 @@ const FILTERS: { id: Status; label: string }[] = [
 ];
 
 /** Messages from club admins (and owners stuck deleting their account), answered by email from here. */
-export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeople, showToast, onOpenCount }: Props) {
+export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeople, showToast, onOpenCount, onSelectRequest }: Props) {
   const [filter, setFilter] = useState<Status>('open');
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [counts, setCounts] = useState<Record<Status, number>>({ open: 0, waiting: 0, done: 0 });
@@ -130,7 +132,7 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
             <div className="mc-ulist">
               {!loading && shown.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>Nothing here.</p>}
               {shown.map(r => (
-                <button key={r.id} type="button" className="mc-urow" aria-pressed={selected?.id === r.id} onClick={() => setSelectedId(r.id)}>
+                <button key={r.id} type="button" className="mc-urow" aria-pressed={selected?.id === r.id} onClick={() => { setSelectedId(r.id); onSelectRequest?.(r.id); }}>
                   <div style={{ minWidth: 0 }}>
                     <b>{r.topic}</b>
                     <small>{clubs.find(c => c.id === r.club_id)?.name || r.from_email} · {timeAgo(r.created_at)}</small>
