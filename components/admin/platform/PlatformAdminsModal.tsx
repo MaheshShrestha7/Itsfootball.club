@@ -81,8 +81,8 @@ export default function PlatformAdminsModal({
 
         {/* Existing Admins List */}
         <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Active Admins ({adminsList.length})
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            Platform admins ({adminsList.length})
           </div>
           {adminsList.map(adm => (
             <div
@@ -121,8 +121,8 @@ export default function PlatformAdminsModal({
 
         {/* Add New Admin Form */}
         <form onSubmit={handleSubmit} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
-            Invite New Platform Admin
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
+            Invite a platform admin
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
             <input

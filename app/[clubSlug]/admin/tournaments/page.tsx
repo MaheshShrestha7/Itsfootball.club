@@ -257,7 +257,6 @@ export default function AdminTournamentsPage({
                             fontSize: '1.05rem',
                             fontWeight: 600,
                             color: 'var(--text-primary)',
-                            textShadow: '0 2px 4px var(--color-shadow)',
                           }}
                         >
                           {tourn.name}

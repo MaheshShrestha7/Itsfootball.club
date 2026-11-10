@@ -20,7 +20,7 @@ import {
   Shield, Radio, Trophy, Users, QrCode, Zap, Globe, ArrowRight, Check, X,
   CheckCircle2, AlertCircle, Flame, Wallet, BarChart3, Newspaper, CalendarCheck, DoorOpen,
   Palette, Crown, Mail, Upload, Search, Images, ArrowLeftRight, Goal, Megaphone,
-  Layers, ClipboardList, Share2, Timer, RotateCcw, AlertTriangle, Clock,
+  Layers, ClipboardList, Share2, Timer, RotateCcw, Clock, Link2,
 } from 'lucide-react';
 import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
@@ -871,110 +871,45 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], d
         </div>
       </div>
 
-      {/* ================= BEFORE / AFTER ================= */}
+      {/* ================= HOW MATCHDAY WORKS ================= */}
       <section className="lp-section">
         <div className="container">
           <div className="lp-head lp-head-center lp-reveal">
-            <div className="lp-matchday-tag">
-              The Matchday Reality Check
-            </div>
-            <h2 className="lp-h2">Your club runs on volunteers. Not on 40-message group chats.</h2>
+            <h2 className="lp-h2">Who&apos;s playing Sunday, sorted before Friday.</h2>
             <p className="lp-lede" style={{ maxWidth: 640, margin: '0.65rem auto 0' }}>
-              Every grassroots manager knows the Sunday morning panic. Here is what happens when your club runs on itsfootball.club instead.
+              No more counting thumbs-up in the group chat. Players answer from a link, you pick the team from their answers, and everyone sees it on your club site.
             </p>
           </div>
 
-          <div className="lp-vs-showcase lp-reveal">
-            {/* Left Column: Sunday Morning Group Chat Meltdown */}
-            <div className="lp-vs-col lp-vs-chaos">
-              <div className="lp-chat-header">
-                <div className="lp-chat-title-group">
-                  <span className="lp-chat-avatar"><Users size={16} /></span>
-                  <div>
-                    <div className="lp-chat-name">Sunday League Div 2 Squad (19)</div>
-                    <div className="lp-chat-sub">14 unread messages &middot; Sunday 9:18 AM</div>
-                  </div>
-                </div>
-                <span className="lp-chat-badge">BEFORE</span>
+          <ol className="lp-steps3 lp-reveal">
+            <li className="glass-panel">
+              <span className="lp-steps3-n">1</span>
+              <h3>Players answer</h3>
+              <p>Each player gets a link by email or WhatsApp and taps one button.</p>
+              <div className="lp-steps3-ans" aria-hidden="true">
+                <span className="on">In</span><span>Maybe</span><span>Out</span>
               </div>
-
-              <div className="lp-chat-messages">
-                <div className="lp-bubble">
-                  <div className="lp-bubble-author">Dave M. (Centre Back) <time>8:42 AM</time></div>
-                  <div className="lp-bubble-text">Anyone got spare shinpads and socks? Left mine in the boot of someone&apos;s car last week 🤦‍♂️</div>
-                </div>
-                <div className="lp-bubble">
-                  <div className="lp-bubble-author">Kev T. (Striker) <time>8:59 AM</time></div>
-                  <div className="lp-bubble-text">Can&apos;t play today, did my back taking the wheelie bins out. Sorry guys</div>
-                </div>
-                <div className="lp-bubble">
-                  <div className="lp-bubble-author">Steve (Coach) <time>9:08 AM</time></div>
-                  <div className="lp-bubble-text">That leaves us with 9 players. And who has the council padlock key for Pitch 2??</div>
-                </div>
-                <div className="lp-bubble">
-                  <div className="lp-bubble-author">Marcus (Treasurer) <time>9:14 AM</time></div>
-                  <div className="lp-bubble-text">URGENT: 7 of you still owe $15 cash for ref fees. If no ref fee, no match! Bring coins!</div>
-                </div>
+            </li>
+            <li className="glass-panel">
+              <span className="lp-steps3-n">2</span>
+              <h3>You pick the team</h3>
+              <p>The line-up builder starts from the players who said In.</p>
+              <div className="lp-steps3-pitch" aria-hidden="true">
+                {[[12, 50], [30, 22], [30, 50], [30, 78], [55, 35], [55, 65], [80, 50]].map(([x, y]) => (
+                  <b key={`${x}-${y}`} style={{ left: `${x}%`, top: `${y}%` }} />
+                ))}
               </div>
-
-              <div className="lp-chat-footer">
-                <AlertTriangle size={15} color="#EF4444" />
-                <span>Kick-off in 45 mins &middot; 9 players confirmed &middot; Gate locked &middot; $105 cash missing</span>
+            </li>
+            <li className="glass-panel">
+              <span className="lp-steps3-n">3</span>
+              <h3>Everyone sees it</h3>
+              <p>The line-up goes on your club site at a link anyone can open.</p>
+              <div className="lp-steps3-link" aria-hidden="true">
+                <Link2 size={14} />
+                <span>itsfootball.club/your-club/match/&hellip;</span>
               </div>
-            </div>
-
-            {/* Right Column: itsfootball.club Match Hub */}
-            <div className="lp-vs-col lp-vs-control">
-              <div className="lp-hub-header">
-                <div className="lp-hub-title-group">
-                  <span className="lp-hub-avatar"><Check size={16} /></span>
-                  <div>
-                    <div className="lp-hub-name">{displayName || 'Eastside Rovers'} Match Hub</div>
-                    <div className="lp-hub-sub">Sunday 10:00 AM kick-off &middot; Pitch 1</div>
-                  </div>
-                </div>
-                <span className="lp-hub-badge">AFTER</span>
-              </div>
-
-              <div className="lp-hub-cards">
-                <div className="lp-hub-item">
-                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
-                  <div>
-                    <div className="lp-hub-item-title">1-Tap Squad Confirmation</div>
-                    <div className="lp-hub-item-desc">Starting XI + 4 bench picked by Thursday night, straight from players&apos; replies.</div>
-                  </div>
-                </div>
-                <div className="lp-hub-item">
-                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
-                  <div>
-                    <div className="lp-hub-item-title">Lineup Published to the Club Site</div>
-                    <div className="lp-hub-item-desc">The XI on a tactical pitch, at a link anyone can open on their phone.</div>
-                  </div>
-                </div>
-                <div className="lp-hub-item">
-                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
-                  <div>
-                    <div className="lp-hub-item-title">Subs Paid Online</div>
-                    <div className="lp-hub-item-desc">Members pay by card or bank transfer and get a receipt. No coins at the gate.</div>
-                  </div>
-                </div>
-                <div className="lp-hub-item">
-                  <div className="lp-hub-item-icon check"><Check size={16} /></div>
-                  <div>
-                    <div className="lp-hub-item-title">Ground Map &amp; Member Passes</div>
-                    <div className="lp-hub-item-desc">Directions to the ground on the club site, and a QR member pass on every phone.</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="lp-hub-footer">
-                <div className="lp-hub-pill">
-                  <span className="pulse-dot" style={{ background: '#10B981', width: 7, height: 7 }} />
-                  <span>15 Players Ready &middot; Subs Paid &middot; Live Match Centre Ready</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            </li>
+          </ol>
         </div>
       </section>
 

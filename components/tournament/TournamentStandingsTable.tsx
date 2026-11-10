@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TournamentStanding } from '@/lib/supabase/types';
-import { Trophy, CheckCircle2 } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 
 interface TournamentStandingsTableProps {
@@ -31,29 +31,20 @@ export default function TournamentStandingsTable({
         }}
       >
         <Trophy size={28} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
-        <p style={{ margin: 0, fontWeight: 600 }}>No participant standings calculated yet.</p>
-        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Points table updates automatically as matches are played.</span>
+        <p style={{ margin: 0, fontWeight: 600 }}>No games played yet.</p>
+        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>The table fills in as results come in.</span>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        background: 'rgba(var(--dk-15-23-42), 0.75)',
-        border: '1px solid rgba(var(--tint-rgb), 0.08)',
-        borderRadius: '14px',
-        overflow: 'hidden',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
-      }}
-    >
+    <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
       {/* Table Header / Title */}
       {groupTitle && (
         <div
           style={{
             padding: '0.9rem 1.25rem',
-            background: 'rgba(var(--tint-rgb), 0.03)',
-            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
+            borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -61,21 +52,6 @@ export default function TournamentStandingsTable({
         >
           <div className="row">
             <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{groupTitle}</span>
-            {advancingCount > 0 && (
-              <span
-                style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  color: 'var(--c-green)',
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                }}
-              >
-                Top {advancingCount} Advance to KO
-              </span>
-            )}
           </div>
           <div className="text-meta">
             3 points for a win, 1 for a draw
@@ -101,8 +77,6 @@ export default function TournamentStandingsTable({
                 borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
                 color: 'var(--text-secondary)',
                 fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
               }}
             >
               <th style={{ padding: '0.75rem 1rem', width: '45px', textAlign: 'center' }}>#</th>
@@ -114,7 +88,7 @@ export default function TournamentStandingsTable({
               <th style={{ padding: '0.75rem 0.6rem', textAlign: 'center', width: '45px' }}>GF</th>
               <th style={{ padding: '0.75rem 0.6rem', textAlign: 'center', width: '45px' }}>GA</th>
               <th style={{ padding: '0.75rem 0.6rem', textAlign: 'center', width: '48px' }}>GD</th>
-              <th style={{ padding: '0.75rem 0.9rem', textAlign: 'center', width: '55px', color: 'var(--c-green)', fontWeight: 800 }}>PTS</th>
+              <th style={{ padding: '0.75rem 0.9rem', textAlign: 'center', width: '55px' }}>Pts</th>
               {showForm && (
                 <th style={{ padding: '0.75rem 1rem', textAlign: 'center', width: '120px' }}>Form</th>
               )}
@@ -130,33 +104,21 @@ export default function TournamentStandingsTable({
                   key={team.team_id || team.name}
                   style={{
                     borderBottom: '1px solid rgba(var(--tint-rgb), 0.04)',
-                    background: isAdvancing ? 'rgba(16, 185, 129, 0.03)' : 'transparent',
+                    background: 'transparent',
                     transition: 'background 0.15s ease',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--tint-rgb), 0.04)')}
                   onMouseLeave={e =>
-                    (e.currentTarget.style.background = isAdvancing ? 'rgba(16, 185, 129, 0.03)' : 'transparent')
+                    (e.currentTarget.style.background = 'transparent')
                   }
                 >
                   {/* Position / Rank */}
-                  <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                    <div
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '6px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '0.75rem',
-                        background: isAdvancing ? 'rgba(16, 185, 129, 0.2)' : 'rgba(var(--tint-rgb), 0.05)',
-                        color: isAdvancing ? 'var(--c-green)' : 'var(--text-secondary)',
-                        border: isAdvancing ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
-                      }}
-                    >
-                      {rank}
-                    </div>
+                  {/* Teams going through get a bar in the club's colour (explained under the table) */}
+                  <td style={{
+                    padding: '0.85rem 1rem', textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600,
+                    color: 'var(--text-secondary)', boxShadow: isAdvancing ? 'inset 3px 0 0 var(--club-primary)' : undefined,
+                  }}>
+                    {rank}
                   </td>
 
                   {/* Team Crest & Name */}
@@ -170,13 +132,6 @@ export default function TournamentStandingsTable({
                       <span style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                         {team.name}
                       </span>
-                      {isAdvancing && (
-                        <CheckCircle2
-                          size={13}
-                          color="var(--c-green)"
-                          style={{ flexShrink: 0, opacity: 0.85 }}
-                        />
-                      )}
                     </div>
                   </td>
 
@@ -185,15 +140,15 @@ export default function TournamentStandingsTable({
                     {team.played}
                   </td>
                   {/* W */}
-                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--c-green)', fontWeight: 600 }}>
+                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--text-primary)' }}>
                     {team.won}
                   </td>
                   {/* D */}
-                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--c-amber)' }}>
+                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--text-primary)' }}>
                     {team.drawn}
                   </td>
                   {/* L */}
-                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--c-red)' }}>
+                  <td style={{ padding: '0.85rem 0.6rem', textAlign: 'center', color: 'var(--text-primary)' }}>
                     {team.lost}
                   </td>
                   {/* GF */}
@@ -209,13 +164,7 @@ export default function TournamentStandingsTable({
                     style={{
                       padding: '0.85rem 0.6rem',
                       textAlign: 'center',
-                      fontWeight: 700,
-                      color:
-                        team.goal_difference > 0
-                          ? '#10B981'
-                          : team.goal_difference < 0
-                          ? '#EF4444'
-                          : 'var(--text-secondary)',
+                      color: 'var(--text-secondary)',
                     }}
                   >
                     {team.goal_difference > 0 ? `+${team.goal_difference}` : team.goal_difference}
@@ -225,10 +174,9 @@ export default function TournamentStandingsTable({
                     style={{
                       padding: '0.85rem 0.9rem',
                       textAlign: 'center',
-                      fontWeight: 900,
+                      fontWeight: 800,
                       fontSize: '0.95rem',
-                      color: 'var(--c-green)',
-                      background: 'rgba(16, 185, 129, 0.07)',
+                      color: 'var(--text-primary)',
                     }}
                   >
                     {team.points}
@@ -240,8 +188,12 @@ export default function TournamentStandingsTable({
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
                         {team.form.length > 0 ? (
                           team.form.map((res, fIdx) => {
-                            const bg =
-                              res === 'W' ? '#10B981' : res === 'D' ? '#F59E0B' : '#EF4444';
+                            // Green means a win; a draw is grey and a loss just an outline, so the guide reads at a glance
+                            const look: React.CSSProperties = res === 'W'
+                              ? { background: 'var(--c-green)', color: '#FFFFFF' }
+                              : res === 'D'
+                              ? { background: 'rgba(var(--tint-rgb), 0.18)', color: 'var(--text-primary)' }
+                              : { background: 'transparent', color: 'var(--text-secondary)', boxShadow: 'inset 0 0 0 1px var(--border-medium)' };
                             return (
                               <span
                                 key={fIdx}
@@ -249,8 +201,7 @@ export default function TournamentStandingsTable({
                                   width: '18px',
                                   height: '18px',
                                   borderRadius: '4px',
-                                  background: bg,
-                                  color: '#000000',
+                                  ...look,
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -274,6 +225,12 @@ export default function TournamentStandingsTable({
           </tbody>
         </table>
       </div>
+      {advancingCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.25rem', borderTop: '1px solid var(--border-subtle)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          <span aria-hidden="true" style={{ width: '3px', height: '14px', borderRadius: '2px', background: 'var(--club-primary)' }} />
+          Top {advancingCount} go through to the knockouts
+        </div>
+      )}
     </div>
   );
 }

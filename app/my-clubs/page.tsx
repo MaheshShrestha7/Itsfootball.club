@@ -25,6 +25,8 @@ import {
   Lock,
   Search,
   UserCog,
+  Activity,
+  QrCode,
 } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 
@@ -629,24 +631,27 @@ export default function MyClubsPage() {
                   textAlign: 'left',
                 }}>
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--c-green)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                      ⚡ 60-Second Setup
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                      <Shield size={16} aria-hidden="true" style={{ color: 'var(--club-ink)', flexShrink: 0 }} />
+                      Set up in three steps
                     </div>
                     <div className="text-note">
-                      Identity, crest, home ground, and team colours ready out of the box.
+                      Name and web address, colours and crest, then your home ground.
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--c-amber)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                      📻 Pitchside Live Desk
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                      <Activity size={16} aria-hidden="true" style={{ color: 'var(--club-ink)', flexShrink: 0 }} />
+                      Match Centre
                     </div>
                     <div className="text-note">
-                      Broadcast commentary, cards, and goal events live to supporters.
+                      Goals, cards and subs go live on your site as you tap them.
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--c-blue)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                      🎟️ Member Passes
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                      <QrCode size={16} aria-hidden="true" style={{ color: 'var(--club-ink)', flexShrink: 0 }} />
+                      Member passes
                     </div>
                     <div className="text-note">
                       Every member gets a pass with a QR code to check in at the gate.

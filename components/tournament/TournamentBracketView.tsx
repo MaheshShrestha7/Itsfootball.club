@@ -39,11 +39,11 @@ export default function TournamentBracketView({
       >
         <Trophy size={36} style={{ opacity: 0.3, margin: '0 auto 1rem auto' }} />
         <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
-          {isAdmin ? 'No Knockout Tiesheet Generated Yet' : 'Knockout bracket coming soon'}
+          {isAdmin ? 'No knockout draw yet' : 'Knockout bracket coming soon'}
         </h3>
         <p style={{ margin: 0, fontSize: '0.85rem' }}>
           {isAdmin
-            ? 'Generate the tournament tiesheet or complete group stage fixtures to unlock the knockout bracket.'
+            ? 'Make the draw, or finish the group games, and the knockout rounds show here.'
             : 'The knockout rounds will appear here once the group stage is finished.'}
         </p>
       </div>
@@ -112,26 +112,25 @@ export default function TournamentBracketView({
                     textAlign: 'center',
                     marginBottom: '1.25rem',
                     padding: '0.65rem',
+                    // The final in the club's own colour (AI10-1)
                     background:
                       rIdx === totalRounds - 1
-                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)'
+                        ? 'rgba(var(--club-primary-rgb), 0.06)'
                         : 'rgba(var(--tint-rgb), 0.03)',
                     borderRadius: '10px',
                     border:
                       rIdx === totalRounds - 1
-                        ? '1px solid rgba(245, 158, 11, 0.4)'
-                        : '1px solid rgba(var(--tint-rgb), 0.06)',
+                        ? '1px solid rgba(var(--club-primary-rgb), 0.45)'
+                        : '1px solid var(--border-subtle)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                    {rIdx === totalRounds - 1 && <Trophy size={15} color="var(--c-amber)" />}
+                    {rIdx === totalRounds - 1 && <Trophy size={15} color="var(--club-ink)" aria-hidden="true" />}
                     <span
                       style={{
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        color: rIdx === totalRounds - 1 ? 'var(--c-amber)' : 'var(--text-primary)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        color: rIdx === totalRounds - 1 ? 'var(--club-ink)' : 'var(--text-primary)',
                       }}
                     >
                       {heading}
@@ -163,17 +162,10 @@ export default function TournamentBracketView({
                         key={match.id}
                         onClick={() => onSelectMatch && onSelectMatch(match)}
                         style={{
-                          background: 'linear-gradient(145deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-                          border: isLive
-                            ? '1.5px solid #EF4444'
-                            : isCompleted
-                            ? '1px solid rgba(16, 185, 129, 0.35)'
-                            : '1px solid rgba(var(--tint-rgb), 0.1)',
+                          background: 'rgb(var(--dk-17-24-39))',
+                          border: isLive ? '1.5px solid var(--c-red)' : '1px solid var(--border-medium)',
                           borderRadius: '12px',
                           overflow: 'hidden',
-                          boxShadow: isLive
-                            ? '0 0 15px rgba(239, 68, 68, 0.25)'
-                            : '0 8px 20px rgba(0, 0, 0, 0.4)',
                           cursor: onSelectMatch ? 'pointer' : 'default',
                           transition: 'transform 0.15s ease, border-color 0.15s ease',
                           position: 'relative',
@@ -181,17 +173,13 @@ export default function TournamentBracketView({
                         onMouseEnter={e => {
                           if (onSelectMatch) {
                             e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.borderColor = '#10B981';
+                            e.currentTarget.style.borderColor = 'var(--club-primary)';
                           }
                         }}
                         onMouseLeave={e => {
                           if (onSelectMatch) {
                             e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.borderColor = isLive
-                              ? '#EF4444'
-                              : isCompleted
-                              ? 'rgba(16, 185, 129, 0.35)'
-                              : 'rgba(var(--tint-rgb), 0.1)';
+                            e.currentTarget.style.borderColor = isLive ? 'var(--c-red)' : 'var(--border-medium)';
                           }
                         }}
                       >
@@ -227,7 +215,7 @@ export default function TournamentBracketView({
                                     width: '6px',
                                     height: '6px',
                                     borderRadius: '50%',
-                                    background: '#EF4444',
+                                    background: 'var(--c-red)',
                                     animation: 'pulse 1.5s infinite',
                                   }}
                                 />
@@ -235,7 +223,7 @@ export default function TournamentBracketView({
                               </span>
                             )}
                             {isCompleted && (
-                              <span style={{ color: 'var(--c-green)', fontWeight: 800 }}>
+                              <span style={{ color: 'var(--text-secondary)', fontWeight: 800 }}>
                                 FT
                               </span>
                             )}
@@ -260,7 +248,7 @@ export default function TournamentBracketView({
                               justifyContent: 'space-between',
                               padding: '0.35rem 0.45rem',
                               borderRadius: '6px',
-                              background: isHomeWinner ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                              background: isHomeWinner ? 'rgba(var(--club-primary-rgb), 0.08)' : 'transparent',
                               marginBottom: '2px',
                             }}
                           >
@@ -295,7 +283,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.home_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
                                   ({match.home_penalty_score})
                                 </span>
                               )}
@@ -303,7 +291,7 @@ export default function TournamentBracketView({
                                 style={{
                                   fontSize: '0.95rem',
                                   fontWeight: 800,
-                                  color: isHomeWinner ? 'var(--c-green)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
+                                  color: isHomeWinner ? 'var(--club-ink)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
                                   minWidth: '18px',
                                   textAlign: 'right',
                                 }}
@@ -321,7 +309,7 @@ export default function TournamentBracketView({
                               justifyContent: 'space-between',
                               padding: '0.35rem 0.45rem',
                               borderRadius: '6px',
-                              background: isAwayWinner ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                              background: isAwayWinner ? 'rgba(var(--club-primary-rgb), 0.08)' : 'transparent',
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
@@ -355,7 +343,7 @@ export default function TournamentBracketView({
                             {/* Score & Penalty indicator */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                               {match.away_penalty_score !== undefined && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--c-amber)', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
                                   ({match.away_penalty_score})
                                 </span>
                               )}
@@ -363,7 +351,7 @@ export default function TournamentBracketView({
                                 style={{
                                   fontSize: '0.95rem',
                                   fontWeight: 800,
-                                  color: isAwayWinner ? 'var(--c-green)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
+                                  color: isAwayWinner ? 'var(--club-ink)' : isCompleted ? 'var(--text-primary)' : 'var(--text-muted)',
                                   minWidth: '18px',
                                   textAlign: 'right',
                                 }}
@@ -388,8 +376,8 @@ export default function TournamentBracketView({
         <div
           style={{
             marginTop: '1.5rem',
-            background: 'rgba(var(--shade-rgb), 0.35)',
-            border: '1px solid rgba(var(--tint-rgb), 0.08)',
+            background: 'rgb(var(--dk-17-24-39))',
+            border: '1px solid var(--border-medium)',
             borderRadius: '12px',
             padding: '1rem 1.25rem',
             display: 'flex',
@@ -401,7 +389,7 @@ export default function TournamentBracketView({
           onClick={() => onSelectMatch && onSelectMatch(thirdPlaceMatch)}
         >
           <div className="row row-loose">
-            <Award size={22} color="var(--c-amber)" />
+            <Award size={22} color="var(--text-muted)" aria-hidden="true" />
             <div>
               <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
                 3rd Place Playoff
@@ -416,7 +404,7 @@ export default function TournamentBracketView({
               style={{
                 fontSize: '1rem',
                 fontWeight: 900,
-                color: thirdPlaceMatch.status === 'completed' ? 'var(--c-green)' : 'var(--text-muted)',
+                color: thirdPlaceMatch.status === 'completed' ? 'var(--text-primary)' : 'var(--text-muted)',
               }}
             >
               {thirdPlaceMatch.status === 'completed'

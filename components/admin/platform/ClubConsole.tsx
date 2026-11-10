@@ -23,10 +23,10 @@ interface Props {
   onChanged: () => void;
 }
 
-const head: React.CSSProperties = { fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
+const head: React.CSSProperties = { fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
 const row: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-primary)' };
 const small: React.CSSProperties = { fontSize: '0.75rem', color: 'var(--text-muted)' };
-const subHead: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', margin: '1.1rem 0 0.6rem', paddingTop: '0.9rem', borderTop: '1px solid var(--border-subtle)' };
+const subHead: React.CSSProperties = { fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', margin: '1.1rem 0 0.6rem', paddingTop: '0.9rem', borderTop: '1px solid var(--border-subtle)' };
 const tag = (tone: 'green' | 'grey' | 'amber'): React.CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.66rem', fontWeight: 800, padding: '2px 7px', borderRadius: 999, marginLeft: 4, whiteSpace: 'nowrap', verticalAlign: 1,
   ...(tone === 'green' ? { background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)' }
@@ -228,7 +228,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
       {loadError && <p role="alert" style={{ margin: 0, fontSize: '0.8rem', color: 'var(--c-amber)' }}>{loadError}</p>}
 
       <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><ClipboardList size={14} color="var(--c-green)" /> Setup · {done} of {steps.length}</h3>
+        <h3 style={head}><ClipboardList size={14} color="var(--text-secondary)" aria-hidden="true" /> Setup · {done} of {steps.length}</h3>
         <div style={{ height: 6, borderRadius: 3, background: 'rgba(var(--tint-rgb), 0.08)', marginBottom: '0.85rem' }}>
           <div style={{ width: `${Math.round((done / steps.length) * 100)}%`, height: 6, borderRadius: 3, background: 'var(--c-green)' }} />
         </div>
@@ -248,7 +248,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
       </section>
 
       <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><Users size={14} color="var(--c-blue)" /> Who runs it</h3>
+        <h3 style={head}><Users size={14} color="var(--text-secondary)" aria-hidden="true" /> Who runs it</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           {people.length === 0 && !loadError && <p style={small}>No Owner or admins found.</p>}
           {people.map(p => {
@@ -317,7 +317,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
       </section>
 
       <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><StickyNote size={14} color="var(--c-amber)" /> Notes and emails</h3>
+        <h3 style={head}><StickyNote size={14} color="var(--text-secondary)" aria-hidden="true" /> Notes and emails</h3>
         <form onSubmit={addNote} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <label htmlFor="mc-note" className="sr-only">Private note</label>
           <textarea id="mc-note" className="form-input" rows={2} maxLength={4000} placeholder="Private note, only platform admins see it" value={noteText} onChange={e => setNoteText(e.target.value)} style={{ resize: 'vertical' }} />
@@ -341,7 +341,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
       </section>
 
       <section className="glass-panel" style={{ padding: '1.25rem' }}>
-        <h3 style={head}><Globe size={14} color="#818CF8" /> Web address</h3>
+        <h3 style={head}><Globe size={14} color="var(--text-secondary)" aria-hidden="true" /> Web address</h3>
         <form onSubmit={changeSlug} style={{ display: 'flex', gap: '0.5rem' }}>
           <label htmlFor="mc-slug" className="sr-only">Club web address</label>
           <span style={{ ...small, alignSelf: 'center' }}>itsfootball.club/</span>
@@ -352,7 +352,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
       </section>
 
       <section className="glass-panel" style={{ padding: '1.25rem', border: club.closed_at ? '1px solid rgba(239, 68, 68, 0.35)' : undefined }}>
-        <h3 style={head}><Archive size={14} color="var(--c-red)" /> Data and closing</h3>
+        <h3 style={head}><Archive size={14} color="var(--c-red)" aria-hidden="true" /> Data and closing</h3>
         <button type="button" className="btn btn-secondary btn-sm" disabled={exporting} onClick={exportAll}>
           <Download size={14} /> {exporting ? 'Preparing…' : exported ? 'Downloaded. Download again' : 'Download everything (ZIP)'}
         </button>
@@ -381,7 +381,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged }: Pro
 
       {history.length > 0 && (
         <section className="glass-panel" style={{ padding: '1.25rem' }}>
-          <h3 style={head}><History size={14} color="#818CF8" /> Recent admin changes</h3>
+          <h3 style={head}><History size={14} color="var(--text-secondary)" aria-hidden="true" /> Recent admin changes</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {history.map(h => (
               <div key={h.id} style={{ fontSize: '0.83rem', color: 'var(--text-primary)' }}>
