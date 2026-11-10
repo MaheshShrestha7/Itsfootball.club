@@ -20,12 +20,14 @@ const motmFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 's
 // events: the match's events with public names (junior players shortened); goals list the scorers
 // photos: player photos by member id for the lineup pitch, as the public site shows them
 // motm: the Player of the Match, as the public site names them: adds a Player of the Match card
-export default function MatchShareButton({ match, club, hideScore = false, events, photos, motm, trigger, autoOpen }: {
+// subs: the substitutes under the starters on the Team list card, as the match page lists them
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, subs, motm, trigger, autoOpen }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
   events?: CardOptions['events'];
   photos?: CardOptions['photos'];
+  subs?: CardOptions['subs'];
   motm?: { name: string; photo?: string | null };
   /** Draws the button that opens the dialog, for places with their own button style */
   trigger?: (open: () => void) => React.ReactNode;
@@ -60,6 +62,9 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     .map(e => [e.team_side, e.player_name, e.minute, e.added_minute || 0, e.event_type]));
   const goals = useMemo(() => JSON.parse(goalsKey).map(([team_side, player_name, minute, added_minute, event_type]: [MatchEvent['team_side'], string, number, number, MatchEvent['event_type']]) =>
     ({ team_side, player_name, minute, added_minute, event_type })) as NonNullable<CardOptions['events']>, [goalsKey]);
+  // The caller builds the bench afresh on every render too: redrawn only when it changes
+  const subsKey = JSON.stringify((subs || []).map(s => [s.number, s.name]));
+  const bench = useMemo(() => (JSON.parse(subsKey) as [number, string][]).map(([number, name]) => ({ number, name })), [subsKey]);
   // "2 goals" under the Player of the Match's name, from the goals they scored
   const motmGoals = motmName && !hideScore ? goals.filter(g => g.event_type !== 'own_goal' && g.player_name === motmName).length : 0;
   const motmLine = motmGoals ? `${motmGoals} goal${motmGoals === 1 ? '' : 's'}` : undefined;
@@ -79,6 +84,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       ...(showSponsors && potmSponsor ? { motmSponsor: { src: potmSponsor.logo_url || undefined, name: potmSponsor.name } } : {}),
     } : {
       hideScore, format, events: hideScore ? undefined : goals, photos,
+      // The Team list is the whole matchday squad: the starters, then the substitutes
+      ...(card === 'lineup-list' ? { headline: ['MATCHDAY', 'SQUAD'] as [string, string], subs: bench } : {}),
       ...(showSponsors && cardSponsors.length ? { sponsors: cardSponsors, sponsorsLabel: 'CLUB SPONSORS' } : {}),
     })
       .then(blob => {
@@ -88,7 +95,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, format, match, club, hideScore, goals, photos, showSponsors, cardSponsors, hasMotm, motmName, motmPhoto, motmLine, potmSponsor]);
+  }, [open, kind, format, match, club, hideScore, goals, photos, bench, showSponsors, cardSponsors, hasMotm, motmName, motmPhoto, motmLine, potmSponsor]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -160,7 +167,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-          {hasLineup || hasMotm ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{hasMotm && tab('motm', 'Player of the Match')}{hasLineup && onPitch && tab('lineup', 'Starting XI')}{hasLineup && tab('lineup-list', onPitch ? 'Team list' : 'Starting XI')}</div> : <span />}
+          {hasLineup || hasMotm ? <div role="group" aria-label="Graphic" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>{tab('score', match.status === 'completed' && !hideScore ? 'Result' : 'Fixture')}{hasMotm && tab('motm', 'Player of the Match')}{hasLineup && onPitch && tab('lineup', 'Starting XI')}{hasLineup && tab('lineup-list', 'Team list')}</div> : <span />}
           <div role="group" aria-label="Size" style={{ display: 'flex', gap: '0.5rem' }}>
             {sizeTab('story', 'Story', 'Instagram or Facebook story, WhatsApp status')}
             {sizeTab('post', 'Post', 'Instagram feed, Facebook group, WhatsApp chat')}
