@@ -62,6 +62,7 @@ import { DEFAULT_CREST } from './crest';
 import { keepEditsMadeDuringLoad, SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 import { cacheSafeMembers, cacheSafeSponsors } from './cache-safe';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
+import { pageName } from './club-overview';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
 import { goalScoringSide, publicScoreHidden } from './teams';
@@ -2538,30 +2539,22 @@ export function ClubProvider({
     const desktopPct = Math.round((desktopCount / totalRecorded) * 100);
     const tabletPct = Math.round((tabletCount / totalRecorded) * 100);
 
-    // Section breakdown
-    const sectionHits: Record<string, number> = {
-      'Live Match-Day Centre': clubViews.filter(v => v.page_path?.includes('/match')).length * 5,
-      'First Team Squad & Stats': clubViews.filter(v => v.page_path?.includes('/squad') || v.page_path?.includes('#squad')).length * 5,
-      'Fixtures & Results': clubViews.filter(v => v.page_path?.includes('/events') || v.page_path?.includes('#fixtures')).length * 5,
-      'Digital Member Pass Portal': clubViews.filter(v => v.page_path?.includes('/member')).length * 5,
-      'Home Ground Guide': clubViews.filter(v => v.page_path?.includes('/branding') || v.page_path?.includes('stadium')).length * 5,
-    };
-    const totalSectionHits = Object.values(sectionHits).reduce((a, b) => a + b, 0) || 1;
-
-    const colors: Record<string, string> = {
-      'Live Match-Day Centre': '#EF4444',
-      'First Team Squad & Stats': 'var(--club-primary)',
-      'Fixtures & Results': '#3B82F6',
-      'Digital Member Pass Portal': '#F59E0B',
-      'Home Ground Guide': '#A855F7',
-    };
-
-    const topSections = Object.entries(sectionHits).map(([name, count]) => ({
-      name,
-      count,
-      views: `${Math.round((count / totalSectionHits) * 1000) / 10}%`,
-      color: colors[name] || '#10B981',
-    }));
+    // Most visited pages: real counts by page, named as the dashboard names them (DASH-2: was fixed labels times 5)
+    const slug = clubs.find(c => c.id === clubId)?.slug || '';
+    const sectionHits: Record<string, number> = {};
+    for (const v of clubViews) {
+      const name = pageName(v.page_path || '/', slug);
+      sectionHits[name] = (sectionHits[name] || 0) + 1;
+    }
+    const topSections = Object.entries(sectionHits)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({
+        name,
+        count,
+        views: `${Math.round((count / (totalVisits || 1)) * 1000) / 10}%`,
+        color: 'var(--color-accent)',
+      }));
 
     return {
       totalVisits,
@@ -2577,7 +2570,7 @@ export function ClubProvider({
       ],
       recentGateScans: clubScans.slice(0, 10),
     };
-  }, [analyticsEvents, gateScans, matches]);
+  }, [analyticsEvents, gateScans, matches, clubs]);
 
   // 16b. Sponsor Placement Analytics: real impressions/clicks recorded as visitors see/click a
   // sponsor placement (see components/Footer.tsx), posted through the API route so country can be

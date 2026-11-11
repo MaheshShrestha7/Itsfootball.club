@@ -107,10 +107,11 @@ export default function AdminAnalyticsPage({
         {/* Most Viewed Sections */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.25rem' }}>
-            Most viewed sections
+            Most visited pages
           </h3>
 
           <div className="stack">
+            {analytics.topSections.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No visits in the last 90 days yet.</p>}
             {analytics.topSections.map(sec => (
               <div key={sec.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
