@@ -10,7 +10,7 @@ import AuthModal from '@/components/AuthModal';
 import { createPortal } from 'react-dom';
 import ThemeToggle from '@/components/ThemeToggle';
 import { BrandWordmark } from '@/components/BrandLogo';
-import { Shield, Trophy, PlusCircle, ChevronDown, User, UserCog, LogOut, Menu, X, HelpCircle, Gauge, BookOpen, MapPin, Scale } from 'lucide-react';
+import { Shield, Trophy, PlusCircle, ChevronDown, User, UserCog, LogOut, Menu, X, HelpCircle, Gauge, BookOpen, MapPin, Scale, Tag } from 'lucide-react';
 import { ToolsMenuDesktop, ToolsMenuMobile } from '@/components/ToolsMenu';
 
 export default function PlatformNavbar() {
@@ -90,6 +90,10 @@ export default function PlatformNavbar() {
           <Link href="/compare" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <Scale size={16} />
             Compare
+          </Link>
+          <Link href="/pricing" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Tag size={16} />
+            Pricing
           </Link>
           <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <HelpCircle size={16} />
@@ -493,6 +497,24 @@ export default function PlatformNavbar() {
                   </span>
                 </Link>
                 <Link
+                  href="/pricing"
+                  onClick={() => setMobileDrawerOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.95rem',
+                    background: 'rgba(var(--tint-rgb), 0.03)',
+                  }}
+                >
+                  <Tag size={18} color="var(--c-blue)" />
+                  <span>Pricing</span>
+                </Link>
+                <Link
                   href="/faq"
                   onClick={() => setMobileDrawerOpen(false)}
                   style={{
@@ -649,6 +671,17 @@ export default function PlatformNavbar() {
           }
           .mobile-platform-trigger {
             display: none !important;
+          }
+        }
+        /* Up to 1440px the links drop their icons and sit a little closer, so Pricing fits without
+           pushing Launch Your Club and Sign In off the edge */
+        @media (min-width: 1240px) and (max-width: 1439px) {
+          .desktop-platform-nav {
+            gap: 1rem !important;
+          }
+          .desktop-platform-nav > :global(a:not(.btn)) > :global(svg),
+          .desktop-platform-nav :global(.tools-menu) > :global(a) > :global(svg) {
+            display: none;
           }
         }
       `}</style>
