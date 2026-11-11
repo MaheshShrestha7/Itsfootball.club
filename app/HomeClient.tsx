@@ -989,6 +989,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       <div className="container">
         <div className="lp-hero-footer-bar">
           <div className="lp-hero-meta">
+            <span className="lp-free"><Check size={15} /> $0 a month, free forever</span>
             <span><Check size={15} /> Your crest, colours &amp; domain</span>
             <span><Check size={15} /> Nothing for supporters to install</span>
           </div>
@@ -1086,6 +1087,27 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
             <ul>
               {['News and match reports', 'Homepage photo carousel', 'Events and socials', 'Door check-in', 'Seasons', 'Committee page', 'Your crest, colours and domain', 'Visitor numbers', 'Contact inbox', 'Bulk member import', 'Search-friendly pages'].map(x => <li key={x}>{x}</li>)}
             </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= PRICE: the one number, said once, with how we are paid ================= */}
+      <section className="hm-sec" aria-labelledby="hm-free-h">
+        <div className="container">
+          <div className="hm-free">
+            <div>
+              <p className="hm-free-zero"><b>$0</b><span>a month</span></p>
+              <h2 id="hm-free-h" className="hm-h2">Free forever. Not a free trial.</h2>
+              <p className="hm-lede">Every club gets every feature from day one. There&apos;s nothing to upgrade to later.</p>
+              <Link href="/create-club" className="btn btn-primary hm-free-btn">Create your club</Link>
+              <p className="hm-small hm-free-note">No bank card required. Sign up and enjoy.</p>
+            </div>
+            <dl className="hm-free-sum">
+              <div><dt>Subscription</dt><dd>None</dd></div>
+              <div><dt>Paid plans or locked features</dt><dd>None</dd></div>
+              <div><dt>Ads from other companies</dt><dd>None</dd></div>
+              <div><dt>How we keep it free</dt><dd>A small booking fee, added when someone pays your club by card. We never take a cut of what your club charges, so that money goes back into the game: nets, kits and the oranges at half-time. <Link href="/pricing" className="hm-link">How card payments work</Link></dd></div>
+            </dl>
           </div>
         </div>
       </section>
@@ -1241,7 +1263,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
               <h2 className="hm-h2">Give your club the matchday it deserves.</h2>
               <p className="hm-lede">Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
               <Link href="/create-club" className="hm-block-btn">Create your club</Link>
-              <p className="hm-small">Free to set up. No credit card needed.</p>
+              <p className="hm-small">$0 a month, free forever. No bank card required.</p>
             </div>
             <ol className="hm-steps hm-steps-list">
               {CREATE_CLUB_STEPS.map(s => (

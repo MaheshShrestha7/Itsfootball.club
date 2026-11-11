@@ -1698,6 +1698,26 @@
   .hm-post { grid-template-columns: 72px minmax(0, 1fr); }
   .hm-post img { width: 72px; }
 }
+/* Price: the one big number, on the page background (the green blocks either side stay the only colour blocks) */
+.lp-hero-meta .lp-free { color: var(--text-primary); font-weight: 700; }
+.hm-free { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; align-items: end; border-top: 2px solid var(--text-primary); padding-top: 1.75rem; }
+.hm-free-zero { display: flex; align-items: baseline; gap: 0.6rem; margin: 0 0 1rem; color: var(--club-ink, var(--c-green)); }
+.hm-free-zero b { font-family: var(--font-heading); font-weight: 900; font-size: clamp(5rem, 12vw, 9rem); line-height: 0.85; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.hm-free-zero span { font-family: var(--font-heading); font-weight: 800; font-size: clamp(1.2rem, 2vw, 1.5rem); }
+.hm-free-btn { margin-top: 1.5rem; }
+.hm-free-note { color: var(--text-secondary); }
+.hm-free-sum { margin: 0; }
+.hm-free-sum > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 1rem; padding: 0.9rem 0; border-top: 1px solid var(--border-subtle); }
+.hm-free-sum > div:first-child { border-top: 0; }
+.hm-free-sum dt { color: var(--text-secondary); }
+.hm-free-sum dd { margin: 0; font-family: var(--font-heading); font-weight: 800; font-size: 1.05rem; }
+.hm-free-sum dd .hm-link { display: block; margin-top: 0.35rem; font-family: var(--font-body, inherit); font-size: 0.92rem; }
+@media (max-width: 900px) {
+  .hm-free { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+}
+@media (max-width: 560px) {
+  .hm-free-sum > div { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   .hm-tab, .hm-game, .hm-block-btn, .hm-sponsor, .hm-tools li a b { transition: none; }
   .hm-tab:active, .hm-game:hover, .hm-block-btn:hover, .hm-block-btn:active { transform: none; }
