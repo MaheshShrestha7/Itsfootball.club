@@ -4,24 +4,18 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { isListedClub } from '@/lib/public-tournaments';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { QRCodeSVG } from 'qrcode.react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import AuthModal from '@/components/AuthModal';
-import SponsorLogo from '@/components/SponsorLogo';
 import { useClub, validateClubSlug } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
-import { sponsorClickHref } from '@/lib/sponsors';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-utils';
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
-import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import './home.css';
 import {
-  ArrowRight, ArrowLeftRight, AlertCircle, BarChart3, Bell, CalendarCheck, Check, CheckCircle2, ClipboardList, Clock,
-  DoorOpen, Flame, Gift, Goal, Heart, Megaphone, QrCode, Radio, RotateCcw, Shield, Ticket, Trophy, User, Users,
-  UsersRound, Wallet, X,
+  ArrowRight, ArrowLeftRight, AlertCircle, Bell, Check, CheckCircle2, ClipboardList, Clock,
+  Goal, Heart, Megaphone, RotateCcw, Shield, User, UsersRound, X,
 } from 'lucide-react';
-import { LINEUP_TOOL, PLAYING_TIME_TOOL, RESULT_TOOL, TOOLS_HUB, TOURNAMENT_TOOL } from '@/lib/tool-pages';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
 import { matchPath, newsPath } from '@/lib/slugs';
@@ -123,269 +117,32 @@ const TACTICAL_LINKS: Record<Formation, [number, number, boolean][]> = {
   '3-5-2': [[1, 2, false], [2, 3, false], [2, 7, true], [7, 6, true], [7, 8, true], [6, 9, true], [8, 10, true], [5, 6, true]],
 };
 
-// The free tools teased on the homepage; the rest are on /tools
-const HOME_TOOLS = [
-  { tool: LINEUP_TOOL, text: 'Pick a formation and download a team sheet.' },
-  { tool: PLAYING_TIME_TOOL, text: 'Equal minutes for everyone, with a sub plan.' },
-  { tool: RESULT_TOOL, text: 'Turn the final score into an Instagram post.' },
-  { tool: TOURNAMENT_TOOL, text: 'Fixtures, tables and a bracket on one live page.' },
-];
-
-// "I'm a..." switcher: each role gets its own pitch, the features it uses, and the action that role can take.
-// secondary: 'demo' links to a live club site, 'share' sends this page to whoever runs the club.
+// Who it's for: one line each, linking to that person's answers (Parent goes to the club directory: there's no parent FAQ section)
 const ROLES = [
-  {
-    id: 'coach', tab: 'Coach', Icon: ClipboardList,
-    headline: 'Know your XI before Thursday.',
-    body: 'Send one availability link, see who is in, and drag them onto the pitch. On matchday, log goals, cards and subs from the touchline.',
-    points: [
-      'Players reply in a tap, so no chasing in the group chat',
-      'Lineup builder on a tactical pitch, published to the club site',
-      'Other clubs can invite your team to a friendly',
-    ],
-    cta: { label: 'Set up your team', href: '/create-club' }, secondary: 'demo',
-  },
-  {
-    id: 'committee', tab: 'Committee', Icon: Shield,
-    headline: 'One dashboard instead of five apps.',
-    body: 'Squad, fixtures, members, money, merch, content and sponsors in one place, with roles for your president, secretary and treasurer.',
-    points: [
-      'Memberships paid by card or bank transfer, with receipts',
-      'A club shop for kits and merch, with every order in one ledger',
-      'Give a volunteer only the gate scanner or shop orders',
-      'A club website with your crest, colours and own domain',
-    ],
-    cta: { label: 'Claim your club', href: '/create-club' }, secondary: 'demo',
-  },
-  {
-    id: 'player', tab: 'Player', Icon: User,
-    headline: 'Your pass, your stats, your streak.',
-    body: 'Players never set anything up. Your club adds you, and you get a member pass on your phone, availability in a tap and your goals on the board.',
-    points: [
-      'A digital member pass with your own QR code',
-      'Reply to availability in one tap',
-      'Goals, assists and attendance streaks on the ClubScore leaderboard',
-    ],
-    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
-  },
-  {
-    id: 'parent', tab: 'Parent', Icon: UsersRound,
-    headline: 'All your kids, one app.',
-    body: 'Answer for each child, pay their fees and keep up with their games, all in one place.',
-    points: [
-      'Say In or Out for each of your children',
-      'Add a brother or sister with the same join form',
-      'Fee reminders come to you, and you pay by card or bank transfer',
-      'Junior teams can keep their scores off the public site',
-    ],
-    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'share',
-  },
-  {
-    id: 'supporter', tab: 'Supporter', Icon: Heart,
-    headline: 'Never miss a goal.',
-    body: 'Follow your club and your phone tells you when it kicks off, every goal and the final score. Nothing to install.',
-    points: [
-      'Kick-off, goal, line-up and full-time alerts',
-      'The live match page opens in any browser',
-      'Buy tickets and club kit, and RSVP to events',
-      "Member perks from the club's sponsors",
-    ],
-    cta: { label: 'Find your club', href: '/clubs' }, secondary: 'demo',
-  },
-  {
-    id: 'sponsor', tab: 'Sponsor', Icon: Megaphone,
-    headline: 'Proof your money worked.',
-    body: 'Back a local club and see what it bought: your logo across their site and events, with every impression and click tracked.',
-    points: [
-      'Tiered placements across the club site and event pages',
-      'Sign up and pay online from the club sponsor page',
-      'A report ready for renewal talks',
-    ],
-    cta: { label: 'Find a club to back', href: '/clubs' }, secondary: 'demo',
-  },
+  { tab: 'Coach', Icon: ClipboardList, line: 'Pick your team in minutes', href: '/faq#managers-coaches' },
+  { tab: 'Committee', Icon: Shield, line: 'Members and money in one place', href: '/faq#club-officials' },
+  { tab: 'Player', Icon: User, line: 'Your pass and your stats', href: '/faq#players' },
+  { tab: 'Parent', Icon: UsersRound, line: 'All your kids, one app', href: '/clubs' },
+  { tab: 'Supporter', Icon: Heart, line: 'Never miss a goal', href: '/faq#supporters' },
+  { tab: 'Sponsor', Icon: Megaphone, line: 'See what your money did', href: '/faq#sponsors' },
 ] as const;
 
-type RoleId = typeof ROLES[number]['id'];
+// "Team picked" tile: a 4-3-3 on the mini pitch, x/y in %, keeper amber, forwards red (same glows as the hero pitch)
+const WEEK_PITCH: [number, number, number, '' | 'gk' | 'fw'][] = [
+  [12, 50, 1, 'gk'], [32, 20, 2, ''], [30, 42, 4, ''], [30, 62, 5, ''], [32, 82, 3, ''],
+  [54, 30, 8, ''], [52, 52, 6, ''], [54, 74, 10, ''], [78, 24, 7, 'fw'], [82, 50, 9, 'fw'], [78, 76, 11, 'fw'],
+];
+
+const SAY_LINES = ['Less chasing.', 'More football.'];
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-
-/** A small pass, the same shape on the Committee and Player tabs */
-function MiniPass({ clubName }: { clubName: string }) {
-  return (
-    <div className="hm-pass">
-      <small>Player pass, {clubName}</small>
-      <span className="hm-pass-qr" aria-hidden="true"><QRCodeSVG value="https://itsfootball.club" size={48} /></span>
-      <b>Alex Morgan</b>
-      <small>Senior squad, valid 2026/27</small>
-    </div>
-  );
-}
-
-/** Each role's features, with a small example of each. Sample data is always captioned Example. */
-function RoleFeatures({ id, clubName }: { id: RoleId; clubName: string }) {
-  switch (id) {
-    case 'coach':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><Radio size={18} aria-hidden="true" /> Live match centre</h4>
-            <p>Run the clock from the touchline. Supporters follow on the club site in real time.</p>
-            <figure>
-              <div className="hm-score"><b>2 - 1</b><span className="hm-game-live">Live 67&apos;</span></div>
-              <div className="hm-timeline" aria-hidden="true"><i /><b style={{ left: '25%' }} /><b className="y" style={{ left: '45%' }} /><b style={{ left: '64%' }} /><b style={{ left: '72%' }} /></div>
-              <figcaption>Example match</figcaption>
-            </figure>
-          </article>
-          <article className="hm-feat">
-            <h4><Users size={18} aria-hidden="true" /> Availability</h4>
-            <table className="hm-table"><tbody>
-              <tr><td>#8 J. Silva</td><td className="is-in">In</td></tr>
-              <tr><td>#15 R. Grant</td><td className="is-maybe">Maybe</td></tr>
-              <tr><td>#18 T. Moss</td><td className="is-out">Out</td></tr>
-            </tbody></table>
-            <figcaption>Example replies</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Trophy size={18} aria-hidden="true" /> Tournaments</h4>
-            <p>Brackets, round-robins and group tables update as you enter scores.</p>
-            <table className="hm-table"><tbody>
-              <tr><td><b>Lions</b></td><td><b>2</b></td></tr>
-              <tr><td>United</td><td>1</td></tr>
-            </tbody></table>
-            <figcaption>Example cup</figcaption>
-          </article>
-        </div>
-      );
-    case 'committee':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><Wallet size={18} aria-hidden="true" /> Subs, shop and money</h4>
-            <figure>
-              <div className="hm-score"><b>$2,340</b><span>of $3,000 season subs</span></div>
-              <div className="hm-bar" aria-hidden="true"><i /></div>
-              <table className="hm-table"><tbody>
-                <tr><td>Senior membership, J. Park</td><td>$120</td></tr>
-                <tr><td>Shop, home shirt x2</td><td>$90</td></tr>
-              </tbody></table>
-              <figcaption>Example ledger</figcaption>
-            </figure>
-          </article>
-          <article className="hm-feat">
-            <h4><QrCode size={18} aria-hidden="true" /> Member passes</h4>
-            <MiniPass clubName={clubName} />
-            <figcaption>Example pass</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><DoorOpen size={18} aria-hidden="true" /> Door check-in</h4>
-            <p>Scan member passes at the door with any phone.</p>
-          </article>
-        </div>
-      );
-    case 'player':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><Flame size={18} aria-hidden="true" /> ClubScore</h4>
-            <p>Points for goals, assists, clean sheets and, most of all, showing up.</p>
-            <table className="hm-table"><tbody>
-              <tr><td>1 Marco Silva <small>5 games in a row</small></td><td><b>412</b></td></tr>
-              <tr><td>2 Dami Okafor</td><td><b>388</b></td></tr>
-              <tr><td>3 Jae Park</td><td><b>351</b></td></tr>
-            </tbody></table>
-            <figcaption>Example leaderboard</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><QrCode size={18} aria-hidden="true" /> Your pass</h4>
-            <MiniPass clubName={clubName} />
-            <figcaption>Example pass</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><CalendarCheck size={18} aria-hidden="true" /> This Sunday</h4>
-            <div className="hm-kid"><span>Are you in?</span><span className="hm-seg" aria-hidden="true"><span className="on">In</span><span>Out</span></span></div>
-            <figcaption>Example</figcaption>
-          </article>
-        </div>
-      );
-    case 'parent':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><CalendarCheck size={18} aria-hidden="true" /> This Saturday</h4>
-            <div className="hm-kid"><span>Mia, Under 10s</span><span className="hm-seg" aria-hidden="true"><span className="on">In</span><span>Out</span></span></div>
-            <div className="hm-kid"><span>Leo, Under 7s</span><span className="hm-seg" aria-hidden="true"><span>In</span><span className="on">Out</span></span></div>
-            <figcaption>Example family</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Wallet size={18} aria-hidden="true" /> Fees</h4>
-            <table className="hm-table"><tbody>
-              <tr><td>Mia, winter season</td><td className="is-in">Paid</td></tr>
-              <tr><td>Leo, winter season</td><td className="is-maybe">Due</td></tr>
-            </tbody></table>
-            <figcaption>Example</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Shield size={18} aria-hidden="true" /> Junior results</h4>
-            <p>When a junior team hides scores, the public site shows the game but not the score.</p>
-          </article>
-        </div>
-      );
-    case 'supporter':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><Bell size={18} aria-hidden="true" /> Alerts on your phone</h4>
-            <div className="hm-alert"><i aria-hidden="true" /><span><b>Goal! {clubName} 2 - 1 Riverside</b><small>67 minutes</small></span></div>
-            <div className="hm-alert"><i aria-hidden="true" /><span><b>Kick-off: {clubName} v Riverside</b><small>Follow it live</small></span></div>
-            <figcaption>Example alerts</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Ticket size={18} aria-hidden="true" /> Tickets and shop</h4>
-            <table className="hm-table"><tbody>
-              <tr><td>Grand final ticket</td><td>$10</td></tr>
-              <tr><td>Home shirt</td><td>$45</td></tr>
-            </tbody></table>
-            <figcaption>Example prices</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Gift size={18} aria-hidden="true" /> Member perks</h4>
-            <p>Deals from local sponsors, shown to members with their pass.</p>
-          </article>
-        </div>
-      );
-    case 'sponsor':
-      return (
-        <div className="hm-feats">
-          <article className="hm-feat hm-feat-wide">
-            <h4><BarChart3 size={18} aria-hidden="true" /> Season report</h4>
-            <table className="hm-table"><tbody>
-              <tr><td>Impressions</td><td><b>12,400</b></td></tr>
-              <tr><td>Clicks</td><td><b>486</b></td></tr>
-              <tr><td>Click rate</td><td><b>3.9%</b></td></tr>
-            </tbody></table>
-            <figcaption>Example report</figcaption>
-          </article>
-          <article className="hm-feat">
-            <h4><Megaphone size={18} aria-hidden="true" /> Placements</h4>
-            <p>Your logo on the club site, match pages and event pages, by tier.</p>
-          </article>
-          <article className="hm-feat">
-            <h4><Gift size={18} aria-hidden="true" /> Member perks</h4>
-            <p>Offer a deal to the club&apos;s members, shown with their pass.</p>
-          </article>
-        </div>
-      );
-  }
-}
-
-const SPONSOR_TIER_WEIGHT: Record<string, number> = { platinum: 0, gold: 1, silver: 2, bronze: 3, grassroots: 4 };
 
 /** Club blocks shown before "See all clubs" takes the last slot */
 const HOME_CLUB_BLOCKS = 12;
 
 export default function PlatformHomePage({ latestNews = [], latestPhotos = [], results = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; results?: HomeResultRow[]; demoClub?: HomeDemoClub | null }) {
   const router = useRouter();
-  const { clubs: allClubs, sponsors, matches } = useClub();
+  const { clubs: allClubs, matches } = useClub();
   // Tournament-only clubs (public tournament pages) aren't clubs to show off
   const clubs = useMemo(() => allClubs.filter(isListedClub), [allClubs]);
   const liveClubIds = useMemo(() => new Set(matches.filter(m => m.status === 'live' || m.status === 'halftime').map(m => m.club_id)), [matches]);
@@ -404,7 +161,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       return club ? [{ kind: 'photo' as const, id: p.id, at: p.created_at, href: `/${club.slug}/gallery`, image: p.thumbnail_url || p.media_url, title: p.title || p.album_name || 'New photos', clubName: club.short_name || club.name }] : [];
     }),
   ].sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 3);
-  // The results board: each listed club's newest game (live ones come first), three clubs at most
+  // The results board: each listed club's newest game (live ones come first), two clubs at most
   const boardGames = useMemo(() => {
     const seen = new Set<string>();
     const out: { game: HomeResultRow; club: (typeof clubs)[number] }[] = [];
@@ -413,7 +170,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       if (!club || seen.has(club.id)) continue;
       seen.add(club.id);
       out.push({ game, club });
-      if (out.length === 3) break;
+      if (out.length === 2) break;
     }
     return out;
   }, [results, clubs]);
@@ -443,13 +200,8 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
   const [matchStatus, setMatchStatus] = useState<'live' | 'halftime' | 'ended'>('live');
   const [refCardActive, setRefCardActive] = useState<'yellow' | 'red' | null>(null);
   const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
-  const [kitStyle, setKitStyle] = useState<KitStyle>('stripes');
-  const [isKitFlash, setIsKitFlash] = useState(false);
-  const handleKitSelect = (style: KitStyle) => {
-    setKitStyle(style);
-    setIsKitFlash(true);
-    setTimeout(() => setIsKitFlash(false), 1200);
-  };
+  // The kit picker is gone from the hero; the mock shirts keep one pattern
+  const kitStyle: KitStyle = 'stripes';
   // Tactical Pitch state
   const [formation, setFormation] = useState<Formation>('4-3-3');
   const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(8);
@@ -532,54 +284,38 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
     router.push(`/create-club?${params}`);
   };
 
-  // Every active sponsor across every club, paired with the club that carries them,
-  // sorted so higher tiers surface first within the scrollable strip.
-  const allSponsors = useMemo(() => {
-    const clubById = new Map(clubs.map(c => [c.id, c]));
-    return sponsors
-      // Club-wide only - event-scoped sponsors show on their own event's page instead.
-      .filter(s => s.is_active && !s.event_id)
-      .map(s => ({ sponsor: s, club: clubById.get(s.club_id) }))
-      .filter((entry): entry is { sponsor: typeof entry.sponsor; club: NonNullable<typeof entry.club> } => !!entry.club)
-      .sort((a, b) => {
-        const tierDiff = (SPONSOR_TIER_WEIGHT[a.sponsor.tier] ?? 99) - (SPONSOR_TIER_WEIGHT[b.sponsor.tier] ?? 99);
-        if (tierDiff !== 0) return tierDiff;
-        return a.sponsor.display_order - b.sponsor.display_order;
-      });
-  }, [clubs, sponsors]);
-
   const openAuth = (mode: 'login' | 'signup') => { setAuthMode(mode); setAuthModalOpen(true); };
 
   // The club picked in Mission Control (F10-9); until one is picked, the first listed club
   const demoClub: HomeDemoClub | undefined = pickedDemo || clubs[0];
 
-  const [roleIdx, setRoleIdx] = useState(0);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const onTabKey = (e: React.KeyboardEvent) => {
-    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    if (!step) return;
+  // The closing block's address box goes to the same place as the hero's
+  const [closeName, setCloseName] = useState('');
+  const claimClose = (e: React.FormEvent) => {
     e.preventDefault();
-    const next = (roleIdx + step + ROLES.length) % ROLES.length;
-    setRoleIdx(next);
-    tabRefs.current[next]?.focus();
+    const params = new URLSearchParams();
+    if (closeName.trim()) params.set('name', closeName.trim());
+    router.push(`/create-club${params.size ? `?${params}` : ''}`);
   };
 
-  const [copied, setCopied] = useState(false);
-  const shareLink = async () => {
-    const url = window.location.origin;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: 'itsfootball.club', text: 'Club website, live match centre and member passes for our club?', url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch { /* share sheet dismissed or clipboard blocked */ }
-  };
+  // Tagline: each word lights up once it crosses the middle of the screen (all lit with reduced motion)
+  const sayRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const words = sayRef.current?.querySelectorAll<HTMLElement>('.hv-w');
+    if (!words?.length) return;
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      words.forEach(w => w.classList.add('is-on'));
+      return;
+    }
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('is-on'); io.unobserve(en.target); } });
+    }, { rootMargin: '0px 0px -45% 0px' });
+    words.forEach(w => io.observe(w));
+    return () => io.disconnect();
+  }, []);
 
   return (
-    <div className="lp" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="lp" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <PlatformNavbar />
 
       {/* ================= HERO ================= */}
@@ -639,7 +375,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 )}
               </div>
 
-              {/* 1.3 Color and kit pattern selection */}
+              {/* 1.3 Club colour picker */}
               <div className="lp-color-kit-section">
                 <div className="lp-swatches-col">
                   <span className="lp-swatches-label" id="lp-colours-label">Club colours</span>
@@ -660,59 +396,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                   <span className="lp-swatch-name">{palette.name}</span>
                 </div>
 
-                <div className="lp-kit-pattern-col">
-                  <span className="lp-swatches-label">Kit Pattern</span>
-                  <div className="lp-kit-pill-grid">
-                    {[
-                      {
-                        id: 'solid',
-                        label: 'Solid',
-                        icon: <span className="lp-pattern-dot" />,
-                      },
-                      {
-                        id: 'stripes',
-                        label: 'Stripes',
-                        icon: (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                            <rect x="1" y="1" width="2" height="10" rx="0.5" />
-                            <rect x="5" y="1" width="2" height="10" rx="0.5" />
-                            <rect x="9" y="1" width="2" height="10" rx="0.5" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        id: 'sash',
-                        label: 'Sash',
-                        icon: (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                            <polygon points="1,11 3.5,11 11,2 8.5,2" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        id: 'checkered',
-                        label: 'Checkered',
-                        icon: (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                            <rect x="1" y="1" width="4.5" height="4.5" />
-                            <rect x="6.5" y="6.5" width="4.5" height="4.5" />
-                          </svg>
-                        ),
-                      },
-                    ].map((k) => (
-                      <button
-                        key={k.id}
-                        type="button"
-                        className={`lp-kit-style-pill ${kitStyle === k.id ? 'is-active' : ''}`}
-                        onClick={() => handleKitSelect(k.id as KitStyle)}
-                        aria-pressed={kitStyle === k.id}
-                      >
-                        {k.icon}
-                        <span>{k.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -741,7 +424,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 <div className="lp-mock-clock">{isLive ? `${minute}'` : matchStatus === 'halftime' ? 'HT' : 'FT'}</div>
 
                 <div className="lp-mock-score-row">
-                  <div className={`lp-mock-team-badge ${isKitFlash ? 'is-kit-flash' : ''}`}>
+                  <div className="lp-mock-team-badge">
                     <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
                     <span className="lp-mock-team" title={displayName}>{displayName}</span>
                   </div>
@@ -756,10 +439,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 <div className="lp-mock-live-wrap">
                   <span className={`lp-mock-live-badge is-${matchStatus}`} aria-live="polite">
                     {isLive ? '● Live Match' : matchStatus === 'halftime' ? 'Half Time' : 'Full Time'}
-                  </span>
-                  <span className={`lp-mock-kit-pill ${isKitFlash ? 'is-kit-flash' : ''}`} title={`Active Match Kit: ${kitStyle.toUpperCase()}`}>
-                    <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                    <span className="lp-kit-tag-text">{kitStyle.toUpperCase()} KIT</span>
                   </span>
                 </div>
 
@@ -1012,152 +691,97 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         </div>
       </div>
 
-      {/* ================= WHO'S PLAYING: the core loop, as one colour block ================= */}
-      <section className="hm-sec">
+      {/* ================= THE WEEK: four pictures on the hero's pitch, two words each ================= */}
+      <section className="hm-sec" aria-labelledby="hv-week-h">
         <div className="container">
-          <div className="hm-block">
-            <h2 className="hm-h2">Who&apos;s playing Sunday, sorted before Friday.</h2>
-            <p className="hm-lede">No more counting thumbs-up in the group chat.</p>
-            <ol className="hm-steps hm-steps-row">
-              <li><h3>Players answer</h3><p>Each player gets a link by email or WhatsApp and taps one button.</p></li>
-              <li><h3>You pick the team</h3><p>The line-up builder starts from the players who said In.</p></li>
-              <li><h3>Everyone sees it</h3><p>The line-up goes on your club site at a link anyone can open.</p></li>
-            </ol>
+          <div className="hv-head">
+            <h2 id="hv-week-h" className="hv-h2">Your week, sorted.</h2>
+            <span className="hv-example">Example week</span>
           </div>
-        </div>
-      </section>
-
-      {/* ================= FEATURES BY ROLE: one switcher; every panel stays in the HTML ================= */}
-      <section className="hm-sec" id="features" aria-labelledby="hm-features-h">
-        <div className="container">
-          <h2 id="hm-features-h" className="hm-h2">From kick-off to the clubhouse, in one place.</h2>
-          <p className="hm-lede">Everything here is live in the product today.</p>
-          <div className="hm-pick">
-            <span id="hm-pick-label">I&apos;m a</span>
-            <div className="hm-tabs" role="tablist" aria-labelledby="hm-pick-label" onKeyDown={onTabKey}>
-              {ROLES.map((r, i) => (
-                <button
-                  key={r.id}
-                  ref={el => { tabRefs.current[i] = el; }}
-                  type="button"
-                  role="tab"
-                  id={`hm-tab-${r.id}`}
-                  aria-selected={i === roleIdx}
-                  aria-controls={`hm-panel-${r.id}`}
-                  tabIndex={i === roleIdx ? 0 : -1}
-                  className="hm-tab"
-                  onClick={() => setRoleIdx(i)}
-                >
-                  <r.Icon size={18} aria-hidden="true" /> {r.tab}
-                </button>
-              ))}
-            </div>
-          </div>
-          {ROLES.map((r, i) => (
-            <div
-              key={r.id}
-              id={`hm-panel-${r.id}`}
-              role="tabpanel"
-              aria-labelledby={`hm-tab-${r.id}`}
-              hidden={i !== roleIdx}
-              className="hm-panel"
-            >
-              <div>
-                <h3 className="hm-role-h">{r.headline}</h3>
-                <p className="hm-role-body">{r.body}</p>
-                <ul className="hm-points">
-                  {r.points.map(pt => <li key={pt}>{pt}</li>)}
-                </ul>
-                <div className="hm-actions">
-                  <Link href={r.cta.href} className="btn btn-primary">{r.cta.label}</Link>
-                  {r.secondary === 'share' ? (
-                    <button type="button" className="btn btn-secondary" onClick={shareLink}>
-                      <span aria-live="polite">{copied ? 'Link copied' : 'Send this to your committee'}</span>
-                    </button>
-                  ) : demoClub && (
-                    <Link href={`/${demoClub.slug}`} className="btn btn-secondary">See a live club site</Link>
-                  )}
+          <ol className="hv-week">
+            <li className="hv-day">
+              <div className="hv-pic" data-theme="dark">
+                <div className="hv-fx"><small>Sunday 9:00 am</small><b>Under 12s v Riverside</b><small>Home</small></div>
+              </div>
+              <p className="hv-cap"><b>Mon</b> Fixture up</p>
+            </li>
+            <li className="hv-day">
+              <div className="hv-pic" data-theme="dark">
+                <div className="hv-tally">
+                  <div className="is-in"><b>14</b> In</div>
+                  <div className="is-maybe"><b>2</b> Maybe</div>
+                  <div className="is-out"><b>1</b> Out</div>
                 </div>
               </div>
-              <RoleFeatures id={r.id} clubName={displayName} />
-            </div>
-          ))}
-          <div className="hm-also">
-            <h3>Also in every club site</h3>
-            <ul>
-              {['News and match reports', 'Homepage photo carousel', 'Events and socials', 'Door check-in', 'Seasons', 'Committee page', 'Your crest, colours and domain', 'Visitor numbers', 'Contact inbox', 'Bulk member import', 'Search-friendly pages'].map(x => <li key={x}>{x}</li>)}
-            </ul>
-          </div>
+              <p className="hv-cap"><b>Wed</b> Players reply</p>
+            </li>
+            <li className="hv-day">
+              <div className="hv-pic" data-theme="dark">
+                <div className="hv-mini" aria-hidden="true">
+                  {WEEK_PITCH.map(([x, y, n, kind]) => (
+                    <span key={n} className={`hv-tok${kind ? ` is-${kind}` : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>{n}</span>
+                  ))}
+                </div>
+              </div>
+              <p className="hv-cap"><b>Fri</b> Team picked</p>
+            </li>
+            <li className="hv-day">
+              <div className="hv-pic" data-theme="dark">
+                <div className="hv-goal">
+                  <b className="hv-goal-score">2–1</b>
+                  <div className="hv-alert"><i aria-hidden="true"><Bell size={16} /></i><span><b>Goal, {displayName}</b><small>67 minutes</small></span></div>
+                </div>
+              </div>
+              <p className="hv-cap"><b>Sun</b> Goal alert sent</p>
+            </li>
+          </ol>
         </div>
       </section>
 
-      {/* ================= PRICE: the one number, said once, with how we are paid ================= */}
-      <section className="hm-sec" aria-labelledby="hm-free-h">
+      {/* ================= WHO IT'S FOR: one line each ================= */}
+      <section className="hm-sec" aria-labelledby="hv-roles-h">
         <div className="container">
-          <div className="hm-free">
-            <div>
-              <p className="hm-free-zero"><b>$0</b><span>a month</span></p>
-              <h2 id="hm-free-h" className="hm-h2">Free forever. Not a free trial.</h2>
-              <p className="hm-lede">Every club gets every feature from day one. There&apos;s nothing to upgrade to later.</p>
-              <Link href="/create-club" className="btn btn-primary hm-free-btn">Create your club</Link>
-              <p className="hm-small hm-free-note">No bank card required. Sign up and enjoy.</p>
-            </div>
-            <dl className="hm-free-sum">
-              <div><dt>Subscription</dt><dd>None</dd></div>
-              <div><dt>Paid plans or locked features</dt><dd>None</dd></div>
-              <div><dt>Ads from other companies</dt><dd>None</dd></div>
-              <div><dt>How we keep it free</dt><dd>A small booking fee, added when someone pays your club by card. We never take a cut of what your club charges, so that money goes back into the game: nets, kits and the oranges at half-time. <Link href="/pricing" className="hm-link">How card payments work</Link></dd></div>
-            </dl>
-          </div>
+          <h2 id="hv-roles-h" className="hv-h2 hv-head">Something for everyone at the club.</h2>
+          <ul className="hv-roles">
+            {ROLES.map(r => (
+              <li key={r.tab}>
+                <Link href={r.href} className="hv-role">
+                  <span className="hv-role-ic"><r.Icon size={22} aria-hidden="true" /></span>
+                  <span><b>{r.tab}</b><span>{r.line}</span></span>
+                  <ArrowRight size={16} className="hv-role-go" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
-      {/* ================= FREE TOOLS (no club needed): one slim band ================= */}
-      <section className="hm-sec" aria-labelledby="hm-tools-h">
-        <div className="container">
-          <div className="hm-tools">
-            <div>
-              <h2 id="hm-tools-h">Not ready for a club site? Start with a free tool.</h2>
-              <Link href={TOOLS_HUB.path} className="hm-link">See all free tools</Link>
-            </div>
-            <ul>
-              {HOME_TOOLS.map(t => (
-                <li key={t.tool.path}>
-                  <Link href={t.tool.path}><b>{t.tool.label}</b><span>{t.text}</span></Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= PROOF: real clubs, their latest games, sponsors and posts ================= */}
+      {/* ================= THIS WEEKEND: real clubs' photos, news and games ================= */}
       {clubs.length > 0 && (
         <section className="hm-sec" aria-labelledby="hm-clubs-h">
           <div className="container">
-            <div className="hm-head">
-              <div>
-                <h2 id="hm-clubs-h" className="hm-h2">Clubs already on the pitch.</h2>
-                <p className="hm-lede">
-                  {clubs.length} {clubs.length === 1 ? 'club runs' : 'clubs run'} on itsfootball.club
-                  {allSponsors.length > 0 && <>, backed by {allSponsors.length} local {allSponsors.length === 1 ? 'sponsor' : 'sponsors'}</>}.
-                </p>
-              </div>
-              <Link href="/clubs" className="hm-link">Browse all clubs</Link>
+            <div className="hv-head">
+              <h2 id="hm-clubs-h" className="hv-h2">This weekend on itsfootball.club.</h2>
+              <Link href="/clubs" className="hm-link">All {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'}</Link>
             </div>
-
-            {boardGames.length > 0 ? (
-              <div className="hm-board">
+            {latestPosts.length + boardGames.length > 0 ? (
+              <div className={`hv-board${latestPosts.length === 0 ? ' no-posts' : ''}`}>
+                {latestPosts.map((p, i) => (
+                  <Link key={`${p.kind}-${p.id}`} href={p.href} className={`hv-post${i === 0 ? ' is-big' : ''}`}>
+                    <img src={p.image} alt="" loading="lazy" decoding="async" />
+                    <span><small>{p.clubName}</small>{p.title}</span>
+                  </Link>
+                ))}
                 {boardGames.map(({ game, club }) => {
                   const live = game.status === 'live' || game.status === 'halftime';
                   const hidden = game.scores_hidden;
                   const homeWon = game.home_score > game.away_score;
                   const awayWon = game.away_score > game.home_score;
-                  const side = (name: string, logo: string | null, score: number, dim: boolean, showScore: boolean) => (
+                  const side = (name: string, logo: string | null, score: number, dim: boolean) => (
                     <div className={`hm-game-row${dim ? ' is-dim' : ''}`}>
                       {logo ? <img src={logo} alt="" width={26} height={26} loading="lazy" decoding="async" /> : <i aria-hidden="true">{initials(name)}</i>}
                       <span>{name}</span>
-                      {showScore && <b>{score}</b>}
+                      {!hidden && <b>{score}</b>}
                     </div>
                   );
                   return (
@@ -1170,16 +794,12 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                           <span><LocalTime value={game.match_date} /></span>
                         )}
                       </div>
-                      {side(game.home_team_name, game.home_team_logo, game.home_score, !hidden && !live && awayWon, !hidden)}
-                      {side(game.away_team_name, game.away_team_logo, game.away_score, !hidden && !live && homeWon, !hidden)}
+                      {side(game.home_team_name, game.home_team_logo, game.home_score, !hidden && !live && awayWon)}
+                      {side(game.away_team_name, game.away_team_logo, game.away_score, !hidden && !live && homeWon)}
                       {hidden && <div className="hm-game-hidden">Scores hidden</div>}
                     </Link>
                   );
                 })}
-                <Link href="/clubs" className="hm-game-more">
-                  See all {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'}
-                  <small>Fixtures, results and squads</small>
-                </Link>
               </div>
             ) : (
               <div className="hm-crests">
@@ -1195,56 +815,47 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 )}
               </div>
             )}
-
-            {allSponsors.length > 0 && (
-              <div className="hm-sponsors">
-                <h3>Backed by local sponsors</h3>
-                <div className="hm-sponsor-row">
-                  {allSponsors.map(({ sponsor, club }) => {
-                    const href = sponsorClickHref(sponsor.website_url, club.slug);
-                    return (
-                      <a
-                        key={sponsor.id}
-                        href={href || `/${club.slug}`}
-                        target={href ? '_blank' : undefined}
-                        rel={href ? 'sponsored noopener' : undefined}
-                        className="hm-sponsor"
-                        title={`${sponsor.name}, ${club.short_name || club.name}`}
-                      >
-                        <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={34} style={{ maxWidth: 140 }} />
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {latestPosts.length > 0 && (
-              <div className="hm-posts">
-                {latestPosts.map(p => (
-                  <Link key={`${p.kind}-${p.id}`} href={p.href} className="hm-post">
-                    <img src={p.image} alt="" loading="lazy" decoding="async" />
-                    <span>
-                      <small>{p.clubName}, {p.kind === 'news' ? 'news' : 'photos'}</small>
-                      <span className="hm-post-title">{p.title}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
         </section>
       )}
 
-      {/* ================= FAQ: two columns; every question stays on the page (FAQPage schema) ================= */}
-      <section className="hm-sec" aria-labelledby="hm-faq-h">
-        <div className="container hm-faq">
-          <div>
-            <h2 id="hm-faq-h" className="hm-h2">Frequently asked questions.</h2>
-            <p className="hm-lede">What committees, volunteers and managers ask before they start.</p>
-            <Link href="/faq" className="hm-link">Read all 30+ answers</Link>
+      {/* ================= PRICE: the one number ================= */}
+      <section className="hm-sec" aria-labelledby="hv-free-h">
+        <div className="container">
+          <div className="hv-free">
+            <h2 id="hv-free-h" className="hv-zero">$0<span>a month, free forever</span></h2>
+            <ul className="hv-nones" aria-label="What you won't pay for">
+              {['Subscription', 'Locked features', 'Ads', 'Bank card to sign up'].map(x => (
+                <li key={x}><s>{x}</s><span className="sr-only"> none</span></li>
+              ))}
+            </ul>
           </div>
-          <div className="hm-faq-list">
+        </div>
+      </section>
+
+      {/* ================= TAGLINE: words light up as they cross the middle of the screen ================= */}
+      <section className="hv-say" aria-label="Less chasing. More football.">
+        <div className="container">
+          <p ref={sayRef} aria-hidden="true">
+            {SAY_LINES.map((line, li) => (
+              <span key={line} className="hv-say-line">
+                {line.split(' ').map((w, wi) => (
+                  <span key={w} className={`hv-w${li === SAY_LINES.length - 1 && wi === line.split(' ').length - 1 ? ' is-green' : ''}`}>{w} </span>
+                ))}
+              </span>
+            ))}
+          </p>
+        </div>
+      </section>
+
+      {/* ================= FAQ: questions only until opened (FAQPage schema) ================= */}
+      <section className="hm-sec" aria-labelledby="hm-faq-h">
+        <div className="container">
+          <div className="hv-head">
+            <h2 id="hm-faq-h" className="hv-h2">Questions?</h2>
+            <Link href="/faq" className="hm-link">All answers</Link>
+          </div>
+          <div className="hm-faq-list hv-faq">
             {HOMEPAGE_FAQS.map(f => (
               <details key={f.q}>
                 <summary>{f.q}</summary>
@@ -1255,21 +866,19 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         </div>
       </section>
 
-      {/* ================= CLOSE: the setup steps and the one action, as a colour block ================= */}
+      {/* ================= CLOSE: the hero's action again ================= */}
       <section className="hm-sec hm-sec-last">
         <div className="container">
-          <div className="hm-block hm-close">
+          <div className="hm-block hv-close">
+            <h2 className="hm-h2 hv-h2">Your club&apos;s address is waiting.</h2>
             <div>
-              <h2 className="hm-h2">Give your club the matchday it deserves.</h2>
-              <p className="hm-lede">Set up your club website, fixtures, squad and member passes this week, and run your next match live from the touchline.</p>
-              <Link href="/create-club" className="hm-block-btn">Create your club</Link>
-              <p className="hm-small">$0 a month, free forever. No bank card required.</p>
+              <form className="hv-claim" onSubmit={claimClose}>
+                <label htmlFor="hv-club-name">itsfootball.club/</label>
+                <input id="hv-club-name" value={closeName} onChange={e => setCloseName(e.target.value)} placeholder="yourclub" autoComplete="off" maxLength={60} />
+                <button type="submit">Claim it</button>
+              </form>
+              <p className="hm-small">$0 a month. No bank card required.</p>
             </div>
-            <ol className="hm-steps hm-steps-list">
-              {CREATE_CLUB_STEPS.map(s => (
-                <li key={s.name}><h3>{s.name}</h3><p>{s.text}</p></li>
-              ))}
-            </ol>
           </div>
         </div>
       </section>
