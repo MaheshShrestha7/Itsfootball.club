@@ -91,10 +91,13 @@ export default function PlatformNavbar() {
             <Scale size={16} />
             Compare
           </Link>
-          <Link href="/pricing" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <Tag size={16} />
-            Pricing
-          </Link>
+          {/* Pricing is for visitors deciding whether to sign up, so signed-in people don't see it */}
+          {!isAuthenticated && (
+            <Link href="/pricing" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Tag size={16} />
+              Pricing
+            </Link>
+          )}
           <Link href="/faq" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
             <HelpCircle size={16} />
             FAQ
@@ -496,24 +499,26 @@ export default function PlatformNavbar() {
                     Australia
                   </span>
                 </Link>
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 0.85rem',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                    background: 'rgba(var(--tint-rgb), 0.03)',
-                  }}
-                >
-                  <Tag size={18} color="var(--c-blue)" />
-                  <span>Pricing</span>
-                </Link>
+                {!isAuthenticated && (
+                  <Link
+                    href="/pricing"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      background: 'rgba(var(--tint-rgb), 0.03)',
+                    }}
+                  >
+                    <Tag size={18} color="var(--c-blue)" />
+                    <span>Pricing</span>
+                  </Link>
+                )}
                 <Link
                   href="/faq"
                   onClick={() => setMobileDrawerOpen(false)}
