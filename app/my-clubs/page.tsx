@@ -95,11 +95,6 @@ export default function MyClubsPage() {
           <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid rgba(16, 185, 129, 0.2)', borderTopColor: '#10B981', animation: 'spin 0.8s linear infinite' }} />
             <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading club portfolio...</div>
-            <style jsx>{`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
           </div>
         ) : !isAuthenticated || !user ? (
           /* Unauthenticated State */

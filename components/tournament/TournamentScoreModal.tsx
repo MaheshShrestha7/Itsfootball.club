@@ -155,18 +155,8 @@ export default function TournamentScoreModal({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '0.25rem',
-              borderRadius: '6px',
-            }}
-          >
-            <X size={20} />
+          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

@@ -567,7 +567,7 @@ export default function PlayerCardTool({ defaultPosition = 'ST', defaultFinish, 
               <input type="file" accept="image/*" hidden onChange={e => { pickCrest(e.target.files?.[0]); e.target.value = ''; }} />
             </label>
             {state.crest && (
-              <button type="button" className="rg-crest-remove" aria-label="Remove badge" onClick={() => update({ crest: null })}><X size={11} /></button>
+              <button type="button" className="rg-crest-remove" aria-label="Remove badge" onClick={() => update({ crest: null })}><X size={14} aria-hidden="true" /></button>
             )}
           </div>
           <div>

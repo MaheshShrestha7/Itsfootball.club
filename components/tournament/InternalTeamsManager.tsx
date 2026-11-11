@@ -473,11 +473,8 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   {editingTeam ? 'Edit Internal Team' : 'Create Internal Team'}
                 </h3>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={20} />
+              <button type="button" aria-label="Close" className="icon-close" onClick={() => setModalOpen(false)}>
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
