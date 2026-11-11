@@ -319,6 +319,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   <Link href="/clubs" style={{ color: 'var(--text-secondary)' }}>Clubs Directory</Link>
                   <Link href="/my-clubs" style={{ color: 'var(--text-secondary)' }}>My Clubs</Link>
                   <Link href="/create-club" style={{ color: 'var(--text-secondary)' }}>Register New Club</Link>
+                  <Link href="/pricing" style={{ color: 'var(--text-secondary)' }}>Pricing</Link>
                   <Link href="/compare" style={{ color: 'var(--text-secondary)' }}>Compare Alternatives</Link>
                   <Link href="/best-free-football-club-website-builders-australia" style={{ color: 'var(--text-secondary)' }}>Best Club Builders Australia</Link>
                   <Link href="/about" style={{ color: 'var(--text-secondary)' }}>About Us</Link>
