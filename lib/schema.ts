@@ -166,7 +166,7 @@ export const HOMEPAGE_FAQS = [
   },
   {
     q: 'How do online membership payments and registrations work?',
-    a: 'Clubs connect their own Stripe account to collect annual registration fees, tournament entry fees, and merchandise sales. A transparent card booking fee is paid by the payer at checkout, ensuring the club receives 100% of its fees.',
+    a: 'Clubs connect their own Stripe account to collect annual registration fees, tournament entry fees, and merchandise sales. A transparent card booking fee is paid by the payer at checkout, so we never take a cut of what the club charges. Stripe’s own card processing fee still comes off the club’s payout.',
   },
 ];
 
