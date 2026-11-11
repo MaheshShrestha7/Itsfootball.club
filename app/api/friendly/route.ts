@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { getClientIp, rateLimit } from '@/lib/rate-limit';
+import { durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { friendlyOf, opponentName, ourSide, type FriendlyDetails } from '@/lib/friendlies';
 
 // The private link in a "would one of these dates suit?" email (migration 20261158):
@@ -44,17 +44,18 @@ const view = (row: Row, details: FriendlyDetails) => ({
   done: !!row.match_id || row.status === 'archived',
 });
 
-const throttled = (req: NextRequest) => !rateLimit(`friendly:${getClientIp(req.headers)}`, 30, 10 * 60 * 1000).allowed;
+// Shared by every Workers isolate (SEC11-8), so spreading tries across them doesn't raise the limit
+const throttled = async (req: NextRequest) => !(await durableRateLimit(`friendly:${getClientIp(req.headers)}`, 30, 10 * 60 * 1000));
 
 export async function GET(req: NextRequest) {
-  if (throttled(req)) return NextResponse.json({ error: 'Too many tries. Please wait a few minutes.' }, { status: 429 });
+  if (await throttled(req)) return NextResponse.json({ error: 'Too many tries. Please wait a few minutes.' }, { status: 429 });
   const found = await find(req.nextUrl.searchParams.get('token'));
   if (!found) return NextResponse.json({ error: 'This link has expired or isn’t right.' }, { status: 404 });
   return NextResponse.json(view(found.row, found.details), { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(req: NextRequest) {
-  if (throttled(req)) return NextResponse.json({ error: 'Too many tries. Please wait a few minutes.' }, { status: 429 });
+  if (await throttled(req)) return NextResponse.json({ error: 'Too many tries. Please wait a few minutes.' }, { status: 429 });
   const input = await req.json().catch(() => null);
   const found = await find(input?.token);
   if (!found) return NextResponse.json({ error: 'This link has expired or isn’t right.' }, { status: 404 });

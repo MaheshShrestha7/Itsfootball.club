@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/supabase/server-auth';
-import { rateLimit } from '@/lib/rate-limit';
+import { durableRateLimit } from '@/lib/rate-limit';
 import { sendEmail } from '@/lib/email/send';
 import { welcomePack } from '@/lib/email/templates';
 import { SITE_URL } from '@/lib/slugs';
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   if (!to) return NextResponse.json({ error: 'Confirm your email address first, then try again.' }, { status: 400 });
 
   // ponytail: per-isolate throttle, like /api/support
-  if (!rateLimit(`welcome-pack:${auth.userId}:${clubId}`, 3, 60 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`welcome-pack:${auth.userId}:${clubId}`, 3, 60 * 60 * 1000))) {
     return NextResponse.json({ error: 'We’ve sent this a few times already. Please check your inbox, or try again in an hour.' }, { status: 429 });
   }
 

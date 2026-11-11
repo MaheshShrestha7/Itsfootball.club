@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
-import { rateLimit } from '@/lib/rate-limit';
+import { durableRateLimit } from '@/lib/rate-limit';
 import { sendEmail } from '@/lib/email/send';
 import { getServiceClient } from '@/lib/supabase/service';
 import { SITE_URL } from '@/lib/slugs';
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   // ponytail: per-isolate throttle only; add a support_requests table if abuse ever shows up
-  if (!rateLimit(`support:${auth.userId}`, 5, 60 * 60 * 1000).allowed) {
+  if (!(await durableRateLimit(`support:${auth.userId}`, 5, 60 * 60 * 1000))) {
     return NextResponse.json({ error: 'Too many messages. Please try again in an hour.' }, { status: 429 });
   }
 

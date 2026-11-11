@@ -60,7 +60,7 @@ import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
 import { keepEditsMadeDuringLoad, SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
-import { cacheSafeMembers } from './cache-safe';
+import { cacheSafeMembers, cacheSafeSponsors } from './cache-safe';
 import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
@@ -1062,7 +1062,7 @@ export function ClubProvider({
           matches,
           matchEvents,
           events,
-          sponsors,
+          sponsors: cacheSafeSponsors(sponsors, syncedIdsRef.current.sponsors || []),
           news,
           gallery,
           clubScoreProfiles,

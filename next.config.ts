@@ -107,6 +107,14 @@ const nextConfig: NextConfig = {
         source: '/tournaments/:slug/embed',
         headers: SECURITY_HEADERS.filter(h => h.key !== 'X-Frame-Options'),
       },
+      {
+        // itsfootball.club itself also covers its subdomains (SEC11-10); listed last so it replaces the
+        // per-host header above. Never on a club's own domain: there includeSubDomains would force
+        // HTTPS onto the club's other subdomains (webmail, an old site), which we don't run.
+        source: '/:path*',
+        has: [{ type: 'host', value: 'itsfootball\\.club' }],
+        headers: [{ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }],
+      },
     ];
   },
   images: {
