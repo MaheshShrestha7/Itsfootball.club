@@ -89,11 +89,13 @@ export default function AdminSearch({ clubSlug, clubId }: { clubSlug: string; cl
         {query && (
           <button
             type="button"
+            aria-label="Clear search"
+            className="icon-close icon-close-sm"
             onMouseDown={e => e.preventDefault()}
             onClick={() => setQuery('')}
-            style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+            style={{ position: 'absolute', right: '0.2rem', top: '50%', transform: 'translateY(-50%)' }}
           >
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         )}
       </div>

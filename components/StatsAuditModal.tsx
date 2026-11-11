@@ -261,18 +261,8 @@ export default function StatsAuditModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '0.35rem',
-              borderRadius: '6px',
-            }}
-          >
-            <X size={20} />
+          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

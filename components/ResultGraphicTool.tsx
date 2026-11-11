@@ -380,7 +380,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
             <span className="rg-crest-edit" aria-hidden="true"><ImagePlus size={12} /></span>
           </label>
           {team.crest && (
-            <button type="button" className="rg-crest-remove" aria-label={`Remove ${name} badge`} onClick={() => setTeam(side, { crest: null })}><X size={11} /></button>
+            <button type="button" className="rg-crest-remove" aria-label={`Remove ${name} badge`} onClick={() => setTeam(side, { crest: null })}><X size={14} aria-hidden="true" /></button>
           )}
         </div>
         <input className="form-input" value={team.name} maxLength={36} placeholder={side === 'home' ? 'Home team' : 'Away team'}

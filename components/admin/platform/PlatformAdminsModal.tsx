@@ -66,12 +66,8 @@ export default function PlatformAdminsModal({
               Platform Super-Admins
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            <X size={20} />
+          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

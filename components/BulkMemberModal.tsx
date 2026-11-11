@@ -636,19 +636,8 @@ export default function BulkMemberModal({
               Bulk Import &amp; Export Members
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'rgba(var(--tint-rgb), 0.05)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '8px',
-              padding: '0.4rem',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={20} />
+          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

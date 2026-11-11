@@ -1329,12 +1329,8 @@ export default function AdminMatchesPage({
                   {editingMatchId ? 'Update Match Details' : 'Schedule Match Fixture'}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsFormModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={22} />
+              <button type="button" aria-label="Close" className="icon-close" onClick={() => setIsFormModalOpen(false)}>
+                <X size={22} aria-hidden="true" />
               </button>
             </div>
 

@@ -934,12 +934,8 @@ export default function MembersWorkspace({
                 <XCircle size={20} color="var(--c-red)" />
                 <span>Reject Membership</span>
               </h3>
-              <button
-                type="button"
-                onClick={() => setRejectModalMember(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
+              <button type="button" aria-label="Close" className="icon-close" onClick={() => setRejectModalMember(null)}>
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 
@@ -1010,12 +1006,8 @@ export default function MembersWorkspace({
                 <Gift size={20} color="var(--color-accent-ink)" aria-hidden="true" />
                 <span>Waive the fee and approve</span>
               </h3>
-              <button
-                type="button"
-                onClick={() => setWaiveModalMember(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
+              <button type="button" aria-label="Close" className="icon-close" onClick={() => setWaiveModalMember(null)}>
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 

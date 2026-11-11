@@ -372,7 +372,9 @@ export default function AdminMatchCenterControllerPage({
             <PopupPanel onClose={() => setIsCreateFixtureOpen(false)} label="New fixture" className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '520px', padding: '2rem', textAlign: 'left', background: 'var(--bg-surface)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>Schedule New Fixture</h3>
-                <button onClick={() => setIsCreateFixtureOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)' }}><X size={20} /></button>
+                <button type="button" aria-label="Close" className="icon-close" onClick={() => setIsCreateFixtureOpen(false)}>
+                  <X size={20} aria-hidden="true" />
+                </button>
               </div>
               <form onSubmit={handleCreateFixture}>
                 <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -1418,11 +1420,8 @@ export default function AdminMatchCenterControllerPage({
                 <CalendarDays size={20} color="var(--club-primary)" />
                 Schedule Match Fixture
               </h3>
-              <button
-                onClick={() => setIsCreateFixtureOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
+              <button type="button" aria-label="Close" className="icon-close" onClick={() => setIsCreateFixtureOpen(false)}>
+                <X size={20} aria-hidden="true" />
               </button>
             </div>
 

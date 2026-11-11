@@ -1,15 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Check, ArrowRight, ShieldCheck, Zap, Sparkles, CreditCard, Users, Globe, Trophy, HelpCircle } from 'lucide-react';
 import PlatformNavbar from '@/components/PlatformNavbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { fitDescription, pageMetadata, SITE_NAME, SITE_URL } from '@/lib/seo';
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/schema';
-import { CONTACT_EMAIL, FEE_PHRASE } from '@/lib/faq';
+import { FEE_PHRASE } from '@/lib/faq';
 import { bookingFeeText } from '@/lib/finance';
 import { COMPARE_ROWS, competitorBySlug } from '@/lib/competitors';
 import CellView from '@/app/vs/CellView';
+import '../home.css';
 
 const PATH = '/pricing';
 
@@ -121,206 +121,126 @@ export default function PricingPage() {
       <JsonLd data={schema} />
       <PlatformNavbar />
 
-      <main className="container" style={{ padding: '3.5rem 1rem 5rem', flex: 1, maxWidth: '1040px' }}>
-        {/* Header */}
-        <header style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <div className="badge badge-primary" style={{ marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Pricing for grassroots clubs
-          </div>
-          <h1 style={{ fontSize: 'clamp(2.2rem, 5vw, 3.4rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: '1.25rem' }}>
-            Free for every <span style={{ color: 'var(--c-amber)' }}>football club</span>
-          </h1>
-          <p style={{ fontSize: '1.2rem', color: 'var(--text-secondary)', maxWidth: '680px', margin: '0 auto', lineHeight: 1.55 }}>
+      {/* Same look as the home page below its hero: plain headings, solid green blocks (app/home.css, hm- and pr-) */}
+      <main className="lp pr" style={{ flex: 1 }}>
+        <section className="container pr-top">
+          <p className="pr-crumb"><Link href="/">itsfootball.club</Link> / Pricing</p>
+          <h1>Free for every football club.</h1>
+          <p className="hm-lede">
             There&apos;s no monthly subscription, every feature comes with every club, and we don&apos;t run third-party ads.
             Community clubs get a website like the big clubs have, without paying for the software.
           </p>
-        </header>
+        </section>
 
-        {/* Pricing Hero Card */}
-        <div
-          className="glass-panel"
-          style={{
-            position: 'relative',
-            padding: 'clamp(1.75rem, 4vw, 3rem)',
-            borderRadius: '24px',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(245, 158, 11, 0.08)',
-            marginBottom: '3.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '2.5rem', marginBottom: '2.5rem' }}>
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--c-amber)', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-                <Sparkles size={16} /> Everything included
+        <section className="hm-sec" aria-labelledby="pr-plan-h">
+          <div className="container">
+            <div className="hm-block pr-price">
+              <div>
+                <h2 id="pr-plan-h" className="hm-h2">One plan for every club.</h2>
+                <p className="pr-zero"><b>$0</b><span>a month</span></p>
+                <p className="hm-lede">What your committee, coaches, players and supporters use to run the season.</p>
+                <Link href="/create-club" className="hm-block-btn">Create your club</Link>
+                <p className="hm-small">Free to set up. No credit card needed.</p>
               </div>
-              <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 900, margin: '0 0 0.5rem 0' }}>
-                One plan for every club
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1.05rem' }}>
-                What your committee, coaches, players and supporters use to run the season.
-              </p>
-            </div>
-
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '0.35rem' }}>
-                <span style={{ fontSize: 'clamp(2.8rem, 6vw, 4.2rem)', fontWeight: 900, lineHeight: 1, color: 'var(--text-primary)' }}>$0</span>
-                <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: 700 }}>/ month</span>
-              </div>
-              <p style={{ margin: '0.35rem 0 1rem 0', fontSize: '0.9rem', color: 'var(--c-green)', fontWeight: 700 }}>
-                Free for clubs · No credit card required
-              </p>
-              <Link href="/create-club" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', padding: '0.85rem 1.6rem', fontSize: '1.05rem', fontWeight: 800 }}>
-                <span>Create your club free</span>
-                <ArrowRight size={18} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Feature Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            {INCLUDED_FEATURES.map((feat, i) => (
-              <div key={i} style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                <div style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', borderRadius: '50%', padding: '0.35rem', flexShrink: 0, marginTop: '2px' }}>
-                  <Check size={16} strokeWidth={3} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, margin: '0 0 0.25rem 0', color: 'var(--text-primary)' }}>
-                    {feat.title}
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>
-                    {feat.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* How Card Payments Work */}
-        <section style={{ marginBottom: '4rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 900, marginBottom: '0.6rem' }}>
-              How card payments work
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto', fontSize: '1rem' }}>
-              Who pays what when someone pays your club by card.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--c-amber)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                <ShieldCheck size={22} />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>Your club gets its full price</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                If your club charges $200 for a season&apos;s registration or $40 for a jersey, that full amount goes into the club&apos;s own Stripe account, less Stripe&apos;s standard processing fee.
-              </p>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--c-sky)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                <CreditCard size={22} />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>A small booking fee</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                A booking fee of {bookingFeeText()} is added to card, Apple Pay and Google Pay payments, and the person checking out pays it. They see it before they pay, the same as when you book cinema or event tickets.
-              </p>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.75rem' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--c-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                <Zap size={22} />
-              </div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.5rem' }}>No fee on anything else</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.55, margin: 0 }}>
-                Following live matches, marking availability, tracking player stats, scanning passes and making tournament brackets never cost anything.
-              </p>
+              <ul className="pr-inc">
+                {INCLUDED_FEATURES.map(feat => (
+                  <li key={feat.title}>
+                    <h3>{feat.title}</h3>
+                    <p>{feat.desc}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
 
-        {/* Competitor Comparison Snapshot */}
-        <section style={{ marginBottom: '4rem' }}>
-          <div className="glass-panel" style={{ padding: '2rem', borderRadius: '20px' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 900, marginBottom: '1.25rem', textAlign: 'center' }}>
-              How we compare with other club software
-            </h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.92rem' }}>
+        <section className="hm-sec" aria-labelledby="pr-pay-h">
+          <div className="container">
+            <h2 id="pr-pay-h" className="hm-h2">How card payments work.</h2>
+            <p className="hm-lede">Who pays what when someone pays your club by card.</p>
+            <div className="pr-cols">
+              <div>
+                <h3>Your club gets its full price</h3>
+                <p>If your club charges $200 for a season&apos;s registration or $40 for a jersey, that full amount goes into the club&apos;s own Stripe account, less Stripe&apos;s standard processing fee.</p>
+              </div>
+              <div>
+                <h3>A small booking fee</h3>
+                <p>A booking fee of {bookingFeeText()} is added to card, Apple Pay and Google Pay payments, and the person checking out pays it. They see it before they pay, the same as when you book cinema or event tickets.</p>
+              </div>
+              <div>
+                <h3>No fee on anything else</h3>
+                <p>Following live matches, marking availability, tracking player stats, scanning passes and making tournament brackets never cost anything.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="hm-sec" aria-labelledby="pr-compare-h">
+          <div className="container">
+            <div className="hm-head">
+              <h2 id="pr-compare-h" className="hm-h2">How we compare with other club software.</h2>
+              <Link href="/compare" className="hm-link">See the full side-by-side comparisons</Link>
+            </div>
+            <div className="pr-table-wrap">
+              <table className="pr-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>Feature</th>
-                    <th style={{ padding: '0.75rem 1rem', color: 'var(--c-amber)', fontWeight: 800 }}>itsfootball.club</th>
+                  <tr>
+                    <th scope="col">Feature</th>
+                    <th scope="col" className="pr-us">{SITE_NAME}</th>
                     {PRICING_COLUMNS.map(c => (
-                      <th key={c.slug} style={{ padding: '0.75rem 1rem' }}>{c.name}</th>
+                      <th scope="col" key={c.slug}>{c.name}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {PRICING_ROWS.map((r, i) => (
-                    <tr key={r.label} style={i < PRICING_ROWS.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : undefined}>
-                      <td style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>{r.label}</td>
-                      <td style={{ padding: '0.85rem 1rem' }}><CellView cell={r.us} /></td>
+                  {PRICING_ROWS.map(r => (
+                    <tr key={r.label}>
+                      <th scope="row">{r.label}</th>
+                      <td className="pr-us"><CellView cell={r.us} /></td>
                       {PRICING_COLUMNS.map(c => (
-                        <td key={c.slug} style={{ padding: '0.85rem 1rem', color: 'var(--text-secondary)' }}>
-                          <CellView cell={r.them[c.slug]} sources={c.sources} />
-                        </td>
+                        <td key={c.slug}><CellView cell={r.them[c.slug]} sources={c.sources} /></td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
-              <Link href="/compare" style={{ color: 'var(--c-amber)', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'underline' }}>
-                See the full side-by-side comparisons →
-              </Link>
+          </div>
+        </section>
+
+        <section className="hm-sec" aria-labelledby="pr-faq-h">
+          <div className="container hm-faq">
+            <div>
+              <h2 id="pr-faq-h" className="hm-h2">Questions about pricing.</h2>
+              <p className="hm-lede">Fees, limits and how we make money.</p>
+              <Link href="/faq" className="hm-link">Read all the FAQs</Link>
+            </div>
+            <div className="hm-faq-list">
+              {PRICING_FAQS.map(faq => (
+                <details key={faq.q}>
+                  <summary>{faq.q}</summary>
+                  <p>{faq.a}</p>
+                </details>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Pricing FAQs */}
-        <section style={{ marginBottom: '4rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.2rem)', fontWeight: 900, marginBottom: '0.5rem' }}>
-              Questions about pricing
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '1rem' }}>
-              Fees, limits and how we make money.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gap: '1rem', maxWidth: '820px', margin: '0 auto' }}>
-            {PRICING_FAQS.map((faq, i) => (
-              <details key={i} className="glass-panel" style={{ padding: '1.2rem 1.5rem', borderRadius: '14px', cursor: 'pointer' }}>
-                <summary style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{faq.q}</span>
-                  <span style={{ color: 'var(--c-amber)', fontSize: '1.2rem', marginLeft: '1rem' }}>+</span>
-                </summary>
-                <p style={{ marginTop: '0.85rem', marginBottom: 0, color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                  {faq.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <section className="glass-panel" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: '24px', background: 'radial-gradient(circle at center, rgba(245, 158, 11, 0.12) 0%, rgba(0,0,0,0.5) 70%)' }}>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 900, marginBottom: '1rem' }}>
-            Ready to Build Your Club Website?
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '540px', margin: '0 auto 2rem', fontSize: '1.1rem', lineHeight: 1.5 }}>
-            Join community football clubs across Australia, New Zealand and the UK. Live in under 5 minutes.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/create-club" className="btn btn-primary" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', fontWeight: 800 }}>
-              Claim Your Free Club Website
-            </Link>
-            <Link href="/clubs" className="btn btn-secondary" style={{ padding: '0.85rem 1.8rem', fontSize: '1.05rem', fontWeight: 800 }}>
-              Explore Live Clubs
-            </Link>
+        <section className="hm-sec hm-sec-last" aria-labelledby="pr-close-h">
+          <div className="container">
+            <div className="hm-block hm-close">
+              <div>
+                <h2 id="pr-close-h" className="hm-h2">Start your club site today.</h2>
+                <p className="hm-lede">Set up your club website, fixtures, squad and member passes, and run your next match live from the touchline.</p>
+                <Link href="/create-club" className="hm-block-btn">Create your club</Link>
+                <p className="hm-small">Or <Link href="/clubs" className="pr-inline">look at live clubs</Link> first.</p>
+              </div>
+              <dl className="pr-sum">
+                <div><dt>What your club pays</dt><dd>$0</dd></div>
+                <div><dt>What a card payer adds</dt><dd>A small booking fee</dd></div>
+                <div><dt>What your club receives</dt><dd>Its full price, less Stripe&apos;s fee</dd></div>
+              </dl>
+            </div>
           </div>
         </section>
       </main>
