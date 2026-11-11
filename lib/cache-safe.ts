@@ -3,9 +3,10 @@
 // The cache makes pages open instantly and keeps Match Centre working offline, but it outlives the
 // visit: on a shared clubhouse laptop or a lost phone, anything in it can be read by whoever opens
 // the browser next. So members are cached without their contact, health, family or pass details,
+// sponsors without their contact person's name, email and phone,
 // and messages, gate scans and availability notes aren't cached at all; all of these come back
 // from the database on the next load.
-import type { ClubMember } from './supabase/types';
+import type { ClubMember, Sponsor } from './supabase/types';
 
 export const PRIVATE_MEMBER_FIELDS = [
   'email', 'phone', 'date_of_birth', 'emergency_contact', 'medical_notes', 'qr_code_token',
@@ -27,6 +28,20 @@ export function cacheSafeMembers<T extends Partial<ClubMember> & { id: string }>
     if (!synced.has(m.id)) return m;
     const copy: Record<string, unknown> = { ...m };
     for (const f of PRIVATE_MEMBER_FIELDS) delete copy[f];
+    return copy as T;
+  });
+}
+
+/** A sponsor's contact person (admin-only CRM fields): not cached, they come back on the next load (SEC11-7) */
+export const PRIVATE_SPONSOR_FIELDS = ['contact_name', 'contact_email', 'contact_phone'] as const;
+
+/** Sponsors as cached; like members, rows not yet saved keep everything */
+export function cacheSafeSponsors<T extends Partial<Sponsor> & { id: string }>(sponsors: T[], syncedIds: Iterable<string>): T[] {
+  const synced = new Set(syncedIds);
+  return sponsors.map(s => {
+    if (!synced.has(s.id)) return s;
+    const copy: Record<string, unknown> = { ...s };
+    for (const f of PRIVATE_SPONSOR_FIELDS) delete copy[f];
     return copy as T;
   });
 }

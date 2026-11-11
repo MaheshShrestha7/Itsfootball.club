@@ -10,6 +10,12 @@ import { deleteAccount } from '@/lib/account-delete';
 export async function DELETE(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  // With two-step sign-in turned on, a password-only session can't delete the account (SEC11-6):
+  // the same mfa_ok() rule admin rights use (migration 20261129). Accounts without it pass as before.
+  const { data: mfaOk, error: mfaError } = await auth.supabase.rpc('mfa_ok');
+  if (mfaError || mfaOk !== true) {
+    return NextResponse.json({ error: 'Sign in with your two-step code to delete your account.' }, { status: 403 });
+  }
   const db = getServiceClient();
   if (!db) return NextResponse.json({ error: 'Account deletion is not configured on the server.' }, { status: 503 });
 
