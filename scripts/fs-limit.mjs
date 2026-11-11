@@ -1,8 +1,9 @@
-// Loaded into the Cloudflare build with NODE_OPTIONS=--require (see scripts/cf-build.sh).
+// Loaded into the Cloudflare build with NODE_OPTIONS=--import (see scripts/cf-build.sh).
 // OpenNext patches the server bundle with one Promise.all over every traced file (~2,600), so that
 // many files are open at once and the build box fails with "EMFILE: too many open files".
 // This queues fs.promises file calls so at most MAX run at a time. Build only: never loaded by the site.
-const fsp = require('node:fs').promises;
+import { promises as fsp } from 'node:fs';
+
 const MAX = 128;
 let running = 0;
 const waiting = [];
