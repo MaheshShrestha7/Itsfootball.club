@@ -1680,3 +1680,34 @@
   .pr-cols { grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
 }
 @media (max-width: 560px) { .pr-inc { grid-template-columns: minmax(0, 1fr); } }
+
+/* ===== 3D football band under the hero (components/FootballBand.tsx) ===== */
+.fb-band {
+  position: relative; height: min(78vh, 720px); min-height: 520px; overflow: hidden; margin-top: 1.5rem;
+  background: radial-gradient(120% 90% at 50% 0%, #14233a 0%, #08101c 45%, #05080e 100%);
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+}
+[data-theme='light'] .fb-band { background: radial-gradient(120% 90% at 50% 0%, #cfe3f7 0%, #e8f0f8 55%, #F3F5F9 100%); }
+.fb-poster, .fb-canvas, .fb-front { position: absolute; inset: 0; pointer-events: none; }
+.fb-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fb-canvas { z-index: 1; opacity: 0; transition: opacity 0.4s ease; }
+.fb-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
+.fb-front { width: 100%; height: 100%; z-index: 4; }
+.fb-band.is-live .fb-canvas { opacity: 1; }
+.fb-band.is-live .fb-poster, [data-theme='light'] .fb-poster-dark, :root:not([data-theme='light']) .fb-poster-light { display: none; }
+.fb-copy { position: relative; z-index: 2; height: 100%; display: flex; align-items: center; }
+.fb-tagline {
+  font-size: clamp(2.6rem, 6.4vw, 5.6rem); font-weight: 900; line-height: 0.98; letter-spacing: -0.035em;
+  max-width: 9ch; color: #fff; margin: 0;
+}
+.fb-tagline span { display: block; }
+.fb-tagline span:nth-child(2) { color: #10B981; }
+[data-theme='light'] .fb-tagline { color: #0F172A; }
+[data-theme='light'] .fb-tagline span:nth-child(2) { color: #036B4E; }
+@media (max-width: 759px) {
+  .fb-band { height: 640px; }
+  .fb-copy { align-items: flex-start; justify-content: center; padding-top: 56px; text-align: center; }
+  .fb-tagline { max-width: none; font-size: clamp(2.4rem, 11vw, 3.4rem); }
+  .fb-tagline span { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) { .fb-canvas { transition: none; } }

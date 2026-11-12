@@ -27,7 +27,8 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "stripe": "^22.6.2"
+    "stripe": "^22.6.2",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "1.20.12",
@@ -35,6 +36,7 @@
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/three": "^0.187.0",
     "esbuild": "^0.25.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.2",

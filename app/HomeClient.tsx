@@ -21,6 +21,7 @@ import { HOMEPAGE_FAQS } from '@/lib/schema';
 import { matchPath, newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import type { HomeDemoClub, HomeResultRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
+import FootballBand from '@/components/FootballBand';
 
 interface DugoutEvent {
   id: string;
@@ -690,6 +691,9 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
           )}
         </div>
       </div>
+
+      {/* ================= 3D band: the tagline with a player juggling beside it ================= */}
+      <FootballBand />
 
       {/* ================= THE WEEK: four pictures on the hero's pitch, two words each ================= */}
       <section className="hm-sec" aria-labelledby="hv-week-h">
