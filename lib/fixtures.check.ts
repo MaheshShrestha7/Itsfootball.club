@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { latestResult, teamForm, teamRecord } from './fixtures';
+import { cupGames, latestResult, teamForm, teamRecord } from './fixtures';
 
 const game = (date: string, us: number, them: number, extra: Record<string, unknown> = {}) => ({
   status: 'completed', match_date: date, is_club_home: true, home_score: us, away_score: them,
@@ -30,3 +30,12 @@ assert.equal(teamForm(games, 2).at(-1), 'L');
 assert.equal(latestResult(games)?.match_date, '2026-08-01');
 assert.equal(latestResult([]), undefined);
 console.log('fixtures: ok');
+
+// An outside cup: the event's games for the same team, soonest first; a game with no event is alone
+{
+  const g = (id: string, date: string, event_id: string | null, team_id: string | null = 'a') => ({ id, match_date: date, event_id, team_id });
+  const all = [g('3', '2026-11-29', 'cup'), g('1', '2026-11-22T09:00:00Z', 'cup'), g('x', '2026-11-22', 'cup', 'b'), g('2', '2026-11-22T11:00:00Z', 'cup'), g('n', '2026-11-22', null)];
+  assert.deepEqual(cupGames(all, all[0]).map(m => m.id), ['1', '2', '3']);
+  assert.deepEqual(cupGames(all, all[4]).map(m => m.id), ['n']);
+  assert.deepEqual(cupGames([], all[0]).map(m => m.id), ['3']);
+}

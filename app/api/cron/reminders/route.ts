@@ -57,18 +57,27 @@ async function availabilityDrafts(db: SupabaseClient): Promise<EmailDraft[]> {
   if (ensureError) console.error('[reminders] could not create availability rows', ensureError.message);
 
   const { data: rows } = await db.from('player_availabilities')
-    .select(`id, match_id, response_token, member:club_members(${MEMBER_RECIPIENT_COLUMNS}, status)`)
+    .select(`id, match_id, member_id, response_token, member:club_members(${MEMBER_RECIPIENT_COLUMNS}, status)`)
     .in('match_id', due.map(m => m.id))
     .eq('status', 'pending');
   const byId = new Map(due.map(m => [m.id, m]));
 
   // ponytail: one email per match; group per player per day if tournament days start sending several
-  return (rows || []).flatMap(r => {
+  // An outside cup (games linked to one club event) is answered once, so one email per player per cup,
+  // for its first game due
+  const cupSent = new Set<string>();
+  const firstFirst = [...(rows || [])].sort((a, b) => (byId.get(a.match_id)?.match_date || '').localeCompare(byId.get(b.match_id)?.match_date || ''));
+  return firstFirst.flatMap(r => {
     const member = (Array.isArray(r.member) ? r.member[0] : r.member) as { full_name: string; email: string | null; guardian_name: string | null; guardian_email: string | null; status: string } | null;
     const match = byId.get(r.match_id);
     const club = match && clubs.get(match.club_id);
     const recipient = member && memberRecipient(member);
     if (!recipient || member.status === 'alumni' || !match || !club || !r.response_token) return [];
+    if (match.event_id) {
+      const cupKey = `${r.member_id}:${match.event_id}`;
+      if (cupSent.has(cupKey)) return [];
+      cupSent.add(cupKey);
+    }
     return [{
       key: `availability:${r.id}`,
       club, kind: 'availability' as const, refId: match.id, to: recipient.to,

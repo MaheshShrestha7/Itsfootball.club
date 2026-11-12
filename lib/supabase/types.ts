@@ -283,6 +283,8 @@ export interface Match {
   audited_at?: string;
   // Tournament bracket & tiesheet fields
   tournament_id?: string;
+  /** The club event this fixture belongs to (an outside cup); migration 20261169 */
+  event_id?: string | null;
   tournament_stage?: 'group' | 'round_of_32' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | 'third_place';
   tournament_group?: string;
   tournament_round?: number;

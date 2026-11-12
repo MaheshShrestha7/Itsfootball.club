@@ -75,7 +75,7 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, liveFeed, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers } = useClub();
+  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, liveFeed, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers, events: clubEvents } = useClub();
 
   // No fallback to another club, and only this club's own fixtures: a match cached from another
   // club's site must not show under this club's name
@@ -680,7 +680,20 @@ export default function MatchCenterPage({
               )}
             </span>
             <span className="text-note">
-              {[match.competition && match.competition !== 'Premier Regional League' ? match.competition : null, match.venue].filter(Boolean).join(' • ')}
+              {(() => {
+                const competition = match.competition && match.competition !== 'Premier Regional League' ? match.competition : null;
+                // Part of a club event (an outside cup): its name links to the event's page
+                const cup = match.event_id ? clubEvents.find(e => e.id === match.event_id && e.club_id === match.club_id) : undefined;
+                if (!cup) return [competition, match.venue].filter(Boolean).join(' • ');
+                return (
+                  <>
+                    <Link href={`/${resolvedParams.clubSlug}/events/${cup.id}`} style={{ color: 'var(--club-ink)', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '3px' }}>
+                      {competition || cup.title}
+                    </Link>
+                    {match.venue ? ` • ${match.venue}` : ''}
+                  </>
+                );
+              })()}
             </span>
           </div>
 

@@ -6,6 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
+import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { Match, MatchType, isPlayerMember, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
 import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone, { uploadImage } from '@/components/ImageUploadZone';
@@ -227,6 +228,8 @@ export default function AdminMatchesPage({
     half_custom: boolean;
     /** The opponent's crest ('' = the plain shield). A data URL (from an invitation) is uploaded on save */
     opponent_logo: string;
+    /** The club event this game is part of, e.g. an outside cup ('' = none) */
+    event_id: string;
   }>({
     title: '',
     match_type: 'friendly',
@@ -255,6 +258,7 @@ export default function AdminMatchesPage({
     half_text: '',
     half_custom: false,
     opponent_logo: '',
+    event_id: '',
   });
 
   const showToast = (msg: string) => {
@@ -266,11 +270,13 @@ export default function AdminMatchesPage({
   const handleOpenAddModal = (prefill?: NewItemRequest) => {
     // Teams may still be loading when the form opens from a link; the calendar only links real teams
     const prefillTeam = prefill?.team && (!teams.length || teams.some(t => t.id === prefill.team)) ? prefill.team : undefined;
+    // "Add new fixture" on an event (an outside cup): its day, name and link come with it
+    const prefillEvent = prefill?.event ? events.find(e => e.id === prefill.event && e.club_id === club.id) : undefined;
     setEditingMatchId(null);
     setFromInvitation(null);
     setForm({
       title: '',
-      match_type: 'friendly',
+      match_type: prefillEvent && matchTypeForCompetition(prefillEvent.title) === 'tournament' ? 'tournament' : 'friendly',
       opponent_name: '',
       opponent_short_name: '',
       is_club_home: true,
@@ -281,7 +287,7 @@ export default function AdminMatchesPage({
       description: '',
       meet_time: '',
       kit: '',
-      competition: 'Club Friendly',
+      competition: prefillEvent ? prefillEvent.title : 'Club Friendly',
       season: activeSeason?.name || defaultSeasonLabel(),
       status: 'upcoming',
       is_completed: false,
@@ -296,6 +302,7 @@ export default function AdminMatchesPage({
       half_text: '',
       half_custom: false,
       opponent_logo: '',
+      event_id: prefillEvent?.id || '',
     });
     setEmailVisitor(true);
     setOfferToThem(true);
@@ -484,6 +491,7 @@ export default function AdminMatchesPage({
         && validHalfMinutes(m.half_minutes) !== validHalfMinutes(teams.find(t => t.id === (m.team_id || mainTeamId))?.half_minutes),
       // Keep the crest the opponent already has (it used to go back to the plain shield on every edit)
       opponent_logo: opponentLogoOf(m),
+      event_id: m.event_id || '',
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setEditOpenedAt({ match_date: parsedDate, match_time: parsedTime, venue: m.venue || club.stadium_name || '', status: m.status || 'upcoming' });
@@ -526,6 +534,12 @@ export default function AdminMatchesPage({
   const halfReady = useHalfLengthReady();
   // Meet time and kit (migration 20261164): hidden, and never sent, until the database has the columns
   const detailsReady = useMatchdayDetailsReady();
+  const eventsReady = useEventFixturesReady();
+  // Events a fixture can be part of: newest first, so this season's cup is at the top
+  const linkableEvents = useMemo(
+    () => events.filter(e => e.club_id === club.id).sort((a, b) => b.start_time.localeCompare(a.start_time)),
+    [events, club.id]
+  );
   const formTeamId = (form: { match_type: Match['match_type']; team_id: string }) =>
     isTeamFixture({ match_type: form.match_type }) ? (form.team_id || mainTeamId || null) : null;
   const teamHalfOf = (teamId: string | null) => validHalfMinutes(teams.find(t => t.id === teamId)?.half_minutes);
@@ -649,6 +663,7 @@ export default function AdminMatchesPage({
         ...(halfReady && halfMinutes !== validHalfMinutes(editingMatch?.half_minutes) ? { half_minutes: halfMinutes } : {}),
         ...(detailsReady && form.meet_time !== (editingMatch?.meet_time || '') ? { meet_time: form.meet_time } : {}),
         ...(detailsReady && cleanKit !== (editingMatch?.kit || '') ? { kit: cleanKit } : {}),
+        ...(eventsReady && (form.event_id || null) !== (editingMatch?.event_id || null) ? { event_id: form.event_id || null } : {}),
         // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -700,6 +715,7 @@ export default function AdminMatchesPage({
         ...(halfReady && halfMinutes !== null ? { half_minutes: halfMinutes } : {}),
         ...(detailsReady && form.meet_time ? { meet_time: form.meet_time } : {}),
         ...(detailsReady && cleanKit ? { kit: cleanKit } : {}),
+        ...(eventsReady && form.event_id ? { event_id: form.event_id } : {}),
       });
       if (fromInvitation) {
         // A return fixture leaves the invitation linked to the first game
@@ -1516,6 +1532,32 @@ export default function AdminMatchesPage({
                   </select>
                 </div>
               </div>
+
+              {/* The club event this game is part of (an outside cup): it shows on the event's page */}
+              {eventsReady && form.match_type !== 'internal' && linkableEvents.length > 0 && (
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label" htmlFor="form-event">
+                    Part of an event (optional)
+                  </label>
+                  <select
+                    id="form-event"
+                    value={form.event_id}
+                    onChange={e => {
+                      const evt = linkableEvents.find(x => x.id === e.target.value);
+                      setForm(evt ? withCompetition({ ...form, event_id: evt.id }, evt.title) : { ...form, event_id: '' });
+                    }}
+                    className="form-input"
+                  >
+                    <option value="">None</option>
+                    {linkableEvents.map(e => (
+                      <option key={e.id} value={e.id}>{e.title} · {formatShortDay(e.start_time)}</option>
+                    ))}
+                  </select>
+                  <div className="text-meta" style={{ marginTop: '0.35rem' }}>
+                    The game shows on the event&apos;s page. Picking an event fills in the competition name.
+                  </div>
+                </div>
+              )}
 
               {/* Which club team plays (internal matches are between the club's own sides) */}
               {multiTeam && form.match_type !== 'internal' && (

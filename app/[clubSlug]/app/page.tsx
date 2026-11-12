@@ -148,11 +148,21 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
       // Not other clubs' games in a cup the club hosts: members aren't asked In/Out for those
       .filter(m => m.club_id === club.id && m.status === 'upcoming' && new Date(m.match_date).getTime() >= now - 86400000 && clubPlaysIn(m, tournamentParticipants, club.name))
       .sort((a, b) => a.match_date.localeCompare(b.match_date) || (a.match_time || '').localeCompare(b.match_time || ''));
-    const ms = ours
+    const clubGames = ours
       .filter(m => !m.tournament_id)
       // An in-house game is for the squad: a supporter (or a visitor) isn't shown Reds v Blues
       .filter(m => player || kids.length > 0 || m.match_type !== 'internal')
-      .filter(forMe)
+      .filter(forMe);
+    // An outside cup (games linked to one club event) is one card and one answer too, in place of
+    // the event's own card
+    const cupEventIds = [...new Set(clubGames.filter(m => m.event_id).map(m => m.event_id!))];
+    const outsideCups = cupEventIds.map(eid => {
+      const games = clubGames.filter(m => m.event_id === eid);
+      const name = events.find(e => e.id === eid)?.title || games[0].competition || 'Cup';
+      return { kind: 'match' as const, id: `event:${eid}`, title: `${name} · ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/events/${eid}`, price: 0 };
+    });
+    const ms = clubGames
+      .filter(m => !m.event_id)
       .map(m => withTeamSide(m, club, clubTeams))
       .map(m => ({ kind: 'match' as const, id: m.id, title: `${m.home_team_name} v ${m.away_team_name}`, at: m.match_date, where: m.venue, match: m as typeof m | undefined, gameIds: [m.id], href: matchPath(club.slug, m), price: 0 }));
     // A tournament is one card and one answer for all its games (each player is only asked about
@@ -164,9 +174,9 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     });
     const es = events
       // A supporter isn't asked about training (players and parents of players are)
-      .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now && !(supporterOnly && e.category === 'training'))
+      .filter(e => e.club_id === club.id && new Date(e.start_time).getTime() >= now && !(supporterOnly && e.category === 'training') && !cupEventIds.includes(e.id))
       .map(e => ({ kind: 'event' as const, id: e.id, title: e.title, at: e.start_time, where: e.location, match: undefined, gameIds: [e.id], href: `${base}/events/${e.id}`, price: e.ticket_price_cents ?? 0 }));
-    return [...ms, ...cups, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
+    return [...ms, ...cups, ...outsideCups, ...es].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   })();
 
   // My availability answers (signed-in members answer here; the email link still works too)
