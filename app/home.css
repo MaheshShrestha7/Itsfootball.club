@@ -1107,3 +1107,38 @@
   .lp-hero-upper { gap: 0.9rem; }
   .lp-h1-stack { margin-bottom: 0; }
 }
+
+/* ---------- Find your part: role chips open a short card (native <dialog>, top layer) ---------- */
+button.mw-role { background: transparent; font: inherit; font-weight: 600; font-size: 0.875rem; cursor: pointer; }
+.rc-dialog { padding: 0; border: 0; background: transparent; color: var(--text-primary); width: min(440px, calc(100vw - 2rem)); max-width: none; margin: auto; overflow: visible; }
+.rc-dialog::backdrop { background: rgba(7, 10, 15, 0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.rc-dialog[open] { animation: rc-in 260ms var(--hv-ease, cubic-bezier(0.16, 1, 0.3, 1)); }
+@keyframes rc-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+.rc-card { position: relative; overflow: hidden; padding: 1.5rem; border-radius: var(--radius-xl); border: 1px solid var(--border-medium); background: var(--bg-surface-elevated); box-shadow: var(--shadow-lg); }
+.rc-card::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: var(--club-ink, var(--c-green)); }
+.rc-head { display: flex; align-items: center; gap: 0.75rem; }
+.rc-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-md); color: var(--club-ink, var(--c-green)); background: color-mix(in srgb, var(--c-green) 14%, transparent); }
+.rc-for { font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); }
+.rc-close { margin-left: auto; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -0.5rem; border: 0; border-radius: 9999px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.rc-close:hover { background: color-mix(in srgb, var(--text-primary) 8%, transparent); color: var(--text-primary); }
+.rc-title { margin: 1rem 0 0; font-family: var(--font-heading); font-weight: 700; font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.02em; text-wrap: balance; }
+.rc-points { list-style: none; margin: 1.1rem 0 0; padding: 0; display: grid; gap: 0.65rem; }
+.rc-points li { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--text-secondary); line-height: 1.4; }
+.rc-points svg { flex-shrink: 0; margin-top: 0.15rem; color: var(--club-ink, var(--c-green)); }
+.rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-top: 1.5rem; }
+.rc-cta { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1.15rem; border-radius: 9999px; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #fff; font-weight: 700; text-decoration: none; }
+.rc-cta:hover { filter: brightness(1.08); }
+.rc-faq { min-height: 44px; display: inline-flex; align-items: center; color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; text-decoration: underline; text-underline-offset: 3px; }
+.rc-faq:hover { color: var(--text-primary); }
+.rc-switch { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 1.35rem -1.5rem -1.5rem; padding: 0.75rem 1.5rem; border-top: 1px solid var(--border-subtle); }
+.rc-switch button { display: inline-flex; align-items: center; gap: 0.35rem; flex-shrink: 0; min-height: 36px; padding: 0 0.7rem; border-radius: 9999px; border: 1px solid transparent; background: transparent; color: var(--text-muted); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.rc-switch button.is-on { border-color: var(--border-medium); color: var(--text-primary); }
+.rc-switch button:hover { color: var(--text-primary); }
+/* Phones: a bottom sheet the thumb can reach */
+@media (max-width: 640px) {
+  .rc-dialog { width: 100vw; margin: auto 0 0; }
+  .rc-card { border-radius: var(--radius-xl) var(--radius-xl) 0 0; padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)); }
+  .rc-switch { margin-bottom: calc(-1.5rem - env(safe-area-inset-bottom)); padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+  .rc-title { font-size: 1.4rem; }
+}
+@media (prefers-reduced-motion: reduce) { .rc-dialog[open] { animation: none; } }
