@@ -8,32 +8,32 @@ import { ArrowRight, Check, ClipboardList, Heart, Megaphone, Shield, User, Users
 const ROLES = [
   {
     tab: 'Coach', Icon: ClipboardList, title: 'Pick your team without chasing the group chat.',
-    points: ['Players answer In or Out for every game', 'Drag your squad onto the pitch and share the lineup', 'Score the game live from the touchline'],
+    points: ['Share one link and players tap In or Out', 'Drag who’s in onto the pitch and publish the XI', 'Log goals, cards and subs from the touchline so supporters follow live'],
     cta: { label: 'Start your club free', href: '/create-club' }, faq: { label: 'Coach questions', href: '/faq#managers-coaches' },
   },
   {
     tab: 'Committee', Icon: Shield, title: 'Members and money in one place.',
-    points: ['Approve members and collect fees online', 'Log what comes in and goes out in Finance', 'Sponsors, shop orders and messages land in one admin'],
+    points: ['Your own club website with your crest, colours and web address. No developer needed', 'Membership plans paid by card or bank transfer', 'One ledger for income and expenses', 'A QR pass for every member, checked in at the gate or door'],
     cta: { label: 'Start your club free', href: '/create-club' }, faq: { label: 'Committee questions', href: '/faq#club-officials' },
   },
   {
     tab: 'Player', Icon: User, title: 'Your pass and your stats.',
-    points: ['Tell your coach if you can play, in one tap', 'A QR member pass on your phone', 'Your goals and assists on your own player page'],
+    points: ['Tap In or Out from the link your coach shares', 'A QR member pass for gate or door check-in', 'Your goals and assists on your own player page'],
     cta: { label: 'Find your club', href: '/clubs' }, faq: { label: 'Player questions', href: '/faq#players' },
   },
   {
     tab: 'Parent', Icon: UsersRound, title: 'All your kids, one app.',
-    points: ['Answer In or Out for each of your children', 'Their games, messages and fees together', 'Junior names show as first name and initial in public'],
+    points: ['Tap In or Out for each of your children', 'Pay their membership by card or bank transfer', 'Junior names show as first name and initial in public'],
     cta: { label: 'Find your club', href: '/clubs' }, faq: null,
   },
   {
     tab: 'Supporter', Icon: Heart, title: 'Never miss a goal.',
-    points: ['Goals and cards on the match page as they happen', 'No app to install', 'Fixtures straight into your calendar'],
+    points: ['Follow goals, cards and subs live, with no app to install', 'Fixtures, squad, news and events on the club’s own site', 'Fixtures straight into your calendar'],
     cta: { label: 'Find your club', href: '/clubs' }, faq: { label: 'Supporter questions', href: '/faq#supporters' },
   },
   {
     tab: 'Sponsor', Icon: Megaphone, title: 'See what your money did.',
-    points: ['Apply on the club’s Sponsor page, free', 'Your logo on the club site and match pages', 'The club can send you a report of where you were seen'],
+    points: ['Apply on the club’s Sponsor page, free', 'Every time your logo is seen and clicked is tracked', 'A report the club can export for you at renewal time'],
     cta: { label: 'Find a club to back', href: '/clubs' }, faq: { label: 'Sponsor questions', href: '/faq#sponsors' },
   },
 ] as const;
