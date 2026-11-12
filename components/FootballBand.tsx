@@ -1,6 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+// Client only: three.js must never reach the server bundle (Cloudflare worker size)
+const FootballBandScene = dynamic(() => import('./FootballBandScene'), { ssr: false });
 
 /** Home page band under the hero: "Football. Community. Passion." with a 3D player juggling beside it.
  *  The tagline is ordinary text. The 3D scene (lib/football-band-scene.ts, three.js) is fetched only once the
@@ -13,21 +17,15 @@ export default function FootballBand() {
   const tagline = useRef<HTMLHeadingElement>(null);
   const [live, setLive] = useState(false);
 
+  const [near, setNear] = useState(false);
+  const onLive = useCallback(() => setLive(true), []);
+
   useEffect(() => {
     const el = band.current;
     if (!el || !('IntersectionObserver' in window)) return;
-    let gone = false;
-    let dispose: (() => void) | undefined;
-    const io = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      io.disconnect();
-      import('@/lib/football-band-scene')
-        .then(m => m.mountFootballBand({ band: el, host: host.current!, front: front.current!, tagline: tagline.current! }))
-        .then(d => { if (gone) d(); else { dispose = d; setLive(true); } })
-        .catch(() => { /* no WebGL, or the model didn't load: the still picture stays */ });
-    }, { rootMargin: '300px' });
+    const io = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { io.disconnect(); setNear(true); } }, { rootMargin: '300px' });
     io.observe(el);
-    return () => { gone = true; io.disconnect(); dispose?.(); };
+    return () => io.disconnect();
   }, []);
 
   return (
@@ -45,6 +43,7 @@ export default function FootballBand() {
           <span>Football.</span> <span>Community.</span> <span>Passion.</span>
         </h2>
       </div>
+      {near && <FootballBandScene band={band} host={host} front={front} tagline={tagline} onLive={onLive} />}
     </section>
   );
 }
