@@ -1221,3 +1221,31 @@
   .lt-cap { padding: 0.25rem 0.5rem 0.5rem; }
   .lt-cap b { font-size: 1.125rem; line-height: 1.5rem; }
 }
+
+/* ---------- Hero, 2026-11-12 markup: tagline headline left; 3D player right with the address box under him ---------- */
+.lp-hero-upper { align-items: center; }
+.lp-h1-stack { font-size: clamp(2.8rem, 6.4vw, 5.4rem); line-height: 0.98; overflow-wrap: break-word; min-width: 0; }
+.lp-h1-stack span { display: block; }
+.lp-h1-stack span:nth-child(2) { color: var(--lp-p); transition: color 400ms var(--ease-out); }
+.lp-hero-right { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+.lp-hero-right .lp-claim { max-width: none; position: relative; z-index: 2; margin-top: -8px; }
+.fb-hero { position: relative; height: 380px; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.fb-hero .fb-canvas, .fb-hero .fb-front { position: absolute; inset: 0; }
+.fb-hero.is-live .fb-canvas { opacity: 1; }
+/* Labels in the body face, sentence case (was tracked mono capitals) */
+.lp-swatches-label { font-family: inherit; font-size: 0.8rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.lp-color-kit-section { margin-top: 0.6rem; }
+@media (max-width: 1024px) {
+  .lp-hero-upper { gap: 0.5rem; }
+  .lp-h1-stack span { display: inline; }
+  .fb-hero { height: 320px; }
+}
+@media (max-width: 640px) { .fb-hero { height: 300px; } }
+
+/* ---------- Live demo, moved down from the hero ---------- */
+.lp-live-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
+.lp-live-copy p { color: var(--text-secondary); font-size: 1.05rem; max-width: 34ch; margin-top: 0.75rem; line-height: 1.5; }
+.lp-live .lp-stage { padding: 0; }
+.lp-live-roles { margin-top: 2rem; }
+@media (max-width: 960px) { .lp-live-grid { grid-template-columns: minmax(0, 1fr); } }

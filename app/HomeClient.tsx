@@ -13,7 +13,7 @@ import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-util
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import './home.css';
 import {
-  ArrowRight, ArrowLeftRight, AlertCircle, Bell, Check, CheckCircle2, ClipboardList, Clock,
+  ArrowRight, ArrowLeftRight, AlertCircle, Check, CheckCircle2, ClipboardList, Clock,
   Goal, Heart, Megaphone, RotateCcw, Shield, User, UsersRound, X,
 } from 'lucide-react';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
@@ -87,20 +87,6 @@ const ROLES = [
   { tab: 'Sponsor', Icon: Megaphone, line: 'See what your money did', href: '/faq#sponsors' },
 ] as const;
 
-// The example week: each day, what happens and who does it
-const WEEK = [
-  { day: 'Mon', what: 'Fixture up', who: 'Committee' },
-  { day: 'Wed', what: 'Players reply', who: 'Players and parents' },
-  { day: 'Fri', what: 'Team picked', who: 'Coach' },
-  { day: 'Sun', what: 'Goal alert sent', who: 'Supporters' },
-] as const;
-
-// "Team picked" tile: a 4-3-3 on the mini pitch, x/y in %, keeper amber, forwards red (same glows as the hero pitch)
-const WEEK_PITCH: [number, number, number, '' | 'gk' | 'fw'][] = [
-  [12, 50, 1, 'gk'], [32, 20, 2, ''], [30, 42, 4, ''], [30, 62, 5, ''], [32, 82, 3, ''],
-  [54, 30, 8, ''], [52, 52, 6, ''], [54, 74, 10, ''], [78, 24, 7, 'fw'], [82, 50, 9, 'fw'], [78, 76, 11, 'fw'],
-];
-
 const SAY_LINES = ['Less chasing.', 'More football.'];
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -155,23 +141,19 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
   }, [results, clubs]);
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  // Example week: the bar under the shown day runs 5s, then moves on (CSS animation, so hover pauses it and reduced motion stops it)
-  const [day, setDay] = useState(0);
-  const [dayAuto, setDayAuto] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     trackPlatformVisit('/');
   }, []);
 
-  // Hero playground: the visitor's club name + colours drive the live mock beside it
+  // Hero playground: the visitor's club name + colours drive the player's kit and the live demo below
   const [clubName, setClubName] = useState('');
   const [paletteIdx, setPaletteIdx] = useState(0);
   const palette = FOOTBALL_COLOR_PALETTES[paletteIdx];
   const onPrimary = evaluateColorContrast(palette.primary).bestTextColor;
   const displayName = clubName.trim() || 'Your Club FC';
   const slugCheck = useMemo(() => validateClubSlug(clubName, allClubs), [clubName, allClubs]);
-  const previewSlug = slugCheck.cleanSlug || 'yourclub';
 
   // Interactive Dugout & Matchday Controller State
   const [homeScore, setHomeScore] = useState(2);
@@ -291,21 +273,23 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         } as React.CSSProperties}
       >
         <div className="container lp-hero-stage">
-          {/* Upper Row: 1 (Left Controls) & 2 (Right Matchday Center) */}
           <div className="lp-hero-upper">
-            {/* 1. On left side */}
             <div className="lp-hero-left">
               {/* No hidden keyword text in the H1 (Google treats it as hidden text); the definition below carries the keywords */}
-              <h1 className="lp-h1">
-                Grassroots club.<br />
-                Big-club matchday.
+              <h1 className="lp-h1 lp-h1-stack">
+                <span>Football.</span> <span>Community.</span> <span>Passion.</span>
               </h1>
 
               <p className="lp-hero-sub">
                 itsfootball.club is the free platform for grassroots football clubs: club website, live match centre and member passes.
               </p>
 
-              {/* 1.2 Claim URL section */}
+            </div>
+
+            {/* Right: the 3D player, with the address box under him */}
+            <div className="lp-hero-right">
+              <FootballBand kit={palette.primary} />
+              {/* Claim URL */}
               <form className="lp-claim" onSubmit={claim}>
                 <div className="lp-claim-field">
                   <label htmlFor="lp-club-name" className="lp-claim-prefix">itsfootball.club/</label>
@@ -337,7 +321,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 )}
               </div>
 
-              {/* 1.3 Club colour picker */}
+              {/* Club colours: repaint his kit */}
               <div className="lp-color-kit-section">
                 <div className="lp-swatches-col">
                   <span className="lp-swatches-label" id="lp-colours-label">Club colours</span>
@@ -360,140 +344,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
 
               </div>
             </div>
-
-          {/* Right Column: Live Matchday Command Console */}
-          <div
-            className="lp-stage"
-            role="region"
-            aria-label="Try the live match centre"
-            data-theme="dark"
-          >
-            <div className="lp-browser">
-              <div className="lp-browser-bar">
-                <div className="lp-dots">
-                  <i className="dot-red" />
-                  <i className="dot-yellow" />
-                  <i className="dot-green" />
-                </div>
-                <div className="lp-browser-tab">
-                  <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                  <span>{displayName} · Match Centre</span>
-                </div>
-                <div className="lp-url">itsfootball.club/{previewSlug}</div>
-              </div>
-
-              <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
-                <div className="lp-mock-clock">{isLive ? `${minute}'` : matchStatus === 'halftime' ? 'HT' : 'FT'}</div>
-
-                <div className="lp-mock-score-row">
-                  <div className="lp-mock-team-badge">
-                    <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
-                    <span className="lp-mock-team" title={displayName}>{displayName}</span>
-                  </div>
-                  <div className="lp-mock-digit">{homeScore}</div>
-                  <span className="lp-mock-colon">:</span>
-                  <div className="lp-mock-digit">{awayScore}</div>
-                  <div className="lp-mock-team-badge">
-                    <span className="lp-mock-team">Riverside</span>
-                  </div>
-                </div>
-
-                <div className="lp-mock-live-wrap">
-                  <span className={`lp-mock-live-badge is-${matchStatus}`} aria-live="polite">
-                    {isLive ? '● Live Match' : matchStatus === 'halftime' ? 'Half Time' : 'Full Time'}
-                  </span>
-                </div>
-
-                {/* Dual-Channel Electronic LED Substitution Board */}
-                <div className="lp-sub-matrix" aria-live="polite">
-                  <div className="lp-sub-panel in">
-                    <span className="lp-sub-tag">SUB IN:</span>
-                    <span className="lp-sub-num">{subInPlayer}</span>
-                  </div>
-                  <div className="lp-sub-panel out">
-                    <span className="lp-sub-tag">SUB OUT:</span>
-                    <span className="lp-sub-num">{subOutPlayer}</span>
-                  </div>
-                </div>
-
-                {/* 5 Prominent Tactile Action Cards */}
-                <div className="lp-action-cards" role="toolbar" aria-label="Touchline matchday controls">
-                  <button
-                    type="button"
-                    className={`lp-action-card btn-goal ${isGoalFlash ? 'is-active' : ''}`}
-                    onClick={triggerGoal}
-                    disabled={!isLive}
-                  >
-                    <Goal size={16} />
-                    <span>Goal!</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="lp-action-card btn-sub"
-                    onClick={triggerSub}
-                    disabled={!isLive}
-                  >
-                    <ArrowLeftRight size={16} />
-                    <span>Sub</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`lp-action-card btn-card ${refCardActive ? 'is-active' : ''}`}
-                    onClick={triggerCard}
-                    disabled={!isLive}
-                  >
-                    <span className="lp-mini-card" />
-                    <span>Card</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`lp-action-card btn-half ${matchStatus === 'halftime' ? 'is-active' : ''}`}
-                    onClick={triggerHalfTime}
-                    disabled={matchStatus === 'ended'}
-                    aria-pressed={matchStatus === 'halftime'}
-                  >
-                    <Clock size={16} />
-                    <span>Half Time</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`lp-action-card btn-end ${matchStatus === 'ended' ? 'is-active' : ''}`}
-                    onClick={triggerEndMatch}
-                    aria-pressed={matchStatus === 'ended'}
-                  >
-                    <X size={16} />
-                    <span>End Match</span>
-                  </button>
-                </div>
-
-                {/* Live Match Events Summary (2-column layout matching mockup) */}
-                <div className="lp-mockup-events">
-                  <div className="lp-mockup-events-title">
-                    <span>Live Match Events</span>
-                    {isDugoutModified && (
-                      <button type="button" className="lp-mock-reset" onClick={resetDugout}>
-                        <RotateCcw size={11} /> Reset
-                      </button>
-                    )}
-                  </div>
-                  <ul className="lp-mockup-events-list" aria-live="polite">
-                    {events.map(ev => (
-                      <li key={ev.id} className="lp-mock-event">
-                        {ev.type === 'goal' ? <Goal size={13} color="#10B981" />
-                          : ev.type === 'sub' ? <ArrowLeftRight size={12} color="#10B981" />
-                          : <span className={`lp-card-${ev.type}`} />}
-                        <span className="lp-mock-ev-time">{ev.minute}&apos;</span>
-                        <span className={`lp-mock-ev-desc ${ev.type === 'sub' ? 'green' : ev.type === 'goal' ? '' : ev.type}`}>
-                          <b>{EVENT_LABEL[ev.type]}</b> {ev.detail}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
 
         </div>
       </section>
@@ -525,69 +376,144 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         </div>
       </div>
 
-      {/* ================= 3D band: the tagline with a player juggling beside it ================= */}
-      <FootballBand />
-
-      {/* ================= THE WEEK: one pitch, four moments, who does each ================= */}
-      <section className="hm-sec" aria-labelledby="hv-week-h">
-        <div className="container">
-          <div className="hv-head">
-            <h2 id="hv-week-h" className="hv-h2">Your week, sorted.</h2>
-            <span className="hv-example">Example week</span>
+      {/* ================= LIVE: score a game from the touchline (moved down from the hero) ================= */}
+      <section
+        className="hm-sec lp-live"
+        aria-labelledby="lp-live-h"
+        style={{ '--lp-p': palette.primary, '--lp-s': palette.secondary, '--lp-a': palette.accent, '--lp-on-p': onPrimary } as React.CSSProperties}
+      >
+        <div className="container lp-live-grid">
+          <div className="lp-live-copy">
+            <h2 id="lp-live-h" className="hv-h2">Score it from the touchline.</h2>
+            <p>Tap Goal on your phone. Everyone following the club sees it. Try it here.</p>
           </div>
-          <div className="mw">
-            <div className="mw-stage" data-theme="dark">
-              <svg className="mw-lines" viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true">
-                <rect x="4" y="4" width="152" height="92" rx="1" />
-                <line x1="80" y1="4" x2="80" y2="96" />
-                <circle cx="80" cy="50" r="12" />
-                <rect x="4" y="28" width="22" height="44" />
-                <rect x="134" y="28" width="22" height="44" />
-              </svg>
-              {WEEK.map((d, i) => (
-                <div key={d.day} className={`mw-shot${i === day ? ' is-on' : ''}`} aria-hidden={i !== day}>
-                  {d.day === 'Mon' && <div className="mw-fx"><small>Sunday 9:00 am</small><b>Under 12s v Riverside</b><small>Home</small></div>}
-                  {d.day === 'Wed' && (
-                    <div className="mw-tally">
-                      <div className="is-in"><b>14</b>In</div>
-                      <div className="is-maybe"><b>2</b>Maybe</div>
-                      <div className="is-out"><b>1</b>Out</div>
-                    </div>
-                  )}
-                  {d.day === 'Fri' && (
-                    <div className="mw-xi">
-                      {WEEK_PITCH.map(([x, y, n, kind]) => (
-                        <span key={n} className={`hv-tok${kind ? ` is-${kind}` : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>{n}</span>
-                      ))}
-                    </div>
-                  )}
-                  {d.day === 'Sun' && (
-                    <div className="mw-goal">
-                      <b>2–1</b>
-                      <div className="hv-alert"><i aria-hidden="true"><Bell size={16} /></i><span><b>Goal, Under 12s</b><small>67 minutes</small></span></div>
-                    </div>
+          {/* Right Column: Live Matchday Command Console */}
+        <div
+          className="lp-stage"
+          role="region"
+          aria-label="Try the live match centre"
+          data-theme="dark"
+        >
+          <div className="lp-browser">
+            <div className={`lp-score ${isGoalFlash ? 'is-goal-flash' : ''}`}>
+              <div className="lp-mock-clock">{isLive ? `${minute}'` : matchStatus === 'halftime' ? 'HT' : 'FT'}</div>
+
+              <div className="lp-mock-score-row">
+                <div className="lp-mock-team-badge">
+                  <MiniJersey primary={palette.primary} accent={palette.accent} style={kitStyle} />
+                  <span className="lp-mock-team" title={displayName}>{displayName}</span>
+                </div>
+                <div className="lp-mock-digit">{homeScore}</div>
+                <span className="lp-mock-colon">:</span>
+                <div className="lp-mock-digit">{awayScore}</div>
+                <div className="lp-mock-team-badge">
+                  <span className="lp-mock-team">Riverside</span>
+                </div>
+              </div>
+
+              <div className="lp-mock-live-wrap">
+                <span className={`lp-mock-live-badge is-${matchStatus}`} aria-live="polite">
+                  {isLive ? '● Live Match' : matchStatus === 'halftime' ? 'Half Time' : 'Full Time'}
+                </span>
+              </div>
+
+              {/* Dual-Channel Electronic LED Substitution Board */}
+              <div className="lp-sub-matrix" aria-live="polite">
+                <div className="lp-sub-panel in">
+                  <span className="lp-sub-tag">SUB IN:</span>
+                  <span className="lp-sub-num">{subInPlayer}</span>
+                </div>
+                <div className="lp-sub-panel out">
+                  <span className="lp-sub-tag">SUB OUT:</span>
+                  <span className="lp-sub-num">{subOutPlayer}</span>
+                </div>
+              </div>
+
+              {/* 5 Prominent Tactile Action Cards */}
+              <div className="lp-action-cards" role="toolbar" aria-label="Touchline matchday controls">
+                <button
+                  type="button"
+                  className={`lp-action-card btn-goal ${isGoalFlash ? 'is-active' : ''}`}
+                  onClick={triggerGoal}
+                  disabled={!isLive}
+                >
+                  <Goal size={16} />
+                  <span>Goal!</span>
+                </button>
+                <button
+                  type="button"
+                  className="lp-action-card btn-sub"
+                  onClick={triggerSub}
+                  disabled={!isLive}
+                >
+                  <ArrowLeftRight size={16} />
+                  <span>Sub</span>
+                </button>
+                <button
+                  type="button"
+                  className={`lp-action-card btn-card ${refCardActive ? 'is-active' : ''}`}
+                  onClick={triggerCard}
+                  disabled={!isLive}
+                >
+                  <span className="lp-mini-card" />
+                  <span>Card</span>
+                </button>
+                <button
+                  type="button"
+                  className={`lp-action-card btn-half ${matchStatus === 'halftime' ? 'is-active' : ''}`}
+                  onClick={triggerHalfTime}
+                  disabled={matchStatus === 'ended'}
+                  aria-pressed={matchStatus === 'halftime'}
+                >
+                  <Clock size={16} />
+                  <span>Half Time</span>
+                </button>
+                <button
+                  type="button"
+                  className={`lp-action-card btn-end ${matchStatus === 'ended' ? 'is-active' : ''}`}
+                  onClick={triggerEndMatch}
+                  aria-pressed={matchStatus === 'ended'}
+                >
+                  <X size={16} />
+                  <span>End Match</span>
+                </button>
+              </div>
+
+              {/* Live Match Events Summary (2-column layout matching mockup) */}
+              <div className="lp-mockup-events">
+                <div className="lp-mockup-events-title">
+                  <span>Live Match Events</span>
+                  {isDugoutModified && (
+                    <button type="button" className="lp-mock-reset" onClick={resetDugout}>
+                      <RotateCcw size={11} /> Reset
+                    </button>
                   )}
                 </div>
-              ))}
+                <ul className="lp-mockup-events-list" aria-live="polite">
+                  {events.map(ev => (
+                    <li key={ev.id} className="lp-mock-event">
+                      {ev.type === 'goal' ? <Goal size={13} color="#10B981" />
+                        : ev.type === 'sub' ? <ArrowLeftRight size={12} color="#10B981" />
+                        : <span className={`lp-card-${ev.type}`} />}
+                      <span className="lp-mock-ev-time">{ev.minute}&apos;</span>
+                      <span className={`lp-mock-ev-desc ${ev.type === 'sub' ? 'green' : ev.type === 'goal' ? '' : ev.type}`}>
+                        <b>{EVENT_LABEL[ev.type]}</b> {ev.detail}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <ol className="mw-days">
-              {WEEK.map((d, i) => (
-                <li key={d.day}>
-                  <button type="button" className={`mw-day${i === day ? ' is-on' : ''}`} aria-pressed={i === day} onClick={() => { setDay(i); setDayAuto(false); }}>
-                    <span className="mw-d">{d.day}</span>
-                    <span className="mw-what"><b>{d.what}</b><span>{d.who}</span></span>
-                    {i === day && dayAuto && <span className="mw-bar" aria-hidden="true" key={`bar-${day}`} onAnimationEnd={() => setDay(n => (n + 1) % WEEK.length)} />}
-                  </button>
-                </li>
-              ))}
-            </ol>
           </div>
-          <nav className="mw-roles" aria-label="Answers for your role">
-            <span>Find your part</span>
-            {ROLES.map(r => (
-              <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
-            ))}
-          </nav>
+        </div>
+        </div>
+        <div className="container">
+            <nav className="mw-roles lp-live-roles" aria-label="Answers for your role">
+              <span>Find your part</span>
+              {ROLES.map(r => (
+                <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
+              ))}
+            </nav>
         </div>
       </section>
 

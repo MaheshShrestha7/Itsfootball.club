@@ -4,21 +4,23 @@
 // down on slow devices; one still frame under prefers-reduced-motion.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 type Pose = Record<string, number>;
 type Touch = 'rf' | 'lf' | 'rk' | 'h';
-interface Els { band: HTMLElement; host: HTMLElement; front: HTMLCanvasElement; tagline: HTMLElement }
+interface Els { band: HTMLElement; host: HTMLElement; front: HTMLCanvasElement; tagline?: HTMLElement; kit?: string }
 
 /** Builds the scene inside `els` and starts it. Resolves to a function that tears everything down.
  *  Rejects when WebGL or the model isn't available; the caller then keeps the still picture. */
-export async function mountFootballBand({ band, host, front, tagline }: Els): Promise<() => void> {
+export async function mountFootballBand({ band, host, front, tagline, kit }: Els): Promise<() => void> {
   const fctx = front.getContext('2d')!;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const isLight = () => document.documentElement.dataset.theme === 'light';
   const phone = () => band.clientWidth < 760;
+  const hero = !tagline; // in the home hero: no tagline to loop round, player framed tight
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  let dprCap = phone() ? 1.5 : 1.75;
+  let dprCap = hero ? 2 : phone() ? 1.5 : 1.75;
   renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -37,7 +39,7 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
   const key = new THREE.SpotLight(0xf4f8ff, 120, 30, 0.42, 0.55, 1.6);
   key.position.set(-5, 8.5, 4.5);
   key.castShadow = true;
-  key.shadow.mapSize.set(phone() ? 512 : 1024, phone() ? 512 : 1024);
+  key.shadow.mapSize.set(phone() && !hero ? 512 : 1024, phone() && !hero ? 512 : 1024);
   key.shadow.bias = -0.0004;
   key.shadow.radius = 4;
   scene.add(key, key.target);
@@ -70,6 +72,12 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), groundMat);
   ground.rotation.x = -Math.PI / 2; ground.rotation.z = Math.PI / 2; ground.receiveShadow = true;
   scene.add(ground);
+  // In the hero he stands on a small floodlit patch of the same pitch, fading out into the hero's own
+  if (hero) ground.scale.setScalar(0.32);
+  if (hero) { // soft studio reflections so skin and kit shade like real materials
+    const pm = new THREE.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.22; pm.dispose();
+  }
 
   // ---------- The player: a rigged footballer (Microsoft Rocketbox "Sports_Male_02", MIT licence, see
   // public/models/LICENSE-player-model.txt) with the kit repainted; the juggling is driven in code ----------
@@ -82,12 +90,35 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
     texLoader.loadAsync('/models/player-head.jpg'),
   ]);
   for (const t of [bodyTex, headTex]) { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; }
+  // Club colours: repaint the green kit (shirt + socks) in the visitor's picked colour, keeping the cloth's shading.
+  // The mask is worked out once; each pick only rewrites those pixels. The band listens for 'fb-kit' events.
+  const kitSrc = bodyTex.image as HTMLImageElement;
+  const kc = document.createElement('canvas'); kc.width = kitSrc.width; kc.height = kitSrc.height;
+  const kx = kc.getContext('2d', { willReadFrequently: true })!; kx.drawImage(kitSrc, 0, 0);
+  const kitBase = kx.getImageData(0, 0, kc.width, kc.height);
+  const kitPx: number[] = [];
+  for (let i = 0; i < kitBase.data.length; i += 4) {
+    const r = kitBase.data[i], g = kitBase.data[i + 1], b = kitBase.data[i + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (g === mx && mx > 40 && (mx - mn) / mx > 0.35 && g - r > 30) kitPx.push(i); // green, saturated: the kit
+  }
+  const kitTex = new THREE.CanvasTexture(kc); kitTex.flipY = false; kitTex.colorSpace = THREE.SRGBColorSpace; kitTex.anisotropy = 4;
+  function paintKit(hex?: string) {
+    const out = new ImageData(new Uint8ClampedArray(kitBase.data), kc.width, kc.height);
+    if (hex && hex.toLowerCase() !== '#10b981') {
+      const t = new THREE.Color(hex).convertLinearToSRGB(); const tr = t.r * 255, tg = t.g * 255, tb = t.b * 255;
+      for (const i of kitPx) { const k = kitBase.data[i + 1] / 185; out.data[i] = tr * k; out.data[i + 1] = tg * k; out.data[i + 2] = tb * k; } // keep the folds' light and shade
+    }
+    kx.putImageData(out, 0, 0); kitTex.needsUpdate = true;
+  }
+  paintKit(kit);
+  const onKit = (e: Event) => { paintKit((e as CustomEvent<string>).detail); if (!running) renderOnce(); };
+  band.addEventListener('fb-kit', onKit);
   const model = gltf.scene; player.add(model);
   const skinned: THREE.SkinnedMesh[] = [];
   model.traverse(o => {
     const m = o as THREE.SkinnedMesh; if (!m.isSkinnedMesh) return;
     m.castShadow = true; m.frustumCulled = false; skinned.push(m);
-    for (const mat of [m.material].flat() as THREE.MeshStandardMaterial[]) { mat.map = /head/.test(mat.name) ? headTex : bodyTex; mat.needsUpdate = true; }
+    for (const mat of [m.material].flat() as THREE.MeshStandardMaterial[]) { mat.map = /head/.test(mat.name) ? headTex : kitTex; mat.needsUpdate = true; }
   });
   model.updateMatrixWorld(true);
   const bone = (n: string) => { const b = model.getObjectByName('Bip01_' + n); if (!b) throw new Error('missing bone ' + n); return b; };
@@ -178,7 +209,7 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
   const G = new THREE.Vector3(0, -9.81, 0);
 
   // Touch rhythm: real flight times (0.7 s foot to foot ≈ 0.6 m rise). Every lap ends with a big lift round the tagline.
-  const RHYTHM: [Touch, number, 'loop'?][] = [['rf', 0.72], ['lf', 0.72], ['rf', 0.72], ['rk', 0.8], ['rf', 0.95], ['h', 0.9], ['lf', 0.72], ['rf', 0.72], ['lf', 2.9, 'loop']];
+  const RHYTHM: [Touch, number, 'loop'?][] = [['rf', 0.72], ['lf', 0.72], ['rf', 0.72], ['rk', 0.8], ['rf', 0.95], ['h', hero ? 0.6 : 0.9], ['lf', 0.72], ['rf', 0.72], hero ? ['lf', 0.72] : ['lf', 2.9, 'loop']];
   const contact = {} as Record<Touch, THREE.Vector3>;
   function measureContacts() {
     player.rotation.y = phone() ? -0.55 : -0.8; player.updateMatrixWorld(true);
@@ -199,6 +230,7 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
     return ray.ray.intersectPlane(planeZ, new THREE.Vector3());
   }
   function buildLoop(from: THREE.Vector3, to: THREE.Vector3) {
+    if (!tagline) return null;
     const t = tagline.getBoundingClientRect();
     const tl = screenToWorld(t.left, t.top), br = screenToWorld(t.right, t.bottom);
     if (!tl || !br) return null;
@@ -235,6 +267,7 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
   const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ map: glow, size: 0.07, color: 0xbff7e0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
   scene.add(particles);
 
+  const FEET_PX = 34; // in the hero his soles sit this far above the canvas bottom, on the patch of pitch
   // ---------- Layout: player beside the tagline on desktop, under it on phones ----------
   function layout() {
     const w = host.clientWidth, h = host.clientHeight;
@@ -242,7 +275,13 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
     renderer.setSize(w, h, false);
     front.width = renderer.domElement.width; front.height = renderer.domElement.height;
     camera.aspect = w / h;
-    if (phone()) { player.position.set(0, 0, 0); camBase.set(0, 1.5, 6.8); camLook.set(0, 1.5, 0); camera.fov = 38; }
+    if (hero) {
+      // Fit 2.6 m of height and at least 2.2 m of width, his soles FEET_PX above the canvas bottom
+      const k = Math.tan(THREE.MathUtils.degToRad(15)), d = Math.max(1.3 / k, 1.1 / (k * camera.aspect)), half = d * k;
+      const x = 0.15, cy = half * (1 - 2 * FEET_PX / h);
+      player.position.set(x, 0, 0); camBase.set(0, cy, d); camLook.set(0, cy, 0); camera.fov = 30;
+      ground.position.x = x;
+    } else if (phone()) { player.position.set(0, 0, 0); camBase.set(0, 1.5, 6.8); camLook.set(0, 1.5, 0); camera.fov = 38; }
     else { player.position.set(1.55, 0, 0); camBase.set(0.3, 1.3, 6.0); camLook.set(0.3, 1.2, 0); camera.fov = 32; }
     camera.position.copy(camBase); camera.lookAt(camLook); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
     glares.forEach(g => (g.visible = !phone())); // they crowd the tagline on a tall phone frame
@@ -313,8 +352,9 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
     driftParticles(dtReal);
     // Camera: pointer parallax, plus a small dolly in as the band scrolls through the screen
     const r = band.getBoundingClientRect();
-    const scrollK = THREE.MathUtils.clamp((innerHeight - r.top) / (innerHeight + r.height), 0, 1);
-    camera.position.set(camBase.x + pointer.x * 0.5, camBase.y - pointer.y * 0.25 + scrollK * 0.25, camBase.z - scrollK * 0.9);
+    const scrollK = hero ? 0 : THREE.MathUtils.clamp((innerHeight - r.top) / (innerHeight + r.height), 0, 1);
+    const pk = hero ? 0.25 : 1; // small in the hero so his feet stay on the panel edge
+    camera.position.set(camBase.x + pointer.x * 0.5 * pk, camBase.y - pointer.y * 0.25 * pk + scrollK * 0.25, camBase.z - scrollK * 0.9);
     camera.lookAt(camLook);
     renderer.render(scene, camera);
     drawFront(b);
@@ -381,6 +421,7 @@ export async function mountFootballBand({ band, host, front, tagline }: Els): Pr
     reduce.removeEventListener('change', sync);
     band.removeEventListener('pointermove', onMove);
     band.removeEventListener('pointerleave', onLeave);
+    band.removeEventListener('fb-kit', onKit);
     scene.traverse(o => {
       const m = o as THREE.Mesh; m.geometry?.dispose();
       for (const mat of [m.material].flat() as (THREE.MeshStandardMaterial | undefined)[]) { mat?.map?.dispose(); mat?.alphaMap?.dispose(); mat?.dispose(); }
