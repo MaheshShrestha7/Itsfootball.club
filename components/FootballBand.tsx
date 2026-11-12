@@ -6,44 +6,24 @@ import dynamic from 'next/dynamic';
 // Client only: three.js must never reach the server bundle (Cloudflare worker size)
 const FootballBandScene = dynamic(() => import('./FootballBandScene'), { ssr: false });
 
-/** Home page band under the hero: "Football. Community. Passion." with a 3D player juggling beside it.
- *  The tagline is ordinary text. The 3D scene (lib/football-band-scene.ts, three.js) is fetched only once the
- *  band is close to the screen; until then, and wherever WebGL isn't available, a still picture of the same
- *  scene shows instead. */
-export default function FootballBand() {
-  const band = useRef<HTMLElement>(null);
+/** The 3D player juggling in the home hero (lib/football-band-scene.ts, three.js). `kit` is the visitor's
+ *  picked club colour: his shirt and socks are repainted in it. Decorative only: hidden from screen readers.
+ *  Without WebGL (or if the model fails to load) the space closes up and the address box moves up. */
+export default function FootballBand({ kit }: { kit?: string }) {
+  const band = useRef<HTMLDivElement>(null);
   const host = useRef<HTMLDivElement>(null);
-  const front = useRef<HTMLCanvasElement>(null);
-  const tagline = useRef<HTMLHeadingElement>(null);
-  const [live, setLive] = useState(false);
+  const [state, setState] = useState<'loading' | 'live' | 'off'>('loading');
+  const onLive = useCallback(() => setState('live'), []);
+  const onFail = useCallback(() => setState('off'), []);
+  const [firstKit] = useState(kit); // the scene starts in this colour; later picks arrive as fb-kit events
 
-  const [near, setNear] = useState(false);
-  const onLive = useCallback(() => setLive(true), []);
+  useEffect(() => { band.current?.dispatchEvent(new CustomEvent('fb-kit', { detail: kit })); }, [kit, state]);
 
-  useEffect(() => {
-    const el = band.current;
-    if (!el || !('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { io.disconnect(); setNear(true); } }, { rootMargin: '300px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
+  if (state === 'off') return null;
   return (
-    <section ref={band} className={`fb-band ${live ? 'is-live' : ''}`} aria-labelledby="fb-h">
-      {(['dark', 'light'] as const).map(t => (
-        <picture key={t} className={`fb-poster fb-poster-${t}`}>
-          <source media="(max-width: 759px)" srcSet={`/images/football-band-phone-${t}.webp`} />
-          <img src={`/images/football-band-${t}.webp`} alt="" loading="lazy" decoding="async" />
-        </picture>
-      ))}
-      <div ref={host} className="fb-canvas" aria-hidden="true" />
-      <canvas ref={front} className="fb-front" aria-hidden="true" />
-      <div className="container fb-copy">
-        <h2 id="fb-h" ref={tagline} className="fb-tagline">
-          <span>Football.</span> <span>Community.</span> <span>Passion.</span>
-        </h2>
-      </div>
-      {near && <FootballBandScene band={band} host={host} front={front} tagline={tagline} onLive={onLive} />}
-    </section>
+    <div ref={band} className={`fb-hero ${state === 'live' ? 'is-live' : ''}`} aria-hidden="true">
+      <div ref={host} className="fb-canvas" />
+      <FootballBandScene band={band} host={host} kit={firstKit} onLive={onLive} onFail={onFail} />
+    </div>
   );
 }

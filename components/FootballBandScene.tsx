@@ -6,21 +6,21 @@ import { mountFootballBand } from '@/lib/football-band-scene';
 interface Props {
   band: RefObject<HTMLElement | null>;
   host: RefObject<HTMLDivElement | null>;
-  front: RefObject<HTMLCanvasElement | null>;
-  tagline: RefObject<HTMLHeadingElement | null>;
+  kit?: string;
   onLive: () => void;
+  onFail: () => void;
 }
 
 /** Starts the three.js scene inside FootballBand's elements. Loaded with ssr: false so three.js stays out of the server bundle. */
-export default function FootballBandScene({ band, host, front, tagline, onLive }: Props) {
+export default function FootballBandScene({ band, host, kit, onLive, onFail }: Props) {
   useEffect(() => {
-    if (!band.current || !host.current || !front.current || !tagline.current) return;
+    if (!band.current || !host.current) return;
     let gone = false;
     let dispose: (() => void) | undefined;
-    mountFootballBand({ band: band.current, host: host.current, front: front.current, tagline: tagline.current })
+    mountFootballBand({ band: band.current, host: host.current, kit })
       .then(d => { if (gone) d(); else { dispose = d; onLive(); } })
-      .catch(() => { /* no WebGL, or the model didn't load: the still picture stays */ });
+      .catch(() => { if (!gone) onFail(); }); // no WebGL, or the model didn't load
     return () => { gone = true; dispose?.(); };
-  }, [band, host, front, tagline, onLive]);
+  }, [band, host, kit, onLive, onFail]);
   return null;
 }
