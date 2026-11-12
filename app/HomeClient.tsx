@@ -87,6 +87,14 @@ const ROLES = [
   { tab: 'Sponsor', Icon: Megaphone, line: 'See what your money did', href: '/faq#sponsors' },
 ] as const;
 
+// The example week: each day, what happens and who does it
+const WEEK = [
+  { day: 'Mon', what: 'Fixture up', who: 'Committee' },
+  { day: 'Wed', what: 'Players reply', who: 'Players and parents' },
+  { day: 'Fri', what: 'Team picked', who: 'Coach' },
+  { day: 'Sun', what: 'Goal alert sent', who: 'Supporters' },
+] as const;
+
 // "Team picked" tile: a 4-3-3 on the mini pitch, x/y in %, keeper amber, forwards red (same glows as the hero pitch)
 const WEEK_PITCH: [number, number, number, '' | 'gk' | 'fw'][] = [
   [12, 50, 1, 'gk'], [32, 20, 2, ''], [30, 42, 4, ''], [30, 62, 5, ''], [32, 82, 3, ''],
@@ -136,6 +144,9 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
   }, [results, clubs]);
   const { user, isAuthenticated } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  // Example week: the bar under the shown day runs 5s, then moves on (CSS animation, so hover pauses it and reduced motion stops it)
+  const [day, setDay] = useState(0);
+  const [dayAuto, setDayAuto] = useState(true);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
@@ -506,68 +517,66 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       {/* ================= 3D band: the tagline with a player juggling beside it ================= */}
       <FootballBand />
 
-      {/* ================= THE WEEK: four pictures on the hero's pitch, two words each ================= */}
+      {/* ================= THE WEEK: one pitch, four moments, who does each ================= */}
       <section className="hm-sec" aria-labelledby="hv-week-h">
         <div className="container">
           <div className="hv-head">
             <h2 id="hv-week-h" className="hv-h2">Your week, sorted.</h2>
             <span className="hv-example">Example week</span>
           </div>
-          <ol className="hv-week">
-            <li className="hv-day">
-              <div className="hv-pic" data-theme="dark">
-                <div className="hv-fx"><small>Sunday 9:00 am</small><b>Under 12s v Riverside</b><small>Home</small></div>
-              </div>
-              <p className="hv-cap"><b>Mon</b> Fixture up</p>
-            </li>
-            <li className="hv-day">
-              <div className="hv-pic" data-theme="dark">
-                <div className="hv-tally">
-                  <div className="is-in"><b>14</b> In</div>
-                  <div className="is-maybe"><b>2</b> Maybe</div>
-                  <div className="is-out"><b>1</b> Out</div>
+          <div className="mw">
+            <div className="mw-stage" data-theme="dark">
+              <svg className="mw-lines" viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true">
+                <rect x="4" y="4" width="152" height="92" rx="1" />
+                <line x1="80" y1="4" x2="80" y2="96" />
+                <circle cx="80" cy="50" r="12" />
+                <rect x="4" y="28" width="22" height="44" />
+                <rect x="134" y="28" width="22" height="44" />
+              </svg>
+              {WEEK.map((d, i) => (
+                <div key={d.day} className={`mw-shot${i === day ? ' is-on' : ''}`} aria-hidden={i !== day}>
+                  {d.day === 'Mon' && <div className="mw-fx"><small>Sunday 9:00 am</small><b>Under 12s v Riverside</b><small>Home</small></div>}
+                  {d.day === 'Wed' && (
+                    <div className="mw-tally">
+                      <div className="is-in"><b>14</b>In</div>
+                      <div className="is-maybe"><b>2</b>Maybe</div>
+                      <div className="is-out"><b>1</b>Out</div>
+                    </div>
+                  )}
+                  {d.day === 'Fri' && (
+                    <div className="mw-xi">
+                      {WEEK_PITCH.map(([x, y, n, kind]) => (
+                        <span key={n} className={`hv-tok${kind ? ` is-${kind}` : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>{n}</span>
+                      ))}
+                    </div>
+                  )}
+                  {d.day === 'Sun' && (
+                    <div className="mw-goal">
+                      <b>2–1</b>
+                      <div className="hv-alert"><i aria-hidden="true"><Bell size={16} /></i><span><b>Goal, Under 12s</b><small>67 minutes</small></span></div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <p className="hv-cap"><b>Wed</b> Players reply</p>
-            </li>
-            <li className="hv-day">
-              <div className="hv-pic" data-theme="dark">
-                <div className="hv-mini" aria-hidden="true">
-                  {WEEK_PITCH.map(([x, y, n, kind]) => (
-                    <span key={n} className={`hv-tok${kind ? ` is-${kind}` : ''}`} style={{ left: `${x}%`, top: `${y}%` }}>{n}</span>
-                  ))}
-                </div>
-              </div>
-              <p className="hv-cap"><b>Fri</b> Team picked</p>
-            </li>
-            <li className="hv-day">
-              <div className="hv-pic" data-theme="dark">
-                <div className="hv-goal">
-                  <b className="hv-goal-score">2–1</b>
-                  <div className="hv-alert"><i aria-hidden="true"><Bell size={16} /></i><span><b>Goal, {displayName}</b><small>67 minutes</small></span></div>
-                </div>
-              </div>
-              <p className="hv-cap"><b>Sun</b> Goal alert sent</p>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      {/* ================= WHO IT'S FOR: one line each ================= */}
-      <section className="hm-sec" aria-labelledby="hv-roles-h">
-        <div className="container">
-          <h2 id="hv-roles-h" className="hv-h2 hv-head">Something for everyone at the club.</h2>
-          <ul className="hv-roles">
+              ))}
+            </div>
+            <ol className="mw-days">
+              {WEEK.map((d, i) => (
+                <li key={d.day}>
+                  <button type="button" className={`mw-day${i === day ? ' is-on' : ''}`} aria-pressed={i === day} onClick={() => { setDay(i); setDayAuto(false); }}>
+                    <span className="mw-d">{d.day}</span>
+                    <span className="mw-what"><b>{d.what}</b><span>{d.who}</span></span>
+                    {i === day && dayAuto && <span className="mw-bar" aria-hidden="true" key={`bar-${day}`} onAnimationEnd={() => setDay(n => (n + 1) % WEEK.length)} />}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <nav className="mw-roles" aria-label="Answers for your role">
+            <span>Find your part</span>
             {ROLES.map(r => (
-              <li key={r.tab}>
-                <Link href={r.href} className="hv-role">
-                  <span className="hv-role-ic"><r.Icon size={22} aria-hidden="true" /></span>
-                  <span><b>{r.tab}</b><span>{r.line}</span></span>
-                  <ArrowRight size={16} className="hv-role-go" aria-hidden="true" />
-                </Link>
-              </li>
+              <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
             ))}
-          </ul>
+          </nav>
         </div>
       </section>
 
