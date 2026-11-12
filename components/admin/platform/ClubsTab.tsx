@@ -6,12 +6,14 @@ import { PlatformClubItem } from '@/lib/supabase/types';
 import { toCsv } from '@/lib/finance';
 import { timeAgo } from '@/lib/mission-control';
 import { Crest } from '@/components/admin/platform/McArt';
-import { Search, Download, ExternalLink, Shield } from 'lucide-react';
+import { Search, Download, ExternalLink, Shield, Plus } from 'lucide-react';
 
 interface ClubsTabProps {
   clubs: PlatformClubItem[];
   loading: boolean;
   onSelectClub: (club: PlatformClubItem) => void;
+  /** Opens the New club form (the server turns Analysts away) */
+  onNewClub?: () => void;
 }
 
 /** How many rows the table draws at a time */
@@ -21,6 +23,7 @@ export default function ClubsTab({
   clubs,
   loading,
   onSelectClub,
+  onNewClub,
 }: ClubsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -148,6 +151,11 @@ export default function ClubsTab({
           <button type="button" className="mc-pill-btn ghost" onClick={handleExportCsv} title="Download the clubs list as a spreadsheet">
             <Download size={14} /> Download CSV
           </button>
+          {onNewClub && (
+            <button type="button" className="mc-pill-btn" onClick={onNewClub}>
+              <Plus size={14} /> New club
+            </button>
+          )}
         </div>
       </div>
 

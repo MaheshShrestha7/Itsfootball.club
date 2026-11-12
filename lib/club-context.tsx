@@ -61,7 +61,7 @@ import { defaultSeasonLabel } from './season';
 import { DEFAULT_CREST } from './crest';
 import { keepEditsMadeDuringLoad, SupabaseSync, SyncState, EntityKey, cleanPhotoUrl, dropSharedPhotos } from './supabase/sync';
 import { cacheSafeMembers, cacheSafeSponsors } from './cache-safe';
-import { RESERVED_SLUGS, clubSlugFromPath, normalizeDomain } from './slugs';
+import { checkClubSlug, clubSlugFromPath, normalizeDomain } from './slugs';
 import { pageName } from './club-overview';
 import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
@@ -351,28 +351,8 @@ export function validateClubSlug(
   existingClubs: Club[],
   currentClubId?: string
 ): { valid: boolean; error?: string; cleanSlug: string } {
-  const cleanSlug = rawSlug
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/--+/g, '-');
-
-  if (!cleanSlug || cleanSlug.length < 3) {
-    return { valid: false, error: 'Club slug must be at least 3 characters.', cleanSlug };
-  }
-
-  if (cleanSlug.length > 48) {
-    return { valid: false, error: 'Club slug cannot exceed 48 characters.', cleanSlug };
-  }
-
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(cleanSlug)) {
-    return { valid: false, error: 'Slug must start and end with an alphanumeric character and contain only single hyphens.', cleanSlug };
-  }
-
-  if (RESERVED_SLUGS.includes(cleanSlug)) {
-    return { valid: false, error: `"${cleanSlug}" is a reserved system path and cannot be used.`, cleanSlug };
-  }
+  const { cleanSlug, error } = checkClubSlug(rawSlug);
+  if (error) return { valid: false, error, cleanSlug };
 
   const collision = existingClubs.find(
     c => c.slug.toLowerCase() === cleanSlug && c.id !== currentClubId

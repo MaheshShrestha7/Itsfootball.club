@@ -170,7 +170,7 @@ function clubFromRow(r: Row): Row {
 }
 
 /** Keeps the legacy `config` JSON (used by the older site) in step with the real columns */
-function clubPrepare(o: Row): Row {
+export function clubPrepare(o: Row): Row {
   const base = o.config && typeof o.config === 'object' ? o.config : {};
   return {
     ...o,
