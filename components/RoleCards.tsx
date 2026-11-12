@@ -70,7 +70,7 @@ export default function RoleCards() {
           </ul>
           <div className="rc-actions">
             <Link href={role.cta.href} className="rc-cta">{role.cta.label}<ArrowRight size={16} aria-hidden="true" /></Link>
-            {role.faq && <Link href={role.faq.href} className="rc-faq">{role.faq.label}</Link>}
+            {role.faq && <a href={role.faq.href} className="rc-faq" target="_blank" rel="noopener">{role.faq.label}<span className="sr-only"> (opens in a new tab)</span></a>}
           </div>
           <nav className="rc-switch" aria-label="Other roles">
             {ROLES.map((r, i) => (
