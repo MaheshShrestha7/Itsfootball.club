@@ -13,8 +13,8 @@ import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast } from '@/lib/theme-util
 import { DEFAULT_BANNER, DEFAULT_CREST } from '@/lib/crest';
 import './home.css';
 import {
-  ArrowRight, ArrowLeftRight, AlertCircle, Check, CheckCircle2, ClipboardList, Clock,
-  Goal, Heart, Megaphone, RotateCcw, Shield, User, UsersRound, X,
+  ArrowRight, ArrowLeftRight, AlertCircle, Check, CheckCircle2, Clock,
+  Goal, RotateCcw, X,
 } from 'lucide-react';
 import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
@@ -22,6 +22,7 @@ import { matchPath, newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import type { HomeDemoClub, HomeResultRow, HomeUpcomingRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
 import FootballBand from '@/components/FootballBand';
+import RoleCards from '@/components/RoleCards';
 
 interface DugoutEvent {
   id: string;
@@ -76,16 +77,6 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
     </svg>
   );
 }
-
-// Who it's for: one line each, linking to that person's answers (Parent goes to the club directory: there's no parent FAQ section)
-const ROLES = [
-  { tab: 'Coach', Icon: ClipboardList, line: 'Pick your team in minutes', href: '/faq#managers-coaches' },
-  { tab: 'Committee', Icon: Shield, line: 'Members and money in one place', href: '/faq#club-officials' },
-  { tab: 'Player', Icon: User, line: 'Your pass and your stats', href: '/faq#players' },
-  { tab: 'Parent', Icon: UsersRound, line: 'All your kids, one app', href: '/clubs' },
-  { tab: 'Supporter', Icon: Heart, line: 'Never miss a goal', href: '/faq#supporters' },
-  { tab: 'Sponsor', Icon: Megaphone, line: 'See what your money did', href: '/faq#sponsors' },
-] as const;
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
@@ -364,12 +355,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
           <div className="lp-live-copy">
             <h2 id="lp-live-h" className="hv-h2">Score it from the touchline.</h2>
             <p>Tap Goal on your phone. Everyone following the club sees it. Try it here.</p>
-            <nav className="mw-roles lp-live-roles" aria-label="Answers for your role">
-              <span>Find your part</span>
-              {ROLES.map(r => (
-                <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
-              ))}
-            </nav>
+            <RoleCards />
           </div>
           {/* Right Column: Live Matchday Command Console */}
         <div
