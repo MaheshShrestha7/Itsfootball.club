@@ -1,4 +1,4 @@
-// The 3D band on the home page: a footballer juggling under floodlights beside the tagline.
+// The 3D player in the home hero: a footballer juggling under floodlights, kit in the visitor's picked club colour.
 // Plain three.js, loaded only when the band nears the screen (components/FootballBand.tsx), so none of this
 // is in the first page load. Renders only while the band is on screen and the tab is open; steps quality
 // down on slow devices; one still frame under prefers-reduced-motion.
@@ -8,19 +8,17 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 type Pose = Record<string, number>;
 type Touch = 'rf' | 'lf' | 'rk' | 'h';
-interface Els { band: HTMLElement; host: HTMLElement; front: HTMLCanvasElement; tagline?: HTMLElement; kit?: string }
+interface Els { band: HTMLElement; host: HTMLElement; kit?: string }
 
 /** Builds the scene inside `els` and starts it. Resolves to a function that tears everything down.
  *  Rejects when WebGL or the model isn't available; the caller then keeps the still picture. */
-export async function mountFootballBand({ band, host, front, tagline, kit }: Els): Promise<() => void> {
-  const fctx = front.getContext('2d')!;
+export async function mountFootballBand({ band, host, kit }: Els): Promise<() => void> {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const isLight = () => document.documentElement.dataset.theme === 'light';
   const phone = () => band.clientWidth < 760;
-  const hero = !tagline; // in the home hero: no tagline to loop round, player framed tight
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  let dprCap = hero ? 2 : phone() ? 1.5 : 1.75;
+  let dprCap = 2;
   renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -39,7 +37,7 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
   const key = new THREE.SpotLight(0xf4f8ff, 120, 30, 0.42, 0.55, 1.6);
   key.position.set(-5, 8.5, 4.5);
   key.castShadow = true;
-  key.shadow.mapSize.set(phone() && !hero ? 512 : 1024, phone() && !hero ? 512 : 1024);
+  key.shadow.mapSize.set(1024, 1024);
   key.shadow.bias = -0.0004;
   key.shadow.radius = 4;
   scene.add(key, key.target);
@@ -73,8 +71,8 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
   ground.rotation.x = -Math.PI / 2; ground.rotation.z = Math.PI / 2; ground.receiveShadow = true;
   scene.add(ground);
   // In the hero he stands on a small floodlit patch of the same pitch, fading out into the hero's own
-  if (hero) ground.scale.setScalar(0.32);
-  if (hero) { // soft studio reflections so skin and kit shade like real materials
+  ground.scale.setScalar(0.32);
+  { // soft studio reflections so skin and kit shade like real materials
     const pm = new THREE.PMREMGenerator(renderer);
     scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.22; pm.dispose();
   }
@@ -208,8 +206,8 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
   const spin = new THREE.Vector3();
   const G = new THREE.Vector3(0, -9.81, 0);
 
-  // Touch rhythm: real flight times (0.7 s foot to foot ≈ 0.6 m rise). Every lap ends with a big lift round the tagline.
-  const RHYTHM: [Touch, number, 'loop'?][] = [['rf', 0.72], ['lf', 0.72], ['rf', 0.72], ['rk', 0.8], ['rf', 0.95], ['h', hero ? 0.6 : 0.9], ['lf', 0.72], ['rf', 0.72], hero ? ['lf', 0.72] : ['lf', 2.9, 'loop']];
+  // Touch rhythm: real flight times (0.7 s foot to foot ≈ 0.6 m rise)
+  const RHYTHM: [Touch, number][] = [['rf', 0.72], ['lf', 0.72], ['rf', 0.72], ['rk', 0.8], ['rf', 0.95], ['h', 0.6], ['lf', 0.72], ['rf', 0.72], ['lf', 0.72]];
   const contact = {} as Record<Touch, THREE.Vector3>;
   function measureContacts() {
     player.rotation.y = phone() ? -0.55 : -0.8; player.updateMatrixWorld(true);
@@ -219,33 +217,6 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
       contact[kind] = p;
     }
     applyPose(REST);
-  }
-
-  // Loop path round the tagline: up over its right end, across in front, down the left, back behind it.
-  let loopCurve: THREE.CatmullRomCurve3 | null = null;
-  const ray = new THREE.Raycaster(), planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  function screenToWorld(x: number, y: number) {
-    const r = host.getBoundingClientRect();
-    ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
-    return ray.ray.intersectPlane(planeZ, new THREE.Vector3());
-  }
-  function buildLoop(from: THREE.Vector3, to: THREE.Vector3) {
-    if (!tagline) return null;
-    const t = tagline.getBoundingClientRect();
-    const tl = screenToWorld(t.left, t.top), br = screenToWorld(t.right, t.bottom);
-    if (!tl || !br) return null;
-    const bandTop = screenToWorld(t.left, host.getBoundingClientRect().top + 40);
-    const top = Math.min(tl.y + 0.2, (bandTop ? bandTop.y : tl.y + 1) - 0.45), bot = br.y - 0.15, left = tl.x + 0.1, right = br.x + 0.25;
-    return new THREE.CatmullRomCurve3([
-      from.clone(),
-      new THREE.Vector3(from.x - 0.2, top, 0.6),
-      new THREE.Vector3((left + right) / 2, top, 0.8),
-      new THREE.Vector3(left, (top + bot) / 2 + 0.2, 0.4),
-      new THREE.Vector3(left + 0.4, bot, -1.0),
-      new THREE.Vector3((left + right) / 2, bot - 0.05, -1.3),
-      new THREE.Vector3(to.x - 0.35, to.y + 1.1, -0.6),
-      to.clone(),
-    ], false, 'catmullrom', 0.4);
   }
 
   // ---------- Floodlight glare + drifting particles ----------
@@ -268,26 +239,20 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
   scene.add(particles);
 
   const FEET_PX = 34; // in the hero his soles sit this far above the canvas bottom, on the patch of pitch
-  // ---------- Layout: player beside the tagline on desktop, under it on phones ----------
+  // ---------- Layout ----------
   function layout() {
     const w = host.clientWidth, h = host.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
-    front.width = renderer.domElement.width; front.height = renderer.domElement.height;
     camera.aspect = w / h;
-    if (hero) {
-      // Fit 2.6 m of height and at least 2.2 m of width, his soles FEET_PX above the canvas bottom
-      const k = Math.tan(THREE.MathUtils.degToRad(15)), d = Math.max(1.12 / k, 0.95 / (k * camera.aspect)), half = d * k;
-      const x = 0.15, cy = half * (1 - 2 * FEET_PX / h);
-      player.position.set(x, 0, 0); camBase.set(0, cy, d); camLook.set(0, cy, 0); camera.fov = 30;
-      ground.position.x = x;
-    } else if (phone()) { player.position.set(0, 0, 0); camBase.set(0, 1.5, 6.8); camLook.set(0, 1.5, 0); camera.fov = 38; }
-    else { player.position.set(1.55, 0, 0); camBase.set(0.3, 1.3, 6.0); camLook.set(0.3, 1.2, 0); camera.fov = 32; }
+    // Fit about 2.24 m of height and at least 1.9 m of width, his soles FEET_PX above the canvas bottom
+    const k = Math.tan(THREE.MathUtils.degToRad(15)), d = Math.max(1.12 / k, 0.95 / (k * camera.aspect)), half = d * k;
+    const x = 0.15, cy = half * (1 - 2 * FEET_PX / h);
+    player.position.set(x, 0, 0); camBase.set(0, cy, d); camLook.set(0, cy, 0); camera.fov = 30;
+    ground.position.x = x;
     camera.position.copy(camBase); camera.lookAt(camLook); camera.updateProjectionMatrix(); camera.updateMatrixWorld();
-    glares.forEach(g => (g.visible = !phone())); // they crowd the tagline on a tall phone frame
     key.target.position.copy(player.position); fill.target.position.copy(player.position);
     measureContacts();
-    loopCurve = null;
   }
 
   // ---------- Theme: follows <html data-theme> ----------
@@ -310,14 +275,9 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
 
   const gauss = (dt: number, w = 0.15) => Math.exp(-((dt / w) ** 2));
   function ballAt(time: number) {
-    const [kind, T, mode] = RHYTHM[step];
+    const [kind, T] = RHYTHM[step];
     const next = RHYTHM[(step + 1) % RHYTHM.length][0];
     const p0 = contact[kind], p1 = contact[next];
-    const s = Math.min((time - t0) / T, 1);
-    if (mode === 'loop') {
-      loopCurve ||= buildLoop(p0, p1);
-      if (loopCurve) { const e = s < 0.5 ? 2 * s * s : 1 - Math.pow(-2 * s + 2, 2) / 2; return loopCurve.getPointAt(e); }
-    }
     const dt = time - t0;
     const v = p1.clone().sub(p0).divideScalar(T).addScaledVector(G, -0.5 * T);
     return p0.clone().addScaledVector(v, dt).addScaledVector(G, 0.5 * dt * dt);
@@ -333,7 +293,6 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
     if (clock - t0 >= T) {
       t0 += T; step = (step + 1) % RHYTHM.length; [kind, T] = RHYTHM[step];
       const k = kind === 'h' ? 1 : -1; spin.set(k * (14 + Math.random() * 6), (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 3);
-      if (RHYTHM[step][2] === 'loop') { spin.set(-22, 6, 0); loopCurve = null; }
     }
     const nextT = t0 + T, nextKind = RHYTHM[(step + 1) % RHYTHM.length][0];
     const pose = blendPose([[kind, gauss(clock - t0)], [nextKind, gauss(clock - nextT)]]);
@@ -350,24 +309,10 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
     ball.rotateOnWorldAxis(X, spin.x * dtReal);
     ball.rotateOnWorldAxis(Y, spin.y * dtReal);
     driftParticles(dtReal);
-    // Camera: pointer parallax, plus a small dolly in as the band scrolls through the screen
-    const r = band.getBoundingClientRect();
-    const scrollK = hero ? 0 : THREE.MathUtils.clamp((innerHeight - r.top) / (innerHeight + r.height), 0, 1);
-    const pk = hero ? 0.25 : 1; // small in the hero so his feet stay on the panel edge
-    camera.position.set(camBase.x + pointer.x * 0.5 * pk, camBase.y - pointer.y * 0.25 * pk + scrollK * 0.25, camBase.z - scrollK * 0.9);
+    // Camera: a small pointer parallax, kept small so his feet stay on the patch of pitch
+    camera.position.set(camBase.x + pointer.x * 0.125, camBase.y - pointer.y * 0.06, camBase.z);
     camera.lookAt(camLook);
     renderer.render(scene, camera);
-    drawFront(b);
-  }
-  // Ball in front of the tagline: copy just the ball's circle onto a canvas above the words (cheap, same frame)
-  const sp = new THREE.Vector3();
-  function drawFront(b: THREE.Vector3) {
-    fctx.clearRect(0, 0, front.width, front.height);
-    if (!(b.z > 0.2 && RHYTHM[step][2] === 'loop')) return;
-    sp.copy(b).project(camera);
-    const x = (sp.x + 1) / 2 * front.width, y = (1 - sp.y) / 2 * front.height;
-    const r = BALL_R / (b.distanceTo(camera.position) * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * front.height / 2 + 2;
-    fctx.save(); fctx.beginPath(); fctx.arc(x, y, r, 0, Math.PI * 2); fctx.clip(); fctx.drawImage(renderer.domElement, 0, 0); fctx.restore();
   }
   function driftParticles(dt: number) {
     const a = pGeo.attributes.position.array;
@@ -394,7 +339,6 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
     step = 0; t0 = 0; clock = 0.36;
     applyPose(blendPose([])); ball.position.copy(ballAt(0.36)); ball.rotation.set(0.4, 0.6, 0);
     camera.position.copy(camBase); camera.lookAt(camLook);
-    fctx.clearRect(0, 0, front.width, front.height);
     renderer.render(scene, camera);
   }
   function start() { if (running || reduce.matches) return; running = true; last = 0; raf = requestAnimationFrame(frame); }
@@ -421,7 +365,7 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
     reduce.removeEventListener('change', sync);
     band.removeEventListener('pointermove', onMove);
     band.removeEventListener('pointerleave', onLeave);
-    band.removeEventListener('fb-kit', onKit);
+    band.removeEventListener('fb-kit', onKit); bodyTex.dispose();
     scene.traverse(o => {
       const m = o as THREE.Mesh; m.geometry?.dispose();
       for (const mat of [m.material].flat() as (THREE.MeshStandardMaterial | undefined)[]) { mat?.map?.dispose(); mat?.alphaMap?.dispose(); mat?.dispose(); }

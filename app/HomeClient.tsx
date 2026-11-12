@@ -319,9 +319,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 aria-live="polite"
                 className={`lp-claim-status ${clubName.trim() ? (slugCheck.valid ? 'ok' : 'bad') : ''}`}
               >
-                {!clubName.trim() ? (
-                  <>Type your club&apos;s name to check your web address.</>
-                ) : slugCheck.valid ? (
+                {!clubName.trim() ? null : slugCheck.valid ? (
                   <><CheckCircle2 size={15} /> itsfootball.club/{slugCheck.cleanSlug} looks free. Claim it before someone else does.</>
                 ) : (
                   <><AlertCircle size={15} /> {slugCheck.error}</>
