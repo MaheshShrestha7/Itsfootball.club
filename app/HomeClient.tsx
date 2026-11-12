@@ -77,47 +77,6 @@ function MiniJersey({ primary, accent, style }: { primary: string; accent: strin
   );
 }
 
-interface TacticalPlayer {
-  num: number;
-  label: string;
-  name: string;
-  role: string;
-  confirmed: string;
-  goals: number;
-  assists: number;
-  zone: 'gk' | 'def' | 'mid' | 'att';
-}
-
-const TACTICAL_ROSTER: TacticalPlayer[] = [
-  { num: 1, label: '1', name: 'S. Turner', role: 'Goalkeeper', confirmed: 'Thursday 7:22 PM', goals: 0, assists: 1, zone: 'gk' },
-  { num: 3, label: '3', name: 'M. Romero', role: 'Right Back', confirmed: 'Thursday 6:40 PM', goals: 2, assists: 0, zone: 'def' },
-  { num: 4, label: '4', name: 'L. Davies', role: 'Center Back', confirmed: 'Wednesday 8:02 PM', goals: 1, assists: 1, zone: 'def' },
-  { num: 5, label: '5', name: 'C. Dawson', role: 'Center Back', confirmed: 'Wednesday 9:15 PM', goals: 1, assists: 3, zone: 'def' },
-  { num: 2, label: '2', name: 'J. Lewis', role: 'Left Back', confirmed: 'Thursday 8:30 PM', goals: 0, assists: 4, zone: 'def' },
-  { num: 12, label: '12', name: 'L. Hughes', role: 'Right Midfielder', confirmed: 'Tuesday 6:15 PM', goals: 4, assists: 6, zone: 'mid' },
-  { num: 8, label: '8', name: 'J. Silva', role: 'Playmaker', confirmed: 'Wednesday 5:45 PM', goals: 9, assists: 11, zone: 'mid' },
-  { num: 6, label: '6', name: 'K. Phillips', role: 'Defensive Mid', confirmed: 'Thursday 7:10 PM', goals: 2, assists: 5, zone: 'mid' },
-  { num: 7, label: '7', name: 'D. Okafor', role: 'Right Winger', confirmed: 'Thursday 6:15 PM', goals: 14, assists: 4, zone: 'att' },
-  { num: 9, label: '9', name: 'J. Park', role: 'Striker', confirmed: 'Thursday 9:00 PM', goals: 7, assists: 8, zone: 'att' },
-  { num: 11, label: '11', name: 'S. Adebayo', role: 'Left Winger', confirmed: 'Wednesday 8:20 PM', goals: 6, assists: 5, zone: 'att' },
-];
-
-type Formation = '4-3-3' | '4-4-2' | '3-5-2';
-
-// Coordinates line up with TACTICAL_ROSTER order: GK, RB, CB, CB, LB, three midfielders, three forwards
-const FORMATIONS: Record<Formation, [number, number][]> = {
-  '4-3-3': [[11, 50], [29, 18], [31, 39], [31, 61], [29, 82], [50, 24], [48, 50], [50, 76], [74, 20], [78, 50], [74, 80]],
-  '4-4-2': [[11, 50], [29, 18], [31, 39], [31, 61], [29, 82], [50, 18], [48, 38], [48, 62], [50, 82], [76, 38], [76, 62]],
-  '3-5-2': [[11, 50], [29, 26], [27, 50], [29, 74], [49, 86], [49, 14], [47, 36], [44, 50], [47, 64], [76, 38], [76, 62]],
-};
-
-// Passing lanes drawn between player indices; true adds an arrowhead
-const TACTICAL_LINKS: Record<Formation, [number, number, boolean][]> = {
-  '4-3-3': [[0, 2, true], [1, 2, false], [2, 3, false], [3, 4, false], [2, 6, true], [3, 6, true], [6, 5, true], [6, 7, true], [6, 9, true], [5, 8, true], [7, 10, true]],
-  '4-4-2': [[1, 2, false], [2, 3, false], [3, 4, false], [2, 6, true], [3, 7, true], [6, 5, true], [7, 8, true], [6, 9, true], [7, 10, true]],
-  '3-5-2': [[1, 2, false], [2, 3, false], [2, 7, true], [7, 6, true], [7, 8, true], [6, 9, true], [8, 10, true], [5, 6, true]],
-};
-
 // Who it's for: one line each, linking to that person's answers (Parent goes to the club directory: there's no parent FAQ section)
 const ROLES = [
   { tab: 'Coach', Icon: ClipboardList, line: 'Pick your team in minutes', href: '/faq#managers-coaches' },
@@ -203,26 +162,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
   const [events, setEvents] = useState<DugoutEvent[]>(DEFAULT_EVENTS);
   // The kit picker is gone from the hero; the mock shirts keep one pattern
   const kitStyle: KitStyle = 'stripes';
-  // Tactical Pitch state
-  const [formation, setFormation] = useState<Formation>('4-3-3');
-  const [selectedPitchPlayer, setSelectedPitchPlayer] = useState<number | null>(8);
-  const activePitchPlayer = TACTICAL_ROSTER.find(p => p.num === selectedPitchPlayer) || TACTICAL_ROSTER[6];
-
-  // Tilt is written straight to CSS variables so mouse moves don't re-render the page
-  const handlePitchMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    el.style.setProperty('--tilt-x', `${38 - y * 10}deg`);
-    el.style.setProperty('--tilt-y', `${x * 12}deg`);
-  };
-
-  const handlePitchMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.currentTarget.style.removeProperty('--tilt-x');
-    e.currentTarget.style.removeProperty('--tilt-y');
-  };
-
   // Live match clock (advances steadily between 71' and 89')
   const [minute, setMinute] = useState(72);
   useEffect(() => {
@@ -534,138 +473,10 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
           </div>
         </div>
 
-          {/* Lineup pitch laid beneath the copy and match centre */}
-          <div className="lp-hero-pitch-layer">
-            <div className="lp-hero-pitch-grid">
-              <div
-              className="lp-pitch-3d-scene"
-              onMouseMove={handlePitchMouseMove}
-              onMouseLeave={handlePitchMouseLeave}
-            >
-              <div className="lp-tactical-pitch">
-                {/* Full Pitch Authentic Markings */}
-                <div className="lp-pitch-boundary" />
-                <div className="lp-pitch-halfway" />
-                <div className="lp-pitch-center-circle">
-                  <div className="lp-pitch-center-spot" />
-                </div>
-
-                {/* Left Penalty Area (Defending) */}
-                <div className="lp-pitch-box left" />
-                <div className="lp-pitch-goal-area left" />
-                <div className="lp-pitch-penalty-spot left" />
-                <div className="lp-pitch-penalty-arc left" />
-
-                {/* Right Penalty Area (Attacking) */}
-                <div className="lp-pitch-box right" />
-                <div className="lp-pitch-goal-area right" />
-                <div className="lp-pitch-penalty-spot right" />
-                <div className="lp-pitch-penalty-arc right" />
-
-                {/* 4 Corner Arcs */}
-                <div className="lp-pitch-corner top-left" />
-                <div className="lp-pitch-corner bottom-left" />
-                <div className="lp-pitch-corner top-right" />
-                <div className="lp-pitch-corner bottom-right" />
-
-                {/* Dynamic Passing Network with Directional Arrowheads */}
-                <svg className="lp-pitch-mesh" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                  <defs>
-                    <marker id="meshArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto">
-                      <path d="M 0 2 L 6 5 L 0 8 z" fill="rgba(110, 231, 183, 0.9)" />
-                    </marker>
-                  </defs>
-                  {TACTICAL_LINKS[formation].map(([fromIdx, toIdx, hasArrow], lIdx) => {
-                    const fromCoord = FORMATIONS[formation][fromIdx];
-                    const toCoord = FORMATIONS[formation][toIdx];
-                    if (!fromCoord || !toCoord) return null;
-                    return (
-                      <line
-                        key={`${formation}-${lIdx}`}
-                        x1={`${fromCoord[0]}%`}
-                        y1={`${fromCoord[1]}%`}
-                        x2={`${toCoord[0]}%`}
-                        y2={`${toCoord[1]}%`}
-                        className="lp-pitch-link"
-                        markerEnd={hasArrow ? "url(#meshArrow)" : undefined}
-                      />
-                    );
-                  })}
-                </svg>
-
-                {/* 11 player tokens */}
-                {FORMATIONS[formation].map(([x, y], i) => {
-                  const player = TACTICAL_ROSTER[i];
-                  const isSelected = selectedPitchPlayer === player.num;
-                  return (
-                    <button
-                      key={player.num}
-                      type="button"
-                      className={`lp-pitch-token zone-${player.zone} ${isSelected ? 'is-selected' : ''}`}
-                      style={{ left: `${x}%`, top: `${y}%` }}
-                      onClick={() => setSelectedPitchPlayer(player.num)}
-                      aria-label={`#${player.label} ${player.name}, ${player.role}`}
-                      aria-pressed={isSelected}
-                      title={`${player.name} (${player.role})`}
-                    >
-                      <span className="lp-token-num">{player.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Docked Player Inspector Card (matching mockup) */}
-            <div className="lp-workbench-card">
-              <div className="lp-wcard-header">
-                <div className="lp-wcard-avatar">{activePitchPlayer.label}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="lp-wcard-name">#{activePitchPlayer.label} {activePitchPlayer.name}</div>
-                  <div className="lp-wcard-sub">
-                    <Check size={12} color="#10B981" /> Confirmed {activePitchPlayer.confirmed} &middot; {activePitchPlayer.role}
-                  </div>
-                </div>
-                <span className="lp-wcard-role-pill">
-                  {activePitchPlayer.zone === 'gk' ? 'GK' : activePitchPlayer.zone === 'def' ? 'DEF' : activePitchPlayer.zone === 'mid' ? 'MID' : 'FWD'}
-                </span>
-              </div>
-
-              <div className="lp-wcard-stats">
-                <div className="lp-wcard-stat-col">
-                  <div className="lp-wcard-stat-label">Goals</div>
-                  <div className="lp-wcard-stat-val">{activePitchPlayer.goals}</div>
-                  <div className="lp-wcard-stat-sub">This season</div>
-                </div>
-                <div className="lp-wcard-stat-col">
-                  <div className="lp-wcard-stat-label">Assists</div>
-                  <div className="lp-wcard-stat-val">{activePitchPlayer.assists}</div>
-                  <div className="lp-wcard-stat-sub">This season</div>
-                </div>
-              </div>
-
-              <div className="lp-wcard-section">
-                <div className="lp-wcard-section-label">Formation Selector</div>
-                <div className="lp-formation-btns">
-                  {(['4-3-3', '4-4-2', '3-5-2'] as const).map(f => (
-                    <button
-                      key={f}
-                      type="button"
-                      className={`lp-formation-btn ${formation === f ? 'is-active' : ''}`}
-                      onClick={() => setFormation(f)}
-                      aria-pressed={formation === f}
-                    >
-                      {f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         </div>
       </section>
 
-      {/* Trust bar under the hero (the pitch runs to the hero's bottom edge) */}
+      {/* Trust bar under the hero */}
       <div className="container">
         <div className="lp-hero-footer-bar">
           <div className="lp-hero-meta">
