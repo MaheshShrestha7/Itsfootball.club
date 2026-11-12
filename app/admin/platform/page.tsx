@@ -47,6 +47,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import NewClubForm from '@/components/admin/platform/NewClubForm';
 import TwoStepSignIn from '@/components/TwoStepSignIn';
 
 const PERIOD_OPTIONS = [
@@ -71,11 +72,13 @@ export default function PlatformOwnerDashboard() {
   const [peopleQuery, setPeopleQuery] = useState('');
   const [supportOpen, setSupportOpen] = useState(0);
   const [supportId, setSupportId] = useState<string | null>(null);
+  const [newClubOpen, setNewClubOpen] = useState(false);
 
   // The page, open club and support request live in the web address, so refresh, back and shared links work
   const setActiveTab = useCallback((tab: TabType) => {
     setActiveTabState(tab);
     setMoreOpen(false);
+    setNewClubOpen(false);
     if (tab !== 'support') setSupportId(null);
     const next = missionUrl(window.location.search, { tab, request: tab === 'support' ? undefined : null });
     if (next !== window.location.search) window.history.pushState(null, '', `${window.location.pathname}${next}`);
@@ -573,13 +576,25 @@ export default function PlatformOwnerDashboard() {
           />
         )}
 
-        {activeTab === 'clubs' && (
+        {activeTab === 'clubs' && (newClubOpen ? (
+          <NewClubForm
+            onCancel={() => setNewClubOpen(false)}
+            onMade={async (id, note) => {
+              setNewClubOpen(false);
+              window.scrollTo({ top: 0 });
+              await fetchClubs('');
+              setPendingClubId(id);
+              notify('The club is live', note);
+            }}
+          />
+        ) : (
           <ClubsTab
             clubs={clubs}
             loading={loadingClubs}
             onSelectClub={openClub}
+            onNewClub={() => { closeClub(); setNewClubOpen(true); window.scrollTo({ top: 0 }); }}
           />
-        )}
+        ))}
 
         {activeTab === 'users' && (
           <UsersTab key={peopleQuery} initialQuery={peopleQuery} showToast={showToast} />

@@ -75,6 +75,24 @@ export const RESERVED_SLUGS = [
   'login', 'register', 'auth', 'account', 'settings', 'dashboard', 'static', 'assets', 'tournaments', 'cups', 'grounds', 'invite'
 ];
 
+/** Cleans a typed club web address and says what's wrong with it, if anything (taken slugs are checked separately) */
+export function checkClubSlug(rawSlug: string): { cleanSlug: string; error?: string } {
+  const cleanSlug = rawSlug
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/--+/g, '-');
+
+  if (!cleanSlug || cleanSlug.length < 3) return { cleanSlug, error: 'Club slug must be at least 3 characters.' };
+  if (cleanSlug.length > 48) return { cleanSlug, error: 'Club slug cannot exceed 48 characters.' };
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(cleanSlug)) {
+    return { cleanSlug, error: 'Slug must start and end with an alphanumeric character and contain only single hyphens.' };
+  }
+  if (RESERVED_SLUGS.includes(cleanSlug)) return { cleanSlug, error: `"${cleanSlug}" is a reserved system path and cannot be used.` };
+  return { cleanSlug };
+}
+
 /**
  * The club a path belongs to ('/ancc/match/123' -> 'ancc'), or '' for platform pages. A public
  * tournament page belongs to its tournament-only club ('/tournaments/dashain-cup' -> 'dashain-cup',
