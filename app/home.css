@@ -1222,30 +1222,56 @@
   .lt-cap b { font-size: 1.125rem; line-height: 1.5rem; }
 }
 
-/* ---------- Hero, 2026-11-12 markup: tagline headline left; 3D player right with the address box under him ---------- */
-.lp-hero-upper { align-items: center; }
+/* ---------- Hero, 2026-11-12 markup: tagline + sentence + trust lines left; 3D player right with the address box under him ---------- */
+.lp-hero { padding-bottom: 2rem; }
+.lp-hero-upper { align-items: end; }
+.lp-hero-left { padding-bottom: 0.5rem; }
 .lp-h1-stack { font-size: clamp(2.8rem, 6.4vw, 5.4rem); line-height: 0.98; overflow-wrap: break-word; min-width: 0; }
 .lp-h1-stack span { display: block; }
 .lp-h1-stack span:nth-child(2) { color: var(--lp-p); transition: color 400ms var(--ease-out); }
+.lp-hero-trust .lp-hero-meta { margin-top: 0; flex-direction: column; gap: 0.4rem; font-size: 0.9rem; }
+.lp-hero-trust .lp-demo { margin-top: 0.75rem; }
+.lp-hero-trust .lp-hero-signin { margin-top: 0.6rem; }
 .lp-hero-right { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
-.lp-hero-right .lp-claim { max-width: none; position: relative; z-index: 2; margin-top: -8px; }
-.fb-hero { position: relative; height: 380px; pointer-events: none;
+.lp-hero-right .lp-claim { max-width: none; position: relative; z-index: 2; margin-top: -6px; }
+.lp-hero-right .lp-claim-status { min-height: 1.2rem; }
+.fb-hero { position: relative; height: 340px; pointer-events: none;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
 .fb-hero .fb-canvas, .fb-hero .fb-front { position: absolute; inset: 0; }
 .fb-hero.is-live .fb-canvas { opacity: 1; }
-/* Labels in the body face, sentence case (was tracked mono capitals) */
+/* Colours on one line: label, swatches, name. Label in the body face, sentence case (was tracked mono capitals) */
+.lp-color-kit-section { margin-top: 0.4rem; }
+.lp-swatches-col { flex-direction: row; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 .lp-swatches-label { font-family: inherit; font-size: 0.8rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
-.lp-color-kit-section { margin-top: 0.6rem; }
+.lp-swatch-boxes { margin: 0; }
+.lp-swatch-box { width: 26px; height: 26px; }
 @media (max-width: 1024px) {
-  .lp-hero-upper { gap: 0.5rem; }
+  .lp-hero-upper { gap: 1.25rem; }
   .lp-h1-stack span { display: inline; }
-  .fb-hero { height: 320px; }
+  .lp-hero-trust .lp-hero-meta { flex-direction: row; }
+  .fb-hero { height: 300px; }
 }
-@media (max-width: 640px) { .fb-hero { height: 300px; } }
+@media (max-width: 640px) { .fb-hero { height: 270px; } }
 
-/* ---------- Live demo, moved down from the hero ---------- */
-.lp-live-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
+/* ---------- Live demo, moved down from the hero; role links sit under its words ---------- */
+.lp-live { padding-top: clamp(2.5rem, 4vw, 3.5rem); }
+.lp-live-grid { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
 .lp-live-copy p { color: var(--text-secondary); font-size: 1.05rem; max-width: 34ch; margin-top: 0.75rem; line-height: 1.5; }
 .lp-live .lp-stage { padding: 0; }
-.lp-live-roles { margin-top: 2rem; }
+.lp-live-roles { margin-top: 1.75rem; }
+.lp-live-roles > span { flex-basis: 100%; }
 @media (max-width: 960px) { .lp-live-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* $0: one slim band, not a tall card */
+.hv-free { padding: 1.5rem 2rem; gap: 2.5rem; }
+.hv-zero { font-size: 4.5rem; }
+.hv-zero span { font-size: 1rem; margin-top: 0.25rem; }
+@media (max-width: 760px) { .hv-zero { font-size: 4rem; } }
+/* Phones and tablets: headline, player + address box, then the trust lines, so Claim URL stays on the first screen */
+@media (max-width: 1024px) {
+  .lp-hero-left { display: contents; }
+  .lp-hero-right { order: 1; }
+  .lp-hero-trust { order: 2; }
+  .lp-hero-sub { margin-bottom: 0; }
+}
+@media (max-width: 1024px) { .lp-hero-upper { gap: 0.9rem; } .lp-h1-stack { margin-bottom: 0; } }

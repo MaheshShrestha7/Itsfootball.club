@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { isListedClub } from '@/lib/public-tournaments';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -86,8 +86,6 @@ const ROLES = [
   { tab: 'Supporter', Icon: Heart, line: 'Never miss a goal', href: '/faq#supporters' },
   { tab: 'Sponsor', Icon: Megaphone, line: 'See what your money did', href: '/faq#sponsors' },
 ] as const;
-
-const SAY_LINES = ['Less chasing.', 'More football.'];
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
@@ -242,21 +240,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
     router.push(`/create-club${params.size ? `?${params}` : ''}`);
   };
 
-  // Tagline: each word lights up once it crosses the middle of the screen (all lit with reduced motion)
-  const sayRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    const words = sayRef.current?.querySelectorAll<HTMLElement>('.hv-w');
-    if (!words?.length) return;
-    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      words.forEach(w => w.classList.add('is-on'));
-      return;
-    }
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('is-on'); io.unobserve(en.target); } });
-    }, { rootMargin: '0px 0px -45% 0px' });
-    words.forEach(w => io.observe(w));
-    return () => io.disconnect();
-  }, []);
 
   return (
     <div className="lp" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -284,6 +267,30 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 itsfootball.club is the free platform for grassroots football clubs: club website, live match centre and member passes.
               </p>
 
+              {/* Was the trust bar under the hero: now under the sentence, so the hero has no empty block */}
+              <div className="lp-hero-trust">
+              <div className="lp-hero-meta">
+                <span className="lp-free"><Check size={15} /> $0 a month, free forever</span>
+                <span><Check size={15} /> Your crest, colours &amp; domain</span>
+                <span><Check size={15} /> Nothing for supporters to install</span>
+              </div>
+              {demoClub && (
+                <Link href={`/${demoClub.slug}`} className="lp-demo">
+                  Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
+                </Link>
+              )}
+              {isAuthenticated && user ? (
+                <div className="lp-hero-signin">
+                  Welcome back, {user.full_name.split(' ')[0]}.{' '}
+                  <Link href="/my-clubs" className="lp-linkbtn">Go to my clubs</Link>
+                </div>
+              ) : (
+                <div className="lp-hero-signin">
+                  Already run a club here?{' '}
+                  <button type="button" className="lp-linkbtn" onClick={() => openAuth('login')}>Sign in</button>
+                </div>
+              )}
+              </div>
             </div>
 
             {/* Right: the 3D player, with the address box under him */}
@@ -349,33 +356,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         </div>
       </section>
 
-      {/* Trust bar under the hero */}
-      <div className="container">
-        <div className="lp-hero-footer-bar">
-          <div className="lp-hero-meta">
-            <span className="lp-free"><Check size={15} /> $0 a month, free forever</span>
-            <span><Check size={15} /> Your crest, colours &amp; domain</span>
-            <span><Check size={15} /> Nothing for supporters to install</span>
-          </div>
-          {demoClub && (
-            <Link href={`/${demoClub.slug}`} className="lp-demo">
-              Not ready to claim? Look around {demoClub.name}&apos;s live club site <ArrowRight size={14} />
-            </Link>
-          )}
-          {isAuthenticated && user ? (
-            <div className="lp-hero-signin">
-              Welcome back, {user.full_name.split(' ')[0]}.{' '}
-              <Link href="/my-clubs" className="lp-linkbtn">Go to my clubs</Link>
-            </div>
-          ) : (
-            <div className="lp-hero-signin">
-              Already run a club here?{' '}
-              <button type="button" className="lp-linkbtn" onClick={() => openAuth('login')}>Sign in</button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* ================= LIVE: score a game from the touchline (moved down from the hero) ================= */}
       <section
         className="hm-sec lp-live"
@@ -386,6 +366,12 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
           <div className="lp-live-copy">
             <h2 id="lp-live-h" className="hv-h2">Score it from the touchline.</h2>
             <p>Tap Goal on your phone. Everyone following the club sees it. Try it here.</p>
+            <nav className="mw-roles lp-live-roles" aria-label="Answers for your role">
+              <span>Find your part</span>
+              {ROLES.map(r => (
+                <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
+              ))}
+            </nav>
           </div>
           {/* Right Column: Live Matchday Command Console */}
         <div
@@ -507,14 +493,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
           </div>
         </div>
         </div>
-        <div className="container">
-            <nav className="mw-roles lp-live-roles" aria-label="Answers for your role">
-              <span>Find your part</span>
-              {ROLES.map(r => (
-                <Link key={r.tab} href={r.href} className="mw-role"><r.Icon size={16} aria-hidden="true" />{r.tab}</Link>
-              ))}
-            </nav>
-        </div>
       </section>
 
       {/* ================= LATEST: newest album, results board, news headlines (real club data only) ================= */}
@@ -631,21 +609,6 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
               ))}
             </ul>
           </div>
-        </div>
-      </section>
-
-      {/* ================= TAGLINE: words light up as they cross the middle of the screen ================= */}
-      <section className="hv-say" aria-label="Less chasing. More football.">
-        <div className="container">
-          <p ref={sayRef} aria-hidden="true">
-            {SAY_LINES.map((line, li) => (
-              <span key={line} className="hv-say-line">
-                {line.split(' ').map((w, wi) => (
-                  <span key={w} className={`hv-w${li === SAY_LINES.length - 1 && wi === line.split(' ').length - 1 ? ' is-green' : ''}`}>{w} </span>
-                ))}
-              </span>
-            ))}
-          </p>
         </div>
       </section>
 

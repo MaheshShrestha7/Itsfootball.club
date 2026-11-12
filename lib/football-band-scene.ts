@@ -277,7 +277,7 @@ export async function mountFootballBand({ band, host, front, tagline, kit }: Els
     camera.aspect = w / h;
     if (hero) {
       // Fit 2.6 m of height and at least 2.2 m of width, his soles FEET_PX above the canvas bottom
-      const k = Math.tan(THREE.MathUtils.degToRad(15)), d = Math.max(1.3 / k, 1.1 / (k * camera.aspect)), half = d * k;
+      const k = Math.tan(THREE.MathUtils.degToRad(15)), d = Math.max(1.12 / k, 0.95 / (k * camera.aspect)), half = d * k;
       const x = 0.15, cy = half * (1 - 2 * FEET_PX / h);
       player.position.set(x, 0, 0); camBase.set(0, cy, d); camLook.set(0, cy, 0); camera.fov = 30;
       ground.position.x = x;
