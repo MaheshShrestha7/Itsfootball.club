@@ -410,6 +410,26 @@ export async function listLatestResults(limit = 40): Promise<HomeResultRow[]> {
   });
 }
 
+/** A club's next fixture or public event, for the platform home page's "Coming up" list */
+export type HomeUpcomingRow =
+  | { kind: 'match'; id: string; club_id: string; slug?: string | null; at: string; home_team_name: string; away_team_name: string; venue: string | null }
+  | { kind: 'event'; id: string; club_id: string; at: string; title: string; location: string | null };
+
+/** Upcoming club games (not in-house or tournament) and public events across every club, soonest first */
+export async function listUpcoming(limit = 20): Promise<HomeUpcomingRow[]> {
+  const now = `${new Date().toISOString().slice(0, 13)}:00:00Z`;
+  const [games, events] = await Promise.all([
+    publicRows<{ id: string; club_id: string; slug?: string | null; match_date: string; home_team_name: string; away_team_name: string; venue: string | null }>(
+      `matches?select=id,club_id,slug,match_date,home_team_name,away_team_name,venue&status=eq.upcoming&match_date=gte.${now}&${CLUB_GAMES}&order=match_date&limit=${limit}`, 300),
+    publicRows<{ id: string; club_id: string; title: string; start_time: string; location: string | null }>(
+      `events?select=id,club_id,title,start_time,location&is_public=eq.true&start_time=gte.${now}&order=start_time&limit=${limit}`, 300),
+  ]);
+  return [
+    ...(games || []).map(g => ({ kind: 'match' as const, id: g.id, club_id: g.club_id, slug: g.slug, at: g.match_date, home_team_name: g.home_team_name, away_team_name: g.away_team_name, venue: g.venue })),
+    ...(events || []).map(e => ({ kind: 'event' as const, id: e.id, club_id: e.club_id, at: e.start_time, title: e.title, location: e.location })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+}
+
 export interface NewsArticleRow extends NewsMetadataRow {
   club_id: string;
   updated_at: string | null;

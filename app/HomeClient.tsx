@@ -20,7 +20,7 @@ import { trackPlatformVisit } from '@/lib/platform-tracking';
 import { HOMEPAGE_FAQS } from '@/lib/schema';
 import { matchPath, newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
-import type { HomeDemoClub, HomeResultRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
+import type { HomeDemoClub, HomeResultRow, HomeUpcomingRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
 import FootballBand from '@/components/FootballBand';
 
 interface DugoutEvent {
@@ -108,7 +108,7 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2)
 /** Club blocks shown before "See all clubs" takes the last slot */
 const HOME_CLUB_BLOCKS = 12;
 
-export default function PlatformHomePage({ latestNews = [], latestPhotos = [], results = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; results?: HomeResultRow[]; demoClub?: HomeDemoClub | null }) {
+export default function PlatformHomePage({ latestNews = [], latestPhotos = [], results = [], upcoming = [], demoClub: pickedDemo = null }: { latestNews?: LatestNewsRow[]; latestPhotos?: LatestPhotoRow[]; results?: HomeResultRow[]; upcoming?: HomeUpcomingRow[]; demoClub?: HomeDemoClub | null }) {
   const router = useRouter();
   const { clubs: allClubs, matches } = useClub();
   // Tournament-only clubs (public tournament pages) aren't clubs to show off
@@ -119,17 +119,28 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
   // News and photos only from clubs the page lists, 3 of each
   const clubOf = (id: string) => clubs.find(c => c.id === id);
   // The newest three posts, news or photos, from clubs the page lists
-  const latestPosts = [
-    ...latestNews.flatMap(n => {
-      const club = clubOf(n.club_id);
-      return club ? [{ kind: 'news' as const, id: n.id, at: n.published_at, href: newsPath(club.slug, n.slug), image: n.cover_image_url || club.banner_url || DEFAULT_BANNER, title: n.title, clubName: club.short_name || club.name }] : [];
-    }),
-    ...latestPhotos.flatMap(p => {
-      const club = clubOf(p.club_id);
-      return club ? [{ kind: 'photo' as const, id: p.id, at: p.created_at, href: `/${club.slug}/gallery`, image: p.thumbnail_url || p.media_url, title: p.title || p.album_name || 'New photos', clubName: club.short_name || club.name }] : [];
-    }),
-  ].sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 3);
-  // The results board: each listed club's newest game (live ones come first), two clubs at most
+  // Newest album: its photos grouped, so one event shows once (not three tiles with the same title)
+  const album = (() => {
+    const first = latestPhotos.find(p => clubOf(p.club_id));
+    if (!first) return null;
+    const key = (p: LatestPhotoRow) => `${p.club_id}|${p.album_name || p.title || ''}`;
+    const photos = latestPhotos.filter(p => key(p) === key(first)).slice(0, 3);
+    const club = clubOf(first.club_id)!;
+    return { club, photos, title: first.album_name || first.title || 'New photos', at: first.created_at };
+  })();
+  const news = latestNews.flatMap(n => {
+    const club = clubOf(n.club_id);
+    return club ? [{ id: n.id, at: n.published_at, href: newsPath(club.slug, n.slug), image: n.cover_image_url || club.banner_url || DEFAULT_BANNER, title: n.title, clubName: club.short_name || club.name }] : [];
+  }).slice(0, 3);
+  // Coming up: the next four fixtures and public events of listed clubs
+  const comingUp = upcoming.flatMap(u => {
+    const club = clubOf(u.club_id);
+    if (!club) return [];
+    return [u.kind === 'match'
+      ? { key: `m-${u.id}`, at: u.at, href: matchPath(club.slug, u), title: `${u.home_team_name} v ${u.away_team_name}`, where: u.venue, club }
+      : { key: `e-${u.id}`, at: u.at, href: `/${club.slug}/events/${u.id}`, title: u.title, where: u.location, club }];
+  }).slice(0, 4);
+  // The results board: each listed club's newest game (live ones come first), three clubs at most
   const boardGames = useMemo(() => {
     const seen = new Set<string>();
     const out: { game: HomeResultRow; club: (typeof clubs)[number] }[] = [];
@@ -138,7 +149,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       if (!club || seen.has(club.id)) continue;
       seen.add(club.id);
       out.push({ game, club });
-      if (out.length === 2) break;
+      if (out.length === 3) break;
     }
     return out;
   }, [results, clubs]);
@@ -580,50 +591,90 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
         </div>
       </section>
 
-      {/* ================= THIS WEEKEND: real clubs' photos, news and games ================= */}
+      {/* ================= LATEST: newest album, results board, news headlines (real club data only) ================= */}
       {clubs.length > 0 && (
         <section className="hm-sec" aria-labelledby="hm-clubs-h">
           <div className="container">
             <div className="hv-head">
-              <h2 id="hm-clubs-h" className="hv-h2">This weekend on itsfootball.club.</h2>
+              <h2 id="hm-clubs-h" className="hv-h2">Latest from our clubs.</h2>
               <Link href="/clubs" className="hm-link">All {clubs.length} {clubs.length === 1 ? 'club' : 'clubs'}</Link>
             </div>
-            {latestPosts.length + boardGames.length > 0 ? (
-              <div className={`hv-board${latestPosts.length === 0 ? ' no-posts' : ''}`}>
-                {latestPosts.map((p, i) => (
-                  <Link key={`${p.kind}-${p.id}`} href={p.href} className={`hv-post${i === 0 ? ' is-big' : ''}`}>
-                    <img src={p.image} alt="" loading="lazy" decoding="async" />
-                    <span><small>{p.clubName}</small>{p.title}</span>
+            {album || news.length || boardGames.length || comingUp.length ? (
+              <div className={`lt${album ? '' : ' no-album'}`}>
+                {album && (
+                  <Link href={`/${album.club.slug}/gallery`} className="lt-album">
+                    <span className={`lt-pics n${album.photos.length}`}>
+                      {album.photos.map(ph => <img key={ph.id} src={ph.thumbnail_url || ph.media_url} alt="" loading="lazy" decoding="async" />)}
+                    </span>
+                    <span className="lt-cap">
+                      <img src={album.club.logo_url || DEFAULT_CREST} alt="" width={36} height={36} loading="lazy" decoding="async" />
+                      <span><b>{album.title}</b><small>{album.club.short_name || album.club.name} photos, <LocalTime value={album.at} options={{ day: 'numeric', month: 'short' }} /></small></span>
+                    </span>
                   </Link>
-                ))}
-                {boardGames.map(({ game, club }) => {
-                  const live = game.status === 'live' || game.status === 'halftime';
-                  const hidden = game.scores_hidden;
-                  const homeWon = game.home_score > game.away_score;
-                  const awayWon = game.away_score > game.home_score;
-                  const side = (name: string, logo: string | null, score: number, dim: boolean) => (
-                    <div className={`hm-game-row${dim ? ' is-dim' : ''}`}>
-                      {logo ? <img src={logo} alt="" width={26} height={26} loading="lazy" decoding="async" /> : <i aria-hidden="true">{initials(name)}</i>}
-                      <span>{name}</span>
-                      {!hidden && <b>{score}</b>}
-                    </div>
-                  );
-                  return (
-                    <Link key={game.id} href={matchPath(club.slug, game)} className="hm-game">
-                      <div className="hm-game-top">
-                        <span>{game.team_name || club.short_name || club.name}</span>
-                        {live ? (
-                          <span className="hm-game-live">{game.status === 'halftime' ? 'Half time' : `Live ${game.current_minute ?? ''}'`}</span>
-                        ) : (
-                          <span><LocalTime value={game.match_date} /></span>
-                        )}
-                      </div>
-                      {side(game.home_team_name, game.home_team_logo, game.home_score, !hidden && !live && awayWon)}
-                      {side(game.away_team_name, game.away_team_logo, game.away_score, !hidden && !live && homeWon)}
-                      {hidden && <div className="hm-game-hidden">Scores hidden</div>}
-                    </Link>
-                  );
-                })}
+                )}
+                {comingUp.length > 0 && (
+                  <div className="lt-up">
+                    <h3>Coming up</h3>
+                    <ul>
+                      {comingUp.map(u => (
+                        <li key={u.key}>
+                          <Link href={u.href}>
+                            <span className="lt-date"><b><LocalTime value={u.at} options={{ day: 'numeric' }} /></b><LocalTime value={u.at} options={{ month: 'short' }} /></span>
+                            <span><b>{u.title}</b><small>{u.club.short_name || u.club.name}, <LocalTime value={u.at} options={{ weekday: 'short', hour: 'numeric', minute: '2-digit' }} format="both" />{u.where ? `, ${u.where}` : ''}</small></span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {boardGames.length > 0 && (
+                  <div className="lt-board">
+                    <h3>Results</h3>
+                    {boardGames.map(({ game, club }) => {
+                      const live = game.status === 'live' || game.status === 'halftime';
+                      const hidden = game.scores_hidden;
+                      const homeWon = game.home_score > game.away_score;
+                      const awayWon = game.away_score > game.home_score;
+                      const side = (name: string, logo: string | null, score: number, dim: boolean) => (
+                        <div className={`hm-game-row${dim ? ' is-dim' : ''}`}>
+                          {logo ? <img src={logo} alt="" width={26} height={26} loading="lazy" decoding="async" /> : <i aria-hidden="true">{initials(name)}</i>}
+                          <span>{name}</span>
+                          {!hidden && <b>{score}</b>}
+                        </div>
+                      );
+                      return (
+                        <Link key={game.id} href={matchPath(club.slug, game)} className="lt-game">
+                          <div className="hm-game-top">
+                            <span>{game.team_name || club.short_name || club.name}</span>
+                            {live ? (
+                              <span className="hm-game-live">{game.status === 'halftime' ? 'Half time' : `Live ${game.current_minute ?? ''}'`}</span>
+                            ) : (
+                              <span><LocalTime value={game.match_date} /></span>
+                            )}
+                          </div>
+                          {side(game.home_team_name, game.home_team_logo, game.home_score, !hidden && !live && awayWon)}
+                          {side(game.away_team_name, game.away_team_logo, game.away_score, !hidden && !live && homeWon)}
+                          {hidden && <div className="hm-game-hidden">Scores hidden</div>}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+                {news.length > 0 && (
+                  <div className="lt-news">
+                    <h3>News</h3>
+                    <ul>
+                      {news.map(n => (
+                        <li key={n.id}>
+                          <Link href={n.href}>
+                            <img src={n.image} alt="" width={64} height={64} loading="lazy" decoding="async" />
+                            <span><b>{n.title}</b><small>{n.clubName}, <LocalTime value={n.at} options={{ day: 'numeric', month: 'short' }} /></small></span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="hm-crests">
