@@ -8,6 +8,7 @@ import type { AttentionItem } from '@/lib/admin-attention';
 const AREA = {
   'match-center': { icon: Radio, go: 'Open' },
   members: { icon: Users, go: 'Review' },
+  squad: { icon: Users, go: 'Check' },
   finance: { icon: Wallet, go: 'Check' },
   inquiries: { icon: Mail, go: 'Read' },
   sponsors: { icon: DollarSign, go: 'Open' },
@@ -15,9 +16,17 @@ const AREA = {
   lineup: { icon: Layers, go: 'Pick' },
 } as const;
 
-/** Top of the admin dashboard: everything waiting on the committee, most urgent first, each row a link to do it. Hidden when nothing is. */
+/** Top of the admin dashboard: everything waiting on the committee, most urgent first, each row a link to do it. Says "All clear" when nothing is. */
 export default function NeedsYouCard({ items }: { items: AttentionItem[] }) {
-  if (items.length === 0) return null;
+  // DASH-8: say so when nothing is waiting, so "all done" doesn't look like "still loading"
+  if (items.length === 0) {
+    return (
+      <section className="admin-panel" aria-labelledby="needs-you-title">
+        <div className="admin-panel-head"><h2 id="needs-you-title">Needs you</h2><span className="admin-meta">All clear</span></div>
+        <p className="admin-empty">Nothing is waiting on you right now.</p>
+      </section>
+    );
+  }
   const sorted = [...items].sort((a, b) => Number(b.tone === 'urgent') - Number(a.tone === 'urgent'));
   return (
     <section className="admin-panel" aria-labelledby="needs-you-title">

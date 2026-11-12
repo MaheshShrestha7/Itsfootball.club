@@ -12,7 +12,7 @@ import { useAdminAttention } from '@/lib/use-admin-attention';
 import { defaultFixture } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
-import { isPlayerMember } from '@/lib/supabase/types';
+import { countsTowardClubRecord, isPlayerMember } from '@/lib/supabase/types';
 import { Calendar, QrCode } from 'lucide-react';
 import { getLiveMinuteLabel } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
@@ -20,6 +20,9 @@ import { defaultSeasonLabel } from '@/lib/season';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isCountedMember } from '@/lib/people';
 import ClubOverview, { OVERVIEW_VIEWS } from '@/components/admin/ClubOverview';
+import { comingEvents, lastResult, opponentLine, sameDayGames } from '@/lib/club-overview';
+import { clubResult, OUTCOME_LABEL } from '@/lib/fixtures';
+import { EVENT_TYPE_LABEL } from '@/lib/club-numbers';
 import { useUrlTab } from '@/lib/use-url-tab';
 
 export default function AdminDashboardPage({
@@ -28,7 +31,7 @@ export default function AdminDashboardPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, members, matches, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants, clubTeams } = useClub();
+  const { clubs, selectClubBySlug, members, matches, activityLogs, getActiveSeason, getClubAnalytics, loadClubAnalytics, tournamentParticipants, clubTeams, events } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const { can, isClubSuperUser } = useAuth();
   // Shortcuts only for the areas this person's roles cover (a Treasurer has no fixtures or scanner)
@@ -38,6 +41,7 @@ export default function AdminDashboardPage({
   const canFixtures = can(club.id, 'matches');
   const canAnalytics = can(club.id, 'analytics');
   const canMatchCentre = can(club.id, 'match-center');
+  const canEvents = can(club.id, 'events');
 
   // A card's detail screen (?view=money); the bare URL is the dashboard itself
   const [view, setView] = useUrlTab(OVERVIEW_VIEWS, 'view');
@@ -51,7 +55,9 @@ export default function AdminDashboardPage({
   const waitingCount = members.filter(m => m.club_id === club.id && m.membership_status === 'pending').length;
   const squadPlayers = clubMembers.filter(m => isPlayerMember(m));
   const clubMatches = matches.filter(m => m.club_id === club.id);
-  const liveMatch = clubMatches.find(m => m.status === 'live' || m.status === 'halftime');
+  // DASH-4: every game that is live, not only the first one found
+  const liveMatches = clubMatches.filter(m => m.status === 'live' || m.status === 'halftime');
+  const liveMatch = liveMatches[0];
   const analytics = getClubAnalytics(club.id);
   const recentActivity = activityLogs
     .filter(l => l.club_id === club.id)
@@ -62,6 +68,14 @@ export default function AdminDashboardPage({
   // When nothing is live, the Matchday card points at the next game instead of an empty box
   const nextFixture = defaultFixture(clubMatches, tournamentParticipants, club.name, { skipLive: true });
   const nextMatch = nextFixture?.status === 'upcoming' ? nextFixture : undefined;
+  // DASH-4: the other games that day (a club with several teams plays more than one on a Saturday)
+  const alsoThatDay = nextMatch ? sameDayGames(clubMatches, nextMatch) : [];
+  // DASH-3: the last result and the jobs that follow full time
+  const last = lastResult(clubMatches.filter(m => countsTowardClubRecord(m)));
+  const lastRes = last ? clubResult(last) : null;
+  // DASH-5: training, socials, the AGM and trials in the next two weeks
+  const coming = canEvents ? comingEvents(events.filter(e => e.club_id === club.id)) : [];
+  const gameHref = (m: { id: string }) => (canMatchCentre ? `/${club.slug}/admin/match-center?match=${m.id}` : matchPath(club.slug, m as typeof clubMatches[number]));
 
   return (
     <div className="admin-dash">
@@ -118,7 +132,17 @@ export default function AdminDashboardPage({
                     <div className="admin-score-side">{liveMatch.away_team_name}<small>Away</small></div>
                   </div>
                   {canMatchCentre && (
-                    <Link href={`/${club.slug}/admin/match-center`} className="btn btn-primary">Open Match Centre</Link>
+                    <Link href={`/${club.slug}/admin/match-center?match=${liveMatch.id}`} className="btn btn-primary">Open Match Centre</Link>
+                  )}
+                  {liveMatches.length > 1 && (
+                    <div>
+                      <p className="admin-kicker">Also live</p>
+                      <ul className="admin-also">
+                        {liveMatches.slice(1).map(m => (
+                          <li key={m.id}><Link href={gameHref(m)}><span>{m.home_team_name} <span className="admin-vs">vs</span> {m.away_team_name}</span><b>{m.home_score} : {m.away_score}</b></Link></li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               ) : nextMatch ? (
@@ -138,6 +162,16 @@ export default function AdminDashboardPage({
                     )}
                     <Link href={matchPath(club.slug, nextMatch)} className="btn btn-secondary">Public match page</Link>
                   </div>
+                  {alsoThatDay.length > 0 && (
+                    <div>
+                      <p className="admin-kicker">Also that day</p>
+                      <ul className="admin-also">
+                        {alsoThatDay.map(m => (
+                          <li key={m.id}><Link href={gameHref(m)}><span>{m.home_team_name} <span className="admin-vs">vs</span> {m.away_team_name}</span><b><LocalTime value={m.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></b></Link></li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="admin-empty">
@@ -145,8 +179,44 @@ export default function AdminDashboardPage({
                   {canEditFixtures && <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary">Schedule a match</Link>}
                 </div>
               )}
+
+              {last && lastRes && (
+                <div className="admin-last">
+                  <p className="admin-kicker">Last result, <LocalTime value={last.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></p>
+                  <p className="admin-last-line">
+                    <b>{lastRes.outcome ? OUTCOME_LABEL[lastRes.outcome] : 'Played'} {lastRes.us} : {lastRes.them}</b> {opponentLine(last)}
+                    {!last.is_audited && <span className="admin-meta"> · player stats not saved yet</span>}
+                  </p>
+                  <div className="admin-match-actions">
+                    {!last.is_audited && canMatchCentre && (
+                      <Link href={`/${club.slug}/admin/match-center?match=${last.id}`} className="btn btn-primary btn-sm">Save player stats</Link>
+                    )}
+                    {canFixtures && <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm">Share the result</Link>}
+                    <Link href={matchPath(club.slug, last)} className="btn btn-secondary btn-sm">Match page</Link>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
+
+          {coming.length > 0 && (
+            <section className="admin-panel" aria-labelledby="coming-title">
+              <div className="admin-panel-head">
+                <h2 id="coming-title">Coming up at the club</h2>
+                <Link href={`/${club.slug}/admin/events`} className="admin-dash-link">Events and training</Link>
+              </div>
+              <ul className="admin-also is-events">
+                {coming.map(e => (
+                  <li key={e.id}>
+                    <Link href={`/${club.slug}/admin/events`}>
+                      <span>{e.title}<small>{EVENT_TYPE_LABEL[e.category] || 'Event'}, <LocalTime value={e.start_time} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /> at <LocalTime value={e.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />{e.location ? `, ${e.location}` : ''}</small></span>
+                      <b>{e.rsvp_count || 0} going</b>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
 

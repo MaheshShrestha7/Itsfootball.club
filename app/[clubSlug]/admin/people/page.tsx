@@ -88,6 +88,7 @@ export default function PeoplePage({ params }: { params: Promise<{ clubSlug: str
               clubSlug={clubSlug}
               actions={actions}
               initialPersonId={searchParams.get('person')}
+              initialGroup={searchParams.get('group')}
               onPersonChange={id => setQuery({ person: id })}
               tabBar={tabBar}
               onReviewApplication={id => openMemberTab('applications', id)}

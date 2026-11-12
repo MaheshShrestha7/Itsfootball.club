@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct, playedGames, formSummary, playersNeeded, topScorers, byDay, topCleanSheets, unsavedCleanSheets } from './club-overview';
+import { overviewRange, overviewBuckets, fillBuckets, barHeights, membersSummary, seasonRecord, upcomingGames, matchesForTeam, opponentLine, pageName, pct, playedGames, formSummary, playersNeeded, topScorers, byDay, topCleanSheets, unsavedCleanSheets, sameDayGames, lastResult, comingEvents, previousRange, compareLine } from './club-overview';
 import type { ClubMember, Match, MatchEvent } from './supabase/types';
 
 const now = new Date(2026, 10, 4, 12, 0).getTime(); // 4 Nov 2026, local
@@ -139,5 +139,36 @@ assert.equal(pageName('/riverside/fixtures?x=1', 'riverside'), 'Fixtures');
 assert.equal(pageName('/riverside/match-reports/abc', 'riverside'), 'Match reports');
 assert.equal(pct(1, 0), 0);
 assert.equal(pct(1, 4), 25);
+
+// DASH-4: the other games on the next game's day; DASH-3: the newest result of the last week
+{
+  const g = (id: string, at: Date, status = 'upcoming') => ({ id, match_date: at.toISOString(), status } as Match);
+  const sat = [g('a', new Date(2026, 10, 7, 9, 0)), g('b', new Date(2026, 10, 7, 14, 0)), g('c', new Date(2026, 10, 7, 11, 0)), g('d', new Date(2026, 10, 8, 9, 0)), g('e', new Date(2026, 10, 7, 8, 0), 'completed')];
+  assert.deepEqual(sameDayGames(sat, sat[0]).map(m => m.id), ['c', 'b']);
+  const done = [g('old', new Date(2026, 9, 20, 15, 0), 'completed'), g('sun', new Date(2026, 10, 1, 15, 0), 'completed'), g('tue', new Date(2026, 10, 3, 19, 0), 'completed'), g('next', new Date(2026, 10, 7, 9, 0))];
+  assert.equal(lastResult(done, now)?.id, 'tue');
+  assert.equal(lastResult([done[0]], now), undefined, 'older than a week');
+}
+// DASH-5: training and socials in the next two weeks, not the games themselves
+{
+  const e = (id: string, category: string, at: Date) => ({ id, category, start_time: at.toISOString() });
+  const list = [e('agm', 'agm', new Date(2026, 10, 12, 19, 0)), e('train', 'training', new Date(2026, 10, 5, 18, 0)), e('game', 'match', new Date(2026, 10, 7, 9, 0)), e('past', 'training', new Date(2026, 10, 3, 18, 0)), e('far', 'social', new Date(2026, 11, 20, 18, 0))];
+  assert.deepEqual(comingEvents(list, now).map(x => x.id), ['train', 'agm']);
+}
+// DASH-9: the 30 days before, or the season before; nothing when this is the first season
+{
+  const p30 = previousRange(r30, [season])!;
+  assert.equal(p30.from.getTime(), new Date(2026, 8, 6).getTime());
+  assert.equal(p30.to.getTime(), r30.from.getTime());
+  assert.equal(previousRange(r, [season]), null);
+  const last = { name: '2025/26', start_date: '2025-07-01', end_date: '2026-06-30' };
+  const ps = previousRange(r, [season, last])!;
+  assert.equal(ps.season, '2025/26');
+  assert.equal(ps.from.getTime(), new Date(2025, 6, 1).getTime());
+  assert.equal(compareLine(15, 12, r30, p30.label), 'Up 3 on the 30 days before');
+  assert.equal(compareLine(9, 12, r30, p30.label), 'Down 3 on the 30 days before');
+  assert.equal(compareLine(12, 12, r30, p30.label), 'Same as the 30 days before');
+  assert.equal(compareLine(15, 40, r, ps.label), '40 in season 2025/26');
+}
 
 console.log('club-overview checks passed');

@@ -14,7 +14,7 @@ import LocalTime from '@/components/LocalTime';
 import GamesDetail, { type Reply } from '@/components/admin/GamesDetail';
 import {
   PERIOD_OPTIONS, barHeights, fillBuckets, matchesForTeam, membersSummary, opponentLine, overviewBuckets,
-  overviewRange, pageName, pct, seasonRecord, sponsorsSummary, upcomingGames, type Bucket, type OverviewPeriod,
+  overviewRange, pageName, pct, seasonRecord, sponsorsSummary, upcomingGames, previousRange, compareLine, type Bucket, type OverviewPeriod,
 } from '@/lib/club-overview';
 import type { ClubMember } from '@/lib/supabase/types';
 
@@ -34,6 +34,9 @@ interface OverviewData {
     in_cents: number; paid_count: number; out_cents: number; expense_count: number; waiting_cents: number; waiting_count: number;
     refunded_count: number; refunded_cents: number; by_kind: Record<string, number>; by_method: Record<string, number>;
     daily: { d: string; in: number; out: number }[]; waiting: Waiting[];
+    /** DASH-10, after migration 20261168: the season's budget totals and the estimated bank balance */
+    budget_income_cents?: number | null; budget_expense_cents?: number | null;
+    cash?: { opening_cents: number; as_at: string; cents: number } | null;
   } | null;
   traffic: { visits: number; visitors: number; pages: { path: string; n: number }[]; daily: { d: string; n: number }[]; scans: number; tickets: number; checked_in: number; ticket_events: number } | null;
 }
@@ -133,11 +136,35 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
     return () => { live = false; };
   }, [club.id, fromMs, toMs, seasonName, matchIds, reload]);
 
+  // DASH-9: the same numbers for the stretch before (the 30 or 90 days before, or last season)
+  const prev = useMemo(() => previousRange(range, clubSeasons), [range, clubSeasons]);
+  const [prevData, setPrevData] = useState<OverviewData | null>(null);
+  const prevFromMs = prev?.from.getTime(), prevToMs = prev?.to.getTime(), prevSeason = prev?.season;
+  useEffect(() => {
+    setPrevData(null);
+    const client = getSupabaseClient();
+    if (!client || prevFromMs == null || prevToMs == null) return;
+    let live = true;
+    client.rpc('get_club_overview', {
+      p_club_id: club.id,
+      p_from: new Date(prevFromMs).toISOString(),
+      p_to: new Date(prevToMs).toISOString(),
+      p_season: prevSeason,
+      p_match_ids: [],
+      p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    }).then(({ data: res, error }) => { if (live && !error) setPrevData(res as OverviewData); });
+    return () => { live = false; };
+  }, [club.id, prevFromMs, prevToMs, prevSeason, reload]);
+  const prevAdded = useMemo(() => (prev ? membersSummary(clubMembers, prev).added : 0), [clubMembers, prev]);
+
   const currency = data?.currency || 'AUD';
   const money = (cents: number | null | undefined) => formatMoney(Number(cents) || 0, currency).replace(/\.00$/, '');
   const replies = useMemo(() => new Map((data?.availability || []).map(r => [r.match_id, r])), [data]);
   const sponsorName = useMemo(() => new Map(clubSponsors.map(s => [s.id, s.name])), [clubSponsors]);
   const base = `/${club.slug}/admin`;
+  /** "Up $120 on the 30 days before", once the earlier numbers are in */
+  const cmp = (now: number | null | undefined, before: number | null | undefined, fmt?: (v: number) => string) =>
+    prev && before != null ? <p className="ov-cmp">{compareLine(Number(now) || 0, Number(before) || 0, range, prev.label, fmt)}</p> : null;
 
   if (state === 'missing' || !getSupabaseClient()) return <>{fallback}</>;
   if (!Object.values(show).some(Boolean)) return null;
@@ -205,6 +232,16 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
     const parts = MIX.map(x => ({ ...x, cents: x.kinds.reduce((s, k) => s + (Number(m.by_kind[k]) || 0), 0) })).filter(x => x.cents > 0);
     const total = parts.reduce((s, x) => s + x.cents, 0);
     return { parts, total };
+  };
+
+  // DASH-10: the season's budget against what has come in and gone out, and the estimated bank balance
+  const budgetStrip = (m: NonNullable<OverviewData['money']>) => {
+    const cells = [
+      m.budget_expense_cents ? <div key="out"><dt>Budget spent</dt><dd className={m.out_cents > m.budget_expense_cents ? 'bad' : undefined}>{pct(m.out_cents, m.budget_expense_cents)}%</dd><span className="n">{money(m.out_cents)} of {money(m.budget_expense_cents)}</span></div> : null,
+      m.budget_income_cents ? <div key="in"><dt>Budget raised</dt><dd>{pct(m.in_cents, m.budget_income_cents)}%</dd><span className="n">{money(m.in_cents)} of {money(m.budget_income_cents)}</span></div> : null,
+      m.cash ? <div key="cash"><dt>In the bank</dt><dd className={m.cash.cents < 0 ? 'bad' : undefined}>{money(m.cash.cents)}</dd><span className="n">Estimate from {money(m.cash.opening_cents)} on {shortDate(m.cash.as_at)}</span></div> : null,
+    ].filter(Boolean);
+    return cells.length ? <dl className="ov-strip">{cells}</dl> : null;
   };
 
   const waitingName = (w: Waiting) => w.payer_name || (w.member_id && byMember.get(w.member_id)?.full_name)
@@ -335,9 +372,14 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
             <div><dt>Money out</dt><dd>{money(m.out_cents)}</dd><span className="n">{plural(m.expense_count, 'expense')}</span></div>
             <div><dt>Balance</dt><dd className={m.in_cents - m.out_cents < 0 ? 'bad' : undefined}>{money(m.in_cents - m.out_cents)}</dd><span className="n">In minus out</span></div>
           </dl>
+          {budgetStrip(m)}
           {bars(fillBuckets(buckets, m.daily.map(d => ({ at: d.d, n: d.in }))), 'Money in over time')}
           {bars(fillBuckets(buckets, m.daily.map(d => ({ at: d.d, n: d.out }))), 'Money out over time', 'out')}
           <p className="ov-legend"><span><i className="c1" />Money in</span><span><i className="c4" />Money out</span></p>
+          <div className="ov-foot">
+            <span>{m.cash ? 'In the bank is an estimate: card fees are not taken off' : m.cash === null ? 'Add your bank balance to see what is in the bank' : 'Budget against what came in and went out'}</span>
+            {m.cash === null ? <Link href={`${base}/finance?tab=settings`}>Add bank balance<ChevronRight size={14} aria-hidden="true" /></Link> : <Link href={`${base}/finance/budget`}>Budget<ChevronRight size={14} aria-hidden="true" /></Link>}
+          </div>
         </section>
         <section className="admin-panel ov-card">
           <div className="admin-panel-head"><h2>Waiting on you</h2><span className="admin-meta">{money(m.waiting_cents)} across {n(m.waiting_count)}</span></div>
@@ -442,7 +484,7 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
         <div className="admin-panel-head"><h2 id="ov-members"><Users size={18} aria-hidden="true" />Members</h2><span className="admin-meta">People</span></div>
         <div className="ov-hero"><div className="k">Members</div><div className="v">{n(people.counted)}<small>{plural(people.players, 'player')}</small></div></div>
         <dl className="ov-strip">
-          <div><dt>New</dt><dd>{n(people.added)}</dd><span className="n">{range.period === 'season' ? 'This season' : range.label}</span></div>
+          <div><dt>New</dt><dd>{n(people.added)}</dd><span className="n">{prev ? compareLine(people.added, prevAdded, range, prev.label) : range.period === 'season' ? 'This season' : range.label}</span></div>
           <div><dt>Waiting to join</dt><dd className={people.waiting.length ? 'warn' : undefined}>{people.waiting.length}</dd><span className="n">Applications</span></div>
           <div><dt>Renew in 30 days</dt><dd className={people.renewSoon.length ? 'warn' : undefined}>{people.renewSoon.length}</dd><span className="n">{people.expired.length ? `${n(people.expired.length)} already expired` : 'None expired'}</span></div>
         </dl>
@@ -457,7 +499,7 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
           <div className="ov-empty"><p>No sponsors yet.</p><Link href={`${base}/sponsors`} className="btn btn-secondary btn-sm">Add a sponsor</Link></div>
         ) : (
           <>
-            <div className="ov-hero"><div className="k">Sponsorship paid</div><div className="v">{sp ? money(sp.paid_cents) : '…'}<small>{plural(sponsorSum.onSite, 'sponsor')} on the site</small></div></div>
+            <div className="ov-hero"><div className="k">Sponsorship paid</div><div className="v">{sp ? money(sp.paid_cents) : '…'}<small>{plural(sponsorSum.onSite, 'sponsor')} on the site</small></div>{sp && cmp(sp.paid_cents, prevData?.sponsors?.paid_cents, money)}</div>
             <dl className="ov-strip">
               <div><dt>Ending in 30 days</dt><dd className={sponsorSum.endingSoon.length ? 'warn' : undefined}>{sponsorSum.endingSoon.length}</dd><span className="n">{sponsorSum.endingSoon[0] ? sponsorSum.endingSoon[0].name : 'None'}</span></div>
               <div><dt>Unpaid</dt><dd className={sp?.unpaid_count ? 'warn' : undefined}>{n(sp?.unpaid_count)}</dd><span className="n">{sp?.unpaid_count ? `${money(sp.unpaid_cents)}${sp.next_due ? `, due ${shortDate(sp.next_due)}` : ''}` : 'Nothing owed'}</span></div>
@@ -477,13 +519,14 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
     show.money && m && mix && (
       <section key="money" className="admin-panel ov-card" aria-labelledby="ov-money">
         <div className="admin-panel-head"><h2 id="ov-money"><Wallet size={18} aria-hidden="true" />Money</h2><span className="admin-meta">Finance</span></div>
-        <div className="ov-hero"><div className="k">Collected</div><div className="v">{money(m.in_cents)}<small>paid in</small></div></div>
+        <div className="ov-hero"><div className="k">Collected</div><div className="v">{money(m.in_cents)}<small>paid in</small></div>{cmp(m.in_cents, prevData?.money?.in_cents, money)}</div>
         <dl className="ov-strip is-four">
           <div><dt>Spent</dt><dd>{money(m.out_cents)}</dd><span className="n">{plural(m.expense_count, 'expense')}</span></div>
           <div><dt>Balance</dt><dd className={m.in_cents - m.out_cents < 0 ? 'bad' : undefined}>{money(m.in_cents - m.out_cents)}</dd><span className="n">In minus out</span></div>
           <div><dt>Waiting now</dt><dd className={m.waiting_count ? 'warn' : undefined}>{money(m.waiting_cents)}</dd><span className="n">{m.waiting_count ? `${plural(m.waiting_count, 'payment')} to check or chase` : 'Nothing waiting'}</span></div>
           <div><dt>Refunded or failed</dt><dd>{n(m.refunded_count)}</dd><span className="n">{money(m.refunded_cents)} refunded</span></div>
         </dl>
+        {budgetStrip(m)}
         {mix.total > 0 && (
           <div className="ov-mix">
             <div className="ov-mix-bar" aria-hidden="true">{mix.parts.map((p, i) => <i key={p.id} className={`c${i + 1}`} style={{ width: `${pct(p.cents, mix.total)}%` }} />)}</div>
@@ -497,7 +540,7 @@ export default function ClubOverview({ club, view, onView, fallback }: Props) {
     show.traffic && t && (
       <section key="traffic" className="admin-panel ov-card is-wide" aria-labelledby="ov-traffic">
         <div className="admin-panel-head"><h2 id="ov-traffic"><Globe size={18} aria-hidden="true" />Website and fans</h2><span className="admin-meta">{range.label}</span></div>
-        <div className="ov-hero"><div className="k">Public page visits</div><div className="v">{n(t.visits)}<small>{topPage ? `most on ${pageName(topPage.path, club.slug)}` : `${n(t.visitors)} visitors`}</small></div></div>
+        <div className="ov-hero"><div className="k">Public page visits</div><div className="v">{n(t.visits)}<small>{topPage ? `most on ${pageName(topPage.path, club.slug)}` : `${n(t.visitors)} visitors`}</small></div>{cmp(t.visits, prevData?.traffic?.visits)}</div>
         <dl className="ov-strip">
           <div><dt>Passes scanned</dt><dd>{n(t.scans)}</dd><span className="n">At the gate</span></div>
           <div><dt>Tickets</dt><dd>{n(t.tickets)}</dd><span className="n">{plural(t.ticket_events, 'event')}</span></div>

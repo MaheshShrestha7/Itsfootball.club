@@ -118,3 +118,11 @@ assert.equal(defaultFixture([bibs, league], [], 'Riverside FC', { skipLive: true
 assert.equal(defaultFixture([bibs], [], 'Riverside FC', { preferClubGames: true })?.id, 'bibs', 'falls back to in-house');
 
 console.log('admin-attention checks passed');
+
+// DASH-6, DASH-7: overdue fee requests, expired memberships and juniors with details missing
+const more = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, feesOverdue: 3, membershipsExpired: 1, juniorsToCheck: 2 }, [], NOW);
+assert.deepEqual(more.map(i => [i.key, i.area, i.tone]), [['fees-overdue', 'finance', 'urgent'], ['juniors', 'squad', 'normal'], ['expired', 'members', 'normal']]);
+assert.equal(more[0].text, '3 fee requests overdue');
+assert.equal(more[0].href, '/rfc/admin/finance?tab=requests');
+assert.equal(more[1].text, '2 juniors are missing photo consent or a parent contact');
+assert.equal(more[2].text, '1 membership has expired and not been renewed');
