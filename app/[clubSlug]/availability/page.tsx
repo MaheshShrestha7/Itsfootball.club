@@ -28,11 +28,11 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
-import { defaultFixture, matchKind, prepFixtures, teamSideIn, tournamentTeamGroups, type MatchKind } from '@/lib/fixtures';
+import { cupGames, defaultFixture, matchKind, prepFixtures, teamSideIn, tournamentTeamGroups, type MatchKind } from '@/lib/fixtures';
 import { clubSidePlayers } from '@/lib/tournament-engine';
 import { fixtureLabel } from '@/lib/fixture-label';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 
 // The roster lists who still needs chasing first
 const STATUS_ORDER: Record<AvailabilityStatus, number> = { pending: 0, maybe: 1, available: 2, unavailable: 3 };
@@ -119,7 +119,21 @@ function AvailabilityHub() {
       : undefined),
     [kind, targetMatch, teamGroups, groupPick]
   );
-  const groupGames = useMemo(() => (activeGroup ? activeGroup.games : targetMatch ? [targetMatch] : []), [activeGroup, targetMatch]);
+  // An outside cup (games linked to one club event): one answer covers all the team's games there,
+  // unless the admin switches to marking them game by game
+  const [gameByGame, setGameByGame] = useState(false);
+  const cupList = useMemo(
+    () => (kind === 'club' && targetMatch?.event_id ? cupGames(prepGames, targetMatch) : []),
+    [kind, targetMatch, prepGames]
+  );
+  const cupName = cupList.length > 1
+    ? events.find(e => e.id === targetMatch?.event_id)?.title || targetMatch?.competition || 'Cup'
+    : null;
+  const cupGroup = !!cupName && !gameByGame;
+  const groupGames = useMemo(
+    () => (activeGroup ? activeGroup.games : cupGroup ? cupList : targetMatch ? [targetMatch] : []),
+    [activeGroup, cupGroup, cupList, targetMatch]
+  );
   const groupGameIds = groupGames.map(m => m.id).join(',');
   const tournamentName = (id?: string | null) => tournaments.find(t => t.id === id)?.name || 'Tournament';
   const pickKind = (k: MatchKind) => {
@@ -245,6 +259,8 @@ function AvailabilityHub() {
     `⚽ *${club.name} Match Call-Up*\n` +
     (activeGroup
       ? `🏆 ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)} (${groupGames.length} games)\n`
+      : cupGroup
+      ? `🏆 ${cupName} (${groupGames.length} games)\n`
       : `🆚 ${targetMatch?.home_team_name} vs ${targetMatch?.away_team_name}\n`) +
     `📍 ${targetMatch?.venue}\n` +
     `📅 ${targetMatch ? new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}\n\n` +
@@ -299,7 +315,7 @@ function AvailabilityHub() {
   const pendingNames = playerRosterWithStatus.filter(p => p.availability.status === 'pending').map(p => p.player.full_name.split(' ')[0]);
   const nudgeMessage = encodeURIComponent(
     `${pendingNames.join(', ')}: can you play ` +
-    (activeGroup ? `for ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)}` : `${targetMatch?.home_team_name} v ${targetMatch?.away_team_name}`) +
+    (activeGroup ? `for ${activeGroup.participant.name} at ${tournamentName(activeGroup.tournamentId)}` : cupGroup ? `in the ${cupName} (${groupGames.length} games)` : `${targetMatch?.home_team_name} v ${targetMatch?.away_team_name}`) +
     `${targetMatch ? ` on ${new Date(targetMatch.match_date).toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}? ` +
     `Tap In, Maybe or Out: ${shareableUrl}`
   );
@@ -446,8 +462,33 @@ function AvailabilityHub() {
               </div>
             )}
 
-            {/* 1. Upcoming Fixture Card (a tournament team's day lists its games above instead) */}
-            {targetMatch && !activeGroup && (
+            {/* An outside cup: one answer for all its games by default, or game by game */}
+            {cupName && (
+              <div className="glass-panel" style={{ padding: '1.25rem', borderColor: 'color-mix(in oklab, var(--c-amber) 35%, transparent)' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--c-amber)', marginBottom: '0.35rem' }}>
+                  {cupName}
+                </div>
+                <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
+                  {cupGroup ? `One answer covers all ${cupList.length} games` : 'Marking this game on its own'}
+                </div>
+                {cupGroup && (
+                  <ul style={{ listStyle: 'none', margin: '0 0 0.75rem', padding: 0, display: 'grid', gap: '0.35rem', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                    {cupList.map(g => (
+                      <li key={g.id} style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
+                        <span className="min-w-0">{g.is_club_home ? 'vs' : 'at'} {g.opponent_name || (g.is_club_home ? g.away_team_name : g.home_team_name)}</span>
+                        <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>{[formatShortDay(g.match_date), g.match_time, g.pitch_label].filter(Boolean).join(', ')}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button data-view-ok type="button" className="btn btn-secondary btn-sm" onClick={() => setGameByGame(!gameByGame)}>
+                  {cupGroup ? 'Mark game by game' : 'One answer for the whole cup'}
+                </button>
+              </div>
+            )}
+
+            {/* 1. Upcoming Fixture Card (a tournament team's day or a cup lists its games above instead) */}
+            {targetMatch && !activeGroup && !cupGroup && (
               <div className="glass-panel" style={{ padding: '1.5rem', border: `1.5px solid ${club.primary_color}40`, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
@@ -739,7 +780,7 @@ function AvailabilityHub() {
 // Player view: a personal link (?token=...) lets one player answer for themselves
 // ---------------------------------------------------------------------------
 function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
-  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken, members, tournaments } = useClub();
+  const { selectClubBySlug, resolveAvailabilityToken, respondToAvailabilityToken, members, tournaments, events } = useClub();
   const { user } = useAuth();
   const router = useRouter();
   const club = selectClubBySlug(slug);
@@ -850,6 +891,15 @@ function PlayerRsvp({ slug, token }: { slug: string; token: string }) {
                     <br />
                     <strong style={{ color: 'var(--text-primary)' }}>
                       Your answer covers all your games at {tournaments.find(t => t.id === match.tournament_id)?.name || 'this tournament'}.
+                    </strong>
+                  </>
+                )}
+                {/* ...and in an outside cup (fixtures linked to one club event) */}
+                {!match.tournament_id && match.event_id && (
+                  <>
+                    <br />
+                    <strong style={{ color: 'var(--text-primary)' }}>
+                      Your answer covers all your upcoming games in {events.find(e => e.id === match.event_id)?.title || 'this cup'}.
                     </strong>
                   </>
                 )}

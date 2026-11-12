@@ -25,7 +25,10 @@ import {
   ImageIcon,
   Printer,
   FileImage,
+  Trophy,
 } from 'lucide-react';
+import EventFixturesModal from '@/components/admin/EventFixturesModal';
+import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { confirmAction } from '@/components/ConfirmDialog';
@@ -45,7 +48,7 @@ export default function AdminEventsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateClubBranding, seasons, getActiveSeason } = useClub();
+  const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateMatch, updateClubBranding, seasons, getActiveSeason } = useClub();
   const { can } = useAuth();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
@@ -57,6 +60,12 @@ export default function AdminEventsPage({
   const [qrModalEvent, setQrModalEvent] = useState<ClubEvent | null>(null);
   const [printPosterEvent, setPrintPosterEvent] = useState<ClubEvent | null>(null);
   const [flyerEvent, setFlyerEvent] = useState<ClubEvent | null>(null);
+  // Fixtures linked to an event (an outside cup); hidden until migration 20261169 has run
+  const eventFixturesReady = useEventFixturesReady();
+  const [fixturesEventId, setFixturesEventId] = useState<string | null>(null);
+  const clubMatches = matches.filter(m => m.club_id === club.id);
+  const fixturesEvent = clubEvents.find(e => e.id === fixturesEventId) || null;
+  const canLinkFixtures = eventFixturesReady && can(club.id, 'matches', 'edit');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -341,6 +350,14 @@ export default function AdminEventsPage({
                       <ImageIcon size={11} aria-hidden="true" /> Flyer
                     </span>
                   )}
+                  {(() => {
+                    const games = clubMatches.filter(m => m.event_id === evt.id).length;
+                    return games > 0 ? (
+                      <span className="admin-pill is-ok">
+                        <Trophy size={11} aria-hidden="true" /> {games} fixture{games === 1 ? '' : 's'}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
 
               <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.4rem', overflowWrap: 'anywhere' }}>
@@ -379,6 +396,18 @@ export default function AdminEventsPage({
                   </button>
                 );
               })()}
+
+              {canLinkFixtures && (
+                <button
+                  type="button"
+                  onClick={() => setFixturesEventId(evt.id)}
+                  className="btn btn-secondary btn-sm"
+                  title={`Link the games played in ${evt.title}`}
+                >
+                  <Trophy size={14} aria-hidden="true" />
+                  <span>Fixtures</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -695,6 +724,26 @@ export default function AdminEventsPage({
           eventId={printPosterEvent.id}
           disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}
           onClose={() => setPrintPosterEvent(null)}
+        />
+      )}
+
+      {fixturesEvent && (
+        <EventFixturesModal
+          event={fixturesEvent}
+          clubSlug={club.slug}
+          matches={clubMatches}
+          onLink={m => {
+            // The game's competition becomes the event's name (it can still be changed on the fixture)
+            updateMatch(m.id, { event_id: fixturesEvent.id, competition: fixturesEvent.title });
+            setToastMessage(`Linked to ${fixturesEvent.title}`);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          onUnlink={m => {
+            updateMatch(m.id, { event_id: null });
+            setToastMessage(`Unlinked from ${fixturesEvent.title}`);
+            setTimeout(() => setToastMessage(null), 3500);
+          }}
+          onClose={() => setFixturesEventId(null)}
         />
       )}
 

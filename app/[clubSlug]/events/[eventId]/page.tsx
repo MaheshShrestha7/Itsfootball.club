@@ -13,6 +13,9 @@ import { isSponsorOnSite, sortSponsorsByTier, sponsorLabel } from '@/lib/sponsor
 import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
 import KickoffCountdown from '@/components/KickoffCountdown';
+import FixtureRow from '@/components/FixtureRow';
+import { clubResult, soonestFirst } from '@/lib/fixtures';
+import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import {
   Shield,
   Calendar,
@@ -24,6 +27,7 @@ import {
   Award,
   CalendarPlus,
   MessageCircle,
+  Trophy,
 } from 'lucide-react';
 
 // How long an event with no end time is treated as running
@@ -44,7 +48,7 @@ export default function EventDetailsPage({
   params: Promise<{ clubSlug: string; eventId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, sponsors } = useClub();
+  const { clubs, selectClubBySlug, events, sponsors, matches, clubTeams } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -74,6 +78,21 @@ export default function EventDetailsPage({
   const eventSponsors = sortSponsorsByTier(sponsors.filter(s => s.event_id === event.id && isSponsorOnSite(s)));
 
   const categoryColor = CATEGORY_COLOR[event.category] || 'var(--club-primary)';
+
+  // The club's games in this event (an outside cup), soonest first, and how the played ones went
+  const games = matches.filter(m => m.club_id === club.id && m.event_id === event.id).sort(soonestFirst);
+  const teams = clubTeamsOf(clubTeams, club.id);
+  const record = games
+    .filter(m => m.status === 'completed' && !publicScoreHidden(m, clubTeams))
+    .reduce((r, m) => {
+      const outcome = clubResult(m).outcome;
+      if (outcome) r[outcome]++;
+      return r;
+    }, { W: 0, D: 0, L: 0 });
+  const played = record.W + record.D + record.L;
+  const recordLine = played > 0
+    ? `${played} played · ${[record.W && `won ${record.W}`, record.D && `drew ${record.D}`, record.L && `lost ${record.L}`].filter(Boolean).join(', ')}`
+    : `${games.length} game${games.length === 1 ? '' : 's'}`;
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;
   const start = new Date(event.start_time).getTime();
   const end = event.end_time ? new Date(event.end_time).getTime() : start + DEFAULT_LENGTH;
@@ -217,6 +236,21 @@ export default function EventDetailsPage({
           </div>
           </div>
         </div>
+
+        {games.length > 0 && (
+          <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }} aria-labelledby="event-games">
+            <h2 id="event-games" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Trophy size={18} color={categoryColor} aria-hidden="true" /> Our games
+            </h2>
+            <p className="text-meta" style={{ margin: '0 0 1rem' }}>{recordLine}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {games.map(m => {
+                const t = teams.length > 1 ? teamOfMatch(m, clubTeams) : undefined;
+                return <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={t ? teamLabel(t) : undefined} />;
+              })}
+            </div>
+          </section>
+        )}
 
         <EventTickets event={event} onContact={() => setContactModalOpen(true)} />
 

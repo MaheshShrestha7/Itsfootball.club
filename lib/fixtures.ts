@@ -109,6 +109,15 @@ export function tournamentTeamGroups<M extends Match>(games: M[], participants: 
   return groups.sort((a, b) => soonestFirst(a.games[0], b.games[0]) || compareTournamentMatches(a.games[0], b.games[0]) || a.participant.name.localeCompare(b.participant.name));
 }
 
+/** A fixture's cup: the games of its event (an outside cup) for the same team, soonest first.
+ *  Just the one game when it isn't linked to an event. */
+export function cupGames<M extends Pick<Match, 'id' | 'event_id' | 'team_id' | 'match_date'>>(games: M[], m: M): M[] {
+  if (!m.event_id) return [m];
+  const own = games.filter(g => g.event_id === m.event_id && (g.team_id || null) === (m.team_id || null));
+  if (!own.some(g => g.id === m.id)) own.push(m);
+  return own.sort(soonestFirst);
+}
+
 /** The fixture an admin page should open on: the live one (unless `skipLive`, for pages about the
  *  next game such as availability), else the club's next fixture, else its latest result (and only
  *  then other teams' tournament games). */
