@@ -1,7 +1,7 @@
 'use client';
 
 import React, { use, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BarChart3, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck } from 'lucide-react';
+import { BarChart3, Download, CheckCircle2, XCircle, FileText, Plus, Trash2, CreditCard, Save, UserCheck, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useUrlTab } from '@/lib/use-url-tab';
@@ -1073,6 +1073,65 @@ function InvoiceDetailsPanel({ clubId, db, flash, load, hasSettings }: { clubId:
   );
 }
 
+/** DASH-10: what was in the bank on a chosen day, so the dashboard can estimate the balance now
+ *  (migration 20261168). Hidden until that migration runs. */
+function OpeningBalancePanel({ clubId, db, flash }: { clubId: string; db: Shared['db']; flash: Shared['flash'] }) {
+  const [ready, setReady] = useState<boolean | null>(null);
+  const [exists, setExists] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [asAt, setAsAt] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => {
+    db?.from('club_opening_balance').select('amount_cents, as_at').eq('club_id', clubId).maybeSingle()
+      .then(({ data, error }) => {
+        setReady(!error);
+        setExists(!!data);
+        setAmount(data ? (data.amount_cents / 100).toFixed(2) : '');
+        setAsAt(data?.as_at || '');
+      });
+  }, [db, clubId]);
+  if (!ready) return null;
+
+  const save = async () => {
+    const cents = Math.round(Number(amount) * 100);
+    if (!amount.trim() || !Number.isFinite(cents)) return setProblem('Enter the balance as a number, like 2500.00.');
+    if (!asAt) return setProblem('Pick the day that balance was in the bank.');
+    if (asAt > today()) return setProblem('That day hasn\'t happened yet.');
+    setProblem(null);
+    setSaving(true);
+    const values = { amount_cents: cents, as_at: asAt, updated_at: new Date().toISOString() };
+    const { error } = exists
+      ? await db!.from('club_opening_balance').update(values).eq('club_id', clubId)
+      : await db!.from('club_opening_balance').insert({ club_id: clubId, ...values });
+    setSaving(false);
+    if (error) return setProblem(error.message);
+    setExists(true);
+    flash('ok', 'Bank balance saved. The dashboard now shows an estimate of what is in the bank.');
+  };
+
+  return (
+    <div className="glass-panel form-stack" style={{ padding: '1.25rem' }}>
+      <div>
+        <h3 style={{ fontWeight: 800, color: 'var(--text-primary)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}><Wallet size={18} /> Bank balance</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0.35rem 0 0' }}>
+          Type what was in the club&apos;s bank account on one day. The dashboard adds everything paid in since then and takes off everything spent, to estimate what is there now. Only people with Finance access see it.
+        </p>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="set-open-amount">Balance</label>
+        <input id="set-open-amount" className="form-input form-narrow" inputMode="decimal" autoComplete="off" value={amount} placeholder="2500.00" onChange={e => setAmount(e.target.value)} />
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="set-open-date">On this day</label>
+        <input id="set-open-date" type="date" className="form-input form-narrow" value={asAt} max={today()} onChange={e => setAsAt(e.target.value)} />
+      </div>
+      <FormError text={problem} />
+      <button type="button" className="btn btn-primary" onClick={save} disabled={saving}><Save size={16} aria-hidden="true" /> {saving ? 'Saving…' : 'Save'}</button>
+    </div>
+  );
+}
+
 function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
   settings: ClubPaymentSettings | null; plans: MembershipPlan[];
 }) {
@@ -1173,6 +1232,7 @@ function SettingsTab({ club, db, load, flash, settings, plans }: Shared & {
       </div>
 
       <InvoiceDetailsPanel clubId={club.id} db={db} flash={flash} load={load} hasSettings={!!settings} />
+      <OpeningBalancePanel clubId={club.id} db={db} flash={flash} />
 
       <PriceList<MembershipPlan>
         title="Membership plans" table="membership_plans" rows={plans} db={db} clubId={club.id} flash={flash} load={load}

@@ -30,6 +30,12 @@ export interface AttentionCounts {
   instalmentsOverdue?: number;
   /** Sponsors who sent a new logo or website from their own page, to check */
   sponsorChanges?: number;
+  /** Fee requests past their due date and still not paid */
+  feesOverdue?: number;
+  /** Approved members whose membership end date has passed */
+  membershipsExpired?: number;
+  /** Juniors with photo consent not asked or no parent or guardian contact (lib/people.ts personChecks) */
+  juniorsToCheck?: number;
 }
 
 export interface AttentionItem {
@@ -72,6 +78,9 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   if (counts.pendingApplications) items.push({ key: 'applications', area: 'members', count: counts.pendingApplications, text: `${plural(counts.pendingApplications, 'application', 'applications')} to approve`, href: `${base}/people?tab=applications`, tone: 'urgent' });
   if (counts.receiptsToReview) items.push({ key: 'receipts', area: 'finance', count: counts.receiptsToReview, text: `${plural(counts.receiptsToReview, 'bank transfer receipt', 'bank transfer receipts')} to check`, href: `${base}/finance`, tone: 'urgent' });
   if (counts.claimsToReview) items.push({ key: 'claims', area: 'finance', count: counts.claimsToReview, text: `${plural(counts.claimsToReview, 'expense claim', 'expense claims')} to review`, href: `${base}/finance?tab=claims`, tone: 'urgent' });
+  if (counts.feesOverdue) items.push({ key: 'fees-overdue', area: 'finance', count: counts.feesOverdue, text: `${plural(counts.feesOverdue, 'fee request', 'fee requests')} overdue`, href: `${base}/finance?tab=requests`, tone: 'urgent' });
+  if (counts.juniorsToCheck) items.push({ key: 'juniors', area: 'squad', count: counts.juniorsToCheck, text: `${counts.juniorsToCheck === 1 ? '1 junior is' : `${counts.juniorsToCheck} juniors are`} missing photo consent or a parent contact`, href: `${base}/people?group=attention`, tone: 'normal' });
+  if (counts.membershipsExpired) items.push({ key: 'expired', area: 'members', count: counts.membershipsExpired, text: `${counts.membershipsExpired === 1 ? '1 membership has' : `${counts.membershipsExpired} memberships have`} expired and not been renewed`, href: `${base}/people?tab=passes`, tone: 'normal' });
   if (counts.unreadMessages) items.push({ key: 'messages', area: 'inquiries', count: counts.unreadMessages, text: `${plural(counts.unreadMessages, 'unread message', 'unread messages')}`, href: `${base}/inquiries${counts.unreadContact && counts.unreadContact * 2 >= counts.unreadMessages ? '?tab=contact' : ''}`, tone: 'normal' });
   if (counts.sponsorsToPutOnSite) items.push({ key: 'sponsors-paid', area: 'sponsors', count: counts.sponsorsToPutOnSite, text: `${plural(counts.sponsorsToPutOnSite, 'paid sponsor', 'paid sponsors')} waiting to go on the site`, href: `${base}/sponsors?view=new`, tone: 'urgent' });
   if (counts.sponsorSignups) items.push({ key: 'sponsors-new', area: 'sponsors', count: counts.sponsorSignups, text: `${plural(counts.sponsorSignups, 'new sponsor sign-up', 'new sponsor sign-ups')} not paid yet`, href: `${base}/sponsors?view=new`, tone: 'normal' });

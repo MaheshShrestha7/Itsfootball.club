@@ -336,3 +336,57 @@ export function topCleanSheets<P extends Pick<ClubMember, 'id' | 'full_name' | '
 
 /** Games kept clean whose player stats haven't been saved yet, so nobody has been credited */
 export const unsavedCleanSheets = (played: PlayedGame[]) => played.filter(g => g.them === 0 && !g.match.is_audited).length;
+
+// ---------------- Dashboard Matchday panel and "Coming up at the club" ----------------
+
+/** DASH-4: the other games on the same local day as `first` that are still to play, soonest first */
+export function sameDayGames<M extends Match>(games: M[], first: M, limit = 5): M[] {
+  const day = dayKey(new Date(first.match_date));
+  return games
+    .filter(m => m.id !== first.id && m.status === 'upcoming' && dayKey(new Date(m.match_date)) === day)
+    .sort((a, b) => a.match_date.localeCompare(b.match_date))
+    .slice(0, limit);
+}
+
+/** DASH-3: the newest finished game from the last `days` days, for the after-match jobs */
+export function lastResult<M extends Match>(games: M[], now = Date.now(), days = 7): M | undefined {
+  return games
+    .filter(m => m.status === 'completed' && new Date(m.match_date).getTime() <= now && now - new Date(m.match_date).getTime() < days * DAY)
+    .sort((a, b) => b.match_date.localeCompare(a.match_date))[0];
+}
+
+/** DASH-5: training, socials, the AGM and trials starting in the next `days` days, soonest first.
+ *  'match' and 'tournament' events are left out: the Matchday panel shows the games themselves. */
+export function comingEvents<E extends { category: string; start_time: string }>(events: E[], now = Date.now(), days = 14, limit = 5): E[] {
+  return events
+    .filter(e => e.category !== 'match' && e.category !== 'tournament')
+    .filter(e => { const t = new Date(e.start_time).getTime(); return t >= now && t - now < days * DAY; })
+    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    .slice(0, limit);
+}
+
+// ---------------- DASH-9: against the period before ----------------
+
+/** The equal-length stretch just before a 30 or 90 day range, or the season before this one.
+ *  `seasons` newest first. Null when there is nothing earlier to compare with. */
+export function previousRange(
+  range: OverviewRange,
+  seasons: Pick<ClubSeason, 'name' | 'start_date' | 'end_date'>[],
+): OverviewRange | null {
+  if (range.period !== 'season') {
+    const from = new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate() - range.period);
+    return { period: range.period, season: null, from, to: range.from, label: `the ${range.period} days before` };
+  }
+  const i = seasons.findIndex(s => s.name === range.season);
+  const prev = i >= 0 ? seasons[i + 1] : undefined;
+  if (!prev) return null;
+  return { ...overviewRange('season', prev, range.from.getTime()), label: `season ${prev.name}` };
+}
+
+/** "up 12 on the 30 days before", "down 3 on …", "same as …". A season still running is set
+ *  beside the whole season before, so it gets the plain figure, not an up or down. */
+export function compareLine(now: number, before: number, range: Pick<OverviewRange, 'period'>, label: string, fmt: (v: number) => string = v => v.toLocaleString(DATE_LOCALE)): string {
+  if (range.period === 'season') return `${fmt(before)} in ${label}`;
+  const d = now - before;
+  return d === 0 ? `Same as ${label}` : `${d > 0 ? 'Up' : 'Down'} ${fmt(Math.abs(d))} on ${label}`;
+}

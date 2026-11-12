@@ -100,6 +100,7 @@ export default function PeopleDirectory({
   onReviewApplication,
   onOpenPass,
   initialPersonId,
+  initialGroup,
   onPersonChange,
   tabBar,
 }: {
@@ -112,6 +113,8 @@ export default function PeopleDirectory({
   /** Opens the Member Passes tab on this member's pass */
   onOpenPass: (memberId: string) => void;
   initialPersonId?: string | null;
+  /** ?group=attention from the dashboard's Needs you list */
+  initialGroup?: string | null;
   onPersonChange: (memberId: string | null) => void;
 }) {
   const { clubs, selectClubBySlug, clubTeams, clubTeamMembers, playerStats, getActiveSeason } = useClub();
@@ -163,7 +166,7 @@ export default function PeopleDirectory({
 
   // Search, chips and filters
   const [query, setQuery] = useState('');
-  const [group, setGroup] = useState<PeopleGroup>('everyone');
+  const [group, setGroup] = useState<PeopleGroup>(initialGroup === 'attention' ? 'attention' : 'everyone');
   const [teamFilter, setTeamFilter] = useState('all');
   const [membershipFilter, setMembershipFilter] = useState('any');
   const [checksFilter, setChecksFilter] = useState('any');
