@@ -12,7 +12,7 @@
 
 /* ---------- Hero ---------- */
 .lp-hero {
-  padding: clamp(2rem, 4vw, 3rem) 0 0;
+  padding: clamp(2rem, 4vw, 3rem) 0 2.5rem;
   position: relative;
   background:
     linear-gradient(180deg, rgba(6, 11, 20, 0.72) 0%, rgba(6, 11, 20, 0.58) 35%, rgba(6, 11, 20, 0.88) 75%, #060B14 100%),
@@ -532,489 +532,7 @@
   color: #FFFFFF !important;
 }
 
-/* 3. Just underneath 1 and 2: 3D Lineup Pitch Layer layed beneath 1 & 2 */
-/* The pitch tucks under the copy and match centre and runs off the hero's bottom edge (clipped by .lp-hero) */
-.lp-hero-pitch-layer {
-  --pitch-tuck: 4rem;
-  position: relative;
-  z-index: 5;
-  margin-top: calc(-1 * var(--pitch-tuck));
-  margin-bottom: calc(-1 * clamp(2rem, 4vw, 3.5rem));
-}
-.lp-hero-pitch-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.78fr) 320px;
-  gap: 2rem;
-  align-items: start;
-}
-.lp-pitch-3d-scene {
-  --tilt-x: 38deg; /* shared by the pitch, its tokens (counter-rotated to stay upright) and the mouse tilt */
-  perspective: 1200px;
-  perspective-origin: 50% 12%;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.lp-tactical-pitch {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9.6;
-  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y, 0deg)) scale(0.96);
-  transform-origin: 50% 12%;
-  transform-style: preserve-3d;
-  border-radius: 18px;
-  background:
-    /* Floodlight radiance */
-    radial-gradient(ellipse 90% 70% at 50% 15%, rgba(52, 211, 153, 0.28) 0%, rgba(16, 185, 129, 0.08) 50%, transparent 80%),
-    /* Alternating mower grass bands */
-    repeating-linear-gradient(90deg, #0d2c1f 0px, #0d2c1f 36px, #103626 36px, #103626 72px),
-    #0c251a;
-  border: 2px solid rgba(52, 211, 153, 0.55);
-  box-shadow:
-    0 40px 90px -15px rgba(0, 0, 0, 0.95),
-    0 20px 40px rgba(0, 0, 0, 0.8),
-    0 0 60px rgba(16, 185, 129, 0.35),
-    inset 0 0 50px rgba(0, 0, 0, 0.7);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
-  overflow: visible;
-}
-.lp-tactical-pitch::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  bottom: -10px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, transparent 70%, rgba(16, 185, 129, 0.35) 90%, #06150e 100%);
-  transform: translateZ(-16px);
-  z-index: -1;
-  box-shadow: 0 35px 50px rgba(0, 0, 0, 0.9);
-}
-
-/* Full Pitch Authentic Markings */
-.lp-pitch-boundary {
-  position: absolute;
-  inset: 14px;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-radius: 4px;
-  pointer-events: none;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
-}
-.lp-pitch-halfway {
-  position: absolute;
-  left: 50%;
-  top: 14px;
-  bottom: 14px;
-  width: 1.5px;
-  background: rgba(255, 255, 255, 0.45);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-.lp-pitch-center-circle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 86px;
-  height: 86px;
-  transform: translate(-50%, -50%);
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-radius: 50%;
-  pointer-events: none;
-  display: grid;
-  place-items: center;
-}
-.lp-pitch-center-spot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 6px #fff;
-}
-
-/* Left Penalty Area (Defending) */
-.lp-pitch-box.left {
-  position: absolute;
-  left: 14px;
-  top: 22%;
-  bottom: 22%;
-  width: 16.5%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-left: none;
-  pointer-events: none;
-}
-.lp-pitch-goal-area.left {
-  position: absolute;
-  left: 14px;
-  top: 36%;
-  bottom: 36%;
-  width: 6.5%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-left: none;
-  pointer-events: none;
-}
-.lp-pitch-penalty-spot.left {
-  position: absolute;
-  left: calc(14px + 11.5%);
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 5px #fff;
-  pointer-events: none;
-}
-.lp-pitch-penalty-arc.left {
-  position: absolute;
-  left: calc(14px + 16.5%);
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%);
-  pointer-events: none;
-}
-
-/* Right Penalty Area (Attacking) */
-.lp-pitch-box.right {
-  position: absolute;
-  right: 14px;
-  top: 22%;
-  bottom: 22%;
-  width: 16.5%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-right: none;
-  pointer-events: none;
-}
-.lp-pitch-goal-area.right {
-  position: absolute;
-  right: 14px;
-  top: 36%;
-  bottom: 36%;
-  width: 6.5%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-right: none;
-  pointer-events: none;
-}
-.lp-pitch-penalty-spot.right {
-  position: absolute;
-  right: calc(14px + 11.5%);
-  top: 50%;
-  transform: translate(50%, -50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 5px #fff;
-  pointer-events: none;
-}
-.lp-pitch-penalty-arc.right {
-  position: absolute;
-  right: calc(14px + 16.5%);
-  top: 50%;
-  transform: translate(50%, -50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  clip-path: polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%);
-  pointer-events: none;
-}
-
-/* Corner Arcs */
-.lp-pitch-corner {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  border-radius: 50%;
-  pointer-events: none;
-}
-.lp-pitch-corner.top-left { left: 14px; top: 14px; clip-path: polygon(50% 50%, 100% 50%, 100% 100%, 50% 100%); transform: translate(-50%, -50%); }
-.lp-pitch-corner.bottom-left { left: 14px; bottom: 14px; clip-path: polygon(50% 0%, 100% 0%, 100% 50%, 50% 50%); transform: translate(-50%, 50%); }
-.lp-pitch-corner.top-right { right: 14px; top: 14px; clip-path: polygon(0% 50%, 50% 50%, 50% 100%, 0% 100%); transform: translate(50%, -50%); }
-.lp-pitch-corner.bottom-right { right: 14px; bottom: 14px; clip-path: polygon(0% 0%, 50% 0%, 50% 50%, 0% 50%); transform: translate(50%, 50%); }
-
-/* Dynamic Passing Mesh */
-.lp-pitch-mesh {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
-}
-.lp-pitch-link {
-  stroke: rgba(56, 189, 248, 0.55);
-  stroke-width: 0.45;
-  stroke-dasharray: 1.5 1.5;
-  stroke-linecap: round;
-  animation: linkPulse 3s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .lp-pitch-link { animation: none; }
-}
-@keyframes linkPulse {
-  0%, 100% {
-    stroke: rgba(52, 211, 153, 0.4);
-    opacity: 0.7;
-  }
-  50% {
-    stroke: rgba(56, 189, 248, 0.85);
-    opacity: 1;
-  }
-}
-
-/* 3D Neon Glowing Player Tokens */
-.lp-pitch-token {
-  position: absolute;
-  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(14px);
-  transform-style: preserve-3d;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  z-index: 5;
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.45s cubic-bezier(0.25, 1, 0.5, 1), top 0.45s cubic-bezier(0.25, 1, 0.5, 1);
-}
-.lp-pitch-token::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 32px;
-  height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 70%);
-  transform: translate(-50%, 12px) rotateX(24deg);
-  pointer-events: none;
-  z-index: -1;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-.lp-pitch-token:hover {
-  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(26px) scale(1.15);
-  z-index: 10;
-}
-.lp-pitch-token:hover::after {
-  transform: translate(-50%, 20px) rotateX(24deg) scale(1.25);
-  opacity: 0.5;
-}
-.lp-pitch-token.is-selected {
-  transform: translate(-50%, -50%) rotateX(calc(-1 * var(--tilt-x))) translateZ(30px) scale(1.2);
-  z-index: 12;
-}
-.lp-pitch-token.is-selected::after {
-  transform: translate(-50%, 22px) rotateX(24deg) scale(1.3);
-  opacity: 0.45;
-}
-
-.lp-token-num {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-heading);
-  font-size: 0.82rem;
-  font-weight: 900;
-  color: #fff;
-  background: #0B111A;
-  border: 2px solid var(--token-color);
-  box-shadow:
-    0 0 16px var(--token-glow),
-    0 0 32px var(--token-glow-soft),
-    0 8px 16px rgba(0, 0, 0, 0.8);
-  transition: all 0.2s ease;
-}
-
-/* Zone colors */
-.zone-gk {
-  --token-color: #F59E0B;
-  --token-glow: rgba(245, 158, 11, 0.9);
-  --token-glow-soft: rgba(245, 158, 11, 0.45);
-}
-.zone-def {
-  --token-color: #38BDF8;
-  --token-glow: rgba(56, 189, 248, 0.9);
-  --token-glow-soft: rgba(56, 189, 248, 0.45);
-}
-.zone-mid {
-  --token-color: #10B981;
-  --token-glow: rgba(16, 185, 129, 0.9);
-  --token-glow-soft: rgba(16, 185, 129, 0.45);
-}
-.zone-att {
-  --token-color: #EF4444;
-  --token-glow: rgba(239, 68, 68, 0.9);
-  --token-glow-soft: rgba(239, 68, 68, 0.45);
-}
-
-/* Ground shadow / neon floor aura */
-.lp-pitch-token::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 50px;
-  height: 50px;
-  transform: translate(-50%, -50%) translateZ(-8px);
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--token-glow) 0%, transparent 70%);
-  opacity: 0.55;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
-}
-.lp-pitch-token:hover::after,
-.lp-pitch-token.is-selected::after {
-  opacity: 0.95;
-  transform: translate(-50%, -50%) translateZ(-8px) scale(1.35);
-}
-
-/* Docked Player Inspector Card (matching mockup) */
-.lp-workbench-card {
-  margin-top: calc(var(--pitch-tuck) + 1rem); /* clears the match centre above */
-  border-radius: 20px;
-  background: rgba(13, 20, 32, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  padding: 1.25rem 1.35rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1.15rem;
-}
-.lp-wcard-header {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-.lp-wcard-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #0B111A;
-  border: 2.5px solid #10B981;
-  display: grid;
-  place-items: center;
-  font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: #fff;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.8), 0 0 32px rgba(16, 185, 129, 0.4);
-}
-.lp-wcard-name {
-  font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #fff;
-}
-.lp-wcard-sub {
-  font-size: 0.75rem;
-  color: #34D399;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.15rem;
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-.lp-wcard-role-pill {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 0.25rem 0.65rem;
-  border-radius: 99px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #34D399;
-}
-.lp-wcard-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.9rem 1.1rem;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-}
-.lp-wcard-stat-col {
-  display: flex;
-  flex-direction: column;
-}
-.lp-wcard-stat-label {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.lp-wcard-stat-val {
-  font-family: var(--font-mono);
-  font-size: 2.2rem;
-  font-weight: 900;
-  color: #10B981;
-  line-height: 1.1;
-  margin-top: 0.15rem;
-  text-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
-}
-.lp-wcard-stat-sub {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  margin-top: 0.2rem;
-}
-.lp-wcard-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.lp-wcard-section-label {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-.lp-formation-btns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.45rem;
-}
-.lp-formation-btn {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 800;
-  padding: 0.5rem 0.2rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-medium);
-  background: #141E2D;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.lp-formation-btn:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #fff;
-}
-.lp-formation-btn.is-active {
-  background: #10B981;
-  border-color: #10B981;
-  color: #0B111A;
-  font-weight: 900;
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
-}
-
-/* Trust and Meta Footer Bar below 3D Pitch */
+/* Trust and Meta Footer Bar below the hero */
 .lp-hero-footer-bar {
   padding: 1.25rem 0;
   border-bottom: 1px solid var(--border-subtle);
@@ -1059,7 +577,6 @@
   .lp-browser { animation: lpFade 200ms var(--ease-out) backwards; }
 }
 @keyframes lpBrowserIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
-
 
 /* ---------- How matchday works: three real steps ---------- */
 
@@ -1281,42 +798,6 @@
   color: #0F172A;
 }
 
-/* Light Pitch & Inspector Card */
-[data-theme='light'] .lp-tactical-pitch {
-  background:
-    repeating-linear-gradient(90deg, #185a36 0px, #185a36 34px, #1e6c41 34px, #1e6c41 68px),
-    #185a36;
-  border-color: rgba(30, 108, 65, 0.8);
-  box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.22);
-}
-[data-theme='light'] .lp-workbench-card {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(15, 23, 42, 0.14);
-  box-shadow: 0 24px 60px -15px rgba(15, 23, 42, 0.12);
-  color: #0F172A;
-}
-[data-theme='light'] .lp-wcard-avatar {
-  background: #F1F5F9;
-  color: #0F172A;
-}
-[data-theme='light'] .lp-wcard-name {
-  color: #0F172A;
-}
-[data-theme='light'] .lp-wcard-stats {
-  background: #F8FAFC;
-  border-color: rgba(15, 23, 42, 0.1);
-}
-[data-theme='light'] .lp-formation-btn {
-  background: #FFFFFF;
-  border-color: rgba(15, 23, 42, 0.15);
-  color: #334155;
-}
-[data-theme='light'] .lp-formation-btn.is-active {
-  background: #10B981;
-  border-color: #10B981;
-  color: #FFFFFF;
-}
-
 /* Existing Light theme tokens */
 [data-theme='light'] .lp-hero-meta svg { color: #047857; }
 [data-theme='light'] .lp-linkbtn,
@@ -1358,16 +839,6 @@
     margin: 0 auto;
   }
   .lp-hero { padding-bottom: 2.5rem; }
-  .lp-hero-pitch-layer { margin-bottom: 0; --pitch-tuck: 0px; margin-top: 1.5rem; }
-  .lp-pitch-3d-scene { --tilt-x: 24deg; }
-  .lp-tactical-pitch { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y, 0deg)) scale(0.88); }
-  .lp-hero-pitch-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2rem;
-  }
-  .lp-workbench-card {
-    max-width: 100%;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1402,15 +873,6 @@
     font-size: 0.65rem;
   }
   .lp-mock-team { max-width: 5.5rem; letter-spacing: 0.06em; }
-  .lp-pitch-3d-scene { --tilt-x: 16deg; }
-  .lp-tactical-pitch {
-    aspect-ratio: 16 / 10.8;
-  }
-  .lp-token-num {
-    width: 28px;
-    height: 28px;
-    font-size: 0.72rem;
-  }
 }
 
 /* ---------- Sponsors (moved out of inline styles) ---------- */
@@ -1680,3 +1142,34 @@
   .pr-cols { grid-template-columns: minmax(0, 1fr); gap: 1.1rem; }
 }
 @media (max-width: 560px) { .pr-inc { grid-template-columns: minmax(0, 1fr); } }
+
+/* ===== 3D football band under the hero (components/FootballBand.tsx) ===== */
+.fb-band {
+  position: relative; height: min(78vh, 720px); min-height: 520px; overflow: hidden; margin-top: 1.5rem;
+  background: radial-gradient(120% 90% at 50% 0%, #14233a 0%, #08101c 45%, #05080e 100%);
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+}
+[data-theme='light'] .fb-band { background: radial-gradient(120% 90% at 50% 0%, #cfe3f7 0%, #e8f0f8 55%, #F3F5F9 100%); }
+.fb-poster, .fb-canvas, .fb-front { position: absolute; inset: 0; pointer-events: none; }
+.fb-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fb-canvas { z-index: 1; opacity: 0; transition: opacity 0.4s ease; }
+.fb-canvas canvas { width: 100% !important; height: 100% !important; display: block; }
+.fb-front { width: 100%; height: 100%; z-index: 4; }
+.fb-band.is-live .fb-canvas { opacity: 1; }
+.fb-band.is-live .fb-poster, [data-theme='light'] .fb-poster-dark, :root:not([data-theme='light']) .fb-poster-light { display: none; }
+.fb-copy { position: relative; z-index: 2; height: 100%; display: flex; align-items: center; }
+.fb-tagline {
+  font-size: clamp(2.6rem, 6.4vw, 5.6rem); font-weight: 900; line-height: 0.98; letter-spacing: -0.035em;
+  max-width: 9ch; color: #fff; margin: 0;
+}
+.fb-tagline span { display: block; }
+.fb-tagline span:nth-child(2) { color: #10B981; }
+[data-theme='light'] .fb-tagline { color: #0F172A; }
+[data-theme='light'] .fb-tagline span:nth-child(2) { color: #036B4E; }
+@media (max-width: 759px) {
+  .fb-band { height: 640px; }
+  .fb-copy { align-items: flex-start; justify-content: center; padding-top: 56px; text-align: center; }
+  .fb-tagline { max-width: none; font-size: clamp(2.4rem, 11vw, 3.4rem); }
+  .fb-tagline span { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) { .fb-canvas { transition: none; } }
