@@ -444,6 +444,8 @@ export interface MediaGalleryItem {
   album_name: string;
   /** The photo shown on its album's cover; an album without one shows its newest photo */
   is_album_cover?: boolean;
+  /** The club event these photos are from; migration 20261171 */
+  event_id?: string | null;
   created_at?: string;
 }
 

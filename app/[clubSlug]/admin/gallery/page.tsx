@@ -8,13 +8,15 @@ import type { MediaGalleryItem } from '@/lib/supabase/types';
 import { deleteUploadedPhoto, uploadImage } from '@/components/ImageUploadZone';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { AlbumGrid, groupAlbums, photoCount } from '@/components/PhotoGallery';
+import { useEventGalleryReady } from '@/lib/use-event-fixtures-ready';
+import { formatShortDay } from '@/lib/dates';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_ALBUM_NAME = 128; // media_gallery.album_name is VARCHAR(128)
 
 export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, gallery, addMediaItem, updateMediaItems, deleteMediaItems, saveNow } = useClub();
+  const { clubs, selectClubBySlug, gallery, events, addMediaItem, updateMediaItems, deleteMediaItems, saveNow } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const [openName, setOpenName] = useState<string | null>(null);
@@ -29,6 +31,14 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
   if (draftName && !albums.some(a => a.name === draftName)) albums.unshift({ name: draftName, photos: [] });
   const album = albums.find(a => a.name === openName);
   const totalPhotos = albums.reduce((n, a) => n + a.photos.length, 0);
+  // An album is linked to a club event (its photos show on the event's page); hidden until migration 20261171
+  const eventsReady = useEventGalleryReady();
+  const clubEvents = events.filter(e => e.club_id === club.id).sort((a, b) => b.start_time.localeCompare(a.start_time));
+  const eventOfAlbum = (name: string) => albums.find(a => a.name === name)?.photos.find(p => p.event_id)?.event_id || null;
+  const albumEvent = album ? eventOfAlbum(album.name) : null;
+  const linkAlbum = (eventId: string | null) => {
+    if (album?.photos.length) updateMediaItems(album.photos.map(p => p.id), { event_id: eventId });
+  };
 
   const openAlbum = (name: string | null) => {
     setOpenName(name);
@@ -53,7 +63,7 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
     for (const [i, file] of images.entries()) {
       try {
         const url = await uploadImage(file, { folder: 'gallery', clubId: club.id, maxDimension: 1600 });
-        addMediaItem({ club_id: club.id, title: '', media_type: 'image', media_url: url, album_name: album.name });
+        addMediaItem({ club_id: club.id, title: '', media_type: 'image', media_url: url, album_name: album.name, ...(eventsReady && albumEvent ? { event_id: albumEvent } : {}) });
       } catch (err) {
         failures.push(`${file.name}: ${(err as Error).message}`);
       }
@@ -105,6 +115,12 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
     const covers = photos.filter(p => p.is_album_cover).map(p => p.id);
     if (covers.length && (!keepCover || targetHasCover)) updateMediaItems(covers, { is_album_cover: false });
     updateMediaItems(photos.map(p => p.id), { album_name: name });
+    // Photos take the event of the album they join; a merged album keeps its own when that one has none
+    if (eventsReady) {
+      const target = eventOfAlbum(name);
+      const changed = photos.filter(p => (p.event_id || null) !== target).map(p => p.id);
+      if (changed.length && (target || !keepCover)) updateMediaItems(changed, { event_id: target });
+    }
   };
 
   const renameAlbum = async (e: React.FormEvent) => {
@@ -186,7 +202,16 @@ export default function AdminGalleryPage({ params }: { params: Promise<{ clubSlu
               </form>
             )}
             {renameTo === null && (
-              <div className="row">
+              <div className="row row-wrap">
+                {eventsReady && album.photos.length > 0 && clubEvents.length > 0 && (
+                  <select aria-label="Event these photos are from" className="form-select" style={{ width: 'auto', maxWidth: '100%', fontSize: '0.85rem', padding: '0.45rem 0.6rem' }}
+                    value={albumEvent || ''} onChange={e => linkAlbum(e.target.value || null)}>
+                    <option value="">Not linked to an event</option>
+                    {clubEvents.map(e => (
+                      <option key={e.id} value={e.id}>Event: {e.title} · {formatShortDay(e.start_time)}</option>
+                    ))}
+                  </select>
+                )}
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenameTo(album.name)}><Pencil size={14} aria-hidden="true" /> Rename</button>
                 <button data-needs-full type="button" className="btn btn-danger btn-sm" onClick={deleteAlbum}><Trash2 size={14} aria-hidden="true" /> Delete album</button>
               </div>
