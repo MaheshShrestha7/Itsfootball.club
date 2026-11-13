@@ -2,6 +2,7 @@
 
 import React, { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import CoachBoards from '@/components/CoachBoards';
 import {
   Radio, ClipboardCheck, Layers, QrCode, CalendarDays, Trophy, Calendar, Flag, Users, Shield, UserCheck, Award,
   BellRing, Flame, Wallet, ShoppingBag, DollarSign, Palette, Sparkles, FileText, Images, BarChart3, Mail, KeyRound,
@@ -441,6 +442,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                   );
                 })()}
               </Link>
+              {item.match && user && <CoachBoards match={item.match} primaryColor={club.primary_color} />}
               {kidsFor(item).map(kid => (
                 <div key={kid.id} className="app-kid-answer">
                   <span>{kid.full_name.split(' ')[0]}</span>
