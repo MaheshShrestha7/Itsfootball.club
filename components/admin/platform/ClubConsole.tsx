@@ -377,7 +377,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
         ) : (
           <>
             <p className="mc-muted" style={{ marginBottom: 8 }}>
-              Closing hides the club at once and deletes it for good after 30 days. Payments are kept for accounting. Download everything first.
+              Closing hides the club at once and deletes it for good after 30 days. Payments are kept for accounting.{exported ? '' : ' The button unlocks once you download everything above.'}
             </p>
             <button type="button" className="mc-pill-btn danger" disabled={busy || !exported} onClick={closeClub} title={exported ? undefined : 'Download everything first'}>
               Close {club.name}

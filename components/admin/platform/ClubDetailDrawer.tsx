@@ -81,7 +81,7 @@ export default function ClubDetailDrawer({
             <Crest logoUrl={club.logo_url} label={club.short_name} color={club.primary_color} />
             <div className="who">
               <h2>{club.name} <span className={`mc-flag ${status.tone}`}>{status.label}</span></h2>
-              <small>itsfootball.club/{club.slug}</small>
+              <small title={`itsfootball.club/${club.slug}`}>itsfootball.club/{club.slug}</small>
             </div>
             <button type="button" className="mc-icon-btn" onClick={copyLink} aria-label="Copy a link to this panel" title="Copy a link to this panel">
               {copiedLink ? <Check size={14} /> : <Link2 size={14} />}
