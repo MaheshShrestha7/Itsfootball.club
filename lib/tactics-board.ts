@@ -33,7 +33,6 @@ const PIECES = ['ball', 'cone', 'opp'];
 const STARTERS: [string, string][] = [
   ['open', 'Open play'], ['corner', 'Our corner'], ['their-corner', 'Their corner'], ['free-kick', 'Free kick'], ['goal-kick', 'Goal kick'],
 ];
-export const isStarterBoard = (id: string) => STARTERS.some(s => s[0] === id);
 export const defaultBoards = (): TacticsBoard[] =>
   STARTERS.map(([id, name]) => ({ id, name, show: false, note: '', players: {}, items: [] }));
 
@@ -67,8 +66,8 @@ function cleanItem(raw: unknown): BoardItem | null {
 
 /**
  * Boards as the app will draw them, whatever came back from the database or the browser's storage:
- * the five starter boards are always there, in order, and anything malformed is dropped rather than
- * drawn. Colours come from the palette only, so nothing typed into the data reaches the page as markup.
+ * a fixture with nothing saved starts with the five starter boards (a coach can rename or delete any
+ * of them afterwards), and anything malformed is dropped rather than drawn. Colours come from the palette only, so nothing typed into the data reaches the page as markup.
  */
 export function cleanBoards(raw: unknown): TacticsBoard[] {
   const seen = new Set<string>();
@@ -92,16 +91,8 @@ export function cleanBoards(raw: unknown): TacticsBoard[] {
       items: (Array.isArray(b.items) ? b.items : []).map(cleanItem).filter((i): i is BoardItem => !!i).slice(0, MAX_ITEMS),
     };
   }).filter((b): b is TacticsBoard => !!b);
-  const starters = defaultBoards().map(d => {
-    const saved = list.find(b => b.id === d.id);
-    return saved ? { ...saved, name: d.name } : d;
-  });
-  return [...starters, ...list.filter(b => !isStarterBoard(b.id))].slice(0, MAX_BOARDS);
+  return list.length ? list.slice(0, MAX_BOARDS) : defaultBoards();
 }
-
-/** True when nothing has been drawn, moved or written on any board (nothing worth saving yet) */
-export const boardsAreBlank = (boards: TacticsBoard[]) =>
-  boards.every(b => isStarterBoard(b.id) && !b.items.length && !b.note && !b.show && !Object.keys(b.players).length);
 
 // ---- Geometry ----
 
