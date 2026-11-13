@@ -183,21 +183,60 @@ const LINE_KEY = (
   </dl>
 );
 
-function BoardTabs({ boards, activeId, onPick, children }: { boards: Board[]; activeId: string; onPick: (id: string) => void; children?: React.ReactNode }) {
+/** The boards as tabs. With `onRename` / `onDelete` (the editor) the open tab carries its own rename and delete buttons. */
+function BoardTabs({ boards, activeId, onPick, onRename, onDelete, children }: {
+  boards: Board[];
+  activeId: string;
+  onPick: (id: string) => void;
+  onRename?: (name: string) => void;
+  onDelete?: () => void;
+  children?: React.ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
   useEffect(() => {
     // Sideways only: scrollIntoView would also drag the page down to the tabs
     const strip = ref.current, tab = strip?.querySelector<HTMLElement>('[aria-selected="true"]');
     if (strip && tab) strip.scrollLeft = tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2;
   }, [activeId]);
+  const saveName = () => {
+    const name = (renaming || '').trim();
+    if (name) onRename?.(name);
+    setRenaming(null);
+  };
   return (
     <div ref={ref} className="tb-tabs" role="tablist" aria-label="Boards">
-      {boards.map(b => (
-        <button key={b.id} type="button" role="tab" className="tb-tab" aria-selected={b.id === activeId} onClick={() => onPick(b.id)}>
-          {b.name.trim() || 'Board'}
-          {b.items.length > 0 && <span className="tb-count">{b.items.length}</span>}
-        </button>
-      ))}
+      {boards.map(b => {
+        const open = b.id === activeId;
+        if (open && renaming !== null) {
+          return (
+            <form key={b.id} className="tb-new" onSubmit={e => { e.preventDefault(); saveName(); }}>
+              <input autoFocus className="form-input" aria-label={`New name for the ${b.name} board`} maxLength={30} value={renaming}
+                onFocus={e => e.target.select()} onChange={e => setRenaming(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); }} />
+              <button type="submit" className="btn btn-primary btn-sm" disabled={!renaming.trim()}>Save</button>
+              <button type="button" className="admin-icon-btn" onClick={() => setRenaming(null)} aria-label="Cancel"><X size={16} aria-hidden="true" /></button>
+            </form>
+          );
+        }
+        return (
+          <React.Fragment key={b.id}>
+            <button type="button" role="tab" className="tb-tab" aria-selected={open} onClick={() => { setRenaming(null); onPick(b.id); }}>
+              {b.name}
+              {b.items.length > 0 && <span className="tb-count">{b.items.length}</span>}
+            </button>
+            {open && onRename && (
+              <span className="tb-tab-acts">
+                <button type="button" className="admin-icon-btn" onClick={() => setRenaming(b.name)} aria-label={`Rename the ${b.name} board`} title="Rename this board"><Pencil size={15} aria-hidden="true" /></button>
+                {/* The last board stays: there is always one to draw on */}
+                {onDelete && boards.length > 1 && (
+                  <button type="button" className="admin-icon-btn is-danger" onClick={onDelete} aria-label={`Delete the ${b.name} board`} title="Delete this board"><Trash2 size={15} aria-hidden="true" /></button>
+                )}
+              </span>
+            )}
+          </React.Fragment>
+        );
+      })}
       {children}
     </div>
   );
@@ -248,7 +287,7 @@ function BoardImage({ board, discs, names, title, primaryColor }: { board: Board
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={IMG.w} height={height} viewBox={`0 0 ${IMG.w} ${height}`}>
       <rect width={IMG.w} height={height} fill="#0b0f14" />
-      <text x={IMG.pad} y={28} fill="#fff" fontFamily={font} fontWeight={800} fontSize={20}>{board.name.trim() || 'Board'}</text>
+      <text x={IMG.pad} y={28} fill="#fff" fontFamily={font} fontWeight={800} fontSize={20}>{board.name}</text>
       <text x={IMG.pad} y={47} fill="#9aa4b2" fontFamily={font} fontWeight={600} fontSize={12}>{title}</text>
       <g transform={`translate(${IMG.pad} ${IMG.top})`}>
         <clipPath id="tb-clip"><rect width={PW} height={PH} rx={12} /></clipPath>
@@ -516,7 +555,9 @@ export default function TacticsBoard({ boards, onChange, positions, primaryColor
             </div>
           </div>
 
-          <BoardTabs boards={shown} activeId={board.id} onPick={setPick}>
+          <BoardTabs boards={shown} activeId={board.id} onPick={setPick}
+            onRename={name => commit(changeBoard(b => ({ ...b, name })))}
+            onDelete={() => { commit(boards.filter(b => b.id !== board.id)); setPick(''); onNotify?.(`${board.name} deleted. Undo brings it back.`, 'info'); }}>
             {adding === null ? (
               boards.length < MAX_BOARDS && (
                 <button type="button" className="tb-tab" onClick={() => setAdding('')}><Plus size={16} aria-hidden="true" /> New</button>
@@ -572,13 +613,8 @@ export default function TacticsBoard({ boards, onChange, positions, primaryColor
 
       <div className="lineup-workbench-bench admin-panel tb-side">
         <div>
-          <label>
-            <span className="form-label" style={{ display: 'block' }}>Board name</span>
-            <input className="form-input" maxLength={30} value={board.name} style={{ width: '100%', fontSize: '16px' }}
-              onChange={e => onChange(changeBoard(b => ({ ...b, name: e.target.value })))}
-              onBlur={e => { if (!e.target.value.trim()) onChange(changeBoard(b => ({ ...b, name: 'Board' }))); }} />
-          </label>
-          <p className="tb-meta" style={{ marginTop: '6px' }}>
+          <h2>{board.name}</h2>
+          <p className="tb-meta">
             {board.items.length
               ? `${lines} line${lines === 1 ? '' : 's'}, ${pieces} piece${pieces === 1 ? '' : 's'}`
               : 'Nothing drawn yet. Pick a tool and draw on the pitch.'}
@@ -608,11 +644,6 @@ export default function TacticsBoard({ boards, onChange, positions, primaryColor
           <button type="button" className="btn btn-secondary row" onClick={() => setPreview(true)}><Eye size={16} aria-hidden="true" /> Preview as player</button>
           <button type="button" className="btn btn-secondary row" onClick={download} disabled={busy}><Download size={16} aria-hidden="true" /> {busy ? 'Making image…' : 'Download image'}</button>
         </div>
-        {/* The last board stays: there is always one to draw on. Undo brings a deleted board back. */}
-        <button type="button" className="btn btn-secondary btn-sm tb-delete" disabled={boards.length < 2}
-          onClick={() => { commit(boards.filter(b => b.id !== board.id)); setPick(''); onNotify?.(`${board.name || 'Board'} deleted. Undo brings it back.`, 'info'); }}>
-          <Trash2 size={14} aria-hidden="true" /> Delete this board
-        </button>
       </div>
     </div>
   );
