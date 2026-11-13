@@ -9,6 +9,8 @@ import { offerLineupAppearances } from '@/components/offerLineupAppearances';
 import { MatchFormat, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import { FORMAT_PRESETS, buildLineupForPreset, defaultPresetFor, normalizeLineup } from '@/components/TacticalPitch';
 import LineupWorkbench from '@/components/LineupWorkbench';
+import TacticsBoard from '@/components/TacticsBoard';
+import { useMatchTactics } from '@/lib/use-match-tactics';
 import { clubLineupSide, clubSidePlayers } from '@/lib/tournament-engine';
 import { matchKind, prepFixtures, teamSideIn, tournamentTeamGroups, type MatchKind } from '@/lib/fixtures';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -22,6 +24,7 @@ import {
   CheckCircle2,
   Users,
   ClipboardList,
+  Pencil,
 } from 'lucide-react';
 import { squadForMatch } from '@/lib/teams';
 import { confirmAction } from '@/components/ConfirmDialog';
@@ -182,6 +185,10 @@ export default function DraftLineupPage() {
     setLineupCoords(update);
     setIsDirty(true);
   }, [setIsDirty]);
+
+  // The tactics board draws over the line-up on the board. A tournament team's boards hang off its first game.
+  const [mode, setMode] = useState<'lineup' | 'board'>('lineup');
+  const tactics = useMatchTactics(club?.id, (groupGames[0] || activeMatch)?.id);
 
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -384,6 +391,27 @@ export default function DraftLineupPage() {
           </div>
         </section>
 
+        {/* Hidden until the database has the boards table (migration 20261170) */}
+        {tactics.ready && (
+          <div className="tb-mode" role="group" aria-label="What the pitch is for">
+            <button type="button" aria-pressed={mode === 'lineup'} onClick={() => setMode('lineup')}>Line-up</button>
+            <button type="button" aria-pressed={mode === 'board'} onClick={() => setMode('board')}><Pencil size={15} aria-hidden="true" /> Tactics board</button>
+          </div>
+        )}
+
+        {tactics.ready && mode === 'board' ? (
+          <TacticsBoard
+            key={(groupGames[0] || activeMatch).id}
+            boards={tactics.boards}
+            onChange={tactics.setBoards}
+            positions={lineupCoords}
+            primaryColor={club.primary_color}
+            title={activeGroup ? `${activeGroup.participant.name} · ${tournamentName(activeGroup.tournamentId)}` : `${activeMatch.home_team_name} vs ${activeMatch.away_team_name}`}
+            saveState={tactics.saveState}
+            onRetrySave={tactics.retry}
+            onNotify={showFeedback}
+          />
+        ) : (
         <LineupWorkbench
           players={squadPlayers}
           positions={lineupCoords}
@@ -417,6 +445,7 @@ export default function DraftLineupPage() {
             </section>
           }
         />
+        )}
 
         {/* Publish confirmation */}
         {showPublishModal && (

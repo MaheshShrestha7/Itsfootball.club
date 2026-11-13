@@ -392,6 +392,37 @@ export function placeOnSlot(list: PitchPosition[], slotId: string, member: ClubM
   });
 }
 
+/** The pitch's lines, boxes and corner arcs: drawn inside .tactical-pitch-surface (the tactics board uses them too) */
+export function PitchMarkings() {
+  return (
+    <>
+      {/* 1. Pitch Markings */}
+      <div className="pitch-halfway-line" />
+      <div className="pitch-center-circle" />
+      <div className="pitch-center-spot" />
+
+      {/* 2. Penalty & Goal Areas */}
+      <div className="pitch-penalty-box-left" />
+      <div className="pitch-six-yard-left" />
+      <div className="pitch-penalty-spot-left" />
+      <div className="pitch-penalty-arc-left" />
+      <div className="pitch-goal-left" />
+
+      <div className="pitch-penalty-box-right" />
+      <div className="pitch-six-yard-right" />
+      <div className="pitch-penalty-spot-right" />
+      <div className="pitch-penalty-arc-right" />
+      <div className="pitch-goal-right" />
+
+      {/* 3. Corner Arcs */}
+      <div className="pitch-corner-arc pitch-corner-tl" />
+      <div className="pitch-corner-arc pitch-corner-tr" />
+      <div className="pitch-corner-arc pitch-corner-bl" />
+      <div className="pitch-corner-arc pitch-corner-br" />
+    </>
+  );
+}
+
 export default function TacticalPitch({
   players,
   formation = '4-3-3',
@@ -1039,29 +1070,7 @@ export default function TacticalPitch({
             rounded pitch edge here, kept separate from the player nodes below so an edge-of-pitch
             player's circle/name-label is never cropped by that clipping (a mobile-width bug). */}
         <div className="tactical-pitch-surface">
-          {/* 1. Pitch Markings */}
-          <div className="pitch-halfway-line" />
-          <div className="pitch-center-circle" />
-          <div className="pitch-center-spot" />
-
-          {/* 2. Penalty & Goal Areas */}
-          <div className="pitch-penalty-box-left" />
-          <div className="pitch-six-yard-left" />
-          <div className="pitch-penalty-spot-left" />
-          <div className="pitch-penalty-arc-left" />
-          <div className="pitch-goal-left" />
-
-          <div className="pitch-penalty-box-right" />
-          <div className="pitch-six-yard-right" />
-          <div className="pitch-penalty-spot-right" />
-          <div className="pitch-penalty-arc-right" />
-          <div className="pitch-goal-right" />
-
-          {/* 3. Corner Arcs */}
-          <div className="pitch-corner-arc pitch-corner-tl" />
-          <div className="pitch-corner-arc pitch-corner-tr" />
-          <div className="pitch-corner-arc pitch-corner-bl" />
-          <div className="pitch-corner-arc pitch-corner-br" />
+          <PitchMarkings />
 
           {/* 4. Format & Orientation Watermarks */}
           <div data-theme="dark" style={{
