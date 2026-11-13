@@ -8,7 +8,7 @@ import { AlertTriangle, Check, Download, Eraser, Eye, Move, Pencil, Plus, Redo2,
 import type { PitchPosition } from '@/lib/supabase/types';
 import { PitchMarkings, formatPitchName } from './TacticalPitch';
 import {
-  BOARD_COLORS, MAX_BOARDS, MAX_ITEMS, MAX_NOTE, hitItem, isStarterBoard, lineShape, simplify,
+  BOARD_COLORS, MAX_BOARDS, MAX_ITEMS, MAX_NOTE, hitItem, lineShape, simplify,
   type BoardItem, type LineKind, type Pt, type TacticsBoard as Board,
 } from '@/lib/tactics-board';
 import type { TacticsSaveState } from '@/lib/use-match-tactics';
@@ -194,7 +194,7 @@ function BoardTabs({ boards, activeId, onPick, children }: { boards: Board[]; ac
     <div ref={ref} className="tb-tabs" role="tablist" aria-label="Boards">
       {boards.map(b => (
         <button key={b.id} type="button" role="tab" className="tb-tab" aria-selected={b.id === activeId} onClick={() => onPick(b.id)}>
-          {b.name}
+          {b.name.trim() || 'Board'}
           {b.items.length > 0 && <span className="tb-count">{b.items.length}</span>}
         </button>
       ))}
@@ -240,13 +240,15 @@ function wrapNote(note: string): string[] {
 }
 function BoardImage({ board, discs, names, title, primaryColor }: { board: Board; discs: Disc[]; names: boolean; title: string; primaryColor: string }) {
   const note = wrapNote(board.note);
-  const height = IMG.top + PH + IMG.pad + (note.length ? note.length * 18 + 14 : 0);
+  const noteH = note.length ? note.length * 18 + 14 : 0;
+  const markY = IMG.top + PH + IMG.pad + noteH + 26;
+  const height = markY + 24;
   const line = { fill: 'none', stroke: '#fff', strokeOpacity: 0.35, strokeWidth: 2 } as const;
   const font = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={IMG.w} height={height} viewBox={`0 0 ${IMG.w} ${height}`}>
       <rect width={IMG.w} height={height} fill="#0b0f14" />
-      <text x={IMG.pad} y={28} fill="#fff" fontFamily={font} fontWeight={800} fontSize={20}>{board.name}</text>
+      <text x={IMG.pad} y={28} fill="#fff" fontFamily={font} fontWeight={800} fontSize={20}>{board.name.trim() || 'Board'}</text>
       <text x={IMG.pad} y={47} fill="#9aa4b2" fontFamily={font} fontWeight={600} fontSize={12}>{title}</text>
       <g transform={`translate(${IMG.pad} ${IMG.top})`}>
         <clipPath id="tb-clip"><rect width={PW} height={PH} rx={12} /></clipPath>
@@ -282,6 +284,14 @@ function BoardImage({ board, discs, names, title, primaryColor }: { board: Board
       {note.map((l, i) => (
         <text key={i} x={IMG.pad} y={IMG.top + PH + IMG.pad + 16 + i * 18} fill="#e5e9ef" fontFamily={font} fontSize={13}>{l}</text>
       ))}
+      {/* The itsfootball.club mark (the goal and ball from the logo) and name, under a thin rule */}
+      <path d={`M${IMG.pad} ${markY - 20}H${IMG.w - IMG.pad}`} stroke="#fff" strokeOpacity={0.12} />
+      <g transform={`translate(${IMG.w / 2 - 82} ${markY - 21}) scale(0.085)`}>
+        <path d="M64 330V198H448V330" fill="none" stroke="#F8FAFC" strokeWidth={24} />
+        <circle cx={99} cy={234} r={21} fill="#10B981" />
+        <path d="M128 238 176 260M120 256 152 270" stroke="#10B981" strokeWidth={7} strokeLinecap="round" />
+      </g>
+      <text x={IMG.w / 2 - 34} y={markY + 6} fill="#fff" fontFamily={font} fontWeight={800} fontSize={14}>itsfootball.club</text>
     </svg>
   );
 }
@@ -562,8 +572,13 @@ export default function TacticsBoard({ boards, onChange, positions, primaryColor
 
       <div className="lineup-workbench-bench admin-panel tb-side">
         <div>
-          <h2>{board.name}</h2>
-          <p className="tb-meta">
+          <label>
+            <span className="form-label" style={{ display: 'block' }}>Board name</span>
+            <input className="form-input" maxLength={30} value={board.name} style={{ width: '100%', fontSize: '16px' }}
+              onChange={e => onChange(changeBoard(b => ({ ...b, name: e.target.value })))}
+              onBlur={e => { if (!e.target.value.trim()) onChange(changeBoard(b => ({ ...b, name: 'Board' }))); }} />
+          </label>
+          <p className="tb-meta" style={{ marginTop: '6px' }}>
             {board.items.length
               ? `${lines} line${lines === 1 ? '' : 's'}, ${pieces} piece${pieces === 1 ? '' : 's'}`
               : 'Nothing drawn yet. Pick a tool and draw on the pitch.'}
@@ -593,12 +608,11 @@ export default function TacticsBoard({ boards, onChange, positions, primaryColor
           <button type="button" className="btn btn-secondary row" onClick={() => setPreview(true)}><Eye size={16} aria-hidden="true" /> Preview as player</button>
           <button type="button" className="btn btn-secondary row" onClick={download} disabled={busy}><Download size={16} aria-hidden="true" /> {busy ? 'Making image…' : 'Download image'}</button>
         </div>
-        {!isStarterBoard(board.id) && (
-          <button type="button" className="btn btn-secondary btn-sm tb-delete"
-            onClick={() => { commit(boards.filter(b => b.id !== board.id)); setPick(''); }}>
-            <Trash2 size={14} aria-hidden="true" /> Delete this board
-          </button>
-        )}
+        {/* The last board stays: there is always one to draw on. Undo brings a deleted board back. */}
+        <button type="button" className="btn btn-secondary btn-sm tb-delete" disabled={boards.length < 2}
+          onClick={() => { commit(boards.filter(b => b.id !== board.id)); setPick(''); onNotify?.(`${board.name || 'Board'} deleted. Undo brings it back.`, 'info'); }}>
+          <Trash2 size={14} aria-hidden="true" /> Delete this board
+        </button>
       </div>
     </div>
   );

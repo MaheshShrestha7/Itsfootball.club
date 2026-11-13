@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import { boardsAreBlank, cleanBoards, defaultBoards, hitItem, lineShape, sampleCurve, simplify, MAX_ITEMS, type Pt } from './tactics-board';
+import { cleanBoards, defaultBoards, hitItem, lineShape, sampleCurve, simplify, MAX_ITEMS, type Pt } from './tactics-board';
 
 // Nothing saved yet: the five starter boards, blank
 const blank = cleanBoards(null);
 assert.deepEqual(blank.map(b => b.name), ['Open play', 'Our corner', 'Their corner', 'Free kick', 'Goal kick']);
-assert.equal(boardsAreBlank(blank), true);
 assert.deepEqual(cleanBoards('junk'), defaultBoards());
 
 // Saved boards come back as drawn; anything malformed is dropped, and colours stay in the palette
@@ -25,15 +24,17 @@ const saved = cleanBoards([
   { id: 'bad id!', name: 'x' },
 ]);
 const corner = saved.find(b => b.id === 'corner')!;
-assert.equal(corner.name, 'Our corner', 'starter boards keep their names');
+assert.equal(corner.name, 'Renamed', 'a starter board can be renamed');
 assert.equal(corner.show, true);
 assert.deepEqual(corner.players, { 'slot-1': [50, 8], 'slot-2': [98, 2] });
 assert.deepEqual(corner.items.map(i => i.t), ['run', 'pass', 'zone', 'opp']);
 assert.equal((corner.items[1] as { c: string }).c, '#FFFFFF');
 assert.equal((corner.items[3] as { n?: number }).n, 1);
-assert.deepEqual(saved.map(b => b.id), ['open', 'corner', 'their-corner', 'free-kick', 'goal-kick', 'my-press']);
-assert.equal(saved[5].name, 'High press');
-assert.equal(boardsAreBlank(saved), false);
+// Only what was saved comes back: the starter boards a coach deleted stay deleted
+assert.deepEqual(saved.map(b => b.id), ['corner', 'my-press']);
+assert.equal(saved[1].name, 'High press');
+assert.equal(cleanBoards([{ id: 'x', name: '   ' }])[0].name, 'Board');
+assert.deepEqual(cleanBoards([{ id: 'bad id!' }]), defaultBoards(), 'nothing usable saved: the starters');
 assert.equal(cleanBoards([{ id: 'open', items: Array.from({ length: 200 }, () => ({ t: 'cone', x: 5, y: 5 })) }])[0].items.length, MAX_ITEMS);
 
 // A shaky straight line becomes its two ends; a real corner is kept
