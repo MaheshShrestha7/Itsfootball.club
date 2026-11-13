@@ -14,6 +14,8 @@ import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
 import KickoffCountdown from '@/components/KickoffCountdown';
 import FixtureRow from '@/components/FixtureRow';
+import { AlbumGrid, groupAlbums } from '@/components/PhotoGallery';
+import { useRouter } from 'next/navigation';
 import { clubResult, soonestFirst } from '@/lib/fixtures';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import {
@@ -28,6 +30,7 @@ import {
   CalendarPlus,
   MessageCircle,
   Trophy,
+  Images,
 } from 'lucide-react';
 
 // How long an event with no end time is treated as running
@@ -48,7 +51,8 @@ export default function EventDetailsPage({
   params: Promise<{ clubSlug: string; eventId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, sponsors, matches, clubTeams } = useClub();
+  const { clubs, selectClubBySlug, events, sponsors, matches, clubTeams, gallery } = useClub();
+  const router = useRouter();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -90,6 +94,8 @@ export default function EventDetailsPage({
       return r;
     }, { W: 0, D: 0, L: 0 });
   const played = record.W + record.D + record.L;
+  // Photo albums linked to this event; each opens in the club gallery
+  const albums = groupAlbums(gallery.filter(g => g.club_id === club.id && g.event_id === event.id));
   const recordLine = played > 0
     ? `${played} played · ${[record.W && `won ${record.W}`, record.D && `drew ${record.D}`, record.L && `lost ${record.L}`].filter(Boolean).join(', ')}`
     : `${games.length} game${games.length === 1 ? '' : 's'}`;
@@ -249,6 +255,15 @@ export default function EventDetailsPage({
                 return <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={t ? teamLabel(t) : undefined} />;
               })}
             </div>
+          </section>
+        )}
+
+        {albums.length > 0 && (
+          <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }} aria-labelledby="event-photos">
+            <h2 id="event-photos" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Images size={18} color={categoryColor} aria-hidden="true" /> Photos
+            </h2>
+            <AlbumGrid albums={albums} onOpen={name => router.push(`/${club.slug}/gallery?album=${encodeURIComponent(name)}`)} />
           </section>
         )}
 
