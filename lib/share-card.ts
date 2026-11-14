@@ -145,15 +145,59 @@ async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
   const items = await Promise.all((list || []).slice(0, max).map(async s => {
     const src = typeof s === 'string' ? s : s.src;
     const name = typeof s === 'string' ? '' : s.name.trim();
-    const img = src ? await loadImage(src) : null;
+    const loaded = src ? await loadImage(src) : null;
+    const img = loaded && trimmed(loaded);
     return img || name ? { img, name } : null;
   }));
-  return items.filter((i): i is { img: HTMLImageElement | null; name: string } => !!i);
+  return items.filter((i): i is SponsorItem => !!i);
+}
+
+type SponsorItem = { img: HTMLImageElement | HTMLCanvasElement | null; name: string };
+
+/** The logo without its blank (white or see-through) margins, so it fills its tile: a small badge
+ *  saved on a big white square otherwise shrinks to a dot. Scaled to 512px at most, plenty for a tile */
+function trimmed(img: HTMLImageElement): HTMLImageElement | HTMLCanvasElement {
+  try {
+    const k = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k));
+    const h = Math.max(1, Math.round(img.naturalHeight * k));
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const x = c.getContext('2d');
+    if (!x) return img;
+    x.drawImage(img, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data;
+    let left = w, top = h, right = -1, bottom = -1;
+    for (let y = 0; y < h; y++) {
+      for (let i = 0; i < w; i++) {
+        const p = (y * w + i) * 4;
+        if (d[p + 3] < 16 || (d[p] > 240 && d[p + 1] > 240 && d[p + 2] > 240)) continue;
+        if (i < left) left = i;
+        if (i > right) right = i;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+    if (right < 0) return img; // nothing but white (a white logo for dark pages): left as it is
+    const pad = Math.round(Math.max(right - left, bottom - top) * 0.04);
+    left = Math.max(0, left - pad);
+    top = Math.max(0, top - pad);
+    const cw = Math.min(w, right + pad + 1) - left;
+    const ch = Math.min(h, bottom + pad + 1) - top;
+    const out = document.createElement('canvas');
+    out.width = cw;
+    out.height = ch;
+    out.getContext('2d')?.drawImage(c, left, top, cw, ch, 0, 0, cw, ch);
+    return out;
+  } catch {
+    return img; // a logo the browser won't let us read (no CORS): drawn untrimmed
+  }
 }
 
 /** A row of white sponsor tiles under a small spaced heading, centred across the card. White tiles,
  *  so a logo made for a light page reads on the dark card */
-function sponsorRow(ctx: CanvasRenderingContext2D, items: { img: HTMLImageElement | null; name: string }[], top: number, rowH: number, tileH: number,
+function sponsorRow(ctx: CanvasRenderingContext2D, items: SponsorItem[], top: number, rowH: number, tileH: number,
   label: string, W: number, M: number, maxTileW: number, body: string, heading: string) {
   ctx.textAlign = 'center';
   ctx.fillStyle = FAINT;
@@ -172,16 +216,18 @@ function sponsorRow(ctx: CanvasRenderingContext2D, items: { img: HTMLImageElemen
 }
 
 /** One sponsor on a white tile: the logo fitted inside, or the name when there is no logo */
-function sponsorTile(ctx: CanvasRenderingContext2D, { img, name }: { img: HTMLImageElement | null; name: string }, x: number, y: number,
+function sponsorTile(ctx: CanvasRenderingContext2D, { img, name }: SponsorItem, x: number, y: number,
   tileW: number, tileH: number, heading: string) {
   roundRect(ctx, x, y, tileW, tileH, Math.min(18, tileH / 3));
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  ctx.fillStyle = '#FFFFFF';
   ctx.fill();
-  const pad = Math.round(tileH * 0.14);
+  const pad = Math.round(tileH * 0.1);
   if (img) {
-    const scale = Math.min((tileW - pad * 2) / img.naturalWidth, (tileH - pad * 2) / img.naturalHeight);
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
+    const iw = 'naturalWidth' in img ? img.naturalWidth : img.width;
+    const ih = 'naturalHeight' in img ? img.naturalHeight : img.height;
+    const scale = Math.min((tileW - pad * 2) / iw, (tileH - pad * 2) / ih);
+    const w = iw * scale;
+    const h = ih * scale;
     ctx.drawImage(img, x + (tileW - w) / 2, y + (tileH - h) / 2, w, h);
   } else {
     ctx.fillStyle = BASE;
@@ -769,7 +815,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     const subs = kind === 'lineup-list' ? [] : (opts.subs || []).filter(s => s.name.trim());
     const listSubs = kind === 'lineup-list' ? (opts.subs || []).filter(s => s.name.trim()) : [];
     const sponsorImgs = await loadSponsors(opts.sponsors, 6);
-    const sponsorH = sponsorImgs.length ? by(170, 118, 118) : 0;
+    const sponsorH = sponsorImgs.length ? by(184, 136, 136) : 0;
     let subLines: string[] = [];
     let subSize = by(32, 28, 28);
     if (subs.length) {
@@ -1137,9 +1183,9 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
     // The club's sponsors (its own match graphics): a glass strip above the watermark. Not on the
     // square card, nor with a Player of the Match row, which leave no room for it
     const clubSponsors = square || (scored && opts.motm?.name) ? [] : await loadSponsors(opts.sponsors, 5);
-    const stripH = clubSponsors.length ? by(150, 120, 0) : 0;
+    const stripH = clubSponsors.length ? by(190, 156, 0) : 0;
     // On a story everything moves up a little to make room
-    const panelTop = by(640, 400, 320) - (stripH && story ? 40 : 0);
+    const panelTop = by(640, 400, 320) - (stripH && story ? 60 : 0);
     const panelH = by(540, 420, 330);
     glass(ctx, M, panelTop, W - M * 2, panelH, 44, backdrop);
     const crestBox = by(210, 170, 140);
@@ -1254,8 +1300,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
     // Kick-off, date and ground: on a fixture always, on a result as one quiet line
     const { day, time } = kickoff(match);
+    // The date card (a fixture's), closer under the teams on a story with sponsors to leave them room
+    const dateTop = below - by(10, 15, 15) - (stripH && story ? 25 : 0);
     if (!scored) {
-      const top = below - by(10, 15, 15);
+      const top = dateTop;
       const cardH = by(270, 210, 200);
       glass(ctx, M, top, W - M * 2, cardH, 36, backdrop);
       const cells: [string, string][] = [['DATE', day], ['KICK-OFF', time]];
@@ -1290,10 +1338,10 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
 
     if (stripH) {
       // Under the date card on a fixture; on a result, just above the quiet date line
-      const stripY = scored ? H - by(310, 150, 100) - by(46, 36, 0) - stripH : below - by(10, 15, 15) + by(270, 210, 200) + by(30, 24, 0);
+      const stripY = scored ? H - by(310, 150, 100) - by(46, 36, 0) - stripH : dateTop + by(270, 210, 200) + by(24, 24, 0);
       glass(ctx, M, stripY, W - M * 2, stripH, 32, backdrop);
-      sponsorRow(ctx, clubSponsors, stripY + by(22, 18, 0), stripH - by(40, 32, 0), by(76, 62, 0), opts.sponsorsLabel || 'CLUB SPONSORS',
-        W, M + 24, by(200, 170, 0), body, heading);
+      sponsorRow(ctx, clubSponsors, stripY + by(22, 18, 0), stripH - by(40, 32, 0), by(114, 92, 0), opts.sponsorsLabel || 'CLUB SPONSORS',
+        W, M + 24, by(300, 300, 0), body, heading);
     }
   }
 
