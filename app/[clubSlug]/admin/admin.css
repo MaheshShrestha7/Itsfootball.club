@@ -1168,3 +1168,12 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
 .rv-status.is-error { color: var(--color-danger); }
 @media (max-width: 48rem) { .rv-two { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 40rem) { .rv-answers { grid-template-columns: minmax(0, 1fr); } }
+
+/* Match Centre: what the public match report has to go on, and whether it can show in search */
+.mc-report { padding: var(--space-md); margin-bottom: var(--space-md); }
+.mc-report h3 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); margin: 0 0 var(--space-sm); font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
+.mc-report ul { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); list-style: none; margin: 0 0 var(--space-sm); padding: 0; }
+.mc-report li { display: flex; align-items: center; gap: var(--space-2xs); font-size: var(--text-sm); color: var(--color-ink); }
+.mc-report li svg { flex: none; color: var(--color-accent-ink); }
+.mc-report li.is-missing, .mc-report li.is-missing svg { color: var(--color-muted); }
+.mc-report p { margin: 0 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-2); }

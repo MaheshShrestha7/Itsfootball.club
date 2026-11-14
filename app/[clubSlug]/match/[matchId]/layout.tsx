@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { findClubMatch } from '@/lib/supabase/club-lookup';
+import { findClubMatch, matchReportReady } from '@/lib/supabase/club-lookup';
 import { matchPath } from '@/lib/slugs';
 import { clubImage, clubName, clubPageMetadata, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 import { tournamentMatchLabel } from '@/lib/tournament-engine';
@@ -13,6 +13,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { clubSlug, matchId } = await params;
   const match = await findClubMatch(clubSlug, matchId);
+  // A finished game with only a score has a thin report: kept out of search until more is logged
+  const thin = !!match && match.status === 'completed' && !match.score_hidden && !(await matchReportReady(match.id));
 
   return clubPageMetadata(clubSlug, club => {
     // The id and any old slug redirect here (app/[clubSlug]/layout.tsx), so the canonical is the current slug
@@ -55,6 +57,7 @@ export async function generateMetadata({
       ),
       path,
       ...clubImage(club),
+      noIndex: thin,
     });
   });
 }

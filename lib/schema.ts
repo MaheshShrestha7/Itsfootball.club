@@ -418,8 +418,27 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground
 }
 
 /** A fixture: both teams, kick-off, venue, and the live/final score in the description */
-export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow, ground?: GroundRow | null) {
-  return graph(matchNode(club, match, ground));
+export function matchSchema(club: ClubMetadataRow, match: MatchMetadataRow, ground?: GroundRow | null, report = false) {
+  return graph(matchNode(club, match, ground), ...(report ? [matchReportNode(club, match)] : []));
+}
+
+/** The full-time report on a finished match's page, as a news article about that match */
+function matchReportNode(club: ClubMetadataRow, match: MatchMetadataRow): Json {
+  const url = abs(matchPath(club.slug, match));
+  const logo = absUrl(club.logo_url);
+  return {
+    '@type': 'NewsArticle',
+    '@id': `${url}#report`,
+    url,
+    mainEntityOfPage: url,
+    headline: `${match.home_team_name} ${match.home_score}-${match.away_score} ${match.away_team_name}: match report`.slice(0, 110),
+    image: absUrl(club.banner_url) || logo,
+    datePublished: match.audited_at || match.match_date,
+    author: clubRef(club),
+    publisher: { '@type': 'Organization', name: club.name, url: clubUrl(club), logo: logo ? { '@type': 'ImageObject', url: logo } : undefined },
+    about: { '@id': `${url}#event` },
+    articleSection: 'Match Report',
+  };
 }
 
 /** A public club event (social, AGM, training day...) */

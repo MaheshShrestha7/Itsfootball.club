@@ -1,26 +1,70 @@
-import { FileText } from 'lucide-react';
+import React from 'react';
+import Link from 'next/link';
+import CoverImage from '@/components/CoverImage';
+import LocalTime from '@/components/LocalTime';
+import ShareLinkButton from '@/components/ShareLinkButton';
+import { plainText, type MatchArticle } from '@/lib/match-report';
 
-/** The full-time report under the scoreboard: plain sentences in a glass panel */
-export default function MatchReport({ paragraphs, source }: { paragraphs: string[]; source: string }) {
-  if (!paragraphs.length) return null;
+/** A sentence from the report with its [text](href) links turned into real ones */
+function Linked({ text }: { text: string }) {
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/);
   return (
-    <section
-      aria-label="Match report"
-      className="glass-panel"
-      style={{ padding: '1.5rem', marginBottom: '2rem', borderRadius: 'var(--radius-xl)', borderLeft: '4px solid var(--club-primary)' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <FileText size={16} color="var(--club-ink)" />
-        <h2 style={{ fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--club-ink)', margin: 0 }}>
-          Match report
-        </h2>
+    <>
+      {parts.map((part, i) => {
+        const m = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        return m ? <Link key={i} href={m[2]}>{m[1]}</Link> : <React.Fragment key={i}>{part}</React.Fragment>;
+      })}
+    </>
+  );
+}
+
+export interface MatchFact { label: string; value: React.ReactNode }
+
+/** The full-time report under the scoreboard, laid out like the club's news articles */
+export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, lineup, source, moreHref }: {
+  article: MatchArticle;
+  clubName: string;
+  coverUrl?: string;
+  crestUrl?: string;
+  tags: string[];
+  publishedAt?: string;
+  shareUrl: string;
+  facts: MatchFact[];
+  /** The club's starters and the subs who came on, as one line */
+  lineup?: React.ReactNode;
+  source: string;
+  /** Where the timeline, line-ups and stats sit on the page */
+  moreHref?: string;
+}) {
+  return (
+    <article aria-label="Match report" className="glass-panel match-article">
+      {/* A photo only when the club has one (the match flyer, else its banner): the scoreboard above already carries the crests */}
+      {coverUrl && <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 420, objectFit: 'cover' }} />}
+      <div className="match-article-in">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+          {tags.map(tag => <span key={tag} className="badge badge-primary">{tag}</span>)}
+        </div>
+        <h2>{article.headline}</h2>
+        <div className="match-article-byline">
+          <p className="text-meta" style={{ margin: 0 }}>By {clubName}{publishedAt && <> · <LocalTime value={publishedAt} /></>}</p>
+          <ShareLinkButton url={shareUrl} title={article.headline} text={plainText(article.lead)} />
+        </div>
+        <p className="match-article-lead"><Linked text={article.lead} /></p>
+        {article.paragraphs.map((p, i) => <p key={i} className="match-article-p"><Linked text={p} /></p>)}
+        {(facts.length > 0 || lineup) && (
+          <div className="match-article-facts">
+            <h3>Match facts</h3>
+            {facts.length > 0 && (
+              <dl>
+                {facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
+              </dl>
+            )}
+            {lineup && <p>{lineup}</p>}
+          </div>
+        )}
+        {moreHref && <p className="match-article-more"><a href={moreHref}>See the timeline, line-ups and match stats</a></p>}
+        <p className="text-meta" style={{ margin: '0.85rem 0 0' }}>{source}</p>
       </div>
-      {paragraphs.map((p, i) => (
-        <p key={i} style={{ color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: i === 0 ? '1.05rem' : '0.95rem', fontWeight: i === 0 ? 600 : 400, lineHeight: 1.65, margin: i ? '0.5rem 0 0' : 0 }}>
-          {p}
-        </p>
-      ))}
-      <p className="text-meta" style={{ marginTop: '0.85rem', fontSize: '0.75rem' }}>{source}</p>
-    </section>
+    </article>
   );
 }

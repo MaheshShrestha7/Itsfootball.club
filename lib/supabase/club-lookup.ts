@@ -79,6 +79,8 @@ export interface MatchMetadataRow {
   tournament_id?: string | null;
   tournament_stage?: string | null;
   tournament_round?: number | null;
+  /** When the player stats were saved */
+  audited_at?: string | null;
   /** Its team hides scores publicly (junior grassroots rules): metadata must not give the score away */
   score_hidden?: boolean;
   /** Its readable URL (see matchPath), once migration 20261117_match_slugs.sql has run */
@@ -159,7 +161,7 @@ export async function newsMissing(clubSlug: string, slug: string): Promise<boole
   return publicRowMissing(`news_articles?select=id&club_id=eq.${club.id}&slug=eq.${encodeURIComponent(slug)}&limit=1`);
 }
 
-const MATCH_COLUMNS = 'id,club_id,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round';
+const MATCH_COLUMNS = 'id,club_id,audited_at,home_team_name,away_team_name,home_score,away_score,status,competition,match_date,match_time,venue,ground_id,is_club_home,home_team_logo,away_team_logo,team_id,match_type,tournament_id,tournament_stage,tournament_round';
 /** MATCH_COLUMNS plus slug once the column exists */
 const matchColumns = async () => (await matchSlugsReady() ? `${MATCH_COLUMNS},slug` : MATCH_COLUMNS);
 
@@ -173,6 +175,26 @@ export async function findClubMatch(clubSlug: string, param: string): Promise<Ma
   const row = rows?.find(r => r.slug === param.toLowerCase()) || rows?.[0];
   if (!row) return null;
   return { ...row, score_hidden: matchScoreHidden(row, await hiddenScoreTeams(row.club_id)) };
+}
+
+/**
+ * Whether a finished match's report says more than its score: a goal scorer, a line-up or a Player of
+ * the Match was logged (reportReady in lib/match-report.ts). A bare score is a thin page, kept out of
+ * search until the club adds more. True when Supabase can't be asked, so a failed lookup never hides a page.
+ */
+export async function matchReportReady(matchId: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key || !UUID.test(matchId)) return true;
+  const [goals, lineups, motm] = await Promise.all([
+    publicRows<{ id: string }>(`match_events?select=id&match_id=eq.${matchId}&event_type=in.(goal,penalty,own_goal)&limit=1`),
+    publicRows<{ home_lineup_coords: unknown[] | null; away_lineup_coords: unknown[] | null }>(`matches?select=home_lineup_coords,away_lineup_coords&id=eq.${matchId}&limit=1`),
+    // public_match_motm (migration 20261165) answers with one id or null, not rows
+    fetch(`${url}/rest/v1/rpc/public_match_motm?p_match_id=${matchId}`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 30 } })
+      .then(res => (res.ok ? res.json() : undefined), () => undefined) as Promise<string | null | undefined>,
+  ]);
+  if (goals === null || lineups === null) return true;
+  return goals.length > 0 || !!lineups[0]?.home_lineup_coords?.length || !!lineups[0]?.away_lineup_coords?.length || !!motm;
 }
 
 /** A club's live and upcoming match fixtures, for schema.org SportsEvent markup */
@@ -563,7 +585,9 @@ async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
 
 export interface SitemapData {
   clubs: { id: string; slug: string; updated_at: string | null; config: { kind?: string } | null }[];
-  matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null }[];
+  matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null; is_audited: boolean | null; audited_at: string | null }[];
+  /** Matches with at least one goal scorer logged; empty when that couldn't be read */
+  goalMatchIds: Set<string>;
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
   news: { club_id: string; slug: string; published_at: string | null; updated_at: string | null }[];
@@ -579,9 +603,9 @@ export interface SitemapData {
 /** Everything the public can read that deserves a sitemap entry. Events are public-only by RLS. */
 export async function listSitemapData(): Promise<SitemapData> {
   const matchSlug = (await matchSlugsReady()) ? 'slug,' : '';
-  const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages] = await Promise.all([
+  const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages, goalRows] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
-    fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at&order=match_date.desc,id`),
+    fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at,is_audited,audited_at&order=match_date.desc,id`),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
     // Published only: a scheduled article joins the sitemap once its time comes
@@ -592,11 +616,14 @@ export async function listSitemapData(): Promise<SitemapData> {
     fetchRows<{ club_id: string }>('media_gallery?select=club_id&media_type=eq.image&order=id'),
     fetchRows<{ tournament_id: string }>('tournament_participants?select=tournament_id&order=id'),
     fetchRows<{ club_id: string }>('sponsorship_packages?select=club_id&is_active=eq.true&order=id'),
+    // ponytail: one row per goal; a distinct-match_id view if the log grows past this
+    fetchRows<{ match_id: string }>('match_events?select=match_id&event_type=in.(goal,penalty,own_goal)&order=id', 50000),
   ]);
   const teamCounts = new Map<string, number>();
   for (const p of participants) teamCounts.set(p.tournament_id, (teamCounts.get(p.tournament_id) || 0) + 1);
   return {
     clubs, matches, events, tournaments, news, teams,
+    goalMatchIds: new Set(goalRows.map(g => g.match_id)),
     shopClubIds: Array.from(new Set(products.map(p => p.club_id))),
     galleryClubIds: Array.from(new Set(photos.map(p => p.club_id))),
     sponsorClubIds: Array.from(new Set(packages.map(p => p.club_id))),

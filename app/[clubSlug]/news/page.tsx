@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { newsPath } from '@/lib/slugs';
 import { newestFirst } from '@/lib/news';
+import { matchReportCards } from '@/lib/match-article';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
@@ -15,7 +16,7 @@ const PAGE = 12;
 /** /club/news: every article the club has posted, newest first (the home page shows the latest few) */
 export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, news, isHydrated } = useClub();
+  const { clubs, selectClubBySlug, news, isHydrated, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   // The topic is in the URL (?topic=Juniors) so a filtered list can be shared
   const [topic, setTopic] = useUrlParam('topic');
@@ -23,7 +24,12 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
   const setTag = (t: string) => setTopic(t === 'all' ? '' : t);
   const [shown, setShown] = useState(PAGE);
 
-  const clubNews = useMemo(() => newestFirst(news.filter(n => n.club_id === club.id)), [news, club.id]);
+  // The club's own articles, plus each finished match's report (its card opens the match page)
+  const clubNews = useMemo(() => newestFirst([
+    ...news.filter(n => n.club_id === club.id).map(n => ({ ...n, href: newsPath(club.slug, n.slug) })),
+    ...matchReportCards({ club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events })
+      .map(r => ({ id: r.id, href: r.href, title: r.title, summary: r.summary, published_at: r.published_at, cover_image_url: r.cover, tags: ['Match Report'] })),
+  ]), [news, club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events]);
   // Tags used on at least two articles: one-off tags would just add noise
   const tags = useMemo(() => {
     const count = new Map<string, number>();
@@ -56,7 +62,7 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
         ) : (
           <div className="stack stack-sm">
             {filtered.slice(0, shown).map(article => (
-              <Link key={article.id} href={newsPath(club.slug, article.slug)} className="glass-panel glass-panel-interactive news-list-item">
+              <Link key={article.id} href={article.href} className="glass-panel glass-panel-interactive news-list-item">
                 <CoverImage
                   width={96} height={96}
                   src={article.cover_image_url || club.banner_url || undefined}

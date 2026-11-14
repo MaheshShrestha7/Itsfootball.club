@@ -14,12 +14,13 @@ const COLUMNS =
 
 interface MatchLike { club_id: string; ground_id?: string | null; pitch_label?: string | null; is_club_home: boolean; venue?: string | null }
 
-export default function GettingThere({ match }: { match: MatchLike }) {
+/** The fixture's ground guide, once loaded (null without one). Also used by the match report's ground link. */
+export function useMatchGround(match: MatchLike | undefined): GroundRow | null {
   const [ground, setGround] = useState<GroundRow | null>(null);
 
   useEffect(() => {
     const db = getSupabaseClient();
-    if (!db) return;
+    if (!db || !match) return;
     let stale = false;
     (async () => {
       let linked: GroundRow | null = null;
@@ -37,8 +38,12 @@ export default function GettingThere({ match }: { match: MatchLike }) {
       if (!stale) setGround(groundForMatch(match, linked, home));
     })().catch(() => {});
     return () => { stale = true; };
-  }, [match.ground_id, match.club_id, match.is_club_home, match.venue]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [match?.ground_id, match?.club_id, match?.is_club_home, match?.venue]); // eslint-disable-line react-hooks/exhaustive-deps
+  return ground;
+}
 
+export default function GettingThere({ match }: { match: MatchLike }) {
+  const ground = useMatchGround(match);
   if (!ground) return null;
   const council = groundCouncil(ground);
   const pitch = match.pitch_label && (ground.pitches || []).some(p => p.label === match.pitch_label) ? match.pitch_label : null;

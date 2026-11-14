@@ -14,6 +14,7 @@ import {
   Plus,
   Minus,
   CheckCircle2,
+  Circle,
   AlertCircle,
   Clock,
   Trash2,
@@ -54,7 +55,7 @@ import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, ful
 import { defaultSeasonLabel } from '@/lib/season';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { goalScoringSide, squadForMatch } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, goalScoringSide, publicScoreHidden, squadForMatch } from '@/lib/teams';
 import LocalTime from '@/components/LocalTime';
 import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
@@ -130,6 +131,7 @@ export default function AdminMatchCenterControllerPage({
     fixMatchStats,
     draftLineups,
     saveDraftLineup,
+    activityLogs,
   } = useClub();
   const { user } = useAuth();
   // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
@@ -720,6 +722,40 @@ export default function AdminMatchCenterControllerPage({
           </div>
         </section>
       )}
+
+      {/* The public match report: what it has to go on, and whether that is enough for a search result
+          (a bare score isn't: the match page stays out of search until a scorer, line-up or award is in) */}
+      {match.status === 'completed' && !publicScoreHidden(match, clubTeams) && (() => {
+        const has = [
+          ['Final score', true],
+          ['Goal scorers', events.some(e => GOAL_EVENT_TYPES.includes(e.event_type))],
+          ['Line-up', !!(match.home_lineup_coords?.length || match.away_lineup_coords?.length)],
+          // shortcut: read from the ClubScore log, so a club with ClubScore off shows this unticked; the public page checks the saved stats too
+          ['Player of the Match', activityLogs.some(l => l.event_type === 'match_motm' && l.reference_id === match.id)],
+        ] as const;
+        const ready = has.slice(1).some(([, ok]) => ok);
+        return (
+          <section className="glass-panel mc-report" aria-labelledby="mc-report-title">
+            <h3 id="mc-report-title">Match report <span className={`admin-pill ${ready ? 'is-ok' : 'is-warn'}`}>{ready ? 'In search' : 'Not in search yet'}</span></h3>
+            <ul>
+              {has.map(([label, ok]) => (
+                <li key={label} className={ok ? undefined : 'is-missing'}>
+                  {ok ? <CheckCircle2 size={16} aria-hidden="true" /> : <Circle size={16} aria-hidden="true" />}
+                  {label}<span className="sr-only">{ok ? ': in the report' : ': not logged'}</span>
+                </li>
+              ))}
+            </ul>
+            <p>
+              {ready
+                ? 'The report is on the match page and in club News. Search engines are told within the hour.'
+                : 'Add the goal scorers or the line-up and this report can show up in search. Fans can still see the page.'}
+            </p>
+            <Link href={matchPath(club.slug, match)} target="_blank" className="btn btn-secondary btn-sm touch-target">
+              <ExternalLink size={14} aria-hidden="true" /> See the report
+            </Link>
+          </section>
+        );
+      })()}
 
       {/* A finished match: edits here change the public result, so say so, and let the admin keep followers' phones quiet */}
       {match.status === 'completed' && (

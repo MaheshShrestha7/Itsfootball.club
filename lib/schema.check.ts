@@ -144,3 +144,10 @@ for (const slug of ['pitchero', 'pitchero-alternative', 'spond', 'spond-alternat
 
 console.log('schema checks passed');
 
+
+// A finished match with a report carries a NewsArticle about its own SportsEvent
+const reported = matchSchema(mockClub, { ...mockLiveMatch, status: 'completed', home_score: 3, away_score: 1 }, null, true) as { '@graph': any[] };
+const reportNode = reported['@graph'].find(n => n['@type'] === 'NewsArticle');
+assert.ok(reportNode, 'report node present');
+assert.equal(reportNode.about['@id'], reported['@graph'].find(n => n['@type'] === 'SportsEvent')['@id']);
+assert.ok(!(standaloneMatch['@graph'] as any[]).some(n => n['@type'] === 'NewsArticle'), 'no report node without a report');
