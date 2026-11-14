@@ -154,7 +154,7 @@ async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
   return items.filter((i): i is SponsorItem => !!i);
 }
 
-type SponsorItem = { img: HTMLImageElement | HTMLCanvasElement | null; name: string; top?: boolean };
+type SponsorItem = { img: HTMLImageElement | HTMLCanvasElement | null; name: string; top: boolean };
 
 /** The logo without its blank (white or see-through) margins, so it fills its tile: a small badge
  *  saved on a big white square otherwise shrinks to a dot. Scaled to 512px at most, plenty for a tile */
