@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Fragment } from 'react';
 import { isListedClub } from '@/lib/public-tournaments';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -254,7 +254,13 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 <span>Football.</span> <span>Community.</span> <span>Passion.</span>
               </h1>
 
-              <p className="lp-hero-tag">The complete football club operating system.</p>
+              {/* Words rise in one by one, then "operating system" gets a club-colour underline (CSS only, see .lp-tw) */}
+              <p className="lp-hero-tag">
+                {['The', 'complete', 'football', 'club'].map((w, i) => (
+                  <Fragment key={w}><span className="lp-tw" style={{ '--i': i } as React.CSSProperties}>{w}</span>{' '}</Fragment>
+                ))}
+                <span className="lp-tw lp-tag-os" style={{ '--i': 4 } as React.CSSProperties}>operating system.</span>
+              </p>
               <p className="lp-hero-sub">
                 Website, live match centre and member passes for grassroots clubs. Free.
               </p>

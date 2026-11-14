@@ -1147,3 +1147,19 @@ button.mw-role { background: transparent; font: inherit; font-weight: 600; font-
 .lp-hero-tag { font-family: var(--font-heading); font-weight: 700; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.2; letter-spacing: -0.02em; color: var(--text-primary); margin: 1.1rem 0 0.45rem; max-width: 26ch; text-wrap: balance; }
 [data-theme='light'] .lp-hero-tag { color: #0F172A; }
 @media (max-width: 1024px) { .lp-hero-tag { margin: 0; } }
+
+/* Tagline entrance: transform/opacity only (compositor), runs once on load */
+.lp-tw { display: inline-block; }
+.lp-tag-os { position: relative; color: var(--lp-p); transition: color 400ms var(--ease-out); }
+.lp-tag-os::after { content: ''; position: absolute; left: 0; right: 0.35em; bottom: -0.16em; height: 0.11em; border-radius: 99px; background: var(--lp-p); transform-origin: left; }
+@media (prefers-reduced-motion: no-preference) {
+  .lp-tw { animation: lp-tw-in 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(300ms + var(--i) * 80ms); }
+  .lp-tag-os::after { animation: lp-tw-line 700ms cubic-bezier(0.65, 0, 0.35, 1) 1050ms both; }
+}
+/* Reduced motion: a short fade, no movement */
+@media (prefers-reduced-motion: reduce) {
+  .lp-tw { animation: lp-tw-fade 200ms ease both; }
+}
+@keyframes lp-tw-in { from { opacity: 0; transform: translateY(0.55em); } }
+@keyframes lp-tw-line { from { transform: scaleX(0); } }
+@keyframes lp-tw-fade { from { opacity: 0; } }
