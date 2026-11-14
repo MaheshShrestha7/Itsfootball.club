@@ -206,7 +206,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
             <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '1.2rem' }}>
               {club
                 ? [sentence(club.motto), club.stadium_name ? `Home matches played at ${club.stadium_name}.` : ''].filter(Boolean).join(' ')
-                : 'The free platform for grassroots football and soccer clubs: club websites, live match centres, digital member passes and club shops.'}
+                : 'The complete football club operating system, free for grassroots football and soccer clubs.'}
             </p>
             {!club && (
               <div className="row" style={{ gap: '0.6rem' }}>

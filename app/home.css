@@ -1142,3 +1142,31 @@ button.mw-role { background: transparent; font: inherit; font-weight: 600; font-
   .rc-title { font-size: 1.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .rc-dialog[open] { animation: none; } }
+
+/* Tagline under the headline: the plain "what it is" line, sentence below stays specific */
+.lp-hero-tag { font-family: var(--font-heading); font-weight: 700; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.2; letter-spacing: -0.02em; color: var(--text-primary); margin: 1.1rem 0 0.45rem; max-width: 26ch; text-wrap: balance; }
+[data-theme='light'] .lp-hero-tag { color: #0F172A; }
+@media (max-width: 1024px) { .lp-hero-tag { margin: 0; } }
+
+/* Tagline entrance: transform/opacity only (compositor), runs once on load */
+.lp-tw { display: inline-block; }
+.lp-tag-os { position: relative; color: var(--lp-p); transition: color 400ms var(--ease-out); }
+.lp-tag-os::after { content: ''; position: absolute; left: 0; right: 0.35em; bottom: -0.16em; height: 0.11em; border-radius: 99px; background: var(--lp-p); transform-origin: left; }
+@media (prefers-reduced-motion: no-preference) {
+  /* Headline first: each word rises out of its own baseline, then the tagline follows */
+  .lp-h1-stack span { animation: lp-h1-in 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .lp-h1-stack span:nth-child(2) { animation-delay: 130ms; }
+  .lp-h1-stack span:nth-child(3) { animation-delay: 260ms; }
+  .lp-tw { animation: lp-tw-in 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(650ms + var(--i) * 80ms); }
+  .lp-tag-os::after { animation: lp-tw-line 700ms cubic-bezier(0.65, 0, 0.35, 1) 1400ms both; }
+}
+/* inline words can't take a transform; inline-block wraps the same way */
+@media (max-width: 1024px) { .lp-h1-stack span { display: inline-block; } }
+/* Reduced motion: a short fade, no movement */
+@media (prefers-reduced-motion: reduce) {
+  .lp-tw, .lp-h1-stack span { animation: lp-tw-fade 200ms ease both; }
+}
+@keyframes lp-tw-in { from { opacity: 0; transform: translateY(0.55em); } }
+@keyframes lp-tw-line { from { transform: scaleX(0); } }
+@keyframes lp-tw-fade { from { opacity: 0; } }
+@keyframes lp-h1-in { from { transform: translateY(100%); clip-path: inset(0 -5% 100% -5%); } to { transform: none; clip-path: inset(-10% -5% -25% -5%); } }
