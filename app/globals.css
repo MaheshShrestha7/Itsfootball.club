@@ -2444,6 +2444,87 @@ textarea {
   .scoreboard-team-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
+/* ---- Public match page: the stadium board (components/StadiumBoard.tsx). A physical object, so it
+   stays black in light and dark; the score is drawn in bold 5x7 lamps with a lamp dash between ---- */
+.stb {
+  --stb-bg: #07090C; --stb-frame: #1B222C; --stb-frame-hi: #2A3340;
+  --stb-lamp-on: #FFB81C; --stb-lamp-off: rgba(255, 184, 28, 0.09); --stb-glow: rgba(255, 184, 28, 0.45);
+  --stb-ink: #F5F7FA; --stb-soft: #A9B2BF; --stb-rule: rgba(255, 255, 255, 0.1); --stb-live: #FF4D4F;
+  --lamp: 7px; --lamp-gap: 2px;
+  position: relative;
+  margin-bottom: 2.5rem;
+  background: var(--stb-bg);
+  border: 5px solid var(--stb-frame);
+  border-radius: 14px;
+  color: var(--stb-ink);
+  box-shadow: 0 0 0 1px var(--stb-frame-hi), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.stb a { color: inherit; text-decoration: underline; text-underline-offset: 4px; }
+.stb a:focus-visible { outline: 2px solid var(--stb-lamp-on); outline-offset: 3px; border-radius: 3px; }
+.stb-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 1rem; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--stb-rule);
+  font: 700 0.78rem var(--font-heading); letter-spacing: 0.08em; text-transform: uppercase; color: var(--stb-lamp-on); }
+.stb-top a { text-decoration-color: rgba(255, 184, 28, 0.4); }
+.stb-field { position: relative; }
+.stb-main { margin: 0; font: inherit; color: var(--stb-ink); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 0.5rem; padding: 1.15rem 0.6rem 1rem; }
+.stb-team { display: grid; justify-items: center; gap: 0.55rem; text-align: center; min-width: 0; }
+.stb-crest { width: 52px; aspect-ratio: 1; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; overflow: hidden; }
+.stb-crest img { width: 100%; height: 100%; object-fit: contain; }
+.stb-crest span { font: 800 0.9rem var(--font-heading); color: var(--stb-frame); }
+.stb-name { font: 800 1rem/1.15 var(--font-heading); text-transform: uppercase; letter-spacing: 0.03em; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.stb-bar { width: 36px; height: 4px; background: var(--side); }
+.stb-centre { display: grid; justify-items: center; gap: 0.65rem; }
+.stb-lamps { display: flex; align-items: center; gap: calc(var(--lamp) * 1.5); padding: calc(var(--lamp) * 0.8); background: #0C1015; border: 1px solid var(--stb-rule); border-radius: 6px; }
+.stb-lamps.is-small { --lamp: 5px; --lamp-gap: 2px; gap: calc(var(--lamp) * 1.2); }
+.stb-glyph { display: grid; gap: var(--lamp-gap); }
+.stb-glyph i { width: var(--lamp); height: var(--lamp); border-radius: 50%; background: var(--stb-lamp-off); transition: background-color 90ms linear, box-shadow 90ms linear; }
+.stb-glyph i.on { background: var(--stb-lamp-on); box-shadow: 0 0 calc(var(--lamp) * 0.75) var(--stb-glow); }
+/* After a goal, the new number relights white-hot, then settles to amber */
+.stb-glyph.is-hot i.on { background: #FFF6D6; box-shadow: 0 0 calc(var(--lamp) * 1.4) var(--stb-lamp-on), 0 0 calc(var(--lamp) * 0.5) #FFFFFF; }
+.stb-suffix { align-self: flex-end; font: 700 0.8rem var(--font-heading); text-transform: uppercase; letter-spacing: 0.08em; color: var(--stb-lamp-on); }
+.stb-word { font: 900 1.2rem/1 var(--font-heading); text-transform: uppercase; letter-spacing: 0.06em; color: var(--stb-lamp-on); padding: 0.5rem 0.25rem; white-space: nowrap; }
+.stb-state { display: inline-flex; align-items: center; gap: 0.45rem; font: 700 0.78rem var(--font-heading); letter-spacing: 0.08em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.stb-state.is-live { color: var(--stb-live); }
+.stb-state.is-live::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--stb-live); box-shadow: 0 0 8px rgba(255, 77, 79, 0.5); }
+.stb-pens { font-size: 0.8rem; font-weight: 700; color: var(--stb-lamp-on); white-space: nowrap; }
+.stb-goals { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; padding: 0 0.9rem 1rem; }
+.stb-goals ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.15rem; align-content: start; font-size: 0.8rem; color: var(--stb-soft); }
+.stb-goals .is-home { text-align: left; } .stb-goals .is-away { text-align: right; }
+.stb-goals .player-name-link { color: var(--stb-ink); }
+.stb-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem 1.25rem; padding: 0.7rem 0.9rem; margin: 0; border-top: 1px solid var(--stb-rule); font-size: 0.85rem; color: var(--stb-soft); }
+.stb-base div { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.stb-base dd { margin: 0; }
+.stb-base a { color: var(--stb-ink); font-weight: 600; text-decoration-color: rgba(255, 255, 255, 0.35); }
+.stb.is-live { border-color: color-mix(in srgb, var(--stb-live) 45%, var(--stb-frame)); }
+/* The goal sequence's lamp screen, laid over the board's middle */
+.stb-fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; background: var(--stb-bg); opacity: 0; }
+.stb-fx.is-on { opacity: 1; }
+.stb-fx.is-out { opacity: 0; transition: opacity 260ms ease-out; }
+
+@media (min-width: 820px) {
+  .stb { --lamp: 14px; --lamp-gap: 3px; border-width: 8px; border-radius: 18px; }
+  .stb-top { padding: 0.9rem 1.6rem; font-size: 0.85rem; }
+  .stb-base { padding: 0.85rem 1.6rem; font-size: 0.9rem; }
+  .stb-main { align-items: center; gap: 1.75rem; padding: 2rem 1.6rem 1.75rem; }
+  .stb-team { grid-template-columns: auto auto; column-gap: 1.1rem; align-items: center; }
+  .stb-team.is-home { justify-content: end; text-align: right; }
+  .stb-team.is-home .stb-crest { grid-column: 2; grid-row: 1; }
+  .stb-team.is-home .stb-name { grid-column: 1; grid-row: 1; }
+  .stb-team.is-away { justify-content: start; text-align: left; }
+  .stb-bar { display: none; }
+  .stb-name { font-size: 1.45rem; border-bottom: 4px solid var(--side); padding-bottom: 0.3rem; }
+  .stb-crest { width: 76px; }
+  .stb-crest span { font-size: 1.2rem; }
+  .stb-lamps.is-small { --lamp: 8px; --lamp-gap: 3px; }
+  .stb-word { font-size: 2.6rem; }
+  .stb-state { font-size: 0.85rem; }
+  .stb-goals { padding: 0 1.6rem 1.25rem; font-size: 0.9rem; }
+  .stb-goals .is-home { text-align: right; padding-right: 9rem; } .stb-goals .is-away { text-align: left; padding-left: 9rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stb-glyph i, .stb-fx.is-out { transition: none; }
+  .stb-fx { display: none; }
+}
+
 /* ==============================================================================
    Confirmation dialog (components/ConfirmDialog.tsx): replaces window.confirm/alert
    ============================================================================== */
