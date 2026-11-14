@@ -347,8 +347,10 @@ export default function MatchCenterPage({
   const lineupAnnounced = lineupSides.some(({ side }) => ((side === 'home' ? match.home_lineup_coords : match.away_lineup_coords) || []).length > 0);
   const previousMeeting = preMatch ? lastMeeting(match, matches.filter(m => m.club_id === club.id)) : undefined;
   const cancelled = match.status === 'cancelled';
-  const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
-  const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
+  // After kick-off too, Lineups only shows when there's a line-up or someone said they're in: an empty pitch says nothing
+  const hasLineupTab = lineupAnnounced || lineupSides.some(s => s.players.length > 0);
+  const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', ...(hasLineupTab ? ['lineups'] : []), 'stats'];
+  const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab === 'lineups' && !hasLineupTab ? 'timeline' : activeTab;
 
   // The full-time report, written as an article
   const reportCup = match.event_id ? clubEvents.find(e => e.id === match.event_id && e.club_id === match.club_id) : undefined;
@@ -406,7 +408,12 @@ export default function MatchCenterPage({
             <span>{(side === 'home' ? homeShort : awayShort).slice(0, 4)}</span>
           )}
         </span>
-        <span className="stb-name">{name}</span>
+        {/* A word too long for the phone column ("Marrickville") would break mid-word, so phones get the short name then */}
+        <span className="stb-name" title={name}>
+          {name.split(/\s+/).some(w => w.length > 9)
+            ? <><span className="team-name-full">{name}</span><span className="team-name-short">{side === 'home' ? homeShort : awayShort}</span></>
+            : name}
+        </span>
         <span className="stb-bar" aria-hidden="true" />
       </span>
     );
@@ -797,7 +804,7 @@ export default function MatchCenterPage({
                       height: '42px',
                       borderRadius: '50%',
                       background: isGoal ? 'var(--club-primary)' : evt.event_type === 'yellow_card' ? '#F59E0B' : evt.event_type === 'red_card' ? '#EF4444' : 'var(--bg-surface-elevated)',
-                      border: '2px solid rgba(255, 255, 255, 0.2)',
+                      border: isGoal || evt.event_type === 'yellow_card' || evt.event_type === 'red_card' ? '2px solid rgba(255, 255, 255, 0.2)' : '1px solid var(--border-medium)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -806,7 +813,8 @@ export default function MatchCenterPage({
                       // Stoppage minutes ("45+3'") need a smaller size to fit the circle
                       fontSize: evt.added_minute ? '0.68rem' : '0.9rem',
                       flexShrink: 0,
-                      color: evt.event_type === 'yellow_card' ? '#000000' : '#FFFFFF',
+                      // The plain circle is white in light mode, so its minute takes the theme's text colour
+                      color: evt.event_type === 'yellow_card' ? '#000000' : isGoal || evt.event_type === 'red_card' ? '#FFFFFF' : 'var(--text-primary)',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
                     }}>
                       {eventMinuteLabel(evt)}&apos;
