@@ -36,9 +36,22 @@ export interface ArticleInput {
   seasonGoals?: Record<string, number>;
   /** The club's outright top scorer this season, by name */
   topScorer?: string;
+  /** "8:00 am" */
+  kickoff?: string;
+  /** Players a side, when it isn't 11 */
+  aSide?: number;
+  /** Our starting side */
+  lineup?: { starters: string[]; captain?: string; keeper?: string };
+  /** This game's place among the team's games that day: [2, 3] is the second of three */
+  gameOfDay?: [number, number];
+  /** The team's other finished games on the same day, in kick-off order */
+  sameDay?: { opponent: string; ourScore: number; theirScore: number; href?: string; later: boolean }[];
   /** The team's season so far, this match included */
-  record?: { played: number; won: number };
+  record?: { played: number; won: number; drawn: number; lost: number; goalsFor?: number; goalsAgainst?: number };
+  /** The team's earlier games against this opponent */
+  meetings?: { played: number; won: number; drawn: number; lost: number };
   lastMeeting?: { home: string; away: string; homeScore: number; awayScore: number; /** "14 June" */ date: string; href?: string };
+  /** The team's next game that hasn't been played yet */
   next?: { opponent: string; competition?: string; /** "at 1:00 pm on Saturday 22 November", or "on Saturday 22 November" with no kick-off time */ when: string; venue?: string; href?: string };
   /** The shootout score of a level cup game */
   shootout?: { home: number; away: number };
@@ -58,6 +71,9 @@ const num = (n: number) => WORDS[n] ?? String(n);
 const ord = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
 const ordWord = (n: number) => ORDINAL_WORDS[n] || ord(n);
 const list = (items: string[]) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+const plural = (n: number, one: string, many = `${one}s`) => `${num(n)} ${n === 1 ? one : many}`;
+/** "two wins, one draw and three defeats" */
+const outcomes = (w: number, d: number, l: number) => list([w && plural(w, 'win'), d && plural(d, 'draw'), l && plural(l, 'defeat')].filter((x): x is string => !!x));
 const times = (n: number) => (n === 2 ? 'twice' : n === 3 ? 'a hat-trick' : num(n));
 
 /** What makes a report worth a search result: more than a bare score */
@@ -81,7 +97,7 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
   // A goal with no scorer picked is saved as "<Team> Player": the team scored, nobody is named
   const known = (player: string | undefined, side: Side) => !!player?.trim() && player.trim() !== `${name(side)} Player`;
   // Full name the first time, surname after that. A junior's "Sam T." and a shared surname stay whole.
-  const everyone = [...r.goals.flatMap(g => [g.player, g.assist]), ...r.subs.flatMap(s => [s.on, s.off]), ...r.yellows.map(c => c.player), ...r.reds.map(c => c.player), r.playerOfTheMatch]
+  const everyone = [...(r.lineup?.starters || []), ...r.goals.flatMap(g => [g.player, g.assist]), ...r.subs.flatMap(s => [s.on, s.off]), ...r.yellows.map(c => c.player), ...r.reds.map(c => c.player), r.playerOfTheMatch]
     .filter((n): n is string => !!n?.trim()).map(n => n.trim());
   const surname = (n: string) => n.trim().split(/\s+/).at(-1)!;
   const short = (n: string) => {
@@ -103,6 +119,10 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
   const complete = logged('home') === hs && logged('away') === as;
   const half = r.halfMinutes;
   const period = (minute: number) => (minute <= half ? 1 : minute <= half * 2 ? 2 : 3);
+  // A minute past full time (a 46th-minute goal in a 2 x 12 game) means the clock wasn't the match clock:
+  // the order still stands, the minutes and the half-time score don't
+  const inTime = (minute: number) => minute >= 0 && minute <= half * 2;
+  const timed = goals.every(g => inTime(g.minute));
   const halfTime = { home: goals.filter(g => period(g.minute) === 1 && scoredFor(g) === 'home').length, away: goals.filter(g => period(g.minute) === 1 && scoredFor(g) === 'away').length };
 
   const stage = r.stage?.toLowerCase();
@@ -140,16 +160,18 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
     lead += scoredFor(g) === 'home' ? 1 : -1;
     if (before === 0) decider = g;
   }
-  const turning = !!our && weWon && complete && halfTime.home === halfTime.away && !!decider && period(decider.minute) === 2 && scoredFor(decider) === our;
+  const turning = timed && !!our && weWon && complete && halfTime.home === halfTime.away && !!decider && period(decider.minute) === 2 && scoredFor(decider) === our;
 
   const pool: ArticleStyle[] = ['result'];
   if (our && weWon && r.record && r.record.won >= 2 && r.record.played >= 3) pool.push('season');
-  if (our && r.next) pool.push('next');
+  // Not when the team played again later that day: the story of the day comes first
+  if (our && r.next && !r.sameDay?.some(g => g.later)) pool.push('next');
   const seed = [...r.id].reduce((n, c) => n + c.charCodeAt(0), 0);
   const style: ArticleStyle = !our ? 'result' : starGoals >= 2 ? 'player' : turning ? 'turning' : pool[seed % pool.length];
 
   let headline: string;
   let leadText: string;
+  let only = false;
   if (style === 'player') {
     const scores = starGoals === 3 ? 'scores a hat-trick' : `scores ${times(starGoals)}`;
     headline = `${short(star)} ${scores} ${draw ? `in ${us}'s ${hs}-${as} draw with ${them}` : weWon ? `as ${us} beat ${them} ${hi}-${lo}` : `but ${us} lose ${hi}-${lo} to ${them}`}`;
@@ -170,16 +192,39 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
     leadText = `${us} will play ${link(r.next.opponent, r.next.href)}${r.next.competition ? ` in the ${r.next.competition}` : ''} ${r.next.when} after ${after}${inComp(true)}.`;
   } else {
     headline = `${resultHeadline}${plainText(inComp(false))}`;
-    const only = hi + lo === 1 && goals.length === 1 && known(goals[0].player, goals[0].side) && !goals[0].ownGoal;
+    only = hi + lo === 1 && goals.length === 1 && known(goals[0].player, goals[0].side) && !goals[0].ownGoal;
     leadText = `${result}${where}${when}.${starGoals >= 2 ? ` ${nm(star)} scored ${times(starGoals)}.` : only ? ` ${nm(goals[0].player)} scored the only goal.` : ''}`;
   }
   leadText += penalties;
 
   const paragraphs: string[] = [];
+  // A line of colour that follows from the score alone (the owner allows this as long as nothing logged
+  // contradicts it): one of two wordings per kind of result, fixed per match
+  if (our) {
+    const spell = r.partOfDay || 'day';
+    const margin = hi - lo;
+    const pick = (a: string, b: string) => (seed % 2 ? a : b);
+    paragraphs.push(draw
+      ? hi === 0 ? pick('Both defences were on top and neither side could find a goal.', `Chances were hard to come by at both ends, and ${us} and ${them} finished without a goal between them.`)
+        : pick('Neither side could find a winner before the final whistle.', `${us} and ${them} could not be separated.`)
+      : weWon
+        ? margin >= 3 ? pick(`${us} were on top for most of the game and the scoreline showed it.`, `It was a comfortable ${spell} for ${us}, who kept ${them} at arm's length.`)
+          : margin === 2 ? pick(`${us} had the better of the chances and made them count.`, `${them} kept working, but ${us} had a little more in front of goal.`)
+          : pick(`It stayed tight to the final whistle, and ${us} did enough to see it out.`, 'There was little between the sides, and one goal was the difference.')
+        : margin >= 3 ? (lo === 0 ? pick(`It was a hard ${spell} for ${us}, who could not find a way through.`, `${them} took their chances and ${us} had no answer on the day.`)
+            : pick(`It was a hard ${spell} for ${us} against a side that took its chances.`, `${them} took their chances and ${us} were left chasing the game.`))
+          : margin === 2 ? pick(`${us} had spells in the game, but ${them} were sharper in front of goal.`, `${us} kept going to the end, but the gap was too much to close.`)
+          : pick(`It was close throughout, and ${us} were left a goal short at the final whistle.`, `${us} pushed for an equaliser late on, but it did not come.`));
+    // No scorers logged: the score itself is the only account of the goals
+    if (!goals.length && hi > 0 && !draw) {
+      const [winners, wonBy] = weWon ? [us, 'kept a clean sheet'] : [them, 'did not concede'];
+      paragraphs[0] += ` ${winners} scored ${hi === 1 ? 'once' : hi === 2 ? 'twice' : `${num(hi)} times`} and ${lo === 0 ? wonBy : `conceded ${lo === 1 ? 'once' : lo === 2 ? 'twice' : `${num(lo)} times`}`}.`;
+    }
+  }
   const full = half * 2;
   const minutePhrase = (g: { minute: number; added?: number }, i: number, last: boolean) => {
+    if (!timed) return '';
     const p = period(g.minute);
-    if (p === 3) return 'in extra time';
     if (g.added) return p === 1 ? 'in first-half stoppage time' : 'in stoppage time';
     if (last && p === 2 && full - g.minute <= 5) return full - g.minute < 1 ? 'in the final minute' : `${num(full - g.minute)} minute${full - g.minute === 1 ? '' : 's'} from the end`;
     if (i === 0) return g.minute <= 1 ? 'in the first minute' : `after ${g.minute} minutes`;
@@ -192,6 +237,7 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
     const score = { home: 0, away: 0 };
     const led = { home: false, away: false };
     const halves: string[][] = [[], []];
+    const told: string[] = [];
     goals.forEach((g, i) => {
       const side = scoredFor(g);
       const [mine, theirs] = [score[side], score[other(side)]];
@@ -206,8 +252,13 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
       score[side]++;
       if (score[side] > score[other(side)]) led[side] = true;
       const assist = g.assist?.trim() && !g.ownGoal ? (i % 2 ? `, with ${nm(g.assist)} assisting` : `, set up by ${nm(g.assist)}`) : '';
-      halves[period(g.minute) === 1 ? 0 : 1].push(`${who || team} ${did}${g.penalty ? ' with a penalty' : ''} ${minutePhrase(g, i, i === goals.length - 1)}${assist}`);
+      const at = minutePhrase(g, i, i === goals.length - 1);
+      // The lead has already named the scorer of the only goal
+      const sentence = only ? (at || assist ? `The goal${g.penalty ? ', a penalty,' : ''} came${at ? ` ${at}` : ''}${assist}` : '')
+        : `${who || team} ${did}${g.penalty ? ' with a penalty' : ''}${at ? ` ${at}` : ''}${assist}`;
+      if (sentence) (timed ? halves[period(g.minute) === 1 ? 0 : 1] : told).push(sentence);
     });
+    if (told.length) paragraphs.push(`${told.join('. ')}.`);
     if (halves[0].length) {
       const last = halves[0].pop()!;
       const [most, least] = [Math.max(halfTime.home, halfTime.away), Math.min(halfTime.home, halfTime.away)];
@@ -224,15 +275,42 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
       const all = [...by.values()].reduce((a, b) => a + b, 0) === (side === 'home' ? hs : as);
       paragraphs.push(all ? `${name(side)}'s goals came from ${names}.` : `${names} ${by.size > 1 ? 'were' : 'was'} among the scorers for ${name(side)}.`);
     }
-  } else if (total > 0) {
-    paragraphs.push('Goal details weren’t logged for this match.');
+  }
+
+  // When and how the game was played, and where it fell in the team's day
+  const setting: string[] = [];
+  const at = r.venue && style !== 'result' && style !== 'season' ? ` at ${link(r.venue, r.links?.venue)}` : '';
+  const length = half !== 45 || r.aSide ? `${r.aSide ? `${num(r.aSide)}-a-side` : ''}` : null;
+  if (r.kickoff && length !== null) {
+    setting.push(seed % 2
+      ? `The game kicked off at ${r.kickoff}${at} and was played over two ${half}-minute halves${length ? `, ${length}` : ''}.`
+      : `Kick-off was at ${r.kickoff}${at}. The game was ${length ? `${length}, with` : 'played over'} two ${half}-minute halves.`);
+  } else if (r.kickoff) setting.push(`${seed % 2 ? 'The game kicked off' : 'Kick-off was'} at ${r.kickoff}${at}.`);
+  else if (length !== null) setting.push(`The game was played${at} over two ${half}-minute halves${length ? `, ${length}` : ''}.`);
+  else if (at) setting.push(`The game was played${at}.`);
+  if (our && r.gameOfDay && r.gameOfDay[1] > 1) setting.push(`It was the ${ordWord(r.gameOfDay[0])} of ${us}'s ${num(r.gameOfDay[1])} games on the day.`);
+  if (setting.length) paragraphs.push(setting.join(' '));
+
+  // Who started
+  if (our && r.lineup?.starters.length) {
+    const { captain, keeper } = r.lineup;
+    const replaced = !!keeper && r.subs.some(s => s.side === our && s.off?.trim() === keeper.trim());
+    const clean = (our === 'home' ? as : hs) === 0 && !!keeper && !replaced;
+    const rest = r.lineup.starters.filter(n => n.trim() && n !== captain && n !== keeper);
+    const side: string[] = [];
+    if (captain && captain === keeper) side.push(`${nm(captain)} captained ${us} from goal${clean ? ' and kept a clean sheet' : ''}.`);
+    else if (captain && keeper) side.push(clean ? `${nm(captain)} captained ${us} and ${nm(keeper)} kept a clean sheet in goal.` : `${nm(captain)} captained ${us}, with ${nm(keeper)} in goal.`);
+    else if (captain) side.push(`${nm(captain)} captained ${us}.`);
+    else if (keeper) side.push(`${nm(keeper)} ${clean ? `kept a clean sheet in goal for ${us}` : `was in goal for ${us}`}.`);
+    if (rest.length) side.push(side.length ? `${list(rest.map(nm))} ${rest.length > 1 ? 'also started' : 'started too'}.` : `${us} started with ${list(rest.map(nm))}.`);
+    paragraphs.push(side.join(' '));
   }
 
   // The bench and the bookings, for our own side
   const bench: string[] = [];
   if (our) {
     const subs = r.subs.filter(s => s.side === our && s.on.trim()).sort((a, b) => a.minute - b.minute);
-    if (subs.length === 1) bench.push(`${nm(subs[0].on)} came on${subs[0].off?.trim() ? ` for ${nm(subs[0].off)}` : ''} in the ${ord(subs[0].minute)} minute.`);
+    if (subs.length === 1) bench.push(`${nm(subs[0].on)} came on${subs[0].off?.trim() ? ` for ${nm(subs[0].off)}` : ''}${inTime(subs[0].minute) ? ` in the ${ord(subs[0].minute)} minute` : ''}.`);
     else if (subs.length > 4) bench.push(`${us} made ${num(subs.length)} substitutions.`);
     else if (subs.length) bench.push(`${list(subs.map(s => nm(s.on)))} ${subs.length === 2 ? 'both ' : ''}came off the bench${subs.every(s => period(s.minute) === 2) ? ' in the second half' : ''}.`);
     const booked = r.yellows.filter(c => c.side === our && c.player.trim());
@@ -240,7 +318,7 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
     else if (booked.length > 3) bench.push(`${us} had ${num(booked.length)} players booked.`);
     else if (booked.length) bench.push(`${list(booked.map(c => nm(c.player)))} were booked.`);
   }
-  for (const c of r.reds) if (c.player.trim()) bench.push(`${nm(c.player)} was sent off${our && c.side === our ? '' : ` for ${name(c.side)}`} in the ${ord(c.minute)} minute.`);
+  for (const c of r.reds) if (c.player.trim()) bench.push(`${nm(c.player)} was sent off${our && c.side === our ? '' : ` for ${name(c.side)}`}${inTime(c.minute) ? ` in the ${ord(c.minute)} minute` : ''}.`);
   if (bench.length) paragraphs.push(bench.join(' '));
 
   // Player of the Match and the season's goal tallies (only once the stats are saved)
@@ -259,11 +337,35 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
   }
   if (players.length) paragraphs.push(players.join(' '));
 
+  // The team's other games that day
+  const day = our ? r.sameDay || [] : [];
+  if (day.length) {
+    const told = (g: (typeof day)[number]) => link(g.ourScore > g.theirScore ? `beat ${g.opponent} ${g.ourScore}-${g.theirScore}`
+      : g.ourScore === g.theirScore ? `drew ${g.ourScore}-${g.theirScore} with ${g.opponent}` : `lost ${g.theirScore}-${g.ourScore} to ${g.opponent}`, g.href);
+    const [before, later] = [day.filter(g => !g.later), day.filter(g => g.later)];
+    const lines: string[] = [];
+    if (before.length) lines.push(`Earlier in the day ${us} ${list(before.map(told))}.`);
+    if (later.length) lines.push(`Later in the day ${before.length ? 'they' : us} ${list(later.map(told))}.`);
+    if (day.length >= 2 && r.gameOfDay?.[1] === day.length + 1) {
+      const all = [...day, { ourScore: our === 'home' ? hs : as, theirScore: our === 'home' ? as : hs }];
+      const count = (f: (g: { ourScore: number; theirScore: number }) => boolean) => all.filter(f).length;
+      lines.push(`They finished the day with ${outcomes(count(g => g.ourScore > g.theirScore), count(g => g.ourScore === g.theirScore), count(g => g.ourScore < g.theirScore))}.`);
+    }
+    paragraphs.push(lines.join(' '));
+  }
+
   // The season so far and the last time these two met
   const context: string[] = [];
-  if (our && r.record && r.record.played >= 3 && style !== 'season') {
-    if (weWon && r.record.won >= 2) context.push(`That is ${num(r.record.won)} wins from ${num(r.record.played)} for ${us} this season.`);
-    else if (r.record.won >= 1) context.push(`${us} have won ${num(r.record.won)} of their ${num(r.record.played)} games this season.`);
+  const rec = r.record;
+  if (our && rec && rec.played >= 2) {
+    const scored = rec.goalsFor != null && rec.goalsAgainst != null ? `${num(rec.goalsFor)} goal${rec.goalsFor === 1 ? '' : 's'} scored and ${num(rec.goalsAgainst)} conceded` : '';
+    if (style === 'season') { if (scored) context.push(`${us} have ${scored} this season.`); }
+    else context.push(`${us}'s record this season is ${outcomes(rec.won, rec.drawn, rec.lost)} from ${num(rec.played)} games${scored ? `, with ${scored}` : ''}.`);
+  }
+  const h = r.meetings;
+  if (our && h && h.played >= 2) {
+    const parts = [h.won && `won ${num(h.won)}`, h.drawn && `drawn ${num(h.drawn)}`, h.lost && `lost ${num(h.lost)}`].filter((x): x is string => !!x);
+    context.push(`${context.length ? 'They' : us} have ${parts.length === 1 ? `${parts[0].split(' ')[0]} ${h.played === 2 ? 'both' : `all ${num(h.played)}`}` : `${list(parts)}`} of their ${parts.length === 1 ? '' : `${num(h.played)} `}earlier games against ${them}.`);
   }
   const m = r.lastMeeting;
   if (m) {
@@ -275,7 +377,7 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
   if (context.length) paragraphs.push(context.join(' '));
 
   if (our && r.next && style !== 'next') {
-    paragraphs.push(`Next for ${us} is ${link(r.next.opponent, r.next.href)}${r.next.competition ? ` in the ${r.next.competition}` : ''}, ${r.next.when}${r.next.venue ? ` at ${r.next.venue}` : ''}.`);
+    paragraphs.push(`${seed % 2 ? `Next for ${us} is` : `${us} are back in action against`} ${link(r.next.opponent, r.next.href)}${r.next.competition ? ` in the ${r.next.competition}` : ''}, ${r.next.when}${r.next.venue ? ` at ${r.next.venue}` : ''}.`);
   }
 
   return { style, headline, lead: leadText, paragraphs };
