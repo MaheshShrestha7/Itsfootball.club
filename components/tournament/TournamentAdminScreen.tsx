@@ -10,12 +10,13 @@ import TournamentMatchesList from '@/components/tournament/TournamentMatchesList
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
+import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 
 // Inline and on the app's own tokens, not the admin's classes: this screen also shows on
 // /tournaments/{slug}/manage, outside the admin shell (inside it, the shell re-points these tokens)
@@ -44,6 +45,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     members,
     updateTournament,
   } = useClub();
+  const reviewsReady = useMatchReviewsReady();
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
@@ -188,6 +190,12 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             <span>{isEvent ? 'Public page' : 'Spectator hub'}</span>
             <ExternalLink size={13} aria-hidden="true" />
           </Link>
+          {reviewsReady && !isEvent && tourneyMatches.some(m => m.status === 'completed') && (
+            <Link href={`/${club.slug}/admin/match-center/cup-review?tournament=${tournament.id}`} className="btn btn-sm btn-secondary" style={actionBtn} title="Every game's match review together (coaches and admins only)">
+              <NotebookPen size={14} aria-hidden="true" />
+              <span>Review</span>
+            </Link>
+          )}
           <button type="button" onClick={() => setEditOpen(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Edit name, dates, venue, cover, format and teams">
             <Pencil size={14} aria-hidden="true" />
             <span>Edit</span>

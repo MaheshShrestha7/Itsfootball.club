@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Link2, Plus, Unlink, X } from 'lucide-react';
+import { Link2, NotebookPen, Plus, Unlink, X } from 'lucide-react';
 import PopupPanel from '@/components/PopupPanel';
 import { newItemHref } from '@/lib/admin-calendar';
 import { formatClock, formatShortDay } from '@/lib/dates';
 import { hasKickoffTime, soonestFirst } from '@/lib/fixtures';
 import type { ClubEvent, Match } from '@/lib/supabase/types';
+import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 
 /** How far back "Link a fixture" looks: a cup's earlier rounds may already be played */
 const RECENT_DAYS = 60;
@@ -54,6 +55,7 @@ export default function EventFixturesModal({ event, clubSlug, matches, onLink, o
       .filter(m => !m.event_id && !m.tournament_id && m.match_type !== 'internal' && new Date(m.match_date).getTime() >= since)
       .sort(soonestFirst);
   }, [matches]);
+  const reviewsReady = useMatchReviewsReady();
   const [pick, setPick] = useState('');
   const picked = linkable.find(m => m.id === pick) || linkable[0];
 
@@ -109,6 +111,12 @@ export default function EventFixturesModal({ event, clubSlug, matches, onLink, o
         <Link href={addHref} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem', justifyContent: 'center' }}>
           <Plus size={14} aria-hidden="true" /> Add new fixture to this event
         </Link>
+        {/* Once a game is played: every game's review together (coaches and admins only) */}
+        {reviewsReady && linked.some(m => m.status === 'completed') && (
+          <Link href={`/${clubSlug}/admin/match-center/cup-review?event=${event.id}`} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem', justifyContent: 'center' }}>
+            <NotebookPen size={14} aria-hidden="true" /> Review of the games
+          </Link>
+        )}
       </PopupPanel>
     </div>
   );
