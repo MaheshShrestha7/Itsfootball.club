@@ -41,6 +41,7 @@ import {
   Megaphone,
   AlertTriangle,
   Share2,
+  PenLine,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -59,6 +60,7 @@ import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtur
 import { matchPath } from '@/lib/slugs';
 import PopupPanel from '@/components/PopupPanel';
 import MatchEventSheet, { type SheetMode, type SheetResult } from '@/components/admin/MatchEventSheet';
+import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 
 // What the confirmation line says, in words rather than codes
 const EVENT_LABEL: Partial<Record<MatchEventType, string>> = {
@@ -130,6 +132,8 @@ export default function AdminMatchCenterControllerPage({
     saveDraftLineup,
   } = useClub();
   const { user } = useAuth();
+  // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
+  const reviewsReady = useMatchReviewsReady();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const clubMatches = matches.filter(m => m.club_id === club.id);
@@ -708,6 +712,11 @@ export default function AdminMatchCenterControllerPage({
             <Link href={matchPath(club.slug, match)} target="_blank" className="btn btn-secondary btn-sm touch-target">
               <ExternalLink size={14} aria-hidden="true" /> Match report
             </Link>
+            {reviewsReady && (
+              <Link href={`/${club.slug}/admin/match-center/review?match=${match.id}`} className="btn btn-secondary btn-sm touch-target">
+                <PenLine size={14} aria-hidden="true" /> Match review
+              </Link>
+            )}
           </div>
         </section>
       )}
@@ -1368,6 +1377,7 @@ export default function AdminMatchCenterControllerPage({
           onAuditCompleted={() => {
             showFeedback('Player stats saved to the season.');
           }}
+          reviewHref={reviewsReady && match.status === 'completed' ? `/${club.slug}/admin/match-center/review?match=${match.id}` : undefined}
         />
       )}
 

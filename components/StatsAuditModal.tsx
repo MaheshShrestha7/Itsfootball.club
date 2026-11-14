@@ -2,6 +2,7 @@
 
 import { minutesOnPitch } from '@/lib/match-subs';
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useDialog } from '@/lib/use-escape-to-close';
 import { Match, MatchEvent, ClubMember, MatchAuditPayload, MatchAuditItem } from '@/lib/supabase/types';
 import { useClub } from '@/lib/club-context';
@@ -19,7 +20,9 @@ import {
   Check,
   X,
   Trash2,
-  Sparkles
+  Sparkles,
+  Lock,
+  PenLine
 } from 'lucide-react';
 
 interface StatsAuditModalProps {
@@ -29,6 +32,8 @@ interface StatsAuditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAuditCompleted?: () => void;
+  /** The match review page for this game: offered as the next step once the stats are saved */
+  reviewHref?: string;
 }
 
 export default function StatsAuditModal({
@@ -38,6 +43,7 @@ export default function StatsAuditModal({
   isOpen,
   onClose,
   onAuditCompleted,
+  reviewHref,
 }: StatsAuditModalProps) {
   const { auditAndBakeMatchStats, clubScoreRules } = useClub();
   const rules = clubScoreRules[match.club_id] || getDefaultClubScoreRules(match.club_id);
@@ -310,12 +316,22 @@ export default function StatsAuditModal({
                 <span>+{auditResult.totalXP} ClubScore points</span>
               </div>
 
+              {/* The next step while the game is fresh: the coach's three questions */}
+              {reviewHref && (
+                <>
+                  <Link href={reviewHref} className="btn btn-primary btn-sm" style={{ marginTop: '1rem', padding: '0.6rem 1.5rem' }}>
+                    <PenLine size={15} aria-hidden="true" />
+                    <span>Write the match review</span>
+                  </Link>
+                  <span className="rv-private"><Lock size={13} aria-hidden="true" /> Three quick questions. Only coaches and admins see it.</span>
+                </>
+              )}
               <button
                 onClick={onClose}
-                className="btn btn-primary btn-sm"
-                style={{ marginTop: '1rem', padding: '0.6rem 1.75rem' }}
+                className={`btn btn-sm ${reviewHref ? 'btn-secondary' : 'btn-primary'}`}
+                style={{ marginTop: reviewHref ? 0 : '1rem', padding: '0.6rem 1.75rem' }}
               >
-                Done
+                {reviewHref ? 'Later' : 'Done'}
               </button>
             </div>
           ) : (
