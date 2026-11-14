@@ -6,9 +6,8 @@ import dynamic from 'next/dynamic';
 import LocalTime from '@/components/LocalTime';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
-import { matchTypeTag } from '@/lib/fixture-label';
 import { useAuth } from '@/lib/auth-context';
-import ScoreboardDigitRoll from '@/components/ScoreboardDigitRoll';
+import { GOAL_SEQUENCE_MS, Lamps, useGoalSequence, useKickoffParts } from '@/components/StadiumBoard';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import SponsorMarquee from '@/components/SponsorMarquee';
 import { isSponsorOnSite, topTierSponsors } from '@/lib/sponsors';
@@ -20,19 +19,15 @@ import {
   Radio,
   Clock,
   MapPin,
-  Trophy,
   ArrowLeft,
   Settings,
-  Flame,
   AlertCircle,
   Share2,
   Volume2,
   VolumeX,
   Sparkles,
-  Calendar,
   Wifi,
   Star,
-  Target,
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
@@ -58,9 +53,6 @@ const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
 });
 
 type Side = 'home' | 'away';
-
-/** The status as people say it (the stored value is "completed", "postponed"...) */
-const STATUS_WORD: Record<string, string> = { upcoming: 'Upcoming', completed: 'Full time', postponed: 'Postponed', cancelled: 'Cancelled' };
 
 /** Event types as people say them */
 const EVENT_WORD: Record<string, string> = {
@@ -173,12 +165,13 @@ export default function MatchCenterPage({
   const [liveSyncPulse, setLiveSyncPulse] = useState(false);
   const [titleColors, setTitleColors] = useState<{ home: string; away: string }>({ home: homeColor, away: awayColor });
 
-  // Goal Strobe Alert State
-  const [goalAlert, setGoalAlert] = useState<{
-    active: boolean;
-    teamName: string;
-    teamSide: Side;
-  } | null>(null);
+  // The goal being shown on the board (components/StadiumBoard.tsx plays it), and the side whose
+  // number then relights lamp by lamp
+  const [goalAlert, setGoalAlert] = useState<{ key: number; teamName: string; teamSide: Side } | null>(null);
+  const [settling, setSettling] = useState<Side | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  useGoalSequence(boardRef, goalAlert);
+  const kickoff = useKickoffParts(foundMatch?.match_date);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const goalQueueRef = useRef<{ side: Side; teamName: string }[]>([]);
@@ -228,28 +221,23 @@ export default function MatchCenterPage({
     }
   }, []);
 
-  // Goals celebrate one at a time (Confetti, Strobe Wave, Crest Glow, Chime), each for its full 3.2s
+  // Goals play one at a time on the board, each for its full sequence, with the chime when sound is on
   const showNextGoal = useCallback(function next() {
     const goal = goalQueueRef.current.shift();
     if (!goal) {
       goalTimerRef.current = null;
       setGoalAlert(null);
+      setSettling(null);
       return;
     }
-    setGoalAlert({ active: true, teamName: goal.teamName, teamSide: goal.side });
+    setGoalAlert({ key: Date.now(), teamName: goal.teamName, teamSide: goal.side });
+    setSettling(null);
     playGoalAudio();
-    const color = goal.side === 'home' ? homeColor : awayColor;
-    import('canvas-confetti')
-      .then(({ default: confetti }) => confetti({
-        particleCount: 65,
-        spread: 80,
-        origin: { y: 0.35 },
-        colors: [color, '#F59E0B', '#FFFFFF'],
-        disableForReducedMotion: true,
-      }))
-      .catch(() => {});
-    goalTimerRef.current = setTimeout(next, 3200);
-  }, [playGoalAudio, homeColor, awayColor]);
+    goalTimerRef.current = setTimeout(() => {
+      setSettling(goal.side);
+      goalTimerRef.current = setTimeout(next, 700);
+    }, GOAL_SEQUENCE_MS);
+  }, [playGoalAudio]);
 
   // Celebrate each goal as the live score moves, for both sides. Only during play, so a stale cached
   // score being corrected after the page loads isn't mistaken for a goal.
@@ -400,62 +388,33 @@ export default function MatchCenterPage({
   // Live, the newest event is on top; once it's over the match reads from kick-off down
   if (match.status === 'completed') timelineRows.reverse();
 
-  // One team's crest and name. The club's crest only stands in on the club's own side.
-  const teamBlock = (side: Side) => {
+  // One team on the board: crest, name and a bar in the side's colour. The club's crest only stands in on the club's own side.
+  const boardTeam = (side: Side) => {
     const name = side === 'home' ? match.home_team_name : match.away_team_name;
     const logo = side === 'home' ? match.home_team_logo : match.away_team_logo;
-    const color = side === 'home' ? homeColor : awayColor;
-    const celebrating = !!goalAlert?.active && goalAlert.teamSide === side;
     const crest = logo && !logoFailed[side] ? logo : isClubSide(side) ? club.logo_url : undefined;
-    const FallbackIcon = side === 'home' ? Shield : Trophy;
     const markFailed = () => setLogoFailed(prev => (prev[side] ? prev : { ...prev, [side]: true }));
     return (
-      <div style={{ textAlign: 'center', minWidth: 0 }}>
-        <div
-          className={celebrating ? 'crest-celebrating' : ''}
-          style={{
-            width: 'clamp(44px, 12vw, 80px)',
-            height: 'clamp(44px, 12vw, 80px)',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            margin: '0 auto 0.5rem auto',
-            border: `2.5px solid ${color}`,
-            boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px color-mix(in srgb, ${color} 35%, transparent)`,
-            background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 35%, #000))`,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '6px',
-            animation: celebrating ? 'crestGoalPulse 1.4s ease-out' : 'none',
-          }}
-        >
+      <span className={`stb-team is-${side}`} style={{ '--side': side === 'home' ? homeColor : awayColor } as React.CSSProperties}>
+        <span className="stb-crest">
           {crest ? (
-            <img loading="eager" decoding="async"
-              src={crest}
-              alt={`${name} crest`}
+            <img loading="eager" decoding="async" src={crest} alt=""
               onError={crest === logo ? markFailed : undefined}
               // A server-rendered image can fail before React attaches onError, so check it on mount too
-              ref={el => { if (crest === logo && el?.complete) el.decode().catch(markFailed); }}
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
+              ref={el => { if (crest === logo && el?.complete) el.decode().catch(markFailed); }} />
           ) : (
-            <>
-              <FallbackIcon size={20} color="#FFFFFF" strokeWidth={2.4} aria-hidden="true" />
-              <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#FFFFFF', marginTop: '2px', letterSpacing: '0.05em' }}>
-                {(side === 'home' ? homeShort : awayShort).slice(0, 4)}
-              </span>
-            </>
+            <span>{(side === 'home' ? homeShort : awayShort).slice(0, 4)}</span>
           )}
-        </div>
-        <h2 className="scoreboard-team-name" title={name} style={{ fontSize: 'clamp(0.95rem, 3.5vw, 1.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.2rem', overflowWrap: 'anywhere' }}>
-          <span className="team-name-full">{name}</span>
-          <span className="team-name-short">{side === 'home' ? homeShort : awayShort}</span>
-        </h2>
-        <span className="text-meta">{side === 'home' ? 'HOME' : 'AWAY'}</span>
-      </div>
+        </span>
+        <span className="stb-name">{name}</span>
+        <span className="stb-bar" aria-hidden="true" />
+      </span>
     );
   };
+  // The cup or competition, named once: a club event's title can be a sentence ("ANCC joins MNFC Cup 2026")
+  const competition = reportCompetition(match, reportCup?.title);
+  const ownTitle = match.title && !titleIsTeams && !/\svs\.?\s/i.test(match.title) ? match.title : undefined;
+  const scored = (side: Side) => goalEvents.filter(e => e.team_side === side);
 
   return (
     <div style={{ padding: '2.5rem 0 5rem 0' }}>
@@ -535,77 +494,9 @@ export default function MatchCenterPage({
           </div>
         </div>
 
-        {/* Stadium-Grade Live Scoreboard Hero with Strobe Wave. A fixture card on the club page glides into
-            it (components/MatchGlideLink.tsx), via data-match-header and its view-transition-name. */}
-        <div
-          data-match-header={match.id}
-          className="glass-panel"
-          style={{
-            padding: 'clamp(1.5rem, 6vw, 2.5rem) clamp(0.75rem, 4vw, 1.5rem)',
-            marginBottom: '2.5rem',
-            background: 'linear-gradient(180deg, rgba(var(--dk-18-26-38), 0.95) 0%, rgba(var(--dk-10-15-23), 0.98) 100%)',
-            border: goalAlert?.active
-              ? '2px solid #F59E0B'
-              : match.status === 'live'
-              ? '2px solid rgba(239, 68, 68, 0.6)'
-              : '1px solid var(--border-medium)',
-            boxShadow: goalAlert?.active
-              ? '0 0 55px rgba(245, 158, 11, 0.5), 0 0 30px rgba(var(--club-primary-rgb), 0.4)'
-              : match.status === 'live'
-              ? '0 0 35px rgba(239, 68, 68, 0.25)'
-              : 'var(--shadow-lg)',
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
-            viewTransitionName: 'match-card',
-          }}
-        >
-          {/* 1. Floodlight Strobe Wave Animation across Scoreboard */}
-          {goalAlert?.active && (
-            <div
-              className="goal-strobe-effect"
-              style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                width: '40%',
-                background: `linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.35) 45%, color-mix(in srgb, ${goalAlert.teamSide === 'home' ? homeColor : awayColor} 40%, transparent) 55%, transparent 100%)`,
-                pointerEvents: 'none',
-                zIndex: 8,
-                animation: 'goalStrobeSweep 1.6s ease-out forwards',
-              }}
-            />
-          )}
-
-          {/* 2. Goal Banner Drop Tag */}
-          {goalAlert?.active && (
-            <div
-              className="goal-banner-drop"
-              style={{
-                position: 'absolute',
-                top: '1.25rem',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                color: '#040609',
-                padding: '0.5rem 1.75rem',
-                borderRadius: 'var(--radius-full)',
-                fontWeight: 900,
-                fontSize: '0.95rem',
-                letterSpacing: '0.08em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                boxShadow: '0 8px 30px rgba(245, 158, 11, 0.8), 0 0 25px rgba(var(--tint-rgb), 0.9)',
-                zIndex: 25,
-                animation: 'goalBannerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-              }}
-            >
-              <Flame size={18} color="#040609" fill="#040609" />
-              <span>GOAL! • {goalAlert.teamName.toUpperCase()}</span>
-            </div>
-          )}
-
+        {/* The stadium board. A fixture card on the club page glides into it (components/MatchGlideLink.tsx),
+            via data-match-header and its view-transition-name. */}
+        <section data-match-header={match.id} className={`stb${match.status === 'live' ? ' is-live' : ''}`} style={{ viewTransitionName: 'match-card' }} aria-label="Scoreboard">
           {/* Full-time board: the referee's whistle goes three times, then a TV-style full-time graphic wipes in */}
           {fullTimeMoment && (
             <div className="ft-board" aria-hidden="true">
@@ -633,194 +524,93 @@ export default function MatchCenterPage({
             </div>
           )}
 
-          {/* Status & Competition Tag */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem', position: 'relative', zIndex: 5, flexWrap: 'wrap', textAlign: 'center' }}>
-            {match.title && !titleIsTeams && (
-              <div style={{ width: '100%', color: 'var(--c-amber)', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
-                {match.title}
-              </div>
-            )}
-            <h1 style={{ width: '100%', margin: '0 0 0.2rem 0', fontFamily: 'inherit', lineHeight: 'inherit', fontSize: 'clamp(1rem, 4vw, 1.25rem)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', overflowWrap: 'anywhere' }}>
-              <span style={{ color: titleColors.home }}>{match.home_team_name}</span>
-              <span className="text-muted" style={{ margin: '0 0.35rem' }}>
-                {['completed', 'full_time', 'live', 'halftime'].includes(match.status) && !scoreHidden
-                  ? `${match.home_score ?? 0}–${match.away_score ?? 0}`
-                  : 'vs'}
-              </span>
-              <span style={{ color: titleColors.away }}>{match.away_team_name}</span>
-            </h1>
-            {match.status === 'live' ? (
-              <span className="badge badge-live" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
-                <span className="pulse-dot" /> {match.is_paused ? 'PAUSED' : 'LIVE'} • <LiveMinute match={match} />&apos;
-                {match.added_time > 0 && <span style={{ color: 'var(--c-amber)', marginLeft: '0.25rem' }}>(+{match.added_time}&apos;)</span>}
-              </span>
-            ) : match.status === 'halftime' ? (
-              <span className="badge badge-gold" style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem' }}>
-                HALF-TIME (HT)
-              </span>
-            ) : (
-              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.1)', color: 'var(--text-primary)' }}>
-                {STATUS_WORD[match.status] || match.status}
-              </span>
-            )}
-            {matchTypeTag(match) && (
-              <span className="badge" style={{ background: 'rgba(var(--tint-rgb), 0.08)', color: 'var(--club-ink)', border: '1px solid rgba(var(--club-primary-rgb), 0.3)', textTransform: 'uppercase' }}>
-                {matchTypeTag(match)} FIXTURE
-              </span>
-            )}
-            <span style={{ width: '100%', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <Calendar size={12} />
-              <LocalTime value={match.match_date} />
-              {match.match_time && (
-                <>
-                  <Clock size={12} style={{ marginLeft: '0.2rem' }} />
-                  <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                </>
-              )}
-              {/* The game's length, once it's set or isn't a full 90 */}
-              {(validHalfMinutes(match.half_minutes) !== null || (match.match_format && match.match_format !== '11v11')) && (
-                <span style={{ marginLeft: '0.4rem' }}>{lengthLabel(match)}</span>
-              )}
+          <div className="stb-top">
+            <span className="stb-comp">
+              {reportCup ? (
+                <Link href={`/${resolvedParams.clubSlug}/events/${reportCup.id}`}>{competition || reportCup.title}</Link>
+              ) : competition}
+              {ownTitle && <span>{competition || reportCup ? ', ' : ''}{ownTitle}</span>}
             </span>
-            <span className="text-note">
-              {(() => {
-                const competition = match.competition && match.competition !== 'Premier Regional League' ? match.competition : null;
-                // Part of a club event (an outside cup): its name links to the event's page
-                const cup = match.event_id ? clubEvents.find(e => e.id === match.event_id && e.club_id === match.club_id) : undefined;
-                if (!cup) return [competition, match.venue].filter(Boolean).join(' • ');
-                return (
-                  <>
-                    <Link href={`/${resolvedParams.clubSlug}/events/${cup.id}`} style={{ color: 'var(--club-ink)', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '3px' }}>
-                      {competition || cup.title}
-                    </Link>
-                    {match.venue ? ` • ${match.venue}` : ''}
-                  </>
-                );
-              })()}
+            <span>
+              <LocalTime value={match.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} />
+              {match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
             </span>
           </div>
 
-          {/* Teams & Scoreboard Display */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
-            alignItems: 'center',
-            gap: 'clamp(0.5rem, 3vw, 2rem)',
-            maxWidth: '850px',
-            margin: '0 auto',
-            position: 'relative',
-            zIndex: 5,
-          }}>
-            {teamBlock('home')}
-
-            {/* Stadium Mechanical Scoreboard Digit Display */}
-            <div data-theme="dark" className={fullTimeMoment ? 'ft-settle' : undefined} style={{
-              viewTransitionName: 'match-score',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(0.5rem, 2.5vw, 2rem)',
-              background: 'rgb(var(--dk-4-6-9))',
-              borderRadius: '20px',
-              border: `2px solid ${goalAlert?.active ? '#F59E0B' : 'rgba(var(--tint-rgb), 0.12)'}`,
-              boxShadow: 'inset 0 0 30px rgba(0,0,0,0.95), 0 12px 30px rgba(0,0,0,0.7)',
-              position: 'relative',
-              transition: 'border-color 0.3s ease',
-              flexShrink: 0,
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'clamp(0.4rem, 1.5vw, 0.75rem)',
-              }}>
+          <div className="stb-field" ref={boardRef}>
+            <h1 className="stb-main">
+              {boardTeam('home')}
+              <span className={`stb-centre${fullTimeMoment ? ' ft-settle' : ''}`}>
                 {match.status === 'postponed' || match.status === 'cancelled' ? (
                   /* A game that was called off has no score and no kick-off time to show */
-                  <span style={{
-                    color: 'var(--text-secondary)',
-                    fontSize: 'clamp(1rem, 4vw, 1.5rem)',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    fontFamily: 'var(--font-heading)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {match.status === 'postponed' ? 'Postponed' : 'Cancelled'}
-                  </span>
+                  <span className="stb-word">{match.status === 'postponed' ? 'Postponed' : 'Cancelled'}</span>
                 ) : match.status === 'upcoming' ? (
-                  /* Before kick-off a 0 : 0 board says nothing: show when it starts (date and venue sit above) */
-                  <span style={{
-                    color: 'var(--text-primary)',
-                    fontSize: 'clamp(1.3rem, 5vw, 2rem)',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    fontFamily: 'var(--font-heading)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                  </span>
-                ) : scoreHidden ? (
-                  <span style={{
-                    color: 'var(--text-secondary)',
-                    fontSize: 'clamp(1.1rem, 4vw, 1.6rem)',
-                    fontWeight: 900,
-                    lineHeight: 1,
-                    fontFamily: 'var(--font-heading)',
-                    letterSpacing: '0.06em',
-                  }}>
-                    VS
-                  </span>
-                ) : (
-                  <>
-                    {/* Home Score Animated Digit */}
-                    <ScoreboardDigitRoll
-                      value={match.home_score}
-                      isGoal={goalAlert?.active && goalAlert.teamSide === 'home'}
-                      accentColor={homeColor}
-                      size="clamp(2rem, 10vw, 3.6rem)"
-                    />
-
-                    <span style={{
-                      color: 'var(--text-muted)',
-                      fontSize: 'clamp(1.4rem, 5vw, 2.5rem)',
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      fontFamily: 'var(--font-heading)',
-                    }}>
-                      :
+                  /* Before kick-off a 0–0 says nothing: the lamps show when it starts */
+                  kickoff ? (
+                    <span className="stb-lamps is-small" style={{ viewTransitionName: 'match-score' }}>
+                      <Lamps text={kickoff.clock} />
+                      <span className="stb-suffix">{kickoff.suffix}</span>
+                      <span className="sr-only">Kick-off {kickoff.clock} {kickoff.suffix}</span>
                     </span>
-
-                    {/* Away Score Animated Digit */}
-                    <ScoreboardDigitRoll
-                      value={match.away_score}
-                      isGoal={goalAlert?.active && goalAlert.teamSide === 'away'}
-                      accentColor={awayColor}
-                      size="clamp(2rem, 10vw, 3.6rem)"
-                    />
-                  </>
+                  ) : <span className="stb-word">vs</span>
+                ) : scoreHidden ? (
+                  <span className="stb-word">vs</span>
+                ) : (
+                  <span className="stb-lamps" style={{ viewTransitionName: 'match-score' }}>
+                    <Lamps text={String(match.home_score ?? 0)} hot={settling === 'home'} />
+                    <Lamps text="-" />
+                    <Lamps text={String(match.away_score ?? 0)} hot={settling === 'away'} />
+                    <span className="sr-only">{match.home_score ?? 0}–{match.away_score ?? 0}</span>
+                  </span>
                 )}
+                <span className={`stb-state${match.status === 'live' ? ' is-live' : ''}`}>
+                  {match.status === 'live' ? (
+                    <span>{match.is_paused ? 'Paused' : 'Live'} <LiveMinute match={match} />&apos;{match.added_time > 0 && ` +${match.added_time}`}</span>
+                  ) : match.status === 'halftime' ? 'Half-time'
+                    : match.status === 'upcoming' ? 'Kick-off'
+                    : match.status === 'postponed' ? 'New date to come'
+                    : match.status === 'cancelled' ? 'Not played'
+                    : periodLabel(match.period)}
+                </span>
+                {/* A cup game settled (or being settled) on penalties: the shootout score, kept apart from the match score */}
+                {shootout && <span className="stb-pens">{shootout.home}–{shootout.away} on penalties</span>}
+              </span>
+              {boardTeam('away')}
+            </h1>
+            {goalEvents.length > 0 && (
+              <div className="stb-goals">
+                {(['home', 'away'] as Side[]).map(side => (
+                  <ul key={side} className={`is-${side}`}>
+                    {scored(side).map(evt => (
+                      <li key={evt.id}>
+                        {playerLink(evt.player_name, evt.team_side) || 'Goal'}{evt.event_type === 'penalty' ? ' (pen)' : evt.event_type === 'own_goal' ? ' (og)' : ''} {eventMinuteLabel(evt)}&apos;
+                      </li>
+                    ))}
+                  </ul>
+                ))}
               </div>
+            )}
+          </div>
 
-              <div style={{
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                color: match.status === 'live' ? 'var(--c-red)' : 'var(--text-muted)',
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                marginTop: '8px',
-                textAlign: 'center',
-              }}>
-                {match.status === 'upcoming' ? 'Kick-off' : match.status === 'postponed' ? 'New date to come' : match.status === 'cancelled' ? 'Not played' : periodLabel(match.period)}
-              </div>
-              {/* A cup game settled (or being settled) on penalties: the shootout score, kept apart from the match score */}
-              {shootout && (
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--c-amber)', marginTop: '6px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                  {shootout.home}–{shootout.away} on penalties
+          {(ground || match.venue || validHalfMinutes(match.half_minutes) !== null || (match.match_format && match.match_format !== '11v11')) && (
+            <dl className="stb-base">
+              {(ground || match.venue) && (
+                <div>
+                  <dt className="sr-only">Ground</dt>
+                  <MapPin size={15} aria-hidden="true" />
+                  <dd>{ground ? <Link href={groundPath(ground)}>{ground.name}</Link> : match.venue}{match.pitch_label ? `, ${match.pitch_label}` : ''}</dd>
                 </div>
               )}
-            </div>
-
-            {teamBlock('away')}
-          </div>
-        </div>
+              {(validHalfMinutes(match.half_minutes) !== null || (match.match_format && match.match_format !== '11v11')) && (
+                <div>
+                  <dt className="sr-only">Length</dt>
+                  <Clock size={15} aria-hidden="true" />
+                  <dd>{lengthLabel(match)}{match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+        </section>
 
         {/* Directions, parking and wet weather from the ground guide, before and during the match */}
         {match.status !== 'completed' && match.status !== 'cancelled' && <GettingThere match={match} />}
@@ -867,8 +657,8 @@ export default function MatchCenterPage({
           </div>
         )}
 
-        {/* Player of the Match & Goal Scorers */}
-        {(motmMember || (goalEvents.length > 0 && match.status !== 'completed')) && (
+        {/* Player of the Match (the scorers are on the board) */}
+        {motmMember && (
           <div
             className="glass-panel"
             style={{
@@ -913,35 +703,6 @@ export default function MatchCenterPage({
               </div>
             )}
 
-            {/* At full time the report above names every scorer, and the timeline lists them below */}
-            {goalEvents.length > 0 && match.status !== 'completed' && (
-              <div style={{ flex: '2 1 320px', minWidth: 0 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Target size={13} />
-                  <span>Goal Scorers</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {goalEvents.map(evt => (
-                    <div key={evt.id} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', fontSize: '0.85rem' }}>
-                      <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', flexShrink: 0, minWidth: '2.2em' }}>{eventMinuteLabel(evt)}&apos;</span>
-                      <span style={{ minWidth: 0 }}>
-                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                          {playerLink(evt.player_name, evt.team_side)}{evt.event_type === 'penalty' ? ' (pen.)' : evt.event_type === 'own_goal' ? ' (own goal)' : ''}
-                        </span>
-                        {evt.assist_player_name && (
-                          <span className="text-secondary"> (Assist: {playerLink(evt.assist_player_name, evt.team_side)})</span>
-                        )}
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                          {' · '}
-                          <span className="team-name-full">{evt.team_side === 'home' ? match.home_team_name : match.away_team_name}</span>
-                          <span className="team-name-short">{evt.team_side === 'home' ? homeShort : awayShort}</span>
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
