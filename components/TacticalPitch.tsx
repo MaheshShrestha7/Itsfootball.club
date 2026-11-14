@@ -1211,7 +1211,7 @@ export default function TacticalPitch({
                 }}
               >
                 {empty ? (
-                  '+'
+                  isEditable ? '+' : null
                 ) : photoUrl ? (
                   <img loading="lazy" decoding="async"
                     src={photoUrl}
@@ -1392,8 +1392,8 @@ export default function TacticalPitch({
         </div>
       )}
 
-      {/* Tactical Assistant Footer & Mode Hint */}
-      <div style={{
+      {/* Tactical Assistant Footer & Mode Hint (editors only: the public page needs no drag hints) */}
+      {isEditable && <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
@@ -1405,17 +1405,15 @@ export default function TacticalPitch({
         <div className="row">
           <Info size={14} />
           <span>
-            {isEditable
-              ? onSendToBench
-                ? 'Drag a player to reposition, onto a teammate to swap, or off onto the bench. Tap a player for more options.'
-                : 'Drag a player to reposition or onto a teammate to swap. Focus + Arrow keys to nudge.'
-              : 'Interactive Matchday Tactical Board.'}
+            {onSendToBench
+              ? 'Drag a player to reposition, onto a teammate to swap, or off onto the bench. Tap a player for more options.'
+              : 'Drag a player to reposition or onto a teammate to swap. Focus + Arrow keys to nudge.'}
           </span>
         </div>
         <div style={{ fontFamily: 'var(--font-mono)' }}>
           Active: <span style={{ color: primaryColor, fontWeight: 700 }}>{selectedFormationKey}</span>
         </div>
-      </div>
+      </div>}
 
       {/* Selected Player Detail & Tactical Role Card (editors only; not shown on read-only public views) */}
       {activePlayer && isEditable && (
