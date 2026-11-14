@@ -4835,6 +4835,4 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .match-article-facts dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem 1.25rem; margin: 0; }
 .match-article-facts dt { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.1rem; }
 .match-article-facts dd { margin: 0; font-size: 0.92rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
-.match-article-facts p { margin: 0.8rem 0 0; font-size: 0.88rem; line-height: 1.65; color: var(--text-secondary); }
-.match-article-facts p b { color: var(--text-primary); }
 .match-article-more { margin: 1.1rem 0 0; font-size: 0.95rem; }

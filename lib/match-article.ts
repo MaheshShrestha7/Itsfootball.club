@@ -14,6 +14,21 @@ const norm = (s?: string | null) => (s || '').trim().toLowerCase();
 /** The old placeholder default isn't a competition (the match page hides it too) */
 const competitionOf = (m: Pick<Match, 'competition'>) => (m.competition && m.competition !== 'Premier Regional League' ? m.competition : undefined);
 
+const CUP_WORD = /^(cup|league|tournament|shield|trophy|championship|premiership|division|series|festival|carnival|challenge|classic|memorial)$/i;
+/** A competition's name as a report can say it ("in the MNFC Cup 2026"). A club event's title is often a
+ *  sentence ("ANCC joins MNFC Cup 2026"): the cup's own name is kept when one is in there, else nothing. */
+export function competitionName(raw?: string | null): string | undefined {
+  const words = (raw || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return undefined;
+  const named = (w: string) => /^[A-Z0-9(]/.test(w);
+  if (words.length <= 4 || words.every(w => named(w) || /^(of|the|and|&|for|-)$/i.test(w))) return words.join(' ');
+  const runs: string[][] = [[]];
+  for (const w of words) { if (named(w)) runs.at(-1)!.push(w); else runs.push([]); }
+  return runs.filter(run => run.length > 1 && run.some(w => CUP_WORD.test(w.replace(/[^a-z]/gi, '')))).at(-1)?.join(' ');
+}
+/** The competition a match report names: the fixture's own, else the cup event it is linked to */
+export const reportCompetition = (m: Pick<Match, 'competition'>, cupTitle?: string) => competitionName(competitionOf(m)) || competitionName(cupTitle);
+
 export interface ArticleSource {
   club: Pick<Club, 'id' | 'slug' | 'config'>;
   /** The match as the public page shows it (our side named after its team) */
@@ -52,9 +67,23 @@ export function articleInput(s: ArticleSource): ArticleInput {
   const earlier = teamGames.filter(m => m.id !== match.id && m.status === 'completed' && kickoff(m) < kickoff(match));
   const last = teamGame ? earlier.filter(m => norm(opponent(m)) === norm(opponent(match))).sort((a, b) => kickoff(b) - kickoff(a))[0] : undefined;
   const next = teamGame
-    ? teamGames.filter(m => m.id !== match.id && kickoff(m) > kickoff(match) && !['cancelled', 'postponed'].includes(m.status)).sort((a, b) => kickoff(a) - kickoff(b))[0]
+    ? teamGames.filter(m => m.id !== match.id && kickoff(m) > kickoff(match) && !['cancelled', 'postponed', 'completed'].includes(m.status)).sort((a, b) => kickoff(a) - kickoff(b))[0]
     : undefined;
   const record = teamGame && match.season ? teamRecord([...earlier, match], match.season) : undefined;
+  // Goals for and against, over the same games the record counts
+  const counted = [...earlier, match].filter(m => (m.season || match.season) === match.season && m.home_score != null && m.away_score != null);
+  const ourGoals = (m: Match) => (m.is_club_home !== false ? m.home_score : m.away_score) ?? 0;
+  const theirGoals = (m: Match) => (m.is_club_home !== false ? m.away_score : m.home_score) ?? 0;
+  const sum = (f: (m: Match) => number) => counted.reduce((n, m) => n + f(m), 0);
+  const versus = teamGame ? earlier.filter(m => norm(opponent(m)) === norm(opponent(match)) && m.home_score != null && m.away_score != null) : [];
+  // The team's other games on the same calendar day
+  const dayOf = (m: Match) => { const d = new Date(m.match_date); return isNaN(d.getTime()) ? '' : fmt(d, { day: 'numeric', month: 'numeric', year: 'numeric' }); };
+  const dayGames = teamGame && valid && hasKickoffTime(match)
+    ? teamGames.filter(m => dayOf(m) === dayOf(match) && hasKickoffTime(m) && !['cancelled', 'postponed'].includes(m.status)).sort((a, b) => kickoff(a) - kickoff(b))
+    : [];
+  // Our starters, as the line-ups tab shows them
+  const coords = (ourSide && !match.tournament_id && match.match_type !== 'internal' && (ourSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords)) || [];
+  const shown = (n: string) => (s.juniorFixture ? juniorPublicName(n) : n).trim();
 
   // Season goals, once this match's stats are saved (before that the totals don't include it)
   const stats = match.is_audited && !s.juniorFixture && match.season ? s.playerStats.filter(p => p.club_id === club.id && p.season === match.season) : [];
@@ -84,7 +113,7 @@ export function articleInput(s: ArticleSource): ArticleInput {
     homeScore: match.home_score ?? 0,
     awayScore: match.away_score ?? 0,
     ourSide,
-    competition: competitionOf(match) || s.cup?.title,
+    competition: reportCompetition(match, s.cup?.title),
     stage: tournamentMatchLabel(match) || undefined,
     venue: match.venue || undefined,
     day: valid ? fmt(date!, { weekday: 'long' }) : undefined,
@@ -100,13 +129,20 @@ export function articleInput(s: ArticleSource): ArticleInput {
     playerOfTheMatch: s.playerOfTheMatch,
     seasonGoals,
     topScorer: leaders.length === 1 ? nameOf(leaders[0].member_id) : undefined,
-    record: record && { played: record.played, won: record.won },
+    kickoff: valid && hasKickoffTime(match) ? date!.toLocaleTimeString(DATE_LOCALE, { timeZone: zone, hour: 'numeric', minute: '2-digit' }) : undefined,
+    aSide: Number(match.match_format?.match(/^(\d+)v/)?.[1]) !== 11 ? Number(match.match_format?.match(/^(\d+)v/)?.[1]) || undefined : undefined,
+    lineup: coords.length ? { starters: coords.map(p => shown(p.name)), captain: coords.find(p => p.is_captain) && shown(coords.find(p => p.is_captain)!.name), keeper: coords.find(p => p.position === 'GK') && shown(coords.find(p => p.position === 'GK')!.name) } : undefined,
+    gameOfDay: dayGames.length > 1 ? [dayGames.findIndex(m => m.id === match.id) + 1, dayGames.length] : undefined,
+    sameDay: dayGames.filter(m => m.id !== match.id && m.status === 'completed' && m.home_score != null && m.away_score != null)
+      .map(m => ({ opponent: opponent(m), ourScore: ourGoals(m), theirScore: theirGoals(m), href: matchPath(club.slug, m), later: kickoff(m) > kickoff(match) })),
+    record: record && { ...record, ...(counted.length === record.played ? { goalsFor: sum(ourGoals), goalsAgainst: sum(theirGoals) } : {}) },
+    meetings: versus.length ? { played: versus.length, won: versus.filter(m => ourGoals(m) > theirGoals(m)).length, drawn: versus.filter(m => ourGoals(m) === theirGoals(m)).length, lost: versus.filter(m => ourGoals(m) < theirGoals(m)).length } : undefined,
     lastMeeting: last && {
       home: last.home_team_name, away: last.away_team_name, homeScore: last.home_score ?? 0, awayScore: last.away_score ?? 0,
       date: fmt(new Date(last.match_date), { day: 'numeric', month: 'long', ...(valid && new Date(last.match_date).getFullYear() !== date!.getFullYear() ? { year: 'numeric' } : {}) }),
       href: matchPath(club.slug, last),
     },
-    next: next && when(next) ? { opponent: opponent(next), competition: competitionOf(next), when: when(next), venue: next.venue || undefined, href: matchPath(club.slug, next) } : undefined,
+    next: next && when(next) ? { opponent: opponent(next), competition: competitionName(competitionOf(next)), when: when(next), venue: next.venue || undefined, href: matchPath(club.slug, next) } : undefined,
     shootout: match.home_penalty_score != null && match.away_penalty_score != null ? { home: match.home_penalty_score, away: match.away_penalty_score } : undefined,
     links: {
       competition: s.cup ? `/${club.slug}/events/${s.cup.id}` : match.tournament_id ? `/${club.slug}/tournaments/${match.tournament_id}` : undefined,
@@ -169,7 +205,7 @@ export function matchReportCards(s: {
     if (!article) continue;
     cards.push({
       id: stored.id, href: matchPath(club.slug, stored), title: article.headline, summary: plainText(article.lead),
-      published_at: stored.audited_at || stored.match_date, cover: stored.match_flyer_url || undefined,
+      published_at: stored.match_date, cover: stored.match_flyer_url || undefined,
     });
   }
   return cards;

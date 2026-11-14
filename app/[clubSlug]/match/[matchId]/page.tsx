@@ -42,7 +42,7 @@ import MatchShareButton from '@/components/MatchShareButton';
 import { lineupBench } from '@/lib/lineup-bench';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
-import { articleFor, publicEvents } from '@/lib/match-article';
+import { articleFor, publicEvents, reportCompetition } from '@/lib/match-article';
 import { groundPath } from '@/lib/grounds';
 import GettingThere, { useMatchGround } from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
@@ -362,7 +362,7 @@ export default function MatchCenterPage({
   const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
   const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
 
-  // The full-time report: the article, and the club side's line-up for its facts box
+  // The full-time report, written as an article
   const reportCup = match.event_id ? clubEvents.find(e => e.id === match.event_id && e.club_id === match.club_id) : undefined;
   const article = articleFor({
     club, match, events, matches, clubTeams, members, playerStats, juniorFixture,
@@ -371,9 +371,6 @@ export default function MatchCenterPage({
     groundHref: ground ? groundPath(ground) : undefined,
   });
   const reportTeam = teamOfMatch(match, clubTeams);
-  const reportSide: Side = (match.is_club_home ?? true) ? 'home' : 'away';
-  const reportStarters = (!match.tournament_id && match.match_type !== 'internal' && (reportSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords)) || [];
-  const reportSubs = events.filter(e => e.event_type === 'sub' && e.team_side === reportSide).sort(compareEventMinute).map(e => subPlayers(e)?.on || e.player_name);
 
   // The shootout score, once one has been entered for a level game (never for a team that hides scores)
   const shootout = !scoreHidden && match.status !== 'upcoming' && match.home_score === match.away_score
@@ -854,8 +851,8 @@ export default function MatchCenterPage({
             clubName={club.name}
             coverUrl={match.match_flyer_url || club.banner_url || undefined}
             crestUrl={club.logo_url || undefined}
-            tags={['Match Report', ...(reportCup ? [reportCup.title] : match.competition && match.competition !== 'Premier Regional League' ? [match.competition] : [])]}
-            publishedAt={match.audited_at || match.match_date}
+            tags={['Match Report', ...[reportCompetition(match, reportCup?.title)].filter((t): t is string => !!t)]}
+            publishedAt={match.match_date}
             shareUrl={matchPath(club.slug, match)}
             source={`Written from the match events ${club.name} logged.`}
             moreHref="#match-tabs"
@@ -865,13 +862,6 @@ export default function MatchCenterPage({
               { label: 'Length', value: `${lengthLabel(match)}${match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}` },
               ...(reportTeam?.slug ? [{ label: 'Team', value: <Link href={`/${club.slug}/teams/${reportTeam.slug}`}>{teamLabel(reportTeam)}</Link> }] : []),
             ]}
-            lineup={reportStarters.length > 0 && (
-              <>
-                <b>{reportSide === 'home' ? match.home_team_name : match.away_team_name}:</b>{' '}
-                {reportStarters.map(p => `${p.name}${p.position === 'GK' ? ' (GK)' : ''}${p.is_captain ? ' (c)' : ''}`).join(', ')}.
-                {reportSubs.length > 0 && <> <b>Subs used:</b> {reportSubs.join(', ')}.</>}
-              </>
-            )}
           />
           <SupportedBy clubId={club.id} />
           </div>

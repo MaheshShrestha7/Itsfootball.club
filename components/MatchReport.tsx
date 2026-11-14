@@ -21,7 +21,7 @@ function Linked({ text }: { text: string }) {
 export interface MatchFact { label: string; value: React.ReactNode }
 
 /** The full-time report under the scoreboard, laid out like the club's news articles */
-export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, lineup, source, moreHref }: {
+export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref }: {
   article: MatchArticle;
   clubName: string;
   coverUrl?: string;
@@ -30,16 +30,14 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
   publishedAt?: string;
   shareUrl: string;
   facts: MatchFact[];
-  /** The club's starters and the subs who came on, as one line */
-  lineup?: React.ReactNode;
   source: string;
   /** Where the timeline, line-ups and stats sit on the page */
   moreHref?: string;
 }) {
   return (
     <article aria-label="Match report" className="glass-panel match-article">
-      {/* A photo only when the club has one (the match flyer, else its banner): the scoreboard above already carries the crests */}
-      {coverUrl && <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 420, objectFit: 'cover' }} />}
+      {/* The match flyer, else the club banner, else the club-colour panel with the crest: kept low so the story starts on the first screen */}
+      <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: coverUrl ? 380 : 220, objectFit: 'cover' }} />
       <div className="match-article-in">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
           {tags.map(tag => <span key={tag} className="badge badge-primary">{tag}</span>)}
@@ -51,15 +49,12 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
         </div>
         <p className="match-article-lead"><Linked text={article.lead} /></p>
         {article.paragraphs.map((p, i) => <p key={i} className="match-article-p"><Linked text={p} /></p>)}
-        {(facts.length > 0 || lineup) && (
+        {facts.length > 0 && (
           <div className="match-article-facts">
             <h3>Match facts</h3>
-            {facts.length > 0 && (
-              <dl>
-                {facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
-              </dl>
-            )}
-            {lineup && <p>{lineup}</p>}
+            <dl>
+              {facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
+            </dl>
           </div>
         )}
         {moreHref && <p className="match-article-more"><a href={moreHref}>See the timeline, line-ups and match stats</a></p>}
