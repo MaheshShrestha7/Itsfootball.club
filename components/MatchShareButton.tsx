@@ -40,12 +40,14 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  // The club's sponsors on the site, biggest tier first, up to 5 (SP-F2); "Show sponsors" leaves them off
+  // The club's sponsors on the site, biggest tier first, up to 9 (SP-F2); "Show sponsors" leaves them off
   const { sponsors } = useClub();
   const [showSponsors, setShowSponsors] = useState(true);
   const sponsorKey = JSON.stringify(sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)))
-    .slice(0, 5).map(s => [s.logo_url || '', s.name]));
-  const cardSponsors = useMemo(() => (JSON.parse(sponsorKey) as [string, string][]).map(([src, name]) => ({ src: src || undefined, name })), [sponsorKey]);
+    .slice(0, 9).map(s => [s.logo_url || '', s.name, s.tier === 'platinum' || s.tier === 'gold']));
+  // Platinum and Gold get the bigger tiles
+  const cardSponsors = useMemo(() => (JSON.parse(sponsorKey) as [string, string, boolean][])
+    .map(([src, name, top]) => ({ src: src || undefined, name, top })), [sponsorKey]);
   // One sponsor on the Player of the Match card (a package with the "Player of the Match graphic" tick),
   // looked up once the dialog opens: Admin, Matches has a Share button on every fixture
   const potmSponsor = useOneSponsor(open ? club : undefined, 'potm_graphic');
