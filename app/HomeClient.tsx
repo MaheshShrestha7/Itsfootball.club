@@ -254,8 +254,9 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 <span>Football.</span> <span>Community.</span> <span>Passion.</span>
               </h1>
 
+              <p className="lp-hero-tag">The complete football club operating system.</p>
               <p className="lp-hero-sub">
-                itsfootball.club is the free platform for grassroots football clubs: club website, live match centre and member passes.
+                Website, live match centre and member passes for grassroots clubs. Free.
               </p>
 
               {/* Was the trust bar under the hero: now under the sentence, so the hero has no empty block */}

@@ -1142,3 +1142,8 @@ button.mw-role { background: transparent; font: inherit; font-weight: 600; font-
   .rc-title { font-size: 1.4rem; }
 }
 @media (prefers-reduced-motion: reduce) { .rc-dialog[open] { animation: none; } }
+
+/* Tagline under the headline: the plain "what it is" line, sentence below stays specific */
+.lp-hero-tag { font-family: var(--font-heading); font-weight: 700; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.2; letter-spacing: -0.02em; color: var(--text-primary); margin: 1.1rem 0 0.45rem; max-width: 26ch; text-wrap: balance; }
+[data-theme='light'] .lp-hero-tag { color: #0F172A; }
+@media (max-width: 1024px) { .lp-hero-tag { margin: 0; } }
