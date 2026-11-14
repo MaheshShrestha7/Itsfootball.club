@@ -42,16 +42,15 @@ import MatchShareButton from '@/components/MatchShareButton';
 import { lineupBench } from '@/lib/lineup-bench';
 import MatchReport from '@/components/MatchReport';
 import SupportedBy from '@/components/SupportedBy';
-import { matchReport } from '@/lib/match-report';
-import { DATE_LOCALE } from '@/lib/dates';
-import { clubTimeZone } from '@/lib/dates';
-import GettingThere from '@/components/grounds/GettingThere';
+import { articleFor, publicEvents } from '@/lib/match-article';
+import { groundPath } from '@/lib/grounds';
+import GettingThere, { useMatchGround } from '@/components/grounds/GettingThere';
 import PreMatchPanel, { lastMeeting } from '@/components/PreMatchPanel';
 import { periodLabel } from '@/lib/match-clock';
-import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden, withTeamSide } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden, teamLabel, teamOfMatch, withTeamSide } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
-import { matchForParam } from '@/lib/slugs';
-import { subDetail, subPlayers } from '@/lib/match-subs';
+import { matchForParam, matchPath } from '@/lib/slugs';
+import { subPlayers } from '@/lib/match-subs';
 
 // Only needed once the lineups tab opens
 const TacticalPitch = dynamic(() => import('@/components/TacticalPitch'), {
@@ -75,7 +74,7 @@ export default function MatchCenterPage({
   params: Promise<{ clubSlug: string; matchId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, liveFeed, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers, events: clubEvents } = useClub();
+  const { selectClubBySlug, matches, matchEvents, members: allMembers, isHydrated, syncStatus, liveFeed, getMatchAvailabilities, activityLogs, sponsors, tournamentParticipants, internalTeams, clubTeams, clubTeamMembers, events: clubEvents, playerStats } = useClub();
 
   // No fallback to another club, and only this club's own fixtures: a match cached from another
   // club's site must not show under this club's name
@@ -101,19 +100,13 @@ export default function MatchCenterPage({
       juniorFixture || (p.member_id && juniorIds.has(p.member_id)) ? { ...p, name: juniorPublicName(p.name) } : p);
     return { ...storedMatch, home_lineup_coords: publicLineup(storedMatch.home_lineup_coords), away_lineup_coords: publicLineup(storedMatch.away_lineup_coords) };
   }, [storedMatch, juniorFixture, juniorIds]);
+  // The ground guide the report links to (loaded in the browser, like Getting there)
+  const ground = useMatchGround(match);
   // A team with "hide scores" on (junior grassroots rules): no score, goals or scorers here.
   // A junior team's fixture shows player names shortened ("Sam T."), for both sides.
   const scoreHidden = !!match && publicScoreHidden(match, clubTeams);
   const events = match
-    ? matchEvents
-        .filter(e => e.match_id === match.id && !(scoreHidden && GOAL_EVENT_TYPES.includes(e.event_type)))
-        .map(e => juniorFixture
-          ? {
-              ...e, player_name: juniorPublicName(e.player_name), assist_player_name: e.assist_player_name ? juniorPublicName(e.assist_player_name) : e.assist_player_name,
-              // A substitution's sentence names both players in full: shortened like every other name here
-              ...(subPlayers(e) ? { detail_text: subDetail(juniorPublicName(subPlayers(e)!.on), juniorPublicName(subPlayers(e)!.off)) } : {}),
-            }
-          : e)
+    ? publicEvents(matchEvents.filter(e => e.match_id === match.id && !(scoreHidden && GOAL_EVENT_TYPES.includes(e.event_type))), juniorFixture)
         .sort((a, b) => compareEventMinute(b, a))
     : [];
   const allSquadPlayers = club ? members.filter(m => m.club_id === club.id && isPlayerMember(m)) : [];
@@ -368,6 +361,19 @@ export default function MatchCenterPage({
   const cancelled = match.status === 'cancelled';
   const visibleTabs = cancelled ? [] : preMatch ? (lineupAnnounced ? ['lineups'] : []) : ['timeline', 'lineups', 'stats'];
   const shownTab = cancelled ? null : preMatch ? (lineupAnnounced ? 'lineups' : null) : activeTab;
+
+  // The full-time report: the article, and the club side's line-up for its facts box
+  const reportCup = match.event_id ? clubEvents.find(e => e.id === match.event_id && e.club_id === match.club_id) : undefined;
+  const article = articleFor({
+    club, match, events, matches, clubTeams, members, playerStats, juniorFixture,
+    playerOfTheMatch: motmMember?.full_name,
+    cup: reportCup && { id: reportCup.id, title: reportCup.title },
+    groundHref: ground ? groundPath(ground) : undefined,
+  });
+  const reportTeam = teamOfMatch(match, clubTeams);
+  const reportSide: Side = (match.is_club_home ?? true) ? 'home' : 'away';
+  const reportStarters = (!match.tournament_id && match.match_type !== 'internal' && (reportSide === 'home' ? match.home_lineup_coords : match.away_lineup_coords)) || [];
+  const reportSubs = events.filter(e => e.event_type === 'sub' && e.team_side === reportSide).sort(compareEventMinute).map(e => subPlayers(e)?.on || e.player_name);
 
   // The shootout score, once one has been entered for a level game (never for a team that hides scores)
   const shootout = !scoreHidden && match.status !== 'upcoming' && match.home_score === match.away_score
@@ -840,26 +846,32 @@ export default function MatchCenterPage({
           </div>
         )}
 
-        {/* Full-time report in plain sentences, from the logged events (none when the team hides scores) */}
-        {match.status === 'completed' && !scoreHidden && (
+        {/* Full-time report, written as a news article from the logged events (none when the team hides scores) */}
+        {article && (
           <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
           <MatchReport
+            article={article}
+            clubName={club.name}
+            coverUrl={match.match_flyer_url || club.banner_url || undefined}
+            crestUrl={club.logo_url || undefined}
+            tags={['Match Report', ...(reportCup ? [reportCup.title] : match.competition && match.competition !== 'Premier Regional League' ? [match.competition] : [])]}
+            publishedAt={match.audited_at || match.match_date}
+            shareUrl={matchPath(club.slug, match)}
             source={`Written from the match events ${club.name} logged.`}
-            paragraphs={matchReport({
-              home: match.home_team_name,
-              away: match.away_team_name,
-              homeScore: match.home_score ?? 0,
-              awayScore: match.away_score ?? 0,
-              competition: match.competition && match.competition !== 'Premier Regional League' ? match.competition : undefined,
-              venue: match.venue,
-              // The club's time zone, so the server's HTML and the browser agree on the day
-              dateLabel: match.match_date ? new Date(match.match_date).toLocaleDateString(DATE_LOCALE, { timeZone: clubTimeZone(club), weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : undefined,
-              goals: events.filter(e => ['goal', 'penalty', 'own_goal'].includes(e.event_type)).map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name, penalty: e.event_type === 'penalty', ownGoal: e.event_type === 'own_goal' })),
-              redCards: events.filter(e => e.event_type === 'red_card').map(e => ({ minute: e.minute, added: e.added_minute || 0, side: e.team_side, player: e.player_name })),
-              playerOfTheMatch: motmMember?.full_name,
-              neutral: !!match.tournament_id || match.match_type === 'internal',
-              shootout: match.home_penalty_score != null && match.away_penalty_score != null ? { home: match.home_penalty_score, away: match.away_penalty_score } : undefined,
-            })}
+            moreHref="#match-tabs"
+            facts={[
+              { label: 'Kick-off', value: <><LocalTime value={match.match_date} />{match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}</> },
+              ...(ground || match.venue ? [{ label: 'Ground', value: <>{ground ? <Link href={groundPath(ground)}>{ground.name}</Link> : match.venue}{match.pitch_label ? `, ${match.pitch_label}` : ''}</> }] : []),
+              { label: 'Length', value: `${lengthLabel(match)}${match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}` },
+              ...(reportTeam?.slug ? [{ label: 'Team', value: <Link href={`/${club.slug}/teams/${reportTeam.slug}`}>{teamLabel(reportTeam)}</Link> }] : []),
+            ]}
+            lineup={reportStarters.length > 0 && (
+              <>
+                <b>{reportSide === 'home' ? match.home_team_name : match.away_team_name}:</b>{' '}
+                {reportStarters.map(p => `${p.name}${p.position === 'GK' ? ' (GK)' : ''}${p.is_captain ? ' (c)' : ''}`).join(', ')}.
+                {reportSubs.length > 0 && <> <b>Subs used:</b> {reportSubs.join(', ')}.</>}
+              </>
+            )}
           />
           <SupportedBy clubId={club.id} />
           </div>

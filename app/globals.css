@@ -4821,3 +4821,20 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 @media (min-width: 701px) {
   .tb-root .tb-tools { flex-wrap: wrap; overflow: visible; -webkit-mask-image: none; mask-image: none; }
 }
+
+/* The full-time match report on a match page (components/MatchReport), laid out like a news article */
+.match-article { padding: 0; overflow: hidden; border-radius: var(--radius-xl); margin-bottom: 2rem; }
+.match-article-in { padding: 1.1rem clamp(1.1rem, 4vw, 2rem) 1.6rem; max-width: 720px; margin: 0 auto; }
+.match-article h2 { font-size: clamp(1.6rem, 5.4vw, 2.3rem); font-weight: 900; line-height: 1.15; color: var(--text-primary); margin: 0.7rem 0 0.6rem; text-wrap: balance; overflow-wrap: anywhere; }
+.match-article-byline { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+.match-article-lead { font-size: 1.1rem; line-height: 1.6; color: var(--text-primary); font-weight: 500; margin: 0 0 1.1rem; }
+.match-article-p { color: var(--text-secondary); font-size: 1rem; line-height: 1.75; margin: 0 0 1rem; }
+.match-article-in a:not(.btn) { color: var(--club-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.match-article-facts { margin-top: 1.4rem; padding: 1rem 1.1rem; border-radius: var(--radius-lg); background: rgba(var(--tint-rgb), 0.05); border: 1px solid var(--border-subtle); }
+.match-article-facts h3 { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.7rem; }
+.match-article-facts dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem 1.25rem; margin: 0; }
+.match-article-facts dt { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.1rem; }
+.match-article-facts dd { margin: 0; font-size: 0.92rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+.match-article-facts p { margin: 0.8rem 0 0; font-size: 0.88rem; line-height: 1.65; color: var(--text-secondary); }
+.match-article-facts p b { color: var(--text-primary); }
+.match-article-more { margin: 1.1rem 0 0; font-size: 0.95rem; }

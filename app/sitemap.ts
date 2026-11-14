@@ -82,12 +82,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   for (const m of matches) {
     const slug = slugById.get(m.club_id);
     if (!slug) continue; // match of an inactive club
+    // A finished game with only a score is a thin page (its report has nothing to say yet): left out
+    // until a scorer is logged or the stats are saved. Skipped when the goal log couldn't be read.
+    if (m.status === 'completed' && !m.is_audited && data.goalMatchIds.size > 0 && !data.goalMatchIds.has(m.id)) continue;
     const kickoff = m.match_date ? Date.parse(m.match_date) : NaN;
     const live = m.status === 'live' || m.status === 'halftime';
     const upcoming = !live && !['completed', 'full_time', 'cancelled'].includes(m.status) && (isNaN(kickoff) || kickoff > now - 3 * 3600 * 1000);
     entries.push({
       url: url(matchPath(slug, m)),
-      lastModified: date(m.created_at, m.match_date),
+      // Saving the stats fills out the report, so it counts as a change (the hourly IndexNow ping reads this)
+      lastModified: date(m.created_at, m.match_date, m.audited_at),
       changeFrequency: live ? 'always' : upcoming ? 'hourly' : 'monthly',
       priority: live ? 0.9 : upcoming ? 0.8 : 0.6,
     });
