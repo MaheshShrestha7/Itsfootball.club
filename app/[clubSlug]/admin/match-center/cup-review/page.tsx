@@ -1,28 +1,17 @@
 'use client';
 
-import { use, useEffect, useMemo, useState } from 'react';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ArrowLeft, Check, Copy, Lock, PenLine } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Copy, FileText, Lock, PenLine } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import ResultChip from '@/components/ResultChip';
 import ReviewSaveNote from '@/components/admin/ReviewSaveNote';
-import { formatClock, formatShortDay } from '@/lib/dates';
-import { hasKickoffTime, soonestFirst, tournamentTeamGroups } from '@/lib/fixtures';
-import { CUP_SUMMARY_MAX, cupNumbers, gameResult, hasReview, minutesAcross, opponentName, reviewPoints, type MatchReview } from '@/lib/match-review';
-import type { MatchStatLine } from '@/lib/match-stats';
-import { compareTournamentMatches, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { formatShortDay } from '@/lib/dates';
+import { CUP_SUMMARY_MAX, cupNumbers, gameResult, hasReview, minutesAcross, opponentName, reviewPoints } from '@/lib/match-review';
 import type { Match } from '@/lib/supabase/types';
-import { loadMatchReviews, loadStatLines, useCupSummary } from '@/lib/use-match-reviews';
-
-/** One of the club's teams in the cup, with its games in playing order */
-interface CupTeam { key: string; name?: string; games: Match[] }
-
-const when = (m: Match) => [
-  formatShortDay(m.match_date, hasKickoffTime(m)),
-  !hasKickoffTime(m) && m.match_time ? formatClock(m.match_time) : null,
-  tournamentMatchLabel(m),
-].filter(Boolean).join(' · ');
+import { gameWhen, useCupGames } from '@/lib/use-cup-games';
+import { useCupSummary } from '@/lib/use-match-reviews';
 
 /** Admin > Match Centre > Cup review: every game of an event or tournament, with each game's review */
 export default function CupReviewPage({ params, searchParams }: {
@@ -31,54 +20,9 @@ export default function CupReviewPage({ params, searchParams }: {
 }) {
   const { clubSlug } = use(params);
   const { event: eventId, tournament: tournamentId, team: askedTeam } = use(searchParams);
-  const { clubs, selectClubBySlug, matches, matchEvents, members, events: clubEvents, tournaments, tournamentParticipants, clubTeams } = useClub();
+  const { matchEvents, members } = useClub();
   const { user } = useAuth();
-  const club = selectClubBySlug(clubSlug) || clubs[0];
-
-  const event = eventId ? clubEvents.find(e => e.id === eventId && e.club_id === club.id) : undefined;
-  const tournament = !event && tournamentId ? tournaments.find(t => t.id === tournamentId && t.club_id === club.id) : undefined;
-  const cupName = event?.title || tournament?.name;
-
-  // The club's teams in this cup: by club team for an event, by entry for a tournament. A tournament
-  // with none of the club's own entries is listed whole, without a result for "us".
-  const teams = useMemo<CupTeam[]>(() => {
-    const own = matches.filter(m => m.club_id === club.id);
-    if (event) {
-      const games = own.filter(m => m.event_id === event.id).sort(soonestFirst);
-      const ids = [...new Set(games.map(m => m.team_id || ''))];
-      return ids.map(id => ({ key: id, name: clubTeams.find(t => t.id === id)?.name, games: games.filter(m => (m.team_id || '') === id) }));
-    }
-    if (tournament) {
-      const games = own.filter(m => m.tournament_id === tournament.id);
-      const groups = tournamentTeamGroups(games, tournamentParticipants.filter(p => p.tournament_id === tournament.id));
-      return groups.length
-        ? groups.map(g => ({ key: g.participant.id, name: g.participant.name, games: g.games }))
-        : [{ key: '', games: [...games].sort(compareTournamentMatches) }];
-    }
-    return [];
-  }, [matches, club.id, event, tournament, clubTeams, tournamentParticipants]);
-
-  const [teamKey, setTeamKey] = useState(askedTeam || '');
-  const team = teams.find(t => t.key === teamKey) || teams[0];
-  // Only a tournament needs the team's name to tell which side is ours
-  const ourName = tournament ? team?.name : undefined;
-  const games = useMemo(() => team?.games || [], [team]);
-  const idList = games.map(m => m.id).join(',');
-
-  const [reviews, setReviews] = useState<Record<string, MatchReview> | null>({});
-  const [lines, setLines] = useState<Record<string, MatchStatLine[]>>({});
-  useEffect(() => {
-    let live = true;
-    const ids = idList ? idList.split(',') : [];
-    void Promise.all([loadMatchReviews(ids), loadStatLines(ids)]).then(([r, l]) => {
-      if (!live) return;
-      setReviews(r);
-      setLines(l);
-    });
-    return () => { live = false; };
-  }, [idList]);
-
-  const cup = team && (event || tournament) ? { eventId: event?.id, tournamentId: tournament?.id, teamKey: team.key } : null;
+  const { club, event, tournament, cupName, teams, team, setTeamKey, games, reviews, lines, cup, query, ourName } = useCupGames(clubSlug, { event: eventId, tournament: tournamentId, team: askedTeam });
   const { summary, change, ready, saveState, retry } = useCupSummary(club.id, cup, user?.full_name || '');
   const [copied, setCopied] = useState(false);
 
@@ -161,6 +105,11 @@ export default function CupReviewPage({ params, searchParams }: {
         </div>
         <div className="admin-head-actions">
           <span className="rv-private"><Lock size={13} aria-hidden="true" /> Coaches and admins only</span>
+          {played.length > 0 && (
+            <Link data-view-ok href={`/${club.slug}/admin/match-center/cup-report?${query}`} className="btn btn-primary btn-sm">
+              <FileText size={14} aria-hidden="true" /> Tournament report
+            </Link>
+          )}
         </div>
       </div>
 
@@ -263,7 +212,7 @@ export default function CupReviewPage({ params, searchParams }: {
                 <div className="rv-game-head">
                   {outcome && <ResultChip outcome={outcome} />}
                   <b>{done ? scoreLine(m) : opponentName(m, ourName)}</b>
-                  <span className="admin-kicker">{when(m)}</span>
+                  <span className="admin-kicker">{gameWhen(m)}</span>
                   {done && hasReview(r) && (
                     <Link href={reviewHref(m)} className="admin-dash-link rv-edit">Edit</Link>
                   )}

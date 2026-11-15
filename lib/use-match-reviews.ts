@@ -12,7 +12,7 @@ export interface CupRef { eventId?: string; tournamentId?: string; teamKey: stri
 
 // Without a database (local preview) reviews stay in this browser
 const LOCAL_KEY = 'itsfootball_reviews_v1';
-type LocalStore = { matches?: Record<string, MatchReview>; cups?: Record<string, string> };
+type LocalStore = { matches?: Record<string, MatchReview>; cups?: Record<string, string>; shares?: Record<string, { share: CupShare | null; report: unknown }> };
 const readLocal = (): LocalStore => {
   try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') || {}; } catch { return {}; }
 };
@@ -132,15 +132,18 @@ export function useCupSummary(clubId: string | undefined, cup: CupRef | null, au
   const key = cup ? cupKey(cup) : null;
   const rowId = useRef<{ key: string; id: string } | null>(null);
   const { eventId, tournamentId, teamKey } = cup || { teamKey: '' };
+  // Who last saved the summary, for the report's "From the coach"
+  const [by, setBy] = useState('');
 
   const load = useCallback(async (): Promise<string | null> => {
     if (!key) return null;
     const sb = getSupabaseClient();
     if (!sb) return readLocal().cups?.[key] || '';
-    const q = sb.from('cup_reviews').select('id, summary').eq('team_key', teamKey);
+    const q = sb.from('cup_reviews').select('id, summary, updated_by_name').eq('team_key', teamKey);
     const { data, error } = await (eventId ? q.eq('event_id', eventId) : q.eq('tournament_id', tournamentId!)).maybeSingle();
     if (error) return null;
     rowId.current = data ? { key, id: data.id } : null;
+    setBy(data?.updated_by_name || '');
     return data?.summary || '';
   }, [key, eventId, tournamentId, teamKey]);
 
@@ -156,16 +159,118 @@ export function useCupSummary(clubId: string | undefined, cup: CupRef | null, au
       const { error } = await sb.from('cup_reviews').update(stamp).eq('id', rowId.current.id);
       return !error;
     }
-    const { data, error } = await sb.from('cup_reviews')
-      .insert({ ...stamp, club_id: clubId, event_id: eventId || null, tournament_id: tournamentId || null, team_key: teamKey })
-      .select('id').single();
-    if (error || !data) return false;
-    rowId.current = { key, id: data.id };
+    const id = await cupRowId(clubId, { eventId, tournamentId, teamKey }, stamp);
+    if (!id) return false;
+    rowId.current = { key, id };
     return true;
   }, [key, clubId, eventId, tournamentId, teamKey, authorName]);
 
   const { value, ...rest } = useAutosaved(key, '', load, save);
-  return { summary: value, ...rest };
+  return { summary: value, by, ...rest };
+}
+
+/**
+ * The id of a cup's row in cup_reviews, making the row when there is none. `fields` are written
+ * either way. Null when it can't be saved.
+ */
+async function cupRowId(clubId: string, cup: CupRef, fields: Record<string, unknown>): Promise<string | null> {
+  const sb = getSupabaseClient();
+  if (!sb) return null;
+  const find = () => {
+    const q = sb.from('cup_reviews').select('id').eq('team_key', cup.teamKey);
+    return (cup.eventId ? q.eq('event_id', cup.eventId) : q.eq('tournament_id', cup.tournamentId!)).maybeSingle();
+  };
+  let id: string | undefined = (await find()).data?.id;
+  if (!id) {
+    const made = await sb.from('cup_reviews')
+      .insert({ ...fields, club_id: clubId, event_id: cup.eventId || null, tournament_id: cup.tournamentId || null, team_key: cup.teamKey })
+      .select('id').single();
+    if (!made.error && made.data) return made.data.id;
+    // Someone made the row a moment ago (another tab, a share link): write to that one
+    id = (await find()).data?.id;
+    if (!id) return null;
+  }
+  const { error } = await sb.from('cup_reviews').update(fields).eq('id', id);
+  return error ? null : id;
+}
+
+/** A tournament report's share link: the token in the link and when the shared copy was saved */
+export interface CupShare { token: string; sharedAt: string }
+
+const newToken = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * The share link of a cup's report (migration 20261174). `ready` is false until the database has
+ * the share columns, so the Share button stays hidden. `save(report)` makes the link or replaces
+ * the copy behind it; `stop()` ends it, after which the old link shows nothing.
+ */
+export function useCupShare(clubId: string | undefined, cup: CupRef | null) {
+  const key = cup ? cupKey(cup) : null;
+  const { eventId, tournamentId, teamKey } = cup || { teamKey: '' };
+  const [state, setState] = useState<{ key: string; share: CupShare | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!key) return;
+    let live = true;
+    void (async () => {
+      const sb = getSupabaseClient();
+      let share: CupShare | null = null;
+      if (sb) {
+        const q = sb.from('cup_reviews').select('share_token, shared_at').eq('team_key', teamKey);
+        const { data, error } = await (eventId ? q.eq('event_id', eventId) : q.eq('tournament_id', tournamentId!)).maybeSingle();
+        if (error) return;
+        if (data?.share_token) share = { token: data.share_token, sharedAt: data.shared_at };
+      } else {
+        share = readLocal().shares?.[key]?.share || null;
+      }
+      if (live) setState({ key, share });
+    })();
+    return () => { live = false; };
+  }, [key, eventId, tournamentId, teamKey]);
+
+  const write = useCallback(async (report: object | null, token: string | null) => {
+    if (!key || !clubId) return;
+    setBusy(true);
+    setFailed(false);
+    const sharedAt = new Date().toISOString();
+    const share = token ? { token, sharedAt } : null;
+    let ok: boolean;
+    if (getSupabaseClient()) {
+      ok = !!(await cupRowId(clubId, { eventId, tournamentId, teamKey }, { share_token: token, share_report: report, shared_at: token ? sharedAt : null }));
+    } else {
+      const local = readLocal();
+      ok = writeLocal({ ...local, shares: { ...local.shares, [key]: { share, report } } });
+    }
+    setBusy(false);
+    setFailed(!ok);
+    if (ok) setState({ key, share });
+  }, [key, clubId, eventId, tournamentId, teamKey]);
+
+  const current = state?.key === key ? state : null;
+  const token = current?.share?.token;
+  return {
+    ready: !!current,
+    share: current?.share || null,
+    busy, failed,
+    save: useCallback((report: object) => write(report, token || newToken()), [write, token]),
+    stop: useCallback(() => write(null, null), [write]),
+  };
+}
+
+/** The saved copy behind a share link, with the club it belongs to. Null when the link is wrong or has been stopped. */
+export async function loadSharedCupReport(token: string): Promise<{ report: unknown; shared_at: string; club: { name: string; slug: string; logo_url?: string | null; primary_color?: string | null } } | null> {
+  const sb = getSupabaseClient();
+  if (!sb) {
+    const hit = Object.values(readLocal().shares || {}).find(s => s.share?.token === token);
+    return hit?.share ? { report: hit.report, shared_at: hit.share.sharedAt, club: { name: (hit.report as { club?: string })?.club || '', slug: '' } } : null;
+  }
+  const { data, error } = await sb.rpc('shared_cup_report', { p_token: token });
+  return error || !data ? null : data;
 }
 
 /** The reviews written for some games, by match id. Null when they can't be read. */
