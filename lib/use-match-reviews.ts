@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { emptyReview, type MatchReview } from '@/lib/match-review';
 import type { MatchStatLine } from '@/lib/match-stats';
+import type { EventNotes } from '@/lib/event-report';
 
 export type ReviewSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -12,7 +13,10 @@ export interface CupRef { eventId?: string; tournamentId?: string; teamKey: stri
 
 // Without a database (local preview) reviews stay in this browser
 const LOCAL_KEY = 'itsfootball_reviews_v1';
-type LocalStore = { matches?: Record<string, MatchReview>; cups?: Record<string, string>; shares?: Record<string, { share: CupShare | null; report: unknown }> };
+type LocalStore = {
+  matches?: Record<string, MatchReview>; cups?: Record<string, string>; shares?: Record<string, { share: CupShare | null; report: unknown }>;
+  events?: Record<string, EventNotes>; eventShares?: Record<string, { share: CupShare | null; report: unknown }>;
+};
 const readLocal = (): LocalStore => {
   try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') || {}; } catch { return {}; }
 };
@@ -297,4 +301,125 @@ export async function loadStatLines(matchIds: string[]): Promise<Record<string, 
   const by: Record<string, MatchStatLine[]> = {};
   for (const row of data as (MatchStatLine & { match_id: string })[]) (by[row.match_id] ||= []).push(row);
   return by;
+}
+
+// ---------------------------------------------------------------------------
+// Wrapping up an event (migration 20261175): the committee's notes and the shared summary
+// ---------------------------------------------------------------------------
+
+/** True once the database has event_reviews and events.completed_at. Until then Mark as completed, the notes and Share stay hidden. */
+export function useEventWrapupReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const sb = getSupabaseClient();
+    void (sb
+      ? Promise.all([sb.from('event_reviews').select('event_id').limit(1), sb.from('events').select('completed_at').limit(1)]).then(r => r.every(x => !x.error))
+      : Promise.resolve(true))
+      .then(ok => { if (live) setReady(ok); });
+    return () => { live = false; };
+  }, []);
+  return ready;
+}
+
+const emptyNotes: EventNotes = { went_well: '', next_time: '' };
+
+/** The committee's notes on one event, saved as they type */
+export function useEventNotes(clubId: string | undefined, eventId: string | undefined, authorName: string) {
+  const load = useCallback(async (): Promise<EventNotes | null> => {
+    if (!eventId) return null;
+    const sb = getSupabaseClient();
+    if (!sb) return readLocal().events?.[eventId] || emptyNotes;
+    const { data, error } = await sb.from('event_reviews').select('went_well, next_time').eq('event_id', eventId).maybeSingle();
+    if (error) return null;
+    return data ? { went_well: data.went_well || '', next_time: data.next_time || '' } : emptyNotes;
+  }, [eventId]);
+
+  const save = useCallback(async (notes: EventNotes): Promise<boolean> => {
+    if (!eventId || !clubId) return false;
+    const sb = getSupabaseClient();
+    if (!sb) {
+      const local = readLocal();
+      return writeLocal({ ...local, events: { ...local.events, [eventId]: notes } });
+    }
+    const { error } = await sb.from('event_reviews').upsert(
+      { event_id: eventId, club_id: clubId, ...notes, updated_by_name: authorName || null, updated_at: new Date().toISOString() },
+      { onConflict: 'event_id' });
+    return !error;
+  }, [eventId, clubId, authorName]);
+
+  const { value, ...rest } = useAutosaved(eventId || null, emptyNotes, load, save);
+  return { notes: value, ...rest };
+}
+
+/**
+ * The share link of an event's summary. `save(report)` makes the link or replaces the copy behind
+ * it; `stop()` ends it, after which the old link shows nothing.
+ */
+export function useEventShare(clubId: string | undefined, eventId: string | undefined) {
+  const [state, setState] = useState<{ key: string; share: CupShare | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!eventId) return;
+    let live = true;
+    void (async () => {
+      const sb = getSupabaseClient();
+      let share: CupShare | null = null;
+      if (sb) {
+        const { data, error } = await sb.from('event_reviews').select('share_token, shared_at').eq('event_id', eventId).maybeSingle();
+        if (error) return;
+        if (data?.share_token) share = { token: data.share_token, sharedAt: data.shared_at };
+      } else {
+        share = readLocal().eventShares?.[eventId]?.share || null;
+      }
+      if (live) setState({ key: eventId, share });
+    })();
+    return () => { live = false; };
+  }, [eventId]);
+
+  const write = useCallback(async (report: object | null, token: string | null) => {
+    if (!eventId || !clubId) return;
+    setBusy(true);
+    setFailed(false);
+    const sharedAt = new Date().toISOString();
+    const share = token ? { token, sharedAt } : null;
+    let ok: boolean;
+    const sb = getSupabaseClient();
+    if (sb) {
+      // Upsert leaves the notes alone on an existing row; a new row starts with empty notes
+      const { error } = await sb.from('event_reviews').upsert(
+        { event_id: eventId, club_id: clubId, share_token: token, share_report: report, shared_at: token ? sharedAt : null },
+        { onConflict: 'event_id' });
+      ok = !error;
+    } else {
+      const local = readLocal();
+      ok = writeLocal({ ...local, eventShares: { ...local.eventShares, [eventId]: { share, report } } });
+    }
+    setBusy(false);
+    setFailed(!ok);
+    if (ok) setState({ key: eventId, share });
+  }, [eventId, clubId]);
+
+  const current = state?.key === eventId ? state : null;
+  const token = current?.share?.token;
+  return {
+    ready: !!current,
+    share: current?.share || null,
+    busy, failed,
+    save: useCallback((report: object) => write(report, token || newToken()), [write, token]),
+    stop: useCallback(() => write(null, null), [write]),
+  };
+}
+
+/** The saved summary behind an event share link, with its club. Null when the link is wrong or has been stopped. */
+export async function loadSharedEventReport(token: string): Promise<{ report: unknown; shared_at: string; club: { name: string; slug: string; logo_url?: string | null; primary_color?: string | null } } | null> {
+  const sb = getSupabaseClient();
+  if (!sb) {
+    const hit = Object.values(readLocal().eventShares || {}).find(x => x.share?.token === token);
+    return hit?.share ? { report: hit.report, shared_at: hit.share.sharedAt, club: { name: (hit.report as { club?: string })?.club || '', slug: '' } } : null;
+  }
+  const { data, error } = await sb.rpc('shared_event_report', { p_token: token });
+  return error || !data ? null : data;
 }

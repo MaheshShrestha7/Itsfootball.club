@@ -15,8 +15,9 @@ export const isAwaitingResult = (m: Pick<Match, 'status' | 'match_date'>, now = 
 export const isPastFixture = (m: Pick<Match, 'status' | 'match_date'>, now = Date.now()) =>
   m.status === 'completed' || m.status === 'cancelled' || isAwaitingResult(m, now);
 
-/** Over once its end (or its start, with no end) is a day gone */
-export const isPastEvent = (e: Pick<ClubEvent, 'start_time' | 'end_time'>, now = Date.now()) => {
+/** Marked Completed, or its end (or its start, with no end) is a day gone */
+export const isPastEvent = (e: Pick<ClubEvent, 'start_time' | 'end_time' | 'completed_at'>, now = Date.now()) => {
+  if (e.completed_at) return true;
   const t = Date.parse(e.end_time || e.start_time);
   return !Number.isNaN(t) && t < now - DAY;
 };

@@ -352,6 +352,9 @@ export interface ClubEvent {
   ticket_member_price_cents?: number | null;
   /** Flyer / poster image; '' or missing = none (supabase/migrations/20261115_event_flyers.sql) */
   flyer_url?: string;
+  /** Set when the committee marks it Completed; '' or missing = not (migration 20261175) */
+  completed_at?: string | null;
+  completed_by_name?: string | null;
   created_at?: string;
 }
 

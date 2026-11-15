@@ -26,11 +26,17 @@ import {
   Printer,
   FileImage,
   Trophy,
+  FileText,
+  Check,
+  RotateCcw,
 } from 'lucide-react';
+import Link from 'next/link';
 import EventFixturesModal from '@/components/admin/EventFixturesModal';
 import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
 import { byDate, isPastEvent, type DateOrder } from '@/lib/club-lists';
+import { EVENT_TYPES } from '@/lib/event-report';
+import { useEventWrapupReady } from '@/lib/use-match-reviews';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { confirmAction } from '@/components/ConfirmDialog';
 import TrainingAttendance from '@/components/TrainingAttendance';
@@ -43,12 +49,6 @@ import PopupPanel from '@/components/PopupPanel';
 const MAX_REPEAT_WEEKS = 26;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
-// The event types, as the form and the Type filter name them
-const EVENT_TYPES: [EventCategory, string][] = [
-  ['training', 'Training Session'], ['match', 'Official Match'], ['social', 'Social & Gala'],
-  ['trial', 'Player Trials'], ['agm', 'Club AGM'], ['tournament', 'Tournament'],
-];
-
 export default function AdminEventsPage({
   params,
 }: {
@@ -56,7 +56,9 @@ export default function AdminEventsPage({
 }) {
   const resolvedParams = use(params);
   const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateMatch, updateClubBranding, seasons, getActiveSeason } = useClub();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  // Mark as completed needs migration 20261175; until then past events just show the summary
+  const wrapupReady = useEventWrapupReady();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubEvents = events.filter(e => e.club_id === club.id);
@@ -78,7 +80,7 @@ export default function AdminEventsPage({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | EventCategory>('ALL');
-  const [whenFilter, setWhenFilter] = useState<'all' | 'coming' | 'past'>('all');
+  const [whenFilter, setWhenFilter] = useState<'all' | 'coming' | 'past' | 'wrap' | 'done'>('all');
   const [order, setOrder] = useState<DateOrder>('newest');
   // Read once, so Coming up and Past don't shift while the page is open
   const [now] = useState(() => Date.now());
@@ -122,10 +124,14 @@ export default function AdminEventsPage({
   const seasonOf = (e: ClubEvent) => e.season || activeSeason?.name || defaultSeasonLabel();
   const inSeasonAndType = clubEvents.filter(e =>
     (seasonFilter === 'ALL' || seasonOf(e) === seasonFilter) && (typeFilter === 'ALL' || e.category === typeFilter));
-  const pastCount = inSeasonAndType.filter(e => isPastEvent(e, now)).length;
-  const filteredEvents = byDate(
-    inSeasonAndType.filter(e => whenFilter === 'all' || (whenFilter === 'past') === isPastEvent(e, now)),
-    e => e.start_time, order);
+  const isWhen = (e: ClubEvent, when: typeof whenFilter) => when === 'all'
+    || (when === 'coming' ? !isPastEvent(e, now)
+      : when === 'past' ? isPastEvent(e, now)
+        : when === 'done' ? !!e.completed_at
+          : isPastEvent(e, now) && !e.completed_at);
+  const whenChips = ([['all', 'All'], ['coming', 'Coming up'], ...(wrapupReady ? [['wrap', 'To wrap up'], ['done', 'Completed']] : [['past', 'Past']])] as [typeof whenFilter, string][])
+    .map(([key, label]) => ({ key, label, n: inSeasonAndType.filter(e => isWhen(e, key)).length }));
+  const filteredEvents = byDate(inSeasonAndType.filter(e => isWhen(e, whenFilter)), e => e.start_time, order);
   // Seasons the club set up, plus any label an older event still carries
   const seasonNames = [...new Set([...clubSeasons.map(s => s.name), ...clubEvents.map(seasonOf)])];
 
@@ -314,7 +320,7 @@ export default function AdminEventsPage({
 
       <div className="admin-toolbar">
         <div className="admin-chips" role="group" aria-label="Show">
-          {([['all', 'All', inSeasonAndType.length], ['coming', 'Coming up', inSeasonAndType.length - pastCount], ['past', 'Past', pastCount]] as const).map(([key, label, n]) => (
+          {whenChips.map(({ key, label, n }) => (
             <button data-view-ok type="button" className="admin-chip" key={key} aria-pressed={whenFilter === key} onClick={() => setWhenFilter(key)}>
               {label} <span className="num">{n}</span>
             </button>
@@ -369,6 +375,9 @@ export default function AdminEventsPage({
                   <span className="admin-pill">
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
+                  {evt.completed_at
+                    ? <span className="admin-pill is-ok"><Check size={11} aria-hidden="true" /> Completed</span>
+                    : wrapupReady && isPastEvent(evt, now) && <span className="admin-pill is-warn">Date has passed</span>}
                   <span className="text-meta">
                     Checked in: {evt.rsvp_count}{evt.max_capacity > 0 ? ` / ${evt.max_capacity}` : ''}
                   </span>
@@ -413,21 +422,74 @@ export default function AdminEventsPage({
 
             {/* Action Buttons */}
             <div className="row row-wrap">
-              {(() => {
-                const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
-                return (
-                  <button
-                    type="button"
-                    onClick={() => handleTogglePinEvent(evt)}
-                    className="btn btn-secondary btn-sm"
-                    aria-pressed={!!isPinned}
-                    title={isPinned ? 'On the home page slider. Select to take it off' : 'Show it in the home page slider'}
-                  >
-                    <Pin size={14} aria-hidden="true" />
-                    <span>{isPinned ? 'On the home page' : 'Pin to the home page'}</span>
-                  </button>
-                );
-              })()}
+              {isPastEvent(evt, now) ? (
+                <>
+                  <Link href={`/${club.slug}/admin/events/report?event=${evt.id}`} className={`btn ${evt.completed_at || !wrapupReady ? 'btn-primary' : 'btn-secondary'} btn-sm row`}>
+                    <FileText size={14} aria-hidden="true" />
+                    <span>Summary report</span>
+                  </Link>
+                  {wrapupReady && (evt.completed_at ? (
+                    <button type="button" className="btn btn-secondary btn-sm row" onClick={() => updateEvent(evt.id, { completed_at: '', completed_by_name: '' })}>
+                      <RotateCcw size={14} aria-hidden="true" />
+                      <span>Reopen</span>
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn-primary btn-sm row" onClick={() => {
+                      updateEvent(evt.id, { completed_at: new Date().toISOString(), completed_by_name: user?.full_name || '' });
+                      setToastMessage(`"${evt.title}" is marked as completed`);
+                    }}>
+                      <Check size={14} aria-hidden="true" />
+                      <span>Mark as completed</span>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                {(() => {
+                  const isPinned = club.hero_pinned_items?.some(p => p.type === 'event' && p.target_id === evt.id);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePinEvent(evt)}
+                      className="btn btn-secondary btn-sm"
+                      aria-pressed={!!isPinned}
+                      title={isPinned ? 'On the home page slider. Select to take it off' : 'Show it in the home page slider'}
+                    >
+                      <Pin size={14} aria-hidden="true" />
+                      <span>{isPinned ? 'On the home page' : 'Pin to the home page'}</span>
+                    </button>
+                  );
+                })()}
+                <button
+                  type="button"
+                  onClick={() => setQrModalEvent(evt)}
+                  className="btn btn-secondary btn-sm"
+                  title="The QR code people scan to check themselves in"
+                >
+                  <QrCode size={14} aria-hidden="true" />
+                  <span>Door QR</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFlyerEvent(evt)}
+                  className="btn btn-secondary btn-sm row"
+                  title={`Make a printable flyer for ${evt.title}`}
+                >
+                  <FileImage size={14} aria-hidden="true" />
+                  <span>Make a flyer</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScannerEvent(evt)}
+                  className="btn btn-primary btn-sm row"
+                >
+                  <CheckCircle2 size={14} aria-hidden="true" />
+                  <span>Check people in</span>
+                </button>
+                </>
+              )}
 
               {canLinkFixtures && (
                 <button
@@ -440,35 +502,6 @@ export default function AdminEventsPage({
                   <span>Fixtures</span>
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => setQrModalEvent(evt)}
-                className="btn btn-secondary btn-sm"
-                title="The QR code people scan to check themselves in"
-              >
-                <QrCode size={14} aria-hidden="true" />
-                <span>Door QR</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFlyerEvent(evt)}
-                className="btn btn-secondary btn-sm row"
-                title={`Make a printable flyer for ${evt.title}`}
-              >
-                <FileImage size={14} aria-hidden="true" />
-                <span>Make a flyer</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setScannerEvent(evt)}
-                className="btn btn-primary btn-sm row"
-              >
-                <CheckCircle2 size={14} aria-hidden="true" />
-                <span>Check people in</span>
-              </button>
 
               <button
                 type="button"

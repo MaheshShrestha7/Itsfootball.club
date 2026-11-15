@@ -102,8 +102,10 @@ export default function EventDetailsPage({
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;
   const start = new Date(event.start_time).getTime();
   const end = event.end_time ? new Date(event.end_time).getTime() : start + DEFAULT_LENGTH;
-  const upcoming = start > now;
-  const over = end < now;
+  // Marked Completed by the committee: treated as over, even if its end time hasn't come
+  const completed = !!event.completed_at;
+  const upcoming = start > now && !completed;
+  const over = end < now || completed;
   const place = event.location || club.stadium_name;
   // "0 / 150 checked in" days out reads as nobody coming: the count shows once people arrive (admins always)
   const showCheckins = event.max_capacity > 0 && (event.rsvp_count > 0 || hasClubAdminAccess(club.id));

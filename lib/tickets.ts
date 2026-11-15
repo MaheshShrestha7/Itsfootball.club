@@ -13,10 +13,12 @@ export interface TicketedEvent {
   ticket_member_price_cents?: number | null;
   start_time: string;
   end_time?: string | null;
+  /** Marked Completed by the committee (migration 20261175): sales stop */
+  completed_at?: string | null;
 }
 
-export const salesOpen = (event: Pick<TicketedEvent, 'start_time' | 'end_time'>, now = Date.now()) =>
-  (event.end_time ? new Date(event.end_time).getTime() : new Date(event.start_time).getTime() + SALES_GRACE_MS) > now;
+export const salesOpen = (event: Pick<TicketedEvent, 'start_time' | 'end_time' | 'completed_at'>, now = Date.now()) =>
+  !event.completed_at && (event.end_time ? new Date(event.end_time).getTime() : new Date(event.start_time).getTime() + SALES_GRACE_MS) > now;
 
 /** Why this order can't go ahead, or null. `left` is tickets_left(): null = no capacity limit */
 export function ticketOrderError(event: TicketedEvent | null, quantity: number, left: number | null, now = Date.now()): string | null {

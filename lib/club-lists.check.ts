@@ -21,6 +21,8 @@ assert.equal(isPastFixture({ status: 'postponed', match_date: at(now - 30 * HOUR
 // Events: by end time, else start
 assert.equal(isPastEvent({ start_time: at(now - 50 * HOUR), end_time: at(now - 30 * HOUR) }, now), true);
 assert.equal(isPastEvent({ start_time: at(now - 50 * HOUR), end_time: at(now + HOUR) }, now), false, 'multi-day event still on');
+assert.equal(isPastEvent({ start_time: at(now + 50 * HOUR), completed_at: at(now) }, now), true, 'marked Completed counts as past');
+assert.equal(isPastEvent({ start_time: at(now + 50 * HOUR), completed_at: '' }, now), false, 'reopened (cleared) is not');
 assert.equal(isPastEvent({ start_time: at(now - 2 * HOUR) }, now), false);
 assert.equal(isPastEvent({ start_time: at(now - 30 * HOUR) }, now), true);
 
