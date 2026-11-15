@@ -11,6 +11,7 @@ import { confirmAction, notify } from '@/components/ConfirmDialog';
 import { isArticleEmpty } from '@/lib/article-text';
 import { FileText, Plus, Trash2, Edit2, Play, Image as ImageIcon, X, Pin, CheckCircle2 } from 'lucide-react';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
+import { byDate, seasonOfMatch, seasonOptions, type DateOrder } from '@/lib/club-lists';
 import PopupPanel from '@/components/PopupPanel';
 
 export default function AdminContentPage({
@@ -19,10 +20,17 @@ export default function AdminContentPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, news, matches, events, addNewsArticle, updateNewsArticle, deleteNewsArticle, updateClubBranding } = useClub();
+  const { clubs, selectClubBySlug, news, matches, events, seasons, addNewsArticle, updateNewsArticle, deleteNewsArticle, updateClubBranding } = useClub();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubNews = news.filter(n => n.club_id === club.id);
+  // A story has no season of its own: it belongs to the club season its date falls in
+  const clubSeasons = seasons.filter(s => s.club_id === club.id);
+  const seasonOf = (a: NewsArticle) => seasonOfMatch({ season: '', match_date: a.published_at }, clubSeasons);
+  const seasonNames = seasonOptions(clubNews.map(seasonOf), clubSeasons).filter(Boolean);
+  const [seasonFilter, setSeasonFilter] = useState('ALL');
+  const [order, setOrder] = useState<DateOrder>('newest');
+  const shownNews = byDate(clubNews.filter(a => seasonFilter === 'ALL' || seasonOf(a) === seasonFilter), a => a.published_at, order);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -151,9 +159,29 @@ export default function AdminContentPage({
         </div>
       </div>
 
+      {clubNews.length > 0 && (
+        <div className="admin-toolbar">
+          <div className="admin-toolbar-end">
+            {seasonNames.length > 0 && (
+              <select data-view-ok aria-label="Season" className="form-input" value={seasonFilter} onChange={e => setSeasonFilter(e.target.value)}>
+                <option value="ALL">All seasons</option>
+                {seasonNames.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+            )}
+            <select data-view-ok aria-label="Order" className="form-input" value={order} onChange={e => setOrder(e.target.value as DateOrder)}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* News Articles List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {clubNews.map(article => (
+        {clubNews.length > 0 && shownNews.length === 0 && (
+          <div className="admin-panel admin-empty"><p style={{ margin: 0 }}>No stories in this season.</p></div>
+        )}
+        {shownNews.map(article => (
           <div
             key={article.id}
             className="glass-panel"

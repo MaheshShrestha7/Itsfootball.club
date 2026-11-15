@@ -30,6 +30,7 @@ import {
 import EventFixturesModal from '@/components/admin/EventFixturesModal';
 import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
+import { byDate, isPastEvent, type DateOrder } from '@/lib/club-lists';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { confirmAction } from '@/components/ConfirmDialog';
 import TrainingAttendance from '@/components/TrainingAttendance';
@@ -41,6 +42,12 @@ import PopupPanel from '@/components/PopupPanel';
 
 const MAX_REPEAT_WEEKS = 26;
 const WEEK_MS = 7 * 24 * 3600 * 1000;
+
+// The event types, as the form and the Type filter name them
+const EVENT_TYPES: [EventCategory, string][] = [
+  ['training', 'Training Session'], ['match', 'Official Match'], ['social', 'Social & Gala'],
+  ['trial', 'Player Trials'], ['agm', 'Club AGM'], ['tournament', 'Tournament'],
+];
 
 export default function AdminEventsPage({
   params,
@@ -70,6 +77,11 @@ export default function AdminEventsPage({
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [seasonFilter, setSeasonFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | EventCategory>('ALL');
+  const [whenFilter, setWhenFilter] = useState<'all' | 'coming' | 'past'>('all');
+  const [order, setOrder] = useState<DateOrder>('newest');
+  // Read once, so Coming up and Past don't shift while the page is open
+  const [now] = useState(() => Date.now());
 
   // Tickets sold per event (door list rows created by paid orders); admins read them under RLS
   const [ticketsSold, setTicketsSold] = useState<Record<string, number>>({});
@@ -107,10 +119,15 @@ export default function AdminEventsPage({
   const doorEvent = qrModalEvent || printPosterEvent;
   const doorCheckinUrl = useDoorCheckinUrl(doorEvent ? `/${club.slug}/events/${doorEvent.id}/checkin` : null, doorEvent?.id);
 
-  const filteredEvents = clubEvents.filter(e => {
-    if (seasonFilter === 'ALL') return true;
-    return (e.season || activeSeason?.name) === seasonFilter;
-  });
+  const seasonOf = (e: ClubEvent) => e.season || activeSeason?.name || defaultSeasonLabel();
+  const inSeasonAndType = clubEvents.filter(e =>
+    (seasonFilter === 'ALL' || seasonOf(e) === seasonFilter) && (typeFilter === 'ALL' || e.category === typeFilter));
+  const pastCount = inSeasonAndType.filter(e => isPastEvent(e, now)).length;
+  const filteredEvents = byDate(
+    inSeasonAndType.filter(e => whenFilter === 'all' || (whenFilter === 'past') === isPastEvent(e, now)),
+    e => e.start_time, order);
+  // Seasons the club set up, plus any label an older event still carries
+  const seasonNames = [...new Set([...clubSeasons.map(s => s.name), ...clubEvents.map(seasonOf)])];
 
   const handleTogglePinEvent = (evt: ClubEvent) => {
     // Preserve default slides if no custom pins exist yet
@@ -295,15 +312,30 @@ export default function AdminEventsPage({
         </div>
       </div>
 
-      <div className="admin-chips" role="group" aria-label="Season" style={{ marginBottom: 'var(--space-md)' }}>
-        <button data-view-ok type="button" className="admin-chip" aria-pressed={seasonFilter === 'ALL'} onClick={() => setSeasonFilter('ALL')}>
-          All seasons
-        </button>
-        {clubSeasons.map(s => (
-          <button data-view-ok type="button" className="admin-chip" key={s.id} aria-pressed={seasonFilter === s.name} onClick={() => setSeasonFilter(s.name)}>
-            {s.name}{s.is_current && <span className="num">current</span>}
-          </button>
-        ))}
+      <div className="admin-toolbar">
+        <div className="admin-chips" role="group" aria-label="Show">
+          {([['all', 'All', inSeasonAndType.length], ['coming', 'Coming up', inSeasonAndType.length - pastCount], ['past', 'Past', pastCount]] as const).map(([key, label, n]) => (
+            <button data-view-ok type="button" className="admin-chip" key={key} aria-pressed={whenFilter === key} onClick={() => setWhenFilter(key)}>
+              {label} <span className="num">{n}</span>
+            </button>
+          ))}
+        </div>
+        <div className="admin-toolbar-end">
+          <select data-view-ok aria-label="Event type" className="form-input" value={typeFilter} onChange={e => setTypeFilter(e.target.value as 'ALL' | EventCategory)}>
+            <option value="ALL">All types</option>
+            {EVENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+          <select data-view-ok aria-label="Season" className="form-input" value={seasonFilter} onChange={e => setSeasonFilter(e.target.value)}>
+            <option value="ALL">All seasons</option>
+            {seasonNames.map(name => (
+              <option key={name} value={name}>{name}{clubSeasons.find(s => s.name === name)?.is_current ? ' (current)' : ''}</option>
+            ))}
+          </select>
+          <select data-view-ok aria-label="Order" className="form-input" value={order} onChange={e => setOrder(e.target.value as DateOrder)}>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </div>
       </div>
 
       {/* Events Table / Grid */}
@@ -311,7 +343,7 @@ export default function AdminEventsPage({
         {filteredEvents.length === 0 ? (
           <div className="admin-panel admin-empty">
             <p style={{ margin: 0 }}>
-              {seasonFilter === 'ALL' ? 'No events yet. Add an event to create your first one.' : `No events in the ${seasonFilter} season.`}
+              {clubEvents.length === 0 ? 'No events yet. Add an event to create your first one.' : 'No events match these filters.'}
             </p>
           </div>
         ) : (
@@ -542,12 +574,7 @@ export default function AdminEventsPage({
                     value={form.category}
                     onChange={e => setForm({ ...form, category: e.target.value as EventCategory })}
                   >
-                    <option value="training">Training Session</option>
-                    <option value="match">Official Match</option>
-                    <option value="social">Social & Gala</option>
-                    <option value="trial">Player Trials</option>
-                    <option value="agm">Club AGM</option>
-                    <option value="tournament">Tournament</option>
+                    {EVENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </div>
 
