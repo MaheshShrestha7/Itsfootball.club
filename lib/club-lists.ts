@@ -49,6 +49,17 @@ export function seasonOptions(seasonOf: string[], seasons: Pick<ClubSeason, 'nam
   });
 }
 
+/** Admin lists: newest first (the default) or oldest first. Undated items go last either way. */
+export type DateOrder = 'newest' | 'oldest';
+export function byDate<T>(items: T[], dateOf: (item: T) => string | null | undefined, order: DateOrder = 'newest'): T[] {
+  const at = (item: T) => Date.parse(dateOf(item) || '');
+  return [...items].sort((a, b) => {
+    const [x, y] = [at(a), at(b)];
+    if (Number.isNaN(x) || Number.isNaN(y)) return Number.isNaN(x) ? (Number.isNaN(y) ? 0 : 1) : -1;
+    return order === 'newest' ? y - x : x - y;
+  });
+}
+
 const monthKey = (iso: string) => {
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
   if (Number.isNaN(d.getTime())) return { key: '', label: 'Date to be confirmed' };

@@ -1,7 +1,7 @@
 // Self-check for the public list helpers (fixtures, events, tournaments: upcoming vs past).
 // Run: npx esbuild lib/club-lists.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { groupByMonth, isAwaitingResult, isPastEvent, isPastFixture, isPastTournament, seasonOfMatch, seasonOptions } from './club-lists';
+import { byDate, groupByMonth, isAwaitingResult, isPastEvent, isPastFixture, isPastTournament, seasonOfMatch, seasonOptions } from './club-lists';
 
 const now = Date.parse('2026-11-03T12:00:00Z');
 const HOUR = 3600000;
@@ -45,5 +45,11 @@ assert.deepEqual(seasonOptions(['2024/25', '2025/26'], []), ['2025/26', '2024/25
 // Month groups keep order and read in the site's zone (Sydney: 31 Oct 14:00 UTC is 1 Nov there)
 const groups = groupByMonth(['2026-11-08T05:00:00Z', '2026-11-01T05:00:00Z', '2026-10-31T14:00:00Z', '2026-10-20', 'nope'], d => d);
 assert.deepEqual(groups.map(g => [g.label, g.items.length]), [['November 2026', 3], ['October 2026', 1], ['Date to be confirmed', 1]]);
+
+// Admin lists: newest first by default, oldest first on request, undated last both ways
+const dated = [{ d: '2026-03-01' }, { d: '' }, { d: '2026-11-01T09:00:00Z' }, { d: '2025-12-31' }];
+assert.deepEqual(byDate(dated, x => x.d).map(x => x.d), ['2026-11-01T09:00:00Z', '2026-03-01', '2025-12-31', '']);
+assert.deepEqual(byDate(dated, x => x.d, 'oldest').map(x => x.d), ['2025-12-31', '2026-03-01', '2026-11-01T09:00:00Z', '']);
+assert.equal(dated[0].d, '2026-03-01', 'the list it was given is left alone');
 
 console.log('club-lists checks passed');

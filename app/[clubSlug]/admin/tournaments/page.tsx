@@ -11,6 +11,7 @@ import { Trophy, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, CheckCircle
 import { parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
+import { byDate, type DateOrder } from '@/lib/club-lists';
 
 export default function AdminTournamentsPage({
   params,
@@ -35,6 +36,17 @@ export default function AdminTournamentsPage({
 
   const clubTournaments = tournaments.filter(t => t.club_id === club.id);
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
+
+  const [seasonFilter, setSeasonFilter] = useState('ALL');
+  const [formatFilter, setFormatFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [order, setOrder] = useState<DateOrder>('newest');
+  const seasonNames = [...new Set(clubTournaments.map(t => t.season).filter(Boolean))].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  const shownTournaments = byDate(
+    clubTournaments.filter(t => (seasonFilter === 'ALL' || t.season === seasonFilter)
+      && (formatFilter === 'ALL' || t.format === formatFilter)
+      && (statusFilter === 'ALL' || t.status === statusFilter)),
+    t => t.start_date, order);
 
   // Upgrade tournaments made by older versions (missing fixtures, old 3rd place slots)
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
@@ -135,6 +147,34 @@ export default function AdminTournamentsPage({
         </dl>
       </div>
 
+      {clubTournaments.length > 0 && (
+        <div className="admin-toolbar">
+          <div className="admin-chips" role="group" aria-label="Show">
+            {([['ALL', 'All'], ['draft', 'Draft'], ['ongoing', 'Ongoing'], ['completed', 'Completed']] as const).map(([key, label]) => (
+              <button data-view-ok type="button" className="admin-chip" key={key} aria-pressed={statusFilter === key} onClick={() => setStatusFilter(key)}>
+                {label} <span className="num">{key === 'ALL' ? clubTournaments.length : clubTournaments.filter(t => t.status === key).length}</span>
+              </button>
+            ))}
+          </div>
+          <div className="admin-toolbar-end">
+            <select data-view-ok aria-label="Format" className="form-input" value={formatFilter} onChange={e => setFormatFilter(e.target.value)}>
+              <option value="ALL">All formats</option>
+              <option value="knockout">Knockout cup</option>
+              <option value="league">League</option>
+              <option value="group_knockout">Groups, then a knockout</option>
+            </select>
+            <select data-view-ok aria-label="Season" className="form-input" value={seasonFilter} onChange={e => setSeasonFilter(e.target.value)}>
+              <option value="ALL">All seasons</option>
+              {seasonNames.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+            <select data-view-ok aria-label="Order" className="form-input" value={order} onChange={e => setOrder(e.target.value as DateOrder)}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Tournaments List */}
       <div>
           {clubTournaments.length === 0 ? (
@@ -171,7 +211,10 @@ export default function AdminTournamentsPage({
                 gap: '1.25rem',
               }}
             >
-              {clubTournaments.map(tourn => {
+              {shownTournaments.length === 0 && (
+                <div className="admin-panel admin-empty" style={{ gridColumn: '1 / -1' }}><p style={{ margin: 0 }}>No tournaments match these filters.</p></div>
+              )}
+              {shownTournaments.map(tourn => {
                 const participants = tournamentParticipants.filter(p => p.tournament_id === tourn.id);
                 const tourneyMatches = matches.filter(m => m.tournament_id === tourn.id);
                 const completedMatches = tourneyMatches.filter(m => m.status === 'completed').length;
