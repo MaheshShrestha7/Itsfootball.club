@@ -20,6 +20,7 @@ import { clubResult, soonestFirst } from '@/lib/fixtures';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import MatchReport from '@/components/MatchReport';
 import ShareLinkButton from '@/components/ShareLinkButton';
+import CountUp from '@/components/CountUp';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
@@ -149,9 +150,10 @@ export default function EventDetailsPage({
                     <div className="ecd-club-count" aria-label={`Our record: ${recordLine}`}>
                       <span className="ecd-club-label">Our record</span>
                       <div className="ecd-club-tiles is-four">
-                        {([[record.W, 'won'], [record.D, 'drawn'], [record.L, 'lost'], [`${goals.for}-${goals.against}`, 'goals']] as const).map(([n, u]) => (
-                          <div key={u} className="ecd-club-tile" aria-hidden="true"><b>{n}</b><span>{u}</span></div>
+                        {([[record.W, 'won'], [record.D, 'drawn'], [record.L, 'lost']] as const).map(([n, u], i) => (
+                          <div key={u} className={`ecd-club-tile is-${u}`} style={{ '--i': i } as React.CSSProperties} aria-hidden="true"><b><CountUp value={n} delay={250 + i * 120} /></b><span>{u}</span></div>
                         ))}
+                        <div className="ecd-club-tile" style={{ '--i': 3 } as React.CSSProperties} aria-hidden="true"><b><span className="ecd-for"><CountUp value={goals.for} delay={610} /></span>-<span className="ecd-against"><CountUp value={goals.against} delay={610} /></span></b><span>goals</span></div>
                       </div>
                     </div>
                   )}

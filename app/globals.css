@@ -4954,7 +4954,7 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .ecd-club-tiles { display: grid; grid-template-columns: repeat(3, minmax(4.75rem, 1fr)); gap: 0.5rem; }
 .ecd-club-tile { display: flex; flex-direction: column; align-items: center; padding: 0.6rem 0.5rem 0.5rem; border-radius: var(--radius-md); background: #FFFFFF; color: var(--club-ink-light, var(--club-primary)); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18); }
 .ecd-club-tile b { font-family: var(--font-heading); font-size: clamp(2rem, 4.5vw, 2.6rem); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-.ecd-club-tile span { margin-top: 0.2rem; font-size: 0.8rem; font-weight: 600; color: #475569; }
+.ecd-club-tile > span { margin-top: 0.2rem; font-size: 0.8rem; font-weight: 600; color: #475569; }
 .ecd-club-now { margin: 0; font: 900 1.5rem var(--font-heading); }
 .ecd-club-tiles.is-four { grid-template-columns: repeat(4, minmax(4.25rem, 1fr)); }
 .ecd-crest { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #FFFFFF; margin-bottom: 0.4rem; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6); }
@@ -4968,6 +4968,29 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .ecd-result .ecd-crest { grid-row: span 3; margin: 0; width: 56px; height: 56px; }
 .ecd-result .ecd-club-tiles.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ecd-result .ecd-club-tile b { white-space: nowrap; }
+/* Won green, drawn grey, lost red: a light tint and dark number, readable on white in either theme */
+.ecd-club-tile.is-won { background: #ECFDF3; color: #15803D; }
+.ecd-club-tile.is-drawn { background: #F1F5F9; color: #475569; }
+.ecd-club-tile.is-lost { background: #FEF2F2; color: #B91C1C; }
+/* Goals: scored green, conceded red, the dash in plain ink */
+.ecd-club-tile .ecd-for { color: #15803D; }
+.ecd-club-tile .ecd-against { color: #B91C1C; }
+.ecd-club-tile:has(.ecd-for) b { color: #334155; }
+/* Motion: one floodlight sweep across the block, tiles rising in one after another, the status tag
+   popping in last, and a countdown number dropping into place when it changes. All off with reduced motion */
+.ecd-club::after { content: ''; position: absolute; inset: 0; pointer-events: none; transform: translateX(-120%);
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, transparent 66%); animation: ecd-sheen 1.4s 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ecd-club-tile { animation: ecd-rise 0.55s calc(0.15s + var(--i, 0) * 0.12s) cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ecd-status { animation: ecd-pop 0.45s 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.ecd-tick { display: inline-block; animation: ecd-drop 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes ecd-sheen { to { transform: translateX(120%); } }
+@keyframes ecd-rise { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+@keyframes ecd-pop { from { opacity: 0; transform: scale(0.6); } }
+@keyframes ecd-drop { from { opacity: 0.2; transform: translateY(-35%); } }
+@media (prefers-reduced-motion: reduce) {
+  .ecd-club::after { display: none; }
+  .ecd-club-tile, .ecd-status, .ecd-tick { animation: none; }
+}
 @media (max-width: 720px) {
   .ecd-club-tiles.is-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ecd-result .ecd-club-tile b { font-size: 1.6rem; }
