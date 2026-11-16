@@ -197,6 +197,14 @@ export async function matchReportReady(matchId: string): Promise<boolean> {
   return goals.length > 0 || !!lineups[0]?.home_lineup_coords?.length || !!lineups[0]?.away_lineup_coords?.length || !!motm;
 }
 
+/** Whether a completed event carries a cup write-up: at least one of its linked games has a score.
+ *  False when Supabase can't be asked, so the page only claims a report it is sure of. */
+export async function eventHasResults(eventId: string): Promise<boolean> {
+  if (!UUID.test(eventId)) return false;
+  const rows = await publicRows<{ id: string }>(`matches?select=id&event_id=eq.${eventId}&status=eq.completed&home_score=not.is.null&away_score=not.is.null&limit=1`);
+  return !!rows?.length;
+}
+
 /** A club's live and upcoming match fixtures, for schema.org SportsEvent markup */
 export async function listClubLiveMatches(clubId: string, limit = 5): Promise<MatchMetadataRow[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

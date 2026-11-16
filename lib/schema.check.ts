@@ -1,7 +1,7 @@
 // Self-check for schema.org JSON-LD builders.
 // Run: npx esbuild lib/schema.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { homeSchema, clubSchema, matchSchema, matchNode } from './schema';
+import { homeSchema, clubSchema, matchSchema, matchNode, eventSchema } from './schema';
 import type { ClubMetadataRow, MatchMetadataRow, NewsMetadataRow } from './supabase/club-lookup';
 
 // 1. Homepage schema: Organization and the platform Service with sameAs
@@ -151,3 +151,13 @@ const reportNode = reported['@graph'].find(n => n['@type'] === 'NewsArticle');
 assert.ok(reportNode, 'report node present');
 assert.equal(reportNode.about['@id'], reported['@graph'].find(n => n['@type'] === 'SportsEvent')['@id']);
 assert.ok(!(standaloneMatch['@graph'] as any[]).some(n => n['@type'] === 'NewsArticle'), 'no report node without a report');
+
+// A completed cup with results: a SportsEvent plus its cup report as a NewsArticle about it
+const cup = { id: 'e1', club_id: mockClub.id, title: '2026 MNFC Cup', category: 'tournament', start_time: '2026-11-01T08:00:00+11:00', end_time: null, location: 'Macarthur', description: null, completed_at: '2026-11-01T10:00:00Z' };
+const cupGraph = (eventSchema(mockClub, cup, true) as { '@graph': any[] })['@graph'];
+assert.equal(cupGraph[0]['@type'], 'SportsEvent');
+assert.equal(cupGraph[1]['@type'], 'NewsArticle');
+assert.equal(cupGraph[1].about['@id'], cupGraph[0]['@id']);
+assert.equal(cupGraph[1].datePublished, '2026-11-01T10:00:00Z');
+assert.equal((eventSchema(mockClub, { ...cup, completed_at: null }, true) as { '@graph': any[] })['@graph'].length, 1, 'no report before Completed');
+assert.equal((eventSchema(mockClub, { ...cup, category: 'social' }) as { '@graph': any[] })['@graph'][0]['@type'], 'Event');
