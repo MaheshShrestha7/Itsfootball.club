@@ -188,11 +188,11 @@ export function upcomingGames<M extends Match>(games: M[], limit = 2, now = Date
     .slice(0, limit);
 }
 
-/** The club's side of a fixture's names: "vs Eastside" at home, "at Eastside" away */
+/** The club's side of a fixture's names: "vs Eastside", home or away */
 export function opponentLine(m: Pick<Match, 'is_club_home' | 'home_team_name' | 'away_team_name' | 'opponent_name'>): string {
   const home = m.is_club_home !== false;
   const other = m.opponent_name || (home ? m.away_team_name : m.home_team_name);
-  return `${home ? 'vs' : 'at'} ${other}`;
+  return `vs ${other}`;
 }
 
 export interface SponsorsSummary { onSite: number; endingSoon: (Sponsor & { days: number | null })[] }

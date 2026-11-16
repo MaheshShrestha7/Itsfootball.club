@@ -3,7 +3,7 @@ import { DATE_LOCALE } from '@/lib/dates';
 
 /**
  * Short name for a fixture in a drop-down: the opponent comes first ("vs Granville Rage · 17 Oct",
- * "at Auburn Warriors · 31 Oct"), so it still reads on a phone where the start of the text is all
+ * "vs Auburn Warriors · 31 Oct"), so it still reads on a phone where the start of the text is all
  * that shows. Matches between two other sides (e.g. a cup the club hosts) keep both names.
  */
 export function fixtureLabel(match: Pick<Match, 'home_team_name' | 'away_team_name' | 'match_date'>, clubName: string): string {
@@ -11,7 +11,7 @@ export function fixtureLabel(match: Pick<Match, 'home_team_name' | 'away_team_na
   const club = name(clubName || '');
   const teams =
     club && name(match.home_team_name || '') === club ? `vs ${match.away_team_name}`
-    : club && name(match.away_team_name || '') === club ? `at ${match.home_team_name}`
+    : club && name(match.away_team_name || '') === club ? `vs ${match.home_team_name}`
     : `${match.home_team_name} vs ${match.away_team_name}`;
   const date = new Date(match.match_date);
   return Number.isNaN(date.getTime())
