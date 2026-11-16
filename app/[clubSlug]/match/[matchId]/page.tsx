@@ -640,30 +640,6 @@ export default function MatchCenterPage({
           </div>
         )}
 
-        {/* Full-time report, written as a news article from the logged events (none when the team hides scores) */}
-        {article && (
-          <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
-          <MatchReport
-            article={article}
-            clubName={club.name}
-            coverUrl={match.match_flyer_url || club.banner_url || undefined}
-            crestUrl={club.logo_url || undefined}
-            tags={['Match Report', ...[reportCompetition(match, reportCup?.title)].filter((t): t is string => !!t)]}
-            publishedAt={match.match_date}
-            shareUrl={matchPath(club.slug, match)}
-            source={`Written from the match events ${club.name} logged.`}
-            moreHref="#match-tabs"
-            facts={[
-              { label: 'Kick-off', value: <><LocalTime value={match.match_date} />{match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}</> },
-              ...(ground || match.venue ? [{ label: 'Ground', value: <>{ground ? <Link href={groundPath(ground)}>{ground.name}</Link> : match.venue}{match.pitch_label ? `, ${match.pitch_label}` : ''}</> }] : []),
-              { label: 'Length', value: `${lengthLabel(match)}${match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}` },
-              ...(reportTeam?.slug ? [{ label: 'Team', value: <Link href={`/${club.slug}/teams/${reportTeam.slug}`}>{teamLabel(reportTeam)}</Link> }] : []),
-            ]}
-          />
-          <SupportedBy clubId={club.id} />
-          </div>
-        )}
-
         {/* Player of the Match (the scorers are on the board) */}
         {motmMember && (
           <div
@@ -1020,6 +996,29 @@ export default function MatchCenterPage({
             </div>
           );
         })()}
+
+        {/* Full-time report, last on the page after the timeline, line-ups and stats, written as a news article from the logged events (none when the team hides scores) */}
+        {article && (
+          <div className={fullTimeMoment ? 'ft-report-in' : undefined}>
+          <MatchReport
+            article={article}
+            clubName={club.name}
+            coverUrl={match.match_flyer_url || club.banner_url || undefined}
+            crestUrl={club.logo_url || undefined}
+            tags={['Match Report', ...[reportCompetition(match, reportCup?.title)].filter((t): t is string => !!t)]}
+            publishedAt={match.match_date}
+            shareUrl={matchPath(club.slug, match)}
+            source={`Written from the match events ${club.name} logged.`}
+            facts={[
+              { label: 'Kick-off', value: <><LocalTime value={match.match_date} />{match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}</> },
+              ...(ground || match.venue ? [{ label: 'Ground', value: <>{ground ? <Link href={groundPath(ground)}>{ground.name}</Link> : match.venue}{match.pitch_label ? `, ${match.pitch_label}` : ''}</> }] : []),
+              { label: 'Length', value: `${lengthLabel(match)}${match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}` },
+              ...(reportTeam?.slug ? [{ label: 'Team', value: <Link href={`/${club.slug}/teams/${reportTeam.slug}`}>{teamLabel(reportTeam)}</Link> }] : []),
+            ]}
+          />
+          <SupportedBy clubId={club.id} />
+          </div>
+        )}
 
         {/* Club partners, under whichever tab is open. Once the report's "Supported by" shows the top
             tier, they aren't repeated here (SPE-19): each logo shows once on the page */}
