@@ -1,6 +1,6 @@
 // Run: npm run check. One time and day style everywhere (UX30-10).
 import assert from 'node:assert/strict';
-import { clubTimeZone, dayOptions, formatClock, formatShortDay } from './dates';
+import { clubTimeZone, dayOptions, formatClock, formatShortDay, ordinalDate } from './dates';
 import { matchIsoDates } from './schema';
 import { formatWhen } from './email/format';
 
@@ -35,3 +35,12 @@ assert.equal(matchIsoDates('2026-06-13', '15:00', 'Australia/Brisbane').startDat
 // 3 pm Perth (07:00 UTC) reads 3:00 pm in a Perth club's email, 6:00 pm in Sydney's
 assert.match(formatWhen('2026-11-14T07:00:00Z', 'Australia/Perth'), /3:00\spm/);
 assert.match(formatWhen('2026-11-14T07:00:00Z'), /6:00\spm/);
+
+// The event day in long form, with the right ordinal (11th-13th are "th")
+const syd = { timeZone: 'Australia/Sydney' };
+assert.equal(ordinalDate(new Date('2026-12-05T08:00:00+11:00'), 'en-AU', syd), '5th December, 2026 (Saturday)');
+assert.equal(ordinalDate(new Date('2026-11-01T08:00:00+11:00'), 'en-AU', syd), '1st November, 2026 (Sunday)');
+assert.equal(ordinalDate(new Date('2026-11-22T08:00:00+11:00'), 'en-AU', syd), '22nd November, 2026 (Sunday)');
+assert.equal(ordinalDate(new Date('2026-11-23T08:00:00+11:00'), 'en-AU', syd), '23rd November, 2026 (Monday)');
+assert.equal(ordinalDate(new Date('2026-11-12T08:00:00+11:00'), 'en-AU', syd), '12th November, 2026 (Thursday)');
+assert.equal(ordinalDate(new Date('2026-11-29T08:00:00+11:00'), 'en-AU', syd), '29th November, 2026 (Sunday)');

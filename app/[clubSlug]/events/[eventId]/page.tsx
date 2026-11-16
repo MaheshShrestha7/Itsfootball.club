@@ -12,7 +12,7 @@ import SponsorLogo from '@/components/SponsorLogo';
 import { isSponsorOnSite, sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
-import KickoffCountdown from '@/components/KickoffCountdown';
+import EventCountdown from '@/components/EventCountdown';
 import FixtureRow from '@/components/FixtureRow';
 import { groupAlbums } from '@/components/PhotoGallery';
 import { useRouter } from 'next/navigation';
@@ -89,7 +89,6 @@ export default function EventDetailsPage({
   const end = event.end_time ? new Date(event.end_time).getTime() : start + DEFAULT_LENGTH;
   // Marked Completed by the committee: treated as over, even if its end time hasn't come
   const completed = !!event.completed_at;
-  const upcoming = start > now && !completed;
   const over = end < now || completed;
   const place = event.location || club.stadium_name;
   // "0 / 150 checked in" days out reads as nobody coming: the count shows once people arrive (admins always)
@@ -130,22 +129,7 @@ export default function EventDetailsPage({
             {!over && (
               /* Before the day: the date is what people come for, set big, with the countdown beside it */
               <div className="evp-when">
-                <div className="evp-date">
-                  <b><LocalTime value={event.start_time} options={{ day: 'numeric' }} /></b>
-                  <span>
-                    <span><LocalTime value={event.start_time} options={{ weekday: 'long' }} />, <LocalTime value={event.start_time} options={{ month: 'long' }} /></span>
-                    <span className="evp-time">
-                      <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                      {event.end_time && <> to <LocalTime value={event.end_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
-                    </span>
-                  </span>
-                </div>
-                {upcoming && (
-                  <div className="evp-count">
-                    <span className="text-meta">Starts in</span>
-                    <KickoffCountdown kickoff={start} event />
-                  </div>
-                )}
+                <EventCountdown startTime={event.start_time} endTime={event.end_time} />
               </div>
             )}
 
