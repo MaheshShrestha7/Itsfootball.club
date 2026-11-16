@@ -19,6 +19,8 @@ import { useRouter } from 'next/navigation';
 import { clubResult, soonestFirst } from '@/lib/fixtures';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import MatchReport from '@/components/MatchReport';
+import ShareLinkButton from '@/components/ShareLinkButton';
+import CountUp from '@/components/CountUp';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
@@ -121,7 +123,7 @@ export default function EventDetailsPage({
           )}
           <div className="evp-head">
             <p className="evp-kind">
-              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}{completed ? ', finished' : over ? ', over' : ''}
+              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             </p>
             <h1>{event.title}</h1>
             {event.description && <p className="evp-desc">{event.description}</p>}
@@ -133,19 +135,36 @@ export default function EventDetailsPage({
               </div>
             )}
 
-            <dl className="evp-facts">
-              {over && <div><dt>When</dt><dd><LocalTime value={event.start_time} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />, <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>}
-              {place && <div><dt>Where</dt><dd>{place}</dd></div>}
-              {event.cup_winner?.trim() && <div><dt>Cup winner</dt><dd>{event.cup_winner.trim()}</dd></div>}
-            </dl>
-
-            {played > 0 && (
-              <div className="evp-record" aria-label={`Our record: ${recordLine}`}>
-                <div><b>{record.W}</b><span>won</span></div>
-                <div><b>{record.D}</b><span>drawn</span></div>
-                <div><b>{record.L}</b><span>lost</span></div>
-                <div><b>{goals.for}-{goals.against}</b><span>goals</span></div>
+            {over && (
+              /* After the day: one block in the club's colour with the day, the venue and how it went */
+              <div className="evp-when">
+                <div className={`ecd-club ecd-result${played > 0 ? '' : ' is-plain'}`}>
+                  <span className="ecd-status">{completed ? 'Finished' : 'Over'}</span>
+                  <div className="ecd-club-day">
+                    {club.logo_url && <img className="ecd-crest" src={club.logo_url} alt="" />}
+                    <b><LocalTime value={event.start_time} format="ordinal" /></b>
+                    {place && <span>{place}</span>}
+                    {event.cup_winner?.trim() && <span>Cup winner: <strong>{event.cup_winner.trim()}</strong></span>}
+                  </div>
+                  {played > 0 && (
+                    <div className="ecd-club-count" aria-label={`Our record: ${recordLine}`}>
+                      <span className="ecd-club-label">Our record</span>
+                      <div className="ecd-club-tiles is-four">
+                        {([[record.W, 'won'], [record.D, 'drawn'], [record.L, 'lost']] as const).map(([n, u], i) => (
+                          <div key={u} className={`ecd-club-tile is-${u}`} style={{ '--i': i } as React.CSSProperties} aria-hidden="true"><b><CountUp value={n} delay={250 + i * 120} /></b><span>{u}</span></div>
+                        ))}
+                        <div className="ecd-club-tile" style={{ '--i': 3 } as React.CSSProperties} aria-hidden="true"><b><span className="ecd-for"><CountUp value={goals.for} delay={610} /></span>-<span className="ecd-against"><CountUp value={goals.against} delay={610} /></span></b><span>goals</span></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
+
+            {!over && place && (
+              <dl className="evp-facts">
+                <div><dt>Where</dt><dd>{place}</dd></div>
+              </dl>
             )}
 
             {showCheckins && (
@@ -171,6 +190,7 @@ export default function EventDetailsPage({
                   <MapPin size={14} aria-hidden="true" /> Directions
                 </a>
               )}
+              {over && writeups.length === 0 && <ShareLinkButton url={`/${club.slug}/events/${event.id}`} title={event.title} />}
               <button type="button" onClick={() => setContactModalOpen(true)} className="btn btn-secondary btn-sm">
                 <MessageCircle size={14} aria-hidden="true" /> Ask about this event
               </button>

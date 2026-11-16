@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import LocalTime from '@/components/LocalTime';
 
 const subscribeNothing = () => () => {};
@@ -46,7 +46,7 @@ export default function EventCountdown({ startTime, endTime }: { startTime: stri
           <span className="ecd-club-label">Starts in</span>
           <div className="ecd-club-tiles">
             {tiles.map(([n, u], i) => (
-              <div key={String(u)} className="ecd-club-tile" aria-hidden="true"><b>{i === 0 ? n : pad(Number(n))}</b><span>{u}</span></div>
+              <div key={String(u)} className="ecd-club-tile" style={{ '--i': i } as React.CSSProperties} aria-hidden="true"><b key={String(n)} className="ecd-tick">{i === 0 ? n : pad(Number(n))}</b><span>{u}</span></div>
             ))}
           </div>
         </div>
