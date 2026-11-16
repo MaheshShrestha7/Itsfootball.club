@@ -14,38 +14,17 @@ import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
 import KickoffCountdown from '@/components/KickoffCountdown';
 import FixtureRow from '@/components/FixtureRow';
-import { AlbumGrid, groupAlbums } from '@/components/PhotoGallery';
+import { groupAlbums } from '@/components/PhotoGallery';
 import { useRouter } from 'next/navigation';
 import { clubResult, soonestFirst } from '@/lib/fixtures';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import MatchReport from '@/components/MatchReport';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
-import {
-  Shield,
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  ArrowLeft,
-  ExternalLink,
-  Award,
-  CalendarPlus,
-  MessageCircle,
-  Trophy,
-  Images,
-} from 'lucide-react';
+import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
+import { salesOpen } from '@/lib/tickets';
 
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;
-
-const CATEGORY_COLOR: Record<string, string> = {
-  training: '#10B981',
-  social: '#F59E0B',
-  agm: '#3B82F6',
-  trial: '#EC4899',
-  tournament: '#8B5CF6',
-  match: '#EF4444',
-};
 
 export default function EventDetailsPage({
   params,
@@ -83,7 +62,6 @@ export default function EventDetailsPage({
   // sponsor showcase, which only shows club-wide (non-event) sponsors.
   const eventSponsors = sortSponsorsByTier(sponsors.filter(s => s.event_id === event.id && isSponsorOnSite(s)));
 
-  const categoryColor = CATEGORY_COLOR[event.category] || 'var(--club-primary)';
 
   // The club's games in this event (an outside cup), soonest first, and how the played ones went
   const games = matches.filter(m => m.club_id === club.id && m.event_id === event.id).sort(soonestFirst);
@@ -117,246 +95,192 @@ export default function EventDetailsPage({
   // "0 / 150 checked in" days out reads as nobody coming: the count shows once people arrive (admins always)
   const showCheckins = event.max_capacity > 0 && (event.rsvp_count > 0 || hasClubAdminAccess(club.id));
 
+  const cover = event.flyer_url;
+  // Tickets on sale: the hero's first button jumps to them (EventTickets still says sold out or closed)
+  const selling = (event.ticket_price_cents ?? 0) > 0 && salesOpen(event, now);
+  // Every game on one day (a cup day): the list shows kick-off times instead of four identical dates
+  const oneDay = games.length > 1 && new Set(games.map(m => m.match_date?.slice(0, 10))).size === 1;
+  const goals = games
+    .filter(m => m.status === 'completed' && !publicScoreHidden(m, clubTeams) && clubResult(m).outcome)
+    .reduce((g, m) => { const r = clubResult(m); return { for: g.for + r.us, against: g.against + r.them }; }, { for: 0, against: 0 });
+  const side = games.length > 0 || albums.length > 0 || eventSponsors.length > 0;
+  const photosShown = eventPhotos.filter(g => g.media_type === 'image').slice(0, 3);
+
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <div className="container" style={{ padding: '2.5rem 1.5rem 4rem 1.5rem', maxWidth: '860px' }}>
-        <Link
-          href={`/${club.slug}/events`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}
-        >
-          <ArrowLeft size={14} />
+    <div className="evp">
+      <div className="container evp-wrap">
+        <Link href={`/${club.slug}/events`} className="evp-back">
+          <ArrowLeft size={14} aria-hidden="true" />
           <span>All events</span>
         </Link>
 
-        {/* Event Header */}
-        <div className="glass-panel" style={{ padding: '2rem', marginBottom: '2rem', borderTop: `4px solid ${categoryColor}` }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '1.75rem' }}>
-          {event.flyer_url && (
-            <a
-              href={event.flyer_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Open the ${event.title} flyer full size`}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
-                background: 'rgba(var(--shade-rgb), 0.35)',
-                flex: '0 1 340px',
-                minWidth: 'min(260px, 100%)',
-              }}
-            >
-              {/* The flyer blurred behind itself, so a portrait poster doesn't sit in empty bars */}
-              <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(event.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(24px)', opacity: 0.45 }} />
-              <img
-                src={event.flyer_url}
-                alt={`${event.title} flyer`}
-                decoding="async"
-                style={{ position: 'relative', display: 'block', maxWidth: '100%', maxHeight: 'min(75vh, 560px)', objectFit: 'contain' }}
-              />
+        <header className={`glass-panel evp-hero${cover ? ' has-flyer' : ''}`}>
+          {cover && (
+            <a href={cover} target="_blank" rel="noopener noreferrer" className="evp-flyer" aria-label={`Open the ${event.title} flyer full size`}>
+              <img src={cover} alt={`${event.title} flyer`} decoding="async" />
             </a>
           )}
+          <div className="evp-head">
+            <p className="evp-kind">
+              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}{completed ? ', finished' : over ? ', over' : ''}
+            </p>
+            <h1>{event.title}</h1>
+            {event.description && <p className="evp-desc">{event.description}</p>}
 
-          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <span className="badge" style={{
-            backgroundColor: `${categoryColor}25`,
-            color: categoryColor,
-            marginBottom: '0.85rem',
-          }}>
-            {event.category.toUpperCase()}
-          </span>
-
-          <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.4rem)', fontWeight: 900, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
-            {event.title}
-          </h1>
-
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.75rem' }}>
-            {event.description}
-          </p>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1rem',
-            marginBottom: '1.75rem',
-          }}>
-            <div className="row row-loose">
-              <Calendar size={18} color={categoryColor} />
-              <div>
-                <div className="text-meta">Date</div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  <LocalTime value={event.start_time} />
-                </div>
-              </div>
-            </div>
-            <div className="row row-loose">
-              <Clock size={18} color={categoryColor} />
-              <div>
-                <div className="text-meta">Time</div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                </div>
-              </div>
-            </div>
-            <div className="row row-loose">
-              <MapPin size={18} color={categoryColor} />
-              <div>
-                <div className="text-meta">Location</div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                  {place}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {upcoming && (
-            <div className="stack stack-sm" style={{ marginBottom: '1.5rem' }}>
-              <div className="prematch-label">Starts in</div>
-              <KickoffCountdown kickoff={start} event />
-            </div>
-          )}
-
-          {showCheckins && (
-            <div style={{ marginBottom: '1.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Users size={13} /> Checked In
-                </span>
-                <strong className="text-primary">{event.rsvp_count} / {event.max_capacity} checked in</strong>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(var(--tint-rgb), 0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${rsvpPct}%`, height: '100%', background: categoryColor, borderRadius: '3px' }} />
-              </div>
-            </div>
-          )}
-
-          <div className="matchday-actions">
             {!over && (
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => downloadEventIcs(club.name, club.slug, event)}>
-                <CalendarPlus size={14} aria-hidden="true" /> Add to calendar
-              </button>
-            )}
-            {!over && place && (
-              <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
-                <MapPin size={14} aria-hidden="true" /> Directions
-              </a>
-            )}
-            <button type="button" onClick={() => setContactModalOpen(true)} className="btn btn-secondary btn-sm">
-              <MessageCircle size={14} aria-hidden="true" /> Ask about this event
-            </button>
-          </div>
-          </div>
-          </div>
-        </div>
-
-        {writeups.map(({ key, team, writeup }) => (
-          <MatchReport
-            key={key}
-            label="Cup report"
-            article={writeup}
-            clubName={club.name}
-            coverUrl={writeupCover}
-            crestUrl={club.logo_url || undefined}
-            tags={['Cup Report', ...(team ? [team] : [])]}
-            publishedAt={event.completed_at || undefined}
-            shareUrl={`/${club.slug}/events/${event.id}`}
-            note={event.writeup_note?.trim() || undefined}
-            factsTitle="Cup facts"
-            facts={[
-              { label: 'Date', value: <LocalTime value={event.start_time} /> },
-              ...(place ? [{ label: 'Where', value: place }] : []),
-              ...(event.cup_winner?.trim() ? [{ label: 'Cup winner', value: event.cup_winner.trim() }] : []),
-            ]}
-            source={[`Written from the games ${club.name} logged at this event.`, event.cup_finish?.[key] && 'How the team finished comes from the club.', event.writeup_note?.trim() && 'The last paragraph is the club\'s own.'].filter(Boolean).join(' ')}
-          />
-        ))}
-
-        {games.length > 0 && (
-          <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }} aria-labelledby="event-games">
-            <h2 id="event-games" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Trophy size={18} color={categoryColor} aria-hidden="true" /> Our games
-            </h2>
-            <p className="text-meta" style={{ margin: '0 0 1rem' }}>{recordLine}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {games.map(m => {
-                const t = teams.length > 1 ? teamOfMatch(m, clubTeams) : undefined;
-                return <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={t ? teamLabel(t) : undefined} />;
-              })}
-            </div>
-          </section>
-        )}
-
-        {albums.length > 0 && (
-          <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }} aria-labelledby="event-photos">
-            <h2 id="event-photos" style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Images size={18} color={categoryColor} aria-hidden="true" /> Photos
-            </h2>
-            <AlbumGrid albums={albums} onOpen={name => router.push(`/${club.slug}/gallery?album=${encodeURIComponent(name)}`)} />
-          </section>
-        )}
-
-        <EventTickets event={event} onContact={() => setContactModalOpen(true)} />
-
-        {/* Event Sponsors */}
-        {eventSponsors.length > 0 && (
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Award size={18} color={categoryColor} /> Event Sponsors
-            </h2>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem' }}>
-              {eventSponsors.map(sponsor => {
-                const isPlatinum = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
-                const isGold = sponsor.tier === 'gold' || sponsor.size_scale === 'lg';
-                return (
-                  <SponsorTrackedLink
-                    key={sponsor.id}
-                    clubId={sponsor.club_id}
-                    sponsorId={sponsor.id}
-                    placement="event_page"
-                    href={sponsor.website_url || '#'}
-                    className="glass-panel glass-panel-interactive"
-                    style={{
-                      padding: '1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      textAlign: 'center',
-                      gap: '0.7rem',
-                      width: isPlatinum ? 'min(100%, 320px)' : isGold ? 'min(100%, 270px)' : 'min(100%, 230px)',
-                      borderTop: isPlatinum ? '3px solid #F59E0B' : `3px solid ${club.primary_color}`,
-                    }}
-                  >
-                    <SponsorLogo
-                      src={sponsor.logo_url}
-                      name={sponsor.name}
-                      height={isPlatinum ? 96 : isGold ? 76 : 60}
-                      style={{ maxWidth: '100%' }}
-                    />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      {sponsor.name}
-                    </div>
-                    <span className="badge" style={{
-                      fontSize: '0.7rem',
-                      backgroundColor: isPlatinum ? 'rgba(245, 158, 11, 0.2)' : 'rgba(var(--tint-rgb), 0.06)',
-                      color: isPlatinum ? 'var(--c-amber)' : 'var(--text-muted)',
-                    }}>
-                      {sponsorLabel(sponsor)}
+              /* Before the day: the date is what people come for, set big, with the countdown beside it */
+              <div className="evp-when">
+                <div className="evp-date">
+                  <b><LocalTime value={event.start_time} options={{ day: 'numeric' }} /></b>
+                  <span>
+                    <span><LocalTime value={event.start_time} options={{ weekday: 'long' }} />, <LocalTime value={event.start_time} options={{ month: 'long' }} /></span>
+                    <span className="evp-time">
+                      <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
+                      {event.end_time && <> to <LocalTime value={event.end_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
                     </span>
-                    {sponsor.website_url && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        Visit <ExternalLink size={10} />
-                      </span>
-                    )}
-                  </SponsorTrackedLink>
-                );
-              })}
+                  </span>
+                </div>
+                {upcoming && (
+                  <div className="evp-count">
+                    <span className="text-meta">Starts in</span>
+                    <KickoffCountdown kickoff={start} event />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <dl className="evp-facts">
+              {over && <div><dt>When</dt><dd><LocalTime value={event.start_time} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />, <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>}
+              {place && <div><dt>Where</dt><dd>{place}</dd></div>}
+              {event.cup_winner?.trim() && <div><dt>Cup winner</dt><dd>{event.cup_winner.trim()}</dd></div>}
+            </dl>
+
+            {played > 0 && (
+              <div className="evp-record" aria-label={`Our record: ${recordLine}`}>
+                <div><b>{record.W}</b><span>won</span></div>
+                <div><b>{record.D}</b><span>drawn</span></div>
+                <div><b>{record.L}</b><span>lost</span></div>
+                <div><b>{goals.for}-{goals.against}</b><span>goals</span></div>
+              </div>
+            )}
+
+            {showCheckins && (
+              <p className="evp-checkins">
+                <Users size={14} aria-hidden="true" /> {event.rsvp_count} of {event.max_capacity} checked in
+                <span className="evp-bar" aria-hidden="true"><span style={{ transform: `scaleX(${rsvpPct / 100})` }} /></span>
+              </p>
+            )}
+
+            <div className="matchday-actions">
+              {selling && (
+                <a href="#tickets-heading" className="btn btn-primary btn-sm">
+                  <Ticket size={14} aria-hidden="true" /> Get tickets
+                </a>
+              )}
+              {!over && (
+                <button type="button" className={`btn ${selling ? 'btn-secondary' : 'btn-primary'} btn-sm`} onClick={() => downloadEventIcs(club.name, club.slug, event)}>
+                  <CalendarPlus size={14} aria-hidden="true" /> Add to calendar
+                </button>
+              )}
+              {!over && place && (
+                <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                  <MapPin size={14} aria-hidden="true" /> Directions
+                </a>
+              )}
+              <button type="button" onClick={() => setContactModalOpen(true)} className="btn btn-secondary btn-sm">
+                <MessageCircle size={14} aria-hidden="true" /> Ask about this event
+              </button>
             </div>
           </div>
-        )}
+        </header>
+
+        <div className={`evp-body${writeups.length > 0 && side ? ' has-side' : ''}`}>
+          {writeups.length > 0 && (
+            <div className="glass-panel evp-main">
+              {writeups.map(({ key, team, writeup }) => (
+                <MatchReport
+                  key={key}
+                  bare
+                  label="Cup report"
+                  article={writeup}
+                  clubName={club.name}
+                  coverUrl={writeupCover}
+                  crestUrl={club.logo_url || undefined}
+                  tags={['Cup Report', ...(team ? [team] : [])]}
+                  publishedAt={event.completed_at || undefined}
+                  shareUrl={`/${club.slug}/events/${event.id}`}
+                  note={event.writeup_note?.trim() || undefined}
+                  factsTitle="Cup facts"
+                  facts={[]}
+                  source={[`Written from the games ${club.name} logged at this event.`, event.cup_finish?.[key] && 'How the team finished comes from the club.', event.writeup_note?.trim() && 'The last paragraph is the club\'s own.'].filter(Boolean).join(' ')}
+                />
+              ))}
+            </div>
+          )}
+
+          {side && (
+            <aside className="evp-side">
+              {games.length > 0 && (
+                <section className="glass-panel evp-box evp-games-box" aria-labelledby="event-games">
+                  <h2 id="event-games">Our games</h2>
+                  <div className="evp-games">
+                    {games.map(m => {
+                      const t = teams.length > 1 ? teamOfMatch(m, clubTeams) : undefined;
+                      return <FixtureRow key={m.id} flat timeTile={oneDay} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={t ? teamLabel(t) : undefined} />;
+                    })}
+                  </div>
+                </section>
+              )}
+
+              <EventTickets event={event} onContact={() => setContactModalOpen(true)} />
+
+              {albums.length > 0 && (
+                <section className="glass-panel evp-box" aria-labelledby="event-photos">
+                  <h2 id="event-photos">Photos</h2>
+                  <div className="evp-thumbs">
+                    {photosShown.map(ph => (
+                      <button key={ph.id} type="button" className="evp-thumb" onClick={() => router.push(`/${club.slug}/gallery?album=${encodeURIComponent(ph.album_name)}`)} aria-label={`Open the ${ph.album_name} album`}>
+                        <img src={ph.thumbnail_url || ph.media_url} alt="" loading="lazy" decoding="async" />
+                      </button>
+                    ))}
+                  </div>
+                  {albums.map(a => (
+                    <Link key={a.name} className="evp-link" href={`/${club.slug}/gallery?album=${encodeURIComponent(a.name)}`}>
+                      See all {a.photos.length} photo{a.photos.length === 1 ? '' : 's'} in {a.name}
+                    </Link>
+                  ))}
+                </section>
+              )}
+
+              {eventSponsors.length > 0 && (
+                <section className="glass-panel evp-box" aria-labelledby="event-sponsors">
+                  <h2 id="event-sponsors">Supported by</h2>
+                  <div className="evp-sponsors">
+                    {eventSponsors.map(sponsor => {
+                      const big = sponsor.tier === 'platinum' || sponsor.size_scale === 'xl';
+                      return (
+                        <SponsorTrackedLink
+                          key={sponsor.id}
+                          clubId={sponsor.club_id}
+                          sponsorId={sponsor.id}
+                          placement="event_page"
+                          href={sponsor.website_url || '#'}
+                          className={`evp-sponsor${big ? ' is-big' : ''}`}
+                        >
+                          <SponsorLogo src={sponsor.logo_url} name={sponsor.name} height={big ? 72 : 52} style={{ maxWidth: '100%' }} />
+                          <span>
+                            <b>{sponsor.name}</b>
+                            <span className="text-meta">{sponsorLabel(sponsor)}</span>
+                          </span>
+                        </SponsorTrackedLink>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </aside>
+          )}
+        </div>
       </div>
 
       <ContactModal

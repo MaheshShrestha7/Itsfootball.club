@@ -21,7 +21,7 @@ function Linked({ text }: { text: string }) {
 export interface MatchFact { label: string; value: React.ReactNode }
 
 /** The full-time report under the scoreboard, laid out like the club's news articles */
-export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref, label = 'Match report', factsTitle = 'Match facts', note }: {
+export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref, label = 'Match report', factsTitle = 'Match facts', note, bare }: {
   article: Pick<MatchArticle, 'headline' | 'lead' | 'paragraphs'>;
   clubName: string;
   coverUrl?: string;
@@ -37,24 +37,30 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
   factsTitle?: string;
   /** The club's own words, printed as typed after the story */
   note?: string;
+  /** Set inside a page that already shows the cover and the facts (the event page): text only, no panel */
+  bare?: boolean;
 }) {
   return (
-    <article aria-label={label} className="glass-panel match-article">
+    <article aria-label={label} className={bare ? 'match-article match-article-bare' : 'glass-panel match-article'}>
+      {!bare && <>
       {/* The match flyer, else the club banner, else the club-colour panel with the crest: kept low so the story starts on the first screen */}
       <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: coverUrl ? 380 : 220, objectFit: 'cover' }} />
+      </>}
       <div className="match-article-in">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-          {tags.map(tag => <span key={tag} className="badge badge-primary">{tag}</span>)}
-        </div>
+        {!bare && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+            {tags.map(tag => <span key={tag} className="badge badge-primary">{tag}</span>)}
+          </div>
+        )}
         <h2>{article.headline}</h2>
         <div className="match-article-byline">
-          <p className="text-meta" style={{ margin: 0 }}>By {clubName}{publishedAt && <> · <LocalTime value={publishedAt} /></>}</p>
+          <p className="text-meta" style={{ margin: 0 }}>{bare && tags.length > 1 ? `${tags.slice(1).join(", ")}. ` : ""}By {clubName}{publishedAt && <>{bare ? ", " : " · "}<LocalTime value={publishedAt} /></>}</p>
           <ShareLinkButton url={shareUrl} title={article.headline} text={plainText(article.lead)} />
         </div>
         <p className="match-article-lead"><Linked text={article.lead} /></p>
         {article.paragraphs.map((p, i) => <p key={i} className="match-article-p"><Linked text={p} /></p>)}
         {note && <p className="match-article-p match-article-note">{note}</p>}
-        {facts.length > 0 && (
+        {!bare && facts.length > 0 && (
           <div className="match-article-facts">
             <h3>{factsTitle}</h3>
             <dl>
