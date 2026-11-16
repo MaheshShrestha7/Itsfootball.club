@@ -23,6 +23,8 @@ export interface NoticeRequest {
   message?: string;
   /** Renewal only: just this member (sent from Members Administration), whatever their expiry date */
   memberId?: string;
+  /** Renewal only: just these members (ticked on Member passes), whatever their expiry dates */
+  memberIds?: string[];
 }
 
 export const MAX_MESSAGE_LENGTH = 1000;
@@ -98,7 +100,10 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
   switch (req.kind) {
     case 'renewal': {
       const today = localDate();
+      // Sent by hand (one member, or ticked ones): once a day, separate from the once-a-term bulk notice
+      const manual = !!(req.memberId || req.memberIds?.length);
       let due: Addressed[];
+      let skipped = skippedNoEmail;
       if (req.memberId) {
         const { data } = await db.from('club_members')
           .select(MEMBER_COLUMNS)
@@ -109,6 +114,16 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         if (!one) return { ok: false, status: 400, error: `${member.full_name} has no email address.` };
         if (!member.membership_expires_at) return { ok: false, status: 400, error: `${member.full_name} has no membership expiry date yet.` };
         due = [one];
+      } else if (req.memberIds?.length) {
+        // Ticked on Member passes: anyone without an address or an expiry date is left out (and counted)
+        const rows: MemberRow[] = [];
+        for (let i = 0; i < req.memberIds.length; i += 100) {
+          const { data } = await db.from('club_members').select(MEMBER_COLUMNS)
+            .eq('club_id', club.id).eq('membership_status', 'approved').in('id', req.memberIds.slice(i, i + 100));
+          rows.push(...((data || []) as MemberRow[]));
+        }
+        due = rows.filter(m => m.membership_expires_at).map(addressed).filter((m): m is Addressed => !!m);
+        skipped = req.memberIds.length - due.length;
       } else {
         // Expiring within 30 days, or lapsed within the last 60. One each (not one per address):
         // every membership is renewed on its own, so a parent hears about each child.
@@ -116,10 +131,9 @@ export async function prepareNotice(db: SupabaseClient, club: ClubBrandRow, req:
         due = addressable.filter(m => m.membership_expires_at && m.membership_expires_at >= from && m.membership_expires_at <= to);
       }
       return {
-        ok: true, label: 'Membership renewal notice', skippedNoEmail,
+        ok: true, label: 'Membership renewal notice', skippedNoEmail: skipped,
         drafts: due.map(m => ({
-          // Sent by hand to one member: once a day, separate from the once-a-term bulk notice
-          key: req.memberId ? `notice_renewal:${m.id}:${m.membership_expires_at}:manual:${today}` : `notice_renewal:${m.id}:${m.membership_expires_at}`,
+          key: manual ? `notice_renewal:${m.id}:${m.membership_expires_at}:manual:${today}` : `notice_renewal:${m.id}:${m.membership_expires_at}`,
           club, kind: 'notice_renewal', refId: `${m.id}:${m.membership_expires_at}`, to: m.to,
           render: unsubscribeUrl => renewalReminder({
             brand, unsubscribeUrl, message,
