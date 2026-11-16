@@ -322,6 +322,19 @@ export function useEventWrapupReady(): boolean {
   return ready;
 }
 
+/** Whether migration 20261176 has run: the Mark as completed popup asks how the team finished only then */
+export function useEventWriteupReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const sb = getSupabaseClient();
+    void (sb ? sb.from('events').select('cup_finish').limit(1).then(r => !r.error) : Promise.resolve(true))
+      .then(ok => { if (live) setReady(ok); });
+    return () => { live = false; };
+  }, []);
+  return ready;
+}
+
 const emptyNotes: EventNotes = { went_well: '', next_time: '' };
 
 /** The committee's notes on one event, saved as they type */

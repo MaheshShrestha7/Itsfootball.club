@@ -36,7 +36,8 @@ import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
 import { byDate, isPastEvent, type DateOrder } from '@/lib/club-lists';
 import { EVENT_TYPES } from '@/lib/event-report';
-import { useEventWrapupReady } from '@/lib/use-match-reviews';
+import { useEventWrapupReady, useEventWriteupReady } from '@/lib/use-match-reviews';
+import CompleteEventModal from '@/components/admin/CompleteEventModal';
 import { useDoorCheckinUrl } from '@/lib/door-code';
 import { confirmAction } from '@/components/ConfirmDialog';
 import TrainingAttendance from '@/components/TrainingAttendance';
@@ -55,10 +56,13 @@ export default function AdminEventsPage({
   params: Promise<{ clubSlug: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, matches, news, addEvent, deleteEvent, updateEvent, updateMatch, updateClubBranding, seasons, getActiveSeason } = useClub();
+  const { clubs, selectClubBySlug, events, matches, matchEvents, clubTeams, news, addEvent, deleteEvent, updateEvent, updateMatch, updateClubBranding, seasons, getActiveSeason } = useClub();
   const { can, user } = useAuth();
   // Mark as completed needs migration 20261175; until then past events just show the summary
   const wrapupReady = useEventWrapupReady();
+  // How the team finished, for the cup write-up: asked only once migration 20261176 has run
+  const writeupReady = useEventWriteupReady();
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
 
   const clubEvents = events.filter(e => e.club_id === club.id);
@@ -134,6 +138,13 @@ export default function AdminEventsPage({
   const filteredEvents = byDate(inSeasonAndType.filter(e => isWhen(e, whenFilter)), e => e.start_time, order);
   // Seasons the club set up, plus any label an older event still carries
   const seasonNames = [...new Set([...clubSeasons.map(s => s.name), ...clubEvents.map(seasonOf)])];
+
+  const markCompleted = (evt: ClubEvent, extra: Partial<ClubEvent> = {}) => {
+    updateEvent(evt.id, { completed_at: new Date().toISOString(), completed_by_name: user?.full_name || '', ...extra });
+    setToastMessage(`"${evt.title}" is marked as completed`);
+    setCompletingId(null);
+  };
+  const completingEvent = clubEvents.find(e => e.id === completingId);
 
   const handleTogglePinEvent = (evt: ClubEvent) => {
     // Preserve default slides if no custom pins exist yet
@@ -435,8 +446,9 @@ export default function AdminEventsPage({
                     </button>
                   ) : (
                     <button type="button" className="btn btn-primary btn-sm row" onClick={() => {
-                      updateEvent(evt.id, { completed_at: new Date().toISOString(), completed_by_name: user?.full_name || '' });
-                      setToastMessage(`"${evt.title}" is marked as completed`);
+                      // An event with games gets the write-up questions first
+                      if (clubMatches.some(m => m.event_id === evt.id)) setCompletingId(evt.id);
+                      else markCompleted(evt);
                     }}>
                       <Check size={14} aria-hidden="true" />
                       <span>Mark as completed</span>
@@ -784,6 +796,19 @@ export default function AdminEventsPage({
           eventId={printPosterEvent.id}
           disabledNotice={!printPosterEvent.door_qr_checkin_enabled ? 'Self check-in is turned off for this event, so this QR code won\'t work until you turn it on in Edit Event.' : undefined}
           onClose={() => setPrintPosterEvent(null)}
+        />
+      )}
+
+      {completingEvent && (
+        <CompleteEventModal
+          club={club}
+          event={completingEvent}
+          matches={clubMatches}
+          matchEvents={matchEvents}
+          clubTeams={clubTeams}
+          askFinish={writeupReady}
+          onConfirm={extra => markCompleted(completingEvent, extra)}
+          onClose={() => setCompletingId(null)}
         />
       )}
 

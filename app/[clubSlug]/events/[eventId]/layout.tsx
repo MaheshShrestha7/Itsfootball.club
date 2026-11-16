@@ -28,7 +28,9 @@ export async function generateMetadata({
       : null;
     return pageMetadata({
       title: fitTitle(event.title, clubName(club)),
-      description: fitDescription(
+      description: event.completed_at ? fitDescription(
+        `How ${club.name} got on at ${event.title}${date ? ` on ${date}` : ''}: the results, the scorers and the photos.`,
+      ) : fitDescription(
         `${event.title}, a ${club.name} event${date ? ` on ${date}` : ''}${event.location ? ` at ${event.location}` : ''}.`,
         'See the details, meet the event sponsors and RSVP to save your place.',
         'RSVP to save your place.',

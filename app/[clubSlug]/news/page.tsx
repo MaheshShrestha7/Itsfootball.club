@@ -6,6 +6,7 @@ import { useClub } from '@/lib/club-context';
 import { newsPath } from '@/lib/slugs';
 import { newestFirst } from '@/lib/news';
 import { matchReportCards } from '@/lib/match-article';
+import { cupWriteupCards } from '@/lib/cup-writeup';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
@@ -29,6 +30,9 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
     ...news.filter(n => n.club_id === club.id).map(n => ({ ...n, href: newsPath(club.slug, n.slug) })),
     ...matchReportCards({ club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events })
       .map(r => ({ id: r.id, href: r.href, title: r.title, summary: r.summary, published_at: r.published_at, cover_image_url: r.cover, tags: ['Match Report'] })),
+    // A completed cup's write-up (its card opens the event page)
+    ...cupWriteupCards({ club, events, matches, matchEvents, clubTeams })
+      .map(r => ({ id: r.id, href: r.href, title: r.title, summary: r.summary, published_at: r.published_at, cover_image_url: r.cover, tags: ['Cup Report'] })),
   ]), [news, club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events]);
   // Tags used on at least two articles: one-off tags would just add noise
   const tags = useMemo(() => {

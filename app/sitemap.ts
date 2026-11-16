@@ -103,7 +103,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const future = e.start_time ? Date.parse(e.start_time) > now : true;
     entries.push({
       url: url(`/${slug}/events/${e.id}`),
-      lastModified: date(e.created_at),
+      // Marking it Completed adds the cup write-up: a fresh date so search engines come back for it
+      lastModified: date(e.completed_at || e.created_at),
       changeFrequency: future ? 'weekly' : 'yearly',
       priority: future ? 0.7 : 0.4,
     });

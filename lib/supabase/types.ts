@@ -355,7 +355,19 @@ export interface ClubEvent {
   /** Set when the committee marks it Completed; '' or missing = not (migration 20261175) */
   completed_at?: string | null;
   completed_by_name?: string | null;
+  /** For the cup write-up (migration 20261176): how each team finished, keyed by team id or 'club' */
+  cup_finish?: Record<string, CupFinish> | null;
+  cup_winner?: string | null;
+  /** The club's own words printed at the end of the write-up */
+  writeup_note?: string | null;
   created_at?: string;
+}
+
+export interface CupFinish {
+  stage: 'won' | 'final' | 'semi' | 'quarter' | 'group';
+  /** Group stage: place in the group, and how many went through */
+  place?: number;
+  through?: number;
 }
 
 export interface EventAttendee {

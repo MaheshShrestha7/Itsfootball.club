@@ -259,6 +259,7 @@ export interface EventMetadataRow {
   description: string | null;
   /** Missing until migration 20261115_event_flyers.sql runs */
   flyer_url?: string | null;
+  completed_at?: string | null;
 }
 
 /** Public events only (row-level security hides private ones from the anon key).
@@ -588,7 +589,7 @@ export interface SitemapData {
   matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null; is_audited: boolean | null; audited_at: string | null }[];
   /** Matches with at least one goal scorer logged; empty when that couldn't be read */
   goalMatchIds: Set<string>;
-  events: { id: string; club_id: string; start_time: string | null; created_at: string | null }[];
+  events: { id: string; club_id: string; start_time: string | null; created_at: string | null; completed_at?: string | null }[];
   tournaments: { id: string; club_id: string; status: string | null; updated_at: string | null }[];
   news: { club_id: string; slug: string; published_at: string | null; updated_at: string | null }[];
   teams: { club_id: string; slug: string }[];
@@ -606,7 +607,7 @@ export async function listSitemapData(): Promise<SitemapData> {
   const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages, goalRows] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
     fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at,is_audited,audited_at&order=match_date.desc,id`),
-    fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at&is_public=eq.true&order=start_time.desc,id'),
+    fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at,completed_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
     // Published only: a scheduled article joins the sitemap once its time comes
     fetchRows<SitemapData['news'][number]>(`news_articles?select=club_id,slug,published_at,updated_at&published_at=lte.${new Date().toISOString().slice(0, 13)}:59:59Z&order=id`),
