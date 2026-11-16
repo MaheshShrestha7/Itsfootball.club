@@ -166,12 +166,12 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
 
                 <label htmlFor="mc-support-reply" className="form-label" style={{ marginTop: 14 }}>Your reply</label>
                 <textarea id="mc-support-reply" ref={box} className="form-input" rows={6} maxLength={4000} value={draft} onChange={e => setDraft(e.target.value)} style={{ resize: 'vertical', lineHeight: 1.5 }} />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                <div className="mc-reply-bar">
+                  <span className="snips">
                     <small className="mc-muted">Saved replies:</small>
-                    {SUPPORT_SNIPPETS.map(s => <button key={s.label} type="button" className="mc-pill-btn ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => insert(s.text)}>{s.label}</button>)}
+                    {SUPPORT_SNIPPETS.map(s => <button key={s.label} type="button" className="mc-pill-btn ghost" onClick={() => insert(s.text)}>{s.label}</button>)}
                   </span>
-                  <span style={{ display: 'flex', gap: 6 }}>
+                  <span className="send">
                     <button type="button" className="mc-pill-btn ghost" disabled={sending || !draft.trim()} onClick={() => send('waiting')}>Send, wait for them</button>
                     <button type="button" className="mc-pill-btn" disabled={sending || !draft.trim()} onClick={() => send('done')}><Send size={14} /> Send and mark done</button>
                   </span>
