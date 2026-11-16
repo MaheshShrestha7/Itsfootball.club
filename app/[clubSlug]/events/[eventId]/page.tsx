@@ -122,7 +122,7 @@ export default function EventDetailsPage({
           )}
           <div className="evp-head">
             <p className="evp-kind">
-              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}{completed ? ', finished' : over ? ', over' : ''}
+              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             </p>
             <h1>{event.title}</h1>
             {event.description && <p className="evp-desc">{event.description}</p>}
@@ -138,6 +138,7 @@ export default function EventDetailsPage({
               /* After the day: one block in the club's colour with the day, the venue and how it went */
               <div className="evp-when">
                 <div className={`ecd-club ecd-result${played > 0 ? '' : ' is-plain'}`}>
+                  <span className="ecd-status">{completed ? 'Finished' : 'Over'}</span>
                   <div className="ecd-club-day">
                     {club.logo_url && <img className="ecd-crest" src={club.logo_url} alt="" />}
                     <b><LocalTime value={event.start_time} format="ordinal" /></b>
