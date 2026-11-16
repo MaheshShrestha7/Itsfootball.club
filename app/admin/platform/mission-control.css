@@ -783,3 +783,138 @@ textarea.mc-input { resize: vertical; }
   .mc-nc-row .mc-nc-fld + .mc-nc-fld { margin-top: 12px; }
   .mc-nc-foot .mc-muted { flex-basis: 100%; }
 }
+
+/* =====================================================================================
+   Phones 2026-11-16 (M1 to M11): club panel Close, scrolling filters, shorter Today items,
+   club flags on rows, log cards, sticky support reply
+   ===================================================================================== */
+.mc-reply-bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; margin-top: 10px; }
+.mc-reply-bar .snips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mc-reply-bar .snips .mc-pill-btn { padding: 4px 10px; font-size: 11px; }
+.mc-reply-bar .send { display: flex; gap: 6px; }
+/* M1 club panel: the header grid sized itself to the long web address, pushing Close off screen */
+.mc-cp-h { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 640px) {
+  .mc-cp-h { padding: 12px 16px; }
+  .mc-cp-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; }
+  .mc-cp-top h2 { font-size: 17px; }
+  .mc-cp-acts { display: grid; grid-template-columns: 1fr 1fr; }
+  .mc-cp-acts .mc-pill-btn { justify-content: center; min-height: 44px; padding: 0 8px; }
+  .mc-cp-sec { padding: 16px; }
+  .mc-cp .mc-icon-btn { width: 40px; height: 40px; }
+}
+
+@media (max-width: 640px) {
+  /* M2 page headings: shorter top, search full width, no Ctrl K on a phone */
+  .mc-page-h { margin: 2px 0 14px; gap: 10px; }
+  .mc-page-h > div:first-child { flex: 1 1 100%; }
+  .mc-page-h .right { width: 100%; }
+  .mc-search-btn { width: 100%; min-height: 44px; }
+  .mc-search-btn kbd { display: none; }
+
+  /* M3 filters: one row that scrolls sideways, every chip a real tap target */
+  .mc-seg, .mc-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .mc-seg::-webkit-scrollbar, .mc-chips::-webkit-scrollbar { display: none; }
+  .mc-seg button { min-height: 38px; padding: 0 14px; font-size: 13.5px; flex-shrink: 0; }
+  .mc-chips { margin-right: -16px; padding-right: 16px; }
+  .mc-chips .mc-chip, .mc-chips button.mc-chip { min-height: 38px; flex-shrink: 0; white-space: nowrap; }
+  .mc-card-h .mc-seg { width: 100%; }
+
+  /* M4 Today: one icon per item, actions in two rows at most */
+  .mc-q { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 16px 0; }
+  .mc-q > .mc-sq { display: none; }
+  .mc-q .t { flex-wrap: nowrap; align-items: center; gap: 10px; }
+  .mc-q .t b { flex: 1; min-width: 0; }
+  .mc-q .t .when { flex-shrink: 0; font-size: 12px; }
+  .mc-q .t b { font-size: 15px; line-height: 1.35; }
+  .mc-q p { font-size: 13.5px; }
+  .mc-q .acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .mc-q .acts .mc-pill-btn { min-height: 40px; justify-content: center; padding: 0 6px; font-size: 13px; }
+  .mc-q .acts .mc-pill-btn:not(.ghost) { grid-column: 1 / -1; min-height: 44px; }
+
+  /* M5 Clubs: what needs a look shows on the row, not only on a desktop */
+  .mc-toolbar .mc-select { flex: 1 1 100%; }
+  .mc-clubs thead { display: none; }
+  .mc-clubs tr { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: 'name name name n' 'wait pay . .'; align-items: center; gap: 8px 8px; padding: 12px 0; border-bottom: 1px solid var(--mc-line); }
+  .mc-clubs td { padding: 0; border: 0; text-align: left !important; }
+  .mc-clubs td.hide-phone { display: none; }
+  .mc-clubs td:nth-child(1) { grid-area: name; min-width: 0; }
+  .mc-clubs td:nth-child(2) { grid-area: n; text-align: right !important; }
+  .mc-clubs td:nth-child(3):has(.mc-flag) { display: block; grid-area: wait; margin-left: 50px; }
+  .mc-clubs td:nth-child(3):has(.mc-flag) .mc-flag::before { content: 'Waiting'; font-weight: 600; }
+  .mc-clubs td:nth-child(4) { display: block; grid-area: pay; }
+  .mc-clubs td:nth-child(3):not(:has(.mc-flag)) + td:nth-child(4) { grid-area: wait; margin-left: 50px; }
+  .mc-clubs td.r.num:nth-child(2)::after { content: ' members'; font-size: 12.5px; color: var(--mc-ink-3); }
+
+  /* M6 Action log: each change is a card, what changed first */
+  .mc-log thead { display: none; }
+  .mc-log, .mc-log tbody { display: block; }
+  .mc-log tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 0; border-bottom: 1px solid var(--mc-line); }
+  .mc-log td { padding: 0; border: 0; }
+  .mc-log td:nth-child(3) { grid-column: 1 / -1; grid-row: 1; font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .mc-log td:nth-child(4) { grid-column: 1; grid-row: 2; font-size: 13px; }
+  .mc-log td:first-child { grid-column: 2; grid-row: 2; font-size: 12.5px; text-align: right; }
+  .mc-log td.who { grid-column: 1 / -1; grid-row: 3; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
+  .mc-card .mc-toolbar .mc-select { flex: 1 1 140px; min-width: 0; }
+
+  /* M7 Overview: number tiles become rows, so labels stop wrapping to 3 lines */
+  .mc-ov-nums { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .mc-ov-nums > div { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 10px 12px; }
+  .mc-ov-nums small { margin-top: 0; font-size: 13px; }
+
+  /* M8 Grounds: the drawn pitch becomes a small thumbnail, so four grounds fit on a screen */
+  .mc-grid { gap: 8px; }
+  .mc-gcard { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; padding: 10px; }
+  .mc-gcard .top { grid-row: 1 / span 4; height: 72px; align-self: start; }
+  .mc-gcard .st { left: 4px; top: 4px; font-size: 9.5px; padding: 2px 6px; }
+  .mc-gcard h3 { margin: 2px 0 2px; }
+  .mc-gcard .meta, .mc-gcard .flags { margin-left: 0; margin-right: 0; }
+  .mc-gcard .flags { margin-top: 6px; }
+  .mc-gcard .acts { grid-column: 1 / -1; margin: 10px 0 0; padding-top: 0; }
+  .mc-gcard .acts .mc-pill-btn { min-height: 40px; padding: 0 14px; font-size: 13px; }
+
+  /* M9 Support: send buttons stay on screen above the bottom bar while typing */
+  .mc-users textarea.form-input { min-height: 120px; }
+  .mc-reply-bar { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 2; display: grid; gap: 8px; padding: 10px 0; background: var(--mc-card-solid); }
+  .mc-reply-bar .snips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .mc-reply-bar .snips::-webkit-scrollbar { display: none; }
+  .mc-reply-bar .snips .mc-pill-btn { flex-shrink: 0; min-height: 36px; font-size: 12.5px; }
+  .mc-reply-bar small { white-space: nowrap; }
+  .mc-reply-bar .send { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mc-reply-bar .send .mc-pill-btn { justify-content: center; min-height: 44px; padding: 4px 8px; font-size: 13px; white-space: normal; line-height: 1.2; text-align: center; }
+
+  /* M10 bigger hit areas for small buttons */
+  .mc-pill-btn { min-height: 40px; }
+  .mc-icon-btn { width: 40px; height: 40px; }
+}
+
+/* M11 More sheet and sidebar: "Light or dark" lined up like the rows around it */
+.mc-theme-row { justify-content: flex-start; }
+.mc-theme-row > .theme-toggle-slot { flex: 0 0 18px; }
+.mc-theme-row .theme-toggle-slot { overflow: visible; }
+.mc-theme-row > span:last-child { flex: 1; text-align: left; }
+
+/* M5 on tablets: the table has room for Waiting and Card payments again */
+@media (min-width: 641px) and (max-width: 960px) {
+  .mc .mc-clubs th.hide-phone:nth-child(3), .mc .mc-clubs th.hide-phone:nth-child(4),
+  .mc .mc-clubs td.hide-phone:nth-child(3), .mc .mc-clubs td.hide-phone:nth-child(4) { display: table-cell; }
+}
+
+/* People on phones: a person opens as a full-screen panel over the list, with a way back */
+.mc-sheet-bar { display: none; }
+@media (max-width: 1180px) and (min-width: 961px) {
+  .mc-users.mc-users-sheet { grid-template-columns: 280px minmax(0, 1fr); }
+}
+@media (max-width: 960px) {
+  .mc-users-sheet > .mc-col { display: none; }
+  .mc-users-sheet.is-open > .mc-col {
+    display: grid; grid-auto-rows: max-content; position: fixed; inset: 0; z-index: 9999; overflow-y: auto; overscroll-behavior: contain; align-content: start;
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--mc-canvas);
+  }
+  .mc-users-sheet.is-open .mc-sheet-bar {
+    display: flex; position: sticky; top: 0; z-index: 2; margin: 0 -16px; padding: 10px 16px;
+    background: var(--mc-card-solid); border-bottom: 1px solid var(--mc-line);
+  }
+  .mc-sheet-bar .mc-pill-btn { min-height: 44px; }
+  .mc-users-sheet .mc-ulist { max-height: none; }
+}

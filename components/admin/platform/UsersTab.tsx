@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { PlatformUserItem } from '@/lib/supabase/types';
@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/dates';
 import { Avatar, Crest, LogoArt } from '@/components/admin/platform/McArt';
 import { initials } from '@/lib/mission-control';
 import AccountActions from '@/components/admin/platform/AccountActions';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import {
   Search,
   RefreshCw,
@@ -19,6 +20,7 @@ import {
   Check,
   UserCheck,
   ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
 
 export default function UsersTab({ initialQuery = '', showToast }: { initialQuery?: string; showToast: (msg: string) => void }) {
@@ -27,6 +29,17 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Phones: the person opens as a full-screen panel over the list (desktop shows it beside the list)
+  const [open, setOpen] = useState(false);
+  const backBtn = useRef<HTMLButtonElement>(null);
+  useEscapeToClose(open, setOpen);
+  // Focus the way back when the panel opens (a no-op on desktop, where it's hidden), and return it after
+  useEffect(() => {
+    if (!open) return;
+    const before = document.activeElement as HTMLElement | null;
+    backBtn.current?.focus({ preventScroll: true });
+    return () => { if (before && document.contains(before)) before.focus({ preventScroll: true }); };
+  }, [open]);
 
   const [query, setQuery] = useState(initialQuery.trim());
   const [total, setTotal] = useState<number | null>(null);
@@ -97,7 +110,7 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
         </div>
       </div>
 
-      <div className="mc-users">
+      <div className={`mc-users mc-users-sheet${open ? ' is-open' : ''}`}>
         <div className="mc-card">
           <label className="mc-search">
             <Search size={15} aria-hidden="true" />
@@ -118,7 +131,7 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
             {loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>Loading people…</p>}
             {!loading && users.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>No one matches that search.</p>}
             {users.map(u => (
-              <button key={u.id} type="button" className="mc-urow" aria-pressed={selected?.id === u.id} onClick={() => setSelectedId(u.id)}>
+              <button key={u.id} type="button" className="mc-urow" aria-pressed={selected?.id === u.id} onClick={() => { setSelectedId(u.id); setOpen(true); }}>
                 <Avatar name={u.full_name || u.email} url={u.avatar_url} />
                 <div>
                   <b>{u.full_name || u.email}</b>
@@ -138,6 +151,9 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
 
         {selected ? (
           <div className="mc-col">
+            <div className="mc-sheet-bar">
+              <button ref={backBtn} type="button" className="mc-pill-btn ghost" onClick={() => setOpen(false)}><ArrowLeft size={16} aria-hidden="true" /> People</button>
+            </div>
             <div className="mc-card mc-profile">
               <div className="ban"><LogoArt id="user" /></div>
               <div className="who">
@@ -175,7 +191,7 @@ export default function UsersTab({ initialQuery = '', showToast }: { initialQuer
               userId={selected.id}
               name={selected.full_name || selected.email}
               showToast={showToast}
-              onChanged={() => { setSelectedId(null); fetchUsers(searchQuery); }}
+              onChanged={() => { setSelectedId(null); setOpen(false); fetchUsers(searchQuery); }}
             />
 
             <div className="mc-kpis">
