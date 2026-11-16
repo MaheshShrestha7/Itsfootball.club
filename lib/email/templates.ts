@@ -801,6 +801,39 @@ export function clubAdminInvite(p: { clubName: string; role: 'owner' | 'admin'; 
   });
 }
 
+/** MCF-10: a platform admin asks the club Owner for a few hours of admin access, to help with something */
+export function supportAccessRequest(p: { ownerName: string; clubName: string; hours: number; reason?: string | null; link: string }): RenderedEmail {
+  const time = p.hours === 1 ? '1 hour' : `${p.hours} hours`;
+  return renderEmail({
+    subject: `itsfootball.club support would like to look at ${p.clubName}'s admin`,
+    preheader: `Say yes or no in your Roles page. Access ends by itself after ${time}.`,
+    heading: `Can we look at ${p.clubName}'s admin?`,
+    paragraphs: [
+      `Hi ${p.ownerName}, someone from the itsfootball.club team would like to see your club's admin area to help.`,
+      `If you say yes, they can see and change what a Club Admin can for ${time}, and then the access ends by itself. Everything they change shows in your Activity log, and you can end it early at any time.`,
+    ],
+    details: [['Club', p.clubName], ['For', time], ...(p.reason ? [['Why', p.reason] as [string, string]] : [])],
+    cta: { label: 'Say yes or no', url: p.link },
+    note: 'Nothing changes unless you say yes. Not expecting this? Say no, and reply to let us know.',
+    reason: `You're receiving this because you're the Owner of ${p.clubName} on itsfootball.club.`,
+  });
+}
+
+/** MCF-5: a feature a club asked for is now built */
+export function featureBuilt(p: { name: string; feature: string; asked: string; link: string }): RenderedEmail {
+  return renderEmail({
+    subject: `You asked, it's built: ${p.feature}`,
+    preheader: `${p.feature} is now on itsfootball.club.`,
+    heading: `${p.feature} is here`,
+    paragraphs: [
+      `Hi ${p.name}, on ${p.asked} you asked us for this. It's now built and ready to use.`,
+      'Thanks for telling us. If it doesn\'t quite do what you needed, reply to this email.',
+    ],
+    cta: { label: 'Open your admin', url: p.link },
+    reason: 'You\'re receiving this because you asked itsfootball.club support for this feature.',
+  });
+}
+
 /** The admin welcome pack: the setup steps this person can do, sent when they start running a club */
 export function welcomePack(p: {
   firstName?: string | null;

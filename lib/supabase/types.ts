@@ -1311,6 +1311,31 @@ export interface PlatformClubNote {
   body: string;
   author_email: string | null;
   created_at: string;
+  /** Comes back on Mission Control's Today on this day (migration 20261177) */
+  remind_on?: string | null;
+}
+
+/** A platform admin's request for Club Admin access, answered by the club's Owner (get_club_support_access, migration 20261177) */
+export interface SupportAccessRequest {
+  id: string;
+  user_email: string | null;
+  hours: number;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'declined' | 'cancelled' | 'ended';
+  created_at: string;
+  decided_at: string | null;
+  expires_at: string | null;
+  is_mine: boolean;
+}
+
+/** A feature clubs asked for through Support (migration 20261177) */
+export interface PlatformFeatureRequest {
+  id: string;
+  title: string;
+  status: 'asked' | 'planned' | 'built';
+  created_at: string;
+  built_at: string | null;
+  built_emailed_at: string | null;
 }
 
 /** get_platform_audit() */
@@ -1342,6 +1367,8 @@ export interface SupportRequest {
   status: 'open' | 'waiting' | 'done';
   created_at: string;
   updated_at: string;
+  /** The feature request it asks for (migration 20261177) */
+  feature_id?: string | null;
 }
 
 export interface SupportReply {
@@ -1412,5 +1439,9 @@ export interface PlatformAnnouncement {
   created_by?: string | null;
   created_at: string;
   expires_at?: string | null;
+  /** Not shown before this time; NULL = straight away (migration 20261177) */
+  starts_at?: string | null;
+  /** Only these clubs; NULL or empty = every club (migration 20261177) */
+  club_ids?: string[] | null;
 }
 

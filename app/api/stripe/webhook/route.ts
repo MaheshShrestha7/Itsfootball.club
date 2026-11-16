@@ -96,6 +96,25 @@ export async function POST(req: NextRequest) {
       }
       break;
     }
+    // MCF-2: card disputes (chargebacks) show on Mission Control's Today until Stripe closes them.
+    // Columns from migration 20261177; before it runs the update fails harmlessly.
+    case 'charge.dispute.created':
+    case 'charge.dispute.updated':
+    case 'charge.dispute.closed': {
+      const dispute = event.data.object as Stripe.Dispute;
+      const intent = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id;
+      if (!intent) break;
+      const dueBy = dispute.evidence_details?.due_by;
+      const { error } = await db.from('payments').update({
+        dispute_id: dispute.id,
+        dispute_status: dispute.status,
+        dispute_reason: dispute.reason,
+        dispute_due_by: dueBy ? new Date(dueBy * 1000).toISOString() : null,
+        ...(event.type === 'charge.dispute.created' ? { disputed_at: new Date(dispute.created * 1000).toISOString() } : {}),
+      }).eq('stripe_payment_intent_id', intent);
+      if (error) console.warn('[stripe-webhook] dispute not saved:', error.message);
+      break;
+    }
     case 'account.updated': {
       const account = event.data.object as Stripe.Account;
       await db

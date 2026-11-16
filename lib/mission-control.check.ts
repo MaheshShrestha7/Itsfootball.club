@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readMissionUrl, missionUrl, buildQueue, queueItems, staleDoneKeys, isDoneSnooze, DONE_UNTIL, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
+import { readMissionUrl, missionUrl, buildQueue, queueItems, unscoredByClub, matchdayRange, gameState, staleDoneKeys, isDoneSnooze, DONE_UNTIL, bucketTotals, emailTemplate, firstName, greeting, healthSignals, initials, setupSteps, shortAge, softTint, timeAgo, weekHeading, weekStrip, type HealthInput } from './mission-control';
 import { pctChange, changeLabel, pageLabel, ranked, sparkBars, setupFunnel, quietClubs, FEATURES } from './mission-control';
 import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
 
@@ -145,7 +145,6 @@ assert.equal(light({ domains: { total: 2, pending: ['a.com'] } }, 'domains'), 'a
 assert.equal(light({ domains: null }, 'domains'), 'grey');
 assert.equal(light({ dbMs: 900 }, 'db'), 'red');
 
-console.log('mission-control: ok');
 
 // ---- Overview helpers ----
 {
@@ -194,3 +193,49 @@ assert.equal(missionUrl('?tab=clubs', { club: 'c1' }), '?tab=clubs&club=c1');
 assert.equal(missionUrl('?tab=clubs&club=c1', { club: null }), '?tab=clubs');
 assert.equal(missionUrl('?tab=support&request=r1', { tab: 'today' }), '');
 assert.equal(missionUrl('?tab=support&request=r1', { tab: 'log' }), '?tab=log');
+
+// MCF-1/2/3: disputes, games with no score and expired invites from get_platform_today (migration 20261177)
+{
+  const now = Date.parse('2026-11-16T10:00:00Z');
+  const rows = [
+    { club_id: 'c1', match_date: '2026-11-15T04:00:00Z', match_time: null }, // yesterday, a full time
+    { club_id: 'c1', match_date: '2026-11-16T09:00:00Z', match_time: null }, // 1 hour ago: not yet
+    { club_id: 'c2', match_date: '2026-11-10T00:00:00Z', match_time: null }, // date only, days ago
+  ];
+  const m = unscoredByClub(rows, now);
+  assert.equal(m.get('c1')!.count, 1);
+  assert.equal(m.get('c2')!.count, 1);
+  const extras = {
+    disputes: [{ payment_id: 'p1', club_id: 'c1', amount_cents: 18000, description: 'Season fee', payer_name: 'Sam', status: 'needs_response', due_by: '2026-11-29T00:00:00Z' }],
+    unscored: rows,
+    expired_invites: [{ invite_id: 'i1', club_id: 'c1', email: 'jo@example.com', role: 'owner' as const, sent_at: '2026-11-01T00:00:00Z', expires_at: '2026-11-08T00:00:00Z' }],
+  };
+  const q = queueItems([club({ logo_url: 'x', team_count: 1, match_count: 1 })], now, extras);
+  assert.deepEqual(q.map(i => i.kind), ['dispute', 'invite', 'unscored']);
+  assert.ok(q[0].title.includes('$180.00, Season fee'), q[0].title);
+  assert.ok(q[0].detail.includes('29 Nov'), q[0].detail);
+  assert.equal(q[1].inviteId, 'i1');
+  assert.ok(q[2].title.includes('1 game with no score'));
+  // A closed dispute status is a new key, so marking one stage done doesn't hide the next
+  assert.equal(q[0].key, 'dispute:p1:needs_response');
+  assert.deepEqual(staleDoneKeys(['dispute:p1:needs_response', 'invite:i1:2026-11-08'], new Set(q.map(i => i.key))), []);
+}
+
+// Matchday ranges and states (MCF-1); dates in the machine's local time like the page
+{
+  const wed = new Date(2026, 10, 18, 15, 0); // Wednesday
+  const r = matchdayRange('weekend', wed);
+  assert.equal(r.from.getDay(), 6);
+  assert.equal(r.from.getDate(), 21);
+  assert.equal((r.to.getTime() - r.from.getTime()) / 86400000 > 1.9, true);
+  const sun = new Date(2026, 10, 22, 9, 0);
+  assert.equal(matchdayRange('weekend', sun).from.getDate(), 21);
+  assert.equal(matchdayRange('last', sun).from.getDate(), 14);
+  assert.equal(matchdayRange('today', wed).from.getDate(), 18);
+  const t = Date.parse('2026-11-16T10:00:00Z');
+  assert.equal(gameState({ status: 'live', match_date: '2026-11-16T09:00:00Z', match_time: null }, t), 'live');
+  assert.equal(gameState({ status: 'completed', match_date: '2026-11-16T05:00:00Z', match_time: null }, t), 'scored');
+  assert.equal(gameState({ status: 'upcoming', match_date: '2026-11-16T07:00:00Z', match_time: null }, t), 'unscored');
+  assert.equal(gameState({ status: 'upcoming', match_date: '2026-11-16T09:00:00Z', match_time: null }, t), 'later');
+}
+console.log('mission-control: ok');

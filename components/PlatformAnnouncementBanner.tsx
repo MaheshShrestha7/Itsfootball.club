@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { clubSlugFromPath, isPlatformHost } from '@/lib/slugs';
 import { PlatformAnnouncement } from '@/lib/supabase/types';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X, ExternalLink } from 'lucide-react';
 import { safeLinkHref } from '@/lib/sponsors';
@@ -9,35 +11,36 @@ import { safeLinkHref } from '@/lib/sponsors';
 export default function PlatformAnnouncementBanner() {
   const [announcement, setAnnouncement] = useState<PlatformAnnouncement | null>(null);
   const [dismissed, setDismissed] = useState(true);
+  // Who sees which banner depends on the club whose page this is (MCF-9), so look again when that changes
+  const slug = clubSlugFromPath(usePathname());
 
   useEffect(() => {
+    let live = true;
     async function loadBanner() {
       const client = getSupabaseClient();
       if (!client) return;
       try {
-        const { data, error } = await client
-          .from('platform_announcements')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (!error && data && data.length > 0) {
-          const ann = data[0] as PlatformAnnouncement;
-          // Check if previously dismissed in this browser session
-          const dismissedKey = `dismissed_announcement_${ann.id}`;
-          if (sessionStorage.getItem(dismissedKey) !== 'true') {
-            setAnnouncement(ann);
-            setDismissed(false);
-          }
+        const host = window.location.hostname;
+        // get_platform_banner (migration 20261177) applies the audience, clubs and start date
+        let { data, error } = await client.rpc('get_platform_banner', { p_slug: slug || null, p_host: isPlatformHost(host) ? null : host });
+        if (error && /function|does not exist/i.test(error.message)) {
+          ({ data, error } = await client.from('platform_announcements').select('*').eq('is_active', true)
+            .order('created_at', { ascending: false }).limit(1));
         }
+        const ann = !error && Array.isArray(data) && data.length > 0 ? (data[0] as PlatformAnnouncement) : null;
+        let seen = false;
+        try { seen = !!ann && sessionStorage.getItem(`dismissed_announcement_${ann.id}`) === 'true'; } catch { /* storage unavailable */ }
+        if (!live) return;
+        setAnnouncement(ann && !seen ? ann : null);
+        setDismissed(!ann || seen);
       } catch {
         // Table may not yet exist in migration
       }
     }
 
     loadBanner();
-  }, []);
+    return () => { live = false; };
+  }, [slug]);
 
   if (dismissed || !announcement) return null;
 
@@ -48,6 +51,8 @@ export default function PlatformAnnouncementBanner() {
     } catch {
       // storage unavailable
     }
+    // Signed in: remembered across devices, and counted in Mission Control. Does nothing for visitors.
+    getSupabaseClient()?.rpc('dismiss_platform_banner', { p_id: announcement.id }).then(() => {}, () => {});
   };
 
   const getStyle = () => {

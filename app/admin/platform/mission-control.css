@@ -918,3 +918,36 @@ textarea.mc-input { resize: vertical; }
   .mc-sheet-bar .mc-pill-btn { min-height: 44px; }
   .mc-users-sheet .mc-ulist { max-height: none; }
 }
+
+/* ---- Mission Control features (MCF-1 to MCF-10, 2026-11-16) ---- */
+/* Matchday: club cell, warning number, table scrolls sideways on phones */
+.mc-md-nums { margin-bottom: 14px; }
+.mc-md-warn { color: var(--mc-amber) !important; }
+.mc-md-scroll { overflow-x: auto; margin: 0 -4px; }
+.mc-md-club { display: inline-flex; align-items: center; gap: 10px; min-width: 0; border: 0; background: none; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mc-md-club:disabled { cursor: default; }
+.mc-md-club:focus-visible, .mc-md-link:focus-visible { outline: 2px solid var(--mc-green); outline-offset: 2px; border-radius: 6px; }
+.mc-md-club b { display: block; font-size: 13px; color: var(--mc-ink); }
+.mc-md-club small { display: block; font-size: 11.5px; color: var(--mc-ink-3); }
+.mc-md-link { color: var(--mc-ink); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.mc-md-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mc-md-miss { align-items: center; }
+/* Emails per day (System health) */
+.mc-bars { display: flex; align-items: flex-end; gap: 4px; height: 96px; margin-top: 6px; }
+.mc-bars span { flex: 1; height: 100%; border-radius: 5px; background: var(--mc-lilac-2); transform-origin: bottom; }
+.mc-bars span.today { background: var(--mc-indigo); }
+.mc-bars-axis { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--mc-ink-3); margin-top: 6px; }
+/* Club panel: note reminder row, support access */
+.mc-follow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.mc-follow .mc-input { width: auto; }
+/* Broadcasts: picked clubs */
+.mc-picked { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mc-picked button { display: inline-flex; align-items: center; gap: 4px; border: 0; cursor: pointer; font-family: inherit; }
+.mc-picked button:focus-visible { outline: 2px solid var(--mc-green); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .mc-md-scroll .mc-table th:nth-child(3), .mc-md-scroll .mc-table td:nth-child(3) { display: none; }
+  /* Room for the state on a phone: no crest, and the flag may wrap */
+  .mc-md-club > :first-child { display: none; }
+  .mc-md-scroll .mc-table th, .mc-md-scroll .mc-table td { padding-left: 6px; padding-right: 6px; }
+  .mc-md-scroll .mc-flag { white-space: normal; }
+}
