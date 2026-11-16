@@ -4918,3 +4918,82 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .match-article-facts dt { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.1rem; }
 .match-article-facts dd { margin: 0; font-size: 0.92rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
 .match-article-more { margin: 1.1rem 0 0; font-size: 0.95rem; }
+
+/* Public event page (/{club}/events/{id}): one hero panel with the flyer as a poster, then the cup report
+   beside a side column of games, photos and sponsors. Lists inside a panel are lines, never cards. */
+.evp-wrap { max-width: 1120px; padding: 2rem 1.5rem 4rem; }
+.evp-back { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 32px; color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem; }
+.evp-back:hover { color: var(--text-primary); }
+.evp-hero { display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; border-radius: var(--radius-xl); margin-bottom: 1.5rem; }
+.evp-hero.has-flyer { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
+.evp-flyer { display: block; background: rgba(var(--shade-rgb), 0.35); border-right: 1px solid var(--border-subtle); }
+.evp-flyer img { display: block; width: 100%; height: 100%; max-height: 560px; object-fit: cover; object-position: top; }
+.evp-head { padding: clamp(1.25rem, 3.5vw, 2.5rem); min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.evp-kind { margin: 0 0 0.35rem; font-size: 0.875rem; font-weight: 600; color: var(--club-ink); }
+.evp-head h1 { font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 900; line-height: 1.05; color: var(--text-primary); margin: 0 0 0.75rem; text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+.evp-desc { color: var(--text-secondary); font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.25rem; max-width: 56ch; }
+.evp-facts { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 0 0 1.25rem; }
+.evp-facts dt { font-size: 0.8rem; color: var(--text-muted); }
+.evp-facts dd { margin: 0.1rem 0 0; font-weight: 700; color: var(--text-primary); }
+.evp-record { display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; padding: 1rem 0; margin: 0 0 1.25rem; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+.evp-record div { display: flex; align-items: baseline; gap: 0.4rem; }
+.evp-record b { font-family: var(--font-heading); font-size: 2.25rem; font-weight: 900; line-height: 1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.evp-record span { font-size: 0.875rem; color: var(--text-muted); }
+.evp-count { display: flex; flex-direction: column; gap: 0.4rem; }
+.evp-when { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; padding: 1rem 0; margin: 0 0 1.25rem; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+.evp-date { display: flex; align-items: center; gap: 0.9rem; min-width: 0; }
+.evp-date > b { font-family: var(--font-heading); font-size: clamp(3.25rem, 8vw, 4.5rem); font-weight: 900; line-height: 0.9; color: var(--club-ink); font-variant-numeric: tabular-nums; }
+.evp-date > span { display: flex; flex-direction: column; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.evp-time { font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); }
+.evp-checkins { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 1.25rem; }
+.evp-bar { flex: 1 1 160px; height: 6px; border-radius: 3px; background: rgba(var(--tint-rgb), 0.08); overflow: hidden; }
+.evp-bar span { display: block; height: 100%; background: var(--club-primary); transform-origin: left; }
+.evp-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.evp-body.has-side { grid-template-columns: minmax(0, 1fr) minmax(0, 360px); }
+.evp-main { border-radius: var(--radius-xl); }
+.evp-main .match-article-bare { margin: 0; }
+.evp-main .match-article-bare + .match-article-bare { border-top: 1px solid var(--border-subtle); }
+.evp-main .match-article-in { padding: clamp(1.25rem, 3.5vw, 2.25rem); }
+.evp-main .match-article h2 { margin-top: 0; }
+.evp-side { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; }
+.evp-side > .glass-panel { margin-bottom: 0 !important; }
+/* Before the event (no report yet): games on the left, tickets and sponsors beside them */
+@media (min-width: 961px) {
+  .evp-body:not(.has-side) .evp-side { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+  .evp-body:not(.has-side) .evp-games-box { grid-row: span 3; }
+}
+.evp-box { padding: 1.25rem; }
+.evp-box h2 { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 0.5rem; }
+.evp-games .fixture-row-flat { padding: 0.65rem 0; border-bottom: 1px solid var(--border-subtle); }
+.evp-games .fixture-row-flat:last-child { border-bottom: 0; padding-bottom: 0; }
+.evp-games .fixture-row-flat:hover .fixture-row-score { color: var(--club-ink); }
+.fixture-row-time { width: 68px; padding: 0 0.3rem; font-size: 0.75rem !important; white-space: nowrap; justify-content: center; min-height: 44px; font-family: var(--font-heading); font-size: 0.8rem; font-weight: 800; color: var(--text-primary); text-align: center; }
+.evp-thumbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin: 0.25rem 0 0.75rem; }
+.evp-thumb:first-child { grid-column: 1 / -1; aspect-ratio: 16 / 9; }
+.evp-thumb { display: block; padding: 0; border: 0; border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 4 / 3; cursor: pointer; background: rgba(var(--shade-rgb), 0.3); }
+.evp-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.evp-link { display: block; font-size: 0.9rem; font-weight: 700; color: var(--club-ink); text-decoration: underline; text-underline-offset: 3px; padding: 0.2rem 0; }
+.evp-sponsors { display: flex; flex-direction: column; }
+.evp-sponsor { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle); color: inherit; text-decoration: none; }
+.evp-sponsor:last-child { border-bottom: 0; padding-bottom: 0; }
+.evp-sponsor > span { display: flex; flex-direction: column; min-width: 0; }
+.evp-sponsor b { color: var(--text-primary); }
+.evp-sponsor:hover b { color: var(--club-ink); }
+@media (max-width: 960px) {
+  /* One column: the results come first, then the report, then photos and sponsors */
+  .evp-body.has-side { grid-template-columns: minmax(0, 1fr); }
+  .evp-body.has-side .evp-side { display: contents; }
+  .evp-body.has-side .evp-main { order: 2; }
+  .evp-body.has-side .evp-side > * { order: 3; }
+  .evp-body.has-side .evp-side > .evp-games-box, .evp-body.has-side .evp-side > [aria-labelledby="tickets-heading"] { order: 1; }
+}
+@media (max-width: 720px) {
+  .evp-wrap { padding: 1rem 1rem 3rem; }
+  /* Phone: the flyer becomes a strip across the top, the full poster one tap away */
+  .evp-hero.has-flyer { grid-template-columns: minmax(0, 1fr); }
+  .evp-flyer { border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .evp-flyer img { max-height: 200px; }
+  .evp-record b { font-size: 1.85rem; }
+  .evp-record { gap: 0.5rem 1.25rem; }
+  .evp-main .match-article-in { padding: 1.25rem; }
+}

@@ -13,7 +13,11 @@ import { formatClock } from '@/lib/dates';
 /** One fixture or result as a row linking to its match page (team pages, /club/fixtures).
  *  A date tile on the left, the opponent and details in the middle, and on the right the
  *  club's own score first with W/D/L (an away 1-2 loss reads "L 1-2", never "2-1"). */
-export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { match: Match; clubSlug: string; hideScore: boolean; teamLabel?: string }) {
+export default function FixtureRow({ match, clubSlug, hideScore, teamLabel, flat, timeTile }: { match: Match; clubSlug: string; hideScore: boolean; teamLabel?: string;
+  /** A plain line in a list (no card of its own), for lists that already sit in a panel */
+  flat?: boolean;
+  /** Every game is on the same day (a cup day): the tile shows the kick-off time, not the date */
+  timeTile?: boolean }) {
   const opponent = match.opponent_name || (match.is_club_home ? match.away_team_name : match.home_team_name);
   const played = match.status === 'completed';
   const live = match.status === 'live' || match.status === 'halftime';
@@ -25,12 +29,16 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { 
     ? <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
     : match.match_time ? formatClock(match.match_time) : null;
   return (
-    <Link href={matchPath(clubSlug, match)} className="glass-panel glass-panel-interactive fixture-row" style={{ color: 'inherit', textDecoration: 'none' }}>
-      <div className="fixture-row-date" aria-hidden="true">
-        <span className="fixture-row-dow"><LocalTime value={when} options={{ weekday: 'short' }} /></span>
-        <span className="fixture-row-day"><LocalTime value={when} options={{ day: 'numeric' }} /></span>
-        <span className="fixture-row-month"><LocalTime value={when} options={{ month: 'short' }} /></span>
-      </div>
+    <Link href={matchPath(clubSlug, match)} className={flat ? 'fixture-row fixture-row-flat' : 'glass-panel glass-panel-interactive fixture-row'} style={{ color: 'inherit', textDecoration: 'none' }}>
+      {timeTile && kickoffTime ? (
+        <div className="fixture-row-date fixture-row-time" aria-hidden="true">{kickoffTime}</div>
+      ) : (
+        <div className="fixture-row-date" aria-hidden="true">
+          <span className="fixture-row-dow"><LocalTime value={when} options={{ weekday: 'short' }} /></span>
+          <span className="fixture-row-day"><LocalTime value={when} options={{ day: 'numeric' }} /></span>
+          <span className="fixture-row-month"><LocalTime value={when} options={{ month: 'short' }} /></span>
+        </div>
+      )}
       <div className="min-w-0" style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
           {/* An in-house game is two of the club's own sides, so both names (never "vs Bibs") */}
@@ -38,8 +46,9 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { 
         </div>
         <div className="text-meta">
           <span className="sr-only"><LocalTime value={when} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />{' · '}</span>
-          {!played && kickoffTime && <>{kickoffTime}{' · '}</>}
-          {[teamLabel, match.competition, match.venue].filter(Boolean).join(' · ')}
+          {!played && !timeTile && kickoffTime && <>{kickoffTime}{' · '}</>}
+          {/* Flat rows sit under their cup's own name, so the competition isn't repeated */}
+          {[teamLabel, !flat && match.competition, match.venue].filter(Boolean).join(' · ')}
         </div>
       </div>
       <div className="shrink-0 fixture-row-end">
