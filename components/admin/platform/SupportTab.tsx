@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { platformApi } from '@/components/admin/platform/api';
 import { SUPPORT_SNIPPETS, setupSteps, timeAgo } from '@/lib/mission-control';
-import type { PlatformClubItem, SupportReply, SupportRequest } from '@/lib/supabase/types';
+import type { PlatformClubItem, PlatformFeatureRequest, SupportReply, SupportRequest } from '@/lib/supabase/types';
+import FeatureRequests, { FeatureTag } from '@/components/admin/platform/FeatureRequests';
 import { Send, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
 
 type Status = SupportRequest['status'];
@@ -29,7 +30,10 @@ const FILTERS: { id: Status; label: string }[] = [
 
 /** Messages from club admins (and owners stuck deleting their account), answered by email from here. */
 export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeople, showToast, onOpenCount, onSelectRequest }: Props) {
-  const [filter, setFilter] = useState<Status>('open');
+  const [filter, setFilter] = useState<Status | 'features'>('open');
+  // MCF-5: null before migration 20261177, and the Feature requests view stays hidden
+  const [features, setFeatures] = useState<PlatformFeatureRequest[] | null>(null);
+  const [tagging, setTagging] = useState(false);
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [counts, setCounts] = useState<Record<Status, number>>({ open: 0, waiting: 0, done: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(initialId || null);
@@ -45,7 +49,11 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
     if (!client) return;
     setLoading(true);
     // ponytail: newest 500 requests, filtered here; page it if the inbox ever grows past that
-    const { data, error } = await client.from('support_requests').select('*').order('created_at', { ascending: false }).limit(500);
+    const [{ data, error }, f] = await Promise.all([
+      client.from('support_requests').select('*').order('created_at', { ascending: false }).limit(500),
+      client.from('platform_feature_requests').select('*').order('created_at', { ascending: false }),
+    ]);
+    setFeatures(f.error ? null : ((f.data || []) as PlatformFeatureRequest[]));
     setLoading(false);
     if (error) { setError('Run migration 20261146_mission_control_phase2.sql to turn on the support inbox.'); return; }
     const all = (data || []) as SupportRequest[];
@@ -59,6 +67,7 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
   useEffect(() => { load(); }, [load]);
 
   const shown = requests.filter(r => r.status === filter);
+  useEffect(() => { setTagging(false); }, [selectedId]);
   const selected = requests.find(r => r.id === selectedId) || shown[0] || null;
   // Opening a request from Today: show its folder
   useEffect(() => {
@@ -121,12 +130,26 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
                 {f.label} {counts[f.id]}
               </button>
             ))}
+            {features && (
+              <button type="button" aria-pressed={filter === 'features'} onClick={() => { setFilter('features'); setSelectedId(null); }}>
+                Feature requests {features.filter(x => x.status !== 'built').length}
+              </button>
+            )}
           </span>
           <button type="button" className="mc-icon-btn" onClick={load} disabled={loading} aria-label="Refresh"><RefreshCw size={14} className={loading ? 'spin' : ''} /></button>
         </div>
       </div>
 
-      {error ? <div className="mc-card mc-empty" role="alert">{error}</div> : (
+      {error ? <div className="mc-card mc-empty" role="alert">{error}</div> : filter === 'features' && features ? (
+        <FeatureRequests
+          features={features}
+          requests={requests}
+          clubs={clubs}
+          onOpenRequest={r => { setFilter(r.status); setSelectedId(r.id); onSelectRequest?.(r.id); }}
+          onChanged={load}
+          showToast={showToast}
+        />
+      ) : (
         <div className="mc-users">
           <div className="mc-card">
             <div className="mc-ulist">
@@ -164,12 +187,23 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
                   </div>
                 ))}
 
+                {features && <FeatureTag key={`${selected.id}-${tagging}`} request={selected} features={features} onChanged={load} showToast={showToast} autoOpen={tagging} />}
+
                 <label htmlFor="mc-support-reply" className="form-label" style={{ marginTop: 14 }}>Your reply</label>
                 <textarea id="mc-support-reply" ref={box} className="form-input" rows={6} maxLength={4000} value={draft} onChange={e => setDraft(e.target.value)} style={{ resize: 'vertical', lineHeight: 1.5 }} />
                 <div className="mc-reply-bar">
                   <span className="snips">
                     <small className="mc-muted">Saved replies:</small>
-                    {SUPPORT_SNIPPETS.map(s => <button key={s.label} type="button" className="mc-pill-btn ghost" onClick={() => insert(s.text)}>{s.label}</button>)}
+                    {SUPPORT_SNIPPETS.map(s => (
+                      <button key={s.label} type="button" className="mc-pill-btn ghost" onClick={() => {
+                        insert(s.text);
+                        // The reply promises the request is noted: ask which feature it belongs to
+                        if (s.label === 'Not built yet' && features && !selected.feature_id) {
+                          setTagging(true);
+                          requestAnimationFrame(() => document.getElementById('mc-feature-tag')?.scrollIntoView({ block: 'center' }));
+                        }
+                      }}>{s.label}</button>
+                    ))}
                   </span>
                   <span className="send">
                     <button type="button" className="mc-pill-btn ghost" disabled={sending || !draft.trim()} onClick={() => send('waiting')}>Send, wait for them</button>

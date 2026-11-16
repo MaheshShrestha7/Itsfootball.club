@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { PlatformAnnouncement } from '@/lib/supabase/types';
+import type { PlatformAnnouncement, PlatformClubItem } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
 import { safeLinkHref } from '@/lib/sponsors';
 import {
@@ -16,15 +16,22 @@ import {
   ExternalLink,
   RefreshCw,
   Bell,
+  X,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 
 interface BroadcastsTabProps {
   showToast: (msg: string) => void;
+  clubs: PlatformClubItem[];
 }
 
-export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
-  const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
+type Broadcast = PlatformAnnouncement & { platform_announcement_dismissals?: { count: number }[] };
+/** A date input's day as the start (or the end) of that local day */
+const dayStart = (d: string) => (d ? new Date(`${d}T00:00:00`).toISOString() : null);
+const dayEnd = (d: string) => (d ? new Date(`${d}T23:59:59`).toISOString() : null);
+
+export default function BroadcastsTab({ showToast, clubs }: BroadcastsTabProps) {
+  const [announcements, setAnnouncements] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const titleRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
@@ -36,19 +43,26 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
   const [target, setTarget] = useState<'all' | 'admins' | 'members' | 'public'>('all');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
+  // MCF-9 (migration 20261177): which clubs, and when it shows
+  const [pickClubs, setPickClubs] = useState(false);
+  const [clubIds, setClubIds] = useState<string[]>([]);
+  const [startsOn, setStartsOn] = useState('');
+  const [endsOn, setEndsOn] = useState('');
 
   const fetchAnnouncements = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
     setLoading(true);
     try {
-      const { data, error } = await client
+      let { data, error } = await client
         .from('platform_announcements')
-        .select('*')
+        .select('*, platform_announcement_dismissals(count)')
         .order('created_at', { ascending: false });
+      // Before migration 20261177 there's nothing to count
+      if (error) ({ data, error } = await client.from('platform_announcements').select('*').order('created_at', { ascending: false }));
 
       if (!error && data) {
-        setAnnouncements(data as PlatformAnnouncement[]);
+        setAnnouncements(data as Broadcast[]);
       }
     } catch (err) {
       console.warn('Could not load announcements:', err);
@@ -68,11 +82,26 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
       notify('Use a full web address (https://…) or a path on this site, such as /tools.');
       return;
     }
+    const onlyClubs = pickClubs && target !== 'public';
+    if (onlyClubs && !clubIds.length) {
+      notify('Pick at least one club, or choose All clubs.');
+      return;
+    }
+    if (startsOn && endsOn && endsOn < startsOn) {
+      notify('The end date is before the start date.');
+      return;
+    }
     const client = getSupabaseClient();
     if (!client) return;
     setSaving(true);
     try {
+      const timing = {
+        ...(onlyClubs ? { club_ids: clubIds } : {}),
+        ...(startsOn ? { starts_at: dayStart(startsOn) } : {}),
+        ...(endsOn ? { expires_at: dayEnd(endsOn) } : {}),
+      };
       const { error } = await client.from('platform_announcements').insert({
+        ...timing,
         title: title.trim(),
         message: message.trim(),
         level,
@@ -90,6 +119,10 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
         setMessage('');
         setLinkUrl('');
         setLinkText('');
+        setClubIds([]);
+        setPickClubs(false);
+        setStartsOn('');
+        setEndsOn('');
         fetchAnnouncements();
       }
     } catch (err: any) {
@@ -157,6 +190,8 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
   };
   const LEVELS = [['info', 'Information'], ['warning', 'Warning'], ['critical', 'Critical'], ['success', 'Feature or news']] as const;
 
+  const clubName = (id: string) => clubs.find(c => c.id === id)?.name || 'A closed club';
+  const now = Date.now();
   const preview = getLevelMeta(level);
   const PreviewIcon = preview.icon;
 
@@ -192,6 +227,10 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
               const meta = getLevelMeta(ann.level);
               const Icon = meta.icon;
               const href = safeLinkHref(ann.link_url);
+              const closed = ann.platform_announcement_dismissals?.[0]?.count;
+              const later = !!ann.starts_at && new Date(ann.starts_at).getTime() > now;
+              const ended = !!ann.expires_at && new Date(ann.expires_at).getTime() <= now;
+              const picked = ann.club_ids || [];
               return (
                 <div key={ann.id} className={`mc-card mc-bc${ann.is_active ? '' : ' off'}`}>
                   <span className="mc-sq" style={{ background: meta.bg, color: meta.color }}><Icon size={17} /></span>
@@ -201,7 +240,15 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
                     <div className="meta">
                       <span className="mc-flag" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                       <span className="mc-flag">{TARGETS[ann.target] || ann.target}</span>
+                      {picked.length > 0 && (
+                        <span className="mc-flag" title={picked.map(clubName).join(', ')}>
+                          {picked.length === 1 ? clubName(picked[0]) : `${picked.length} clubs`}
+                        </span>
+                      )}
+                      {later && <span className="mc-flag warn">Starts {formatDate(ann.starts_at!)}</span>}
+                      {ann.expires_at && <span className="mc-flag">{ended ? 'Ended' : 'Ends'} {formatDate(ann.expires_at)}</span>}
                       <span className="mc-flag">Added {formatDate(ann.created_at)}</span>
+                      {typeof closed === 'number' && <span className="mc-flag">Closed by {closed}</span>}
                       {href && (
                         <a href={href} target="_blank" rel="noopener noreferrer">{ann.link_text || 'Learn more'} <ExternalLink size={11} /></a>
                       )}
@@ -216,7 +263,7 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
                       className="mc-switch"
                       onClick={() => handleToggleActive(ann.id, ann.is_active)}
                     />
-                    <small>{ann.is_active ? 'Showing' : 'Hidden'}</small>
+                    <small>{!ann.is_active ? 'Hidden' : later ? 'Scheduled' : ended ? 'Ended' : 'Showing'}</small>
                     <button type="button" className="mc-icon-btn" style={{ color: 'var(--mc-red)' }} onClick={() => handleDelete(ann.id)} aria-label={`Delete ${ann.title}`} title="Delete broadcast">
                       <Trash2 size={13} />
                     </button>
@@ -253,6 +300,42 @@ export default function BroadcastsTab({ showToast }: BroadcastsTabProps) {
                   <button key={k} type="button" aria-pressed={target === k} onClick={() => setTarget(k as typeof target)}>{TARGETS[k]}</button>
                 ))}
               </span>
+            </div>
+            <div className="form-group">
+              <span className="form-label">Which clubs</span>
+              <span className="mc-chips" role="group" aria-label="Which clubs">
+                <button type="button" aria-pressed={!pickClubs} onClick={() => setPickClubs(false)}>All clubs</button>
+                <button type="button" aria-pressed={pickClubs} onClick={() => setPickClubs(true)} disabled={target === 'public'}>Clubs I pick</button>
+              </span>
+              {target === 'public' && <small className="mc-muted">Main site visitors aren&apos;t on a club&apos;s pages, so this shows to all of them.</small>}
+              {pickClubs && target !== 'public' && (
+                <>
+                  <label htmlFor="bc-club" className="sr-only">Add a club</label>
+                  <select id="bc-club" className="form-input" style={{ marginTop: 8 }} value="" onChange={e => e.target.value && setClubIds(ids => [...ids, e.target.value])}>
+                    <option value="">Add a club…</option>
+                    {clubs.filter(c => !clubIds.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {clubIds.length > 0 && (
+                    <div className="mc-picked">
+                      {clubIds.map(id => (
+                        <button key={id} type="button" className="mc-flag" onClick={() => setClubIds(ids => ids.filter(x => x !== id))} aria-label={`Remove ${clubName(id)}`}>
+                          {clubName(id)} <X size={11} aria-hidden="true" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="form-grid">
+              <div className="form-group">
+                <label htmlFor="bc-starts" className="form-label">Starts (optional)</label>
+                <input id="bc-starts" className="form-input" type="date" value={startsOn} onChange={e => setStartsOn(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label htmlFor="bc-ends" className="form-label">Ends (optional)</label>
+                <input id="bc-ends" className="form-input" type="date" min={startsOn || undefined} value={endsOn} onChange={e => setEndsOn(e.target.value)} />
+              </div>
             </div>
             <div className="form-grid">
               <div className="form-group">

@@ -7,7 +7,75 @@ import StorageCleanup from '@/components/admin/platform/StorageCleanup';
 import { timeAgo, type Light } from '@/lib/mission-control';
 import type { HealthReport } from '@/lib/platform-health';
 import type { PlatformHealthStats } from '@/lib/supabase/types';
-import { RefreshCw, Play, Layers } from 'lucide-react';
+import { RefreshCw, Play, Layers, Mail } from 'lucide-react';
+
+// MCF-8: club emails the site sent (email_log), get_platform_email_stats(), migration 20261177
+interface EmailStats { days: { day: string; n: number }[]; kinds: { kind: string; n: number }[]; clubs: { club_id: string; name: string; n: number }[] }
+const KIND_LABELS: Record<string, string> = {
+  availability: 'Availability reminders', event: 'Event reminders', renewal: 'Renewal reminders',
+  notice_match: 'Match notices', notice_event: 'Event notices', notice_news: 'News notices', notice_renewal: 'Renewal notices',
+  member_applied: 'Membership applications', member_approved: 'Members approved', member_rejected: 'Members not approved',
+  inquiry_reply: 'Inbox replies', fee_request: 'Fee requests', fee_reminder: 'Fee reminders', expense_claim: 'Expense claims',
+  sponsor_payment: 'Sponsor payments', sponsor_renewal: 'Sponsor renewals', sponsor_paid: 'Sponsor receipts',
+  sponsor_rejected: 'Sponsors declined', sponsor_change: 'Sponsor changes', sponsor_invoice: 'Sponsor invoices', sponsor_reminder: 'Sponsor reminders',
+  friendly_suggest: 'Friendly invites', friendly_confirm: 'Friendlies confirmed', friendly_update: 'Friendly updates',
+};
+const dayLabel = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+
+function EmailsCard() {
+  const [days, setDays] = useState(14);
+  const [stats, setStats] = useState<EmailStats | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    client.rpc('get_platform_email_stats', { p_days: days }).then(({ data, error: e }) => {
+      setError(e ? (/function|does not exist/i.test(e.message) ? 'Run migration 20261177_mission_control_features.sql to see this.' : e.message) : '');
+      setStats(e ? null : (data as EmailStats));
+    });
+  }, [days]);
+  const list = stats?.days || [];
+  const total = list.reduce((t, d) => t + d.n, 0);
+  const max = Math.max(1, ...list.map(d => d.n));
+  const busiest = list.reduce<{ day: string; n: number } | null>((b, d) => (!b || d.n > b.n ? d : b), null);
+  return (
+    <div className="mc-card">
+      <div className="mc-card-h" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}><Mail size={15} aria-hidden="true" /> Club emails sent</h3>
+        <span className="mc-seg" role="group" aria-label="How far back">
+          {[14, 30].map(n => <button key={n} type="button" aria-pressed={days === n} onClick={() => setDays(n)}>{n} days</button>)}
+        </span>
+      </div>
+      {error ? <p className="mc-muted">{error}</p> : !stats ? <p className="mc-muted">Loading…</p> : (
+        <>
+          <div className="mc-ov-nums">
+            <div><b className="num">{total.toLocaleString()}</b><small>sent in {days} days</small></div>
+            <div><b className="num">{busiest && busiest.n ? busiest.n.toLocaleString() : 0}</b><small>{busiest && busiest.n ? `busiest day, ${dayLabel(busiest.day)}` : 'busiest day'}</small></div>
+          </div>
+          <div className="mc-bars" role="img" aria-label={`Emails per day for the last ${days} days`}>
+            {list.map((d, i) => <span key={d.day} className={i === list.length - 1 ? 'today' : ''} style={{ height: `${Math.max(3, (d.n / max) * 100)}%` }} title={`${dayLabel(d.day)}: ${d.n}`} />)}
+          </div>
+          {list.length > 0 && <div className="mc-bars-axis"><span>{dayLabel(list[0].day)}</span><span>Today</span></div>}
+          <h4 style={{ margin: '16px 0 8px' }}>What they were</h4>
+          {stats.kinds.length === 0 ? <p className="mc-muted" style={{ margin: 0 }}>Nothing sent.</p> : (
+            <dl className="mc-kv">
+              {stats.kinds.slice(0, 8).map(k => <React.Fragment key={k.kind}><dt>{KIND_LABELS[k.kind] || 'Other emails'}</dt><dd className="num">{k.n.toLocaleString()}</dd></React.Fragment>)}
+            </dl>
+          )}
+          {stats.clubs.length > 0 && (
+            <>
+              <h4 style={{ margin: '16px 0 8px' }}>Clubs sending the most</h4>
+              <dl className="mc-kv">
+                {stats.clubs.map(c => <React.Fragment key={c.club_id}><dt>{c.name}</dt><dd className="num">{c.n.toLocaleString()}</dd></React.Fragment>)}
+              </dl>
+            </>
+          )}
+          <p className="mc-muted" style={{ fontSize: 11, marginTop: 10 }}>Reminders, notices and other club emails, one per person. Sign-in emails aren&apos;t counted here.</p>
+        </>
+      )}
+    </div>
+  );
+}
 
 const LIGHT: Record<Light, { color: string; flag: string; word: string }> = {
   red: { color: '#DC2626', flag: 'bad', word: 'Problem' },
@@ -119,6 +187,8 @@ export default function HealthTab({ showToast }: { showToast: (msg: string) => v
               Reminder emails that fail are sent again on the next daily run. Bounces (sent but not delivered) show in Resend, not here.
             </p>
           </div>
+
+          <EmailsCard />
 
           <StorageCleanup showToast={showToast} />
 

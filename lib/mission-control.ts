@@ -1,5 +1,6 @@
 // Small pure helpers for the Mission Control (super admin) dashboard. Checked by mission-control.check.ts.
 import type { PlatformClubItem, PlatformDailyTrend } from './supabase/types';
+import { matchStart } from './admin-calendar';
 
 /** "Good morning" / "Good afternoon" / "Good evening" for an hour 0-23. */
 export function greeting(hour: number): string {
@@ -106,8 +107,8 @@ export function softTint(hex: string | null | undefined, alpha = 0.22): string {
 }
 
 /** The pages of Mission Control, in menu order. */
-export type MissionTab = 'today' | 'support' | 'overview' | 'clubs' | 'users' | 'grounds' | 'health' | 'broadcasts' | 'log';
-export const MISSION_TABS: MissionTab[] = ['today', 'support', 'clubs', 'users', 'overview', 'grounds', 'health', 'broadcasts', 'log'];
+export type MissionTab = 'today' | 'support' | 'overview' | 'clubs' | 'users' | 'matchday' | 'grounds' | 'health' | 'broadcasts' | 'log';
+export const MISSION_TABS: MissionTab[] = ['today', 'support', 'clubs', 'users', 'overview', 'matchday', 'grounds', 'health', 'broadcasts', 'log'];
 
 /** Where Mission Control is, from the web address: ?tab=support&request=<id>, ?tab=clubs&club=<id>.
  *  Unknown or missing values fall back to Today with nothing open. ?tab=cockpit (an old link) opens the Overview. */
@@ -157,12 +158,13 @@ export function setupSteps(c: PlatformClubItem, now: number = Date.now()): Setup
   return steps;
 }
 
-export type QueueKind = 'backlog' | 'transfers' | 'enquiries' | 'payments' | 'stalled' | 'welcome';
+export type QueueKind = 'backlog' | 'transfers' | 'enquiries' | 'payments' | 'stalled' | 'welcome' | 'dispute' | 'unscored' | 'invite';
 export type EmailAudience = 'owner' | 'admins';
 
 /** Which filter chip on Today a kind sits under */
 export const QUEUE_GROUP: Record<QueueKind, 'money' | 'clubs' | 'new'> = {
   transfers: 'money', payments: 'money', backlog: 'clubs', enquiries: 'clubs', stalled: 'clubs', welcome: 'new',
+  dispute: 'money', unscored: 'clubs', invite: 'clubs',
 };
 
 export interface QueueItem {
@@ -174,11 +176,38 @@ export interface QueueItem {
   title: string;
   detail: string;
   action: { label: string; template: TemplateKey; to: EmailAudience };
+  /** An expired invite: the fix is to send it again */
+  inviteId?: string;
 }
 
 /** Per-club counts from get_platform_today() (migration 20261163) */
 export interface ClubBacklog { club_id: string; count: number; oldest: string }
-export interface TodayExtras { transfers?: ClubBacklog[]; enquiries?: ClubBacklog[] }
+/** get_platform_today() additions (migration 20261177) */
+export interface TodayDispute { payment_id: string; club_id: string; amount_cents: number; description: string | null; payer_name: string | null; status: string; due_by: string | null }
+export interface TodayUnscored { club_id: string; match_date: string; match_time: string | null }
+export interface TodayInvite { invite_id: string; club_id: string; email: string; role: 'owner' | 'admin'; sent_at: string; expires_at: string }
+export interface TodayExtras {
+  transfers?: ClubBacklog[];
+  enquiries?: ClubBacklog[];
+  disputes?: TodayDispute[];
+  unscored?: TodayUnscored[];
+  expired_invites?: TodayInvite[];
+}
+
+/** Games past their kickoff + 2 hours that still say upcoming, per club (no kickoff time: the end of that day). */
+export function unscoredByClub(rows: TodayUnscored[], now: number): Map<string, { count: number; latest: number }> {
+  const out = new Map<string, { count: number; latest: number }>();
+  for (const r of rows) {
+    if (gameState({ status: 'upcoming', match_date: r.match_date, match_time: r.match_time }, now) !== 'unscored') continue;
+    const s = matchStart(r)!;
+    const cur = out.get(r.club_id) || { count: 0, latest: 0 };
+    out.set(r.club_id, { count: cur.count + 1, latest: Math.max(cur.latest, s.start.getTime()) });
+  }
+  return out;
+}
+
+const audMoney = (cents: number) => `$${(cents / 100).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const shortDate = (v: string | number) => new Date(v).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', timeZone: 'Australia/Sydney' });
 
 const days = (from: string | null | undefined, now: number) => (from ? Math.floor((now - new Date(from).getTime()) / DAY) : 0);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -189,6 +218,10 @@ export function queueItems(clubs: PlatformClubItem[], now: number = Date.now(), 
   const out: QueueItem[] = [];
   const transfers = new Map((extras.transfers || []).map(t => [t.club_id, t]));
   const enquiries = new Map((extras.enquiries || []).map(t => [t.club_id, t]));
+  const disputes = new Map<string, TodayDispute[]>();
+  (extras.disputes || []).forEach(d => disputes.set(d.club_id, [...(disputes.get(d.club_id) || []), d]));
+  const unscored = unscoredByClub(extras.unscored || [], now);
+  const invites = new Map((extras.expired_invites || []).map(i => [i.club_id, i]));
   for (const c of clubs) {
     if (!c.is_active) continue;
     const age = days(c.created_at, now);
@@ -223,6 +256,41 @@ export function queueItems(clubs: PlatformClubItem[], now: number = Date.now(), 
       });
     }
 
+    for (const d of disputes.get(c.id) || []) {
+      const waiting = d.status === 'needs_response' || d.status === 'warning_needs_response';
+      const who = d.payer_name || 'A payer';
+      out.push({
+        key: `dispute:${d.payment_id}:${d.status}`, kind: 'dispute', club: c,
+        title: `${c.name} has a card dispute: ${audMoney(Number(d.amount_cents) || 0)}${d.description ? `, ${d.description}` : ''}`,
+        detail: !waiting
+          ? `${who} disputed the payment. The bank is looking at the club's evidence now.`
+          : d.due_by
+            ? `${who} asked their bank to reverse the payment. Stripe wants the club's evidence by ${shortDate(d.due_by)}, or the money goes back to them.`
+            : `${who} asked their bank to reverse the payment. Without the club's evidence the money goes back to them.`,
+        action: { label: 'Email the club what to send', template: 'dispute', to: 'owner' },
+      });
+    }
+
+    const u = unscored.get(c.id);
+    if (u) {
+      out.push({
+        key: `unscored:${c.id}:${dayOf(new Date(u.latest).toISOString())}`, kind: 'unscored', club: c,
+        title: `${c.name} has ${plural(u.count, 'game')} with no score`,
+        detail: 'The fixtures still say upcoming, so the results, the table and the match reports are missing.',
+        action: { label: 'Remind the club admins', template: 'scores', to: 'admins' },
+      });
+    }
+
+    const inv = invites.get(c.id);
+    if (inv) {
+      out.push({
+        key: `invite:${inv.invite_id}:${dayOf(inv.expires_at)}`, kind: 'invite', club: c, inviteId: inv.invite_id,
+        title: `${c.name}${/s$/i.test(c.name) ? "'" : "'s"} ${inv.role === 'owner' ? 'Owner' : 'Club Admin'} invite ran out unaccepted`,
+        detail: `Sent to ${inv.email} on ${shortDate(inv.sent_at)}. Nothing changes at the club until they accept a new one.`,
+        action: { label: 'Email the owner', template: 'blank', to: 'owner' },
+      });
+    }
+
     if (c.membership_payment_policy === 'require_payment' && !c.stripe_ready && age >= 3) {
       out.push({
         key: `payments:${c.id}`, kind: 'payments', club: c,
@@ -251,7 +319,7 @@ export function queueItems(clubs: PlatformClubItem[], now: number = Date.now(), 
       });
     }
   }
-  const order: Record<QueueKind, number> = { transfers: 0, backlog: 1, enquiries: 2, payments: 3, stalled: 4, welcome: 5 };
+  const order: Record<QueueKind, number> = { dispute: 0, transfers: 1, backlog: 2, invite: 3, unscored: 4, enquiries: 5, payments: 6, stalled: 7, welcome: 8 };
   return out.sort((a, b) => order[a.kind] - order[b.kind]);
 }
 
@@ -260,13 +328,41 @@ export function buildQueue(clubs: PlatformClubItem[], snoozed: Set<string>, now:
   return queueItems(clubs, now, extras).filter(i => !snoozed.has(i.key));
 }
 
+// Matchday (MCF-1)
+export type MatchdayWhen = 'today' | 'weekend' | 'last';
+export type MatchdayState = 'live' | 'scored' | 'unscored' | 'later' | 'postponed';
+
+
+/** Local midnight [from, to) for a choice. "This weekend" on a weekday is the coming Saturday and Sunday. */
+export function matchdayRange(when: MatchdayWhen, now: Date): { from: Date; to: Date } {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (when === 'today') return { from: d, to: new Date(d.getTime() + DAY) };
+  const dow = d.getDay(); // 0 Sunday, 6 Saturday
+  const sat = new Date(d);
+  sat.setDate(d.getDate() + (dow === 0 ? -1 : 6 - dow));
+  if (when === 'last') sat.setDate(sat.getDate() - 7);
+  const mon = new Date(sat);
+  mon.setDate(sat.getDate() + 2);
+  return { from: sat, to: mon };
+}
+
+export function gameState(g: { status: string; match_date: string; match_time: string | null }, now: number): MatchdayState {
+  if (g.status === 'live' || g.status === 'halftime') return 'live';
+  if (g.status === 'completed') return 'scored';
+  if (g.status === 'postponed') return 'postponed';
+  const s = matchStart(g);
+  if (!s) return 'later';
+  const due = s.timeKnown ? s.start.getTime() + 2 * 3600000 : s.start.getTime() + DAY;
+  return due <= now ? 'unscored' : 'later';
+}
+
 /** A snooze until this date or later means "done". */
 export const DONE_UNTIL = '2100-01-01T00:00:00Z';
 export const isDoneSnooze = (until: string) => new Date(until).getTime() >= new Date('2099-01-01T00:00:00Z').getTime();
 
 /** The site-wide Today items (not tied to one club) use these key prefixes */
-export const SITE_KEY_PREFIXES = ['crashes:', 'grounds:'];
-const CLUB_KEY_PREFIXES = ['backlog:', 'transfers:', 'enquiries:', 'payments:', 'stalled:', 'welcome:'];
+export const SITE_KEY_PREFIXES = ['crashes:', 'grounds:', 'suggestions:'];
+const CLUB_KEY_PREFIXES = ['backlog:', 'transfers:', 'enquiries:', 'payments:', 'stalled:', 'welcome:', 'dispute:', 'unscored:', 'invite:'];
 
 /** "Done" keys whose problem has gone away, so they can be cleared and the problem shows again if
  *  it comes back. Only keys Today owns, and only once every source has loaded (`live` is complete). */
@@ -363,7 +459,7 @@ export const SUPPORT_SNIPPETS: { label: string; text: string }[] = [
   { label: 'Fixed', text: 'Thanks for reporting this. It\'s fixed now. Let me know if you still see it.' },
 ];
 
-export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'transfers' | 'enquiries' | 'suspended' | 'closing';
+export type TemplateKey = 'blank' | 'welcome' | 'needHand' | 'stripe' | 'approvals' | 'transfers' | 'enquiries' | 'suspended' | 'closing' | 'scores' | 'dispute';
 
 export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   blank: 'Blank',
@@ -375,6 +471,8 @@ export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
   enquiries: 'Unread enquiries',
   suspended: 'Club suspended',
   closing: 'Club closing',
+  scores: 'Scores missing',
+  dispute: 'Card dispute',
 };
 
 /** Subject and body for a template. `firstName` may be empty. */
@@ -411,6 +509,16 @@ export function emailTemplate(key: TemplateKey, club: { name: string; slug: stri
       return {
         subject: `Unread messages for ${club.name}`,
         message: `${hi}\n\nA few people have sent ${club.name} a message through the club's website and haven't heard back yet. They might be new players or sponsors.\n\nYou can read and reply to them here:\n\n${admin}/inquiries\n\nCheers`,
+      };
+    case 'scores':
+      return {
+        subject: `A few ${club.name} games are missing their scores`,
+        message: `${hi}\n\nSome of ${club.name}'s recent games still show as upcoming, so their results, the table and the match reports are missing.\n\nYou can add the scores from Fixtures in your admin area:\n\n${admin}/matches\n\nCheers`,
+      };
+    case 'dispute':
+      return {
+        subject: `A card payment to ${club.name} is being disputed`,
+        message: `${hi}\n\nSomeone asked their bank to reverse a card payment to ${club.name}. Stripe gives the club a few days to send its side, otherwise the money goes back to them.\n\nTo respond, sign in to the Stripe account connected in Finance, open Disputes, and upload what shows the payment was fair: the sign-up or order, the receipt and any messages with the payer.\n\n${admin}/finance\n\nReply if you'd like a hand.\n\nCheers`,
       };
     case 'suspended':
       return {

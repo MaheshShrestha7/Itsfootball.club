@@ -7,9 +7,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Check, CheckCircle2, Download, ExternalLink, Layers, Loader2, MapPin, Plus, RefreshCw, Search, ShieldCheck, Trash2, X,
 } from 'lucide-react';
-import { getAccessToken } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { COUNCILS, STATES, type AuState } from '@/lib/councils';
-import { councilName, groundPath, mapEmbedUrl, parseLatLng, pitchSummary, slugify, type GroundRow, type Pitch } from '@/lib/grounds';
+import { SUGGESTION_TOPICS, councilName, groundPath, mapEmbedUrl, parseLatLng, pitchSummary, slugify, type GroundRow, type Pitch } from '@/lib/grounds';
 import { OSM_COPYRIGHT_URL, findExisting, pitchesLine, type Candidate } from '@/lib/ground-import';
 import { councilAreas, findGroundsInCouncil } from '@/lib/ground-import-fetch';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
@@ -26,7 +26,7 @@ interface FoundCouncil { code: string; name: string; key: string; councilName: s
 type Row = Candidate & { picked: boolean; unnamed: boolean };
 
 type Filter = 'all' | 'drafts' | 'live' | 'noclub';
-type View = 'all' | 'import' | 'edit';
+type View = 'all' | 'import' | 'edit' | 'suggestions';
 
 const ACCENT = '#818CF8';
 const muted: React.CSSProperties = { fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 };
@@ -44,6 +44,55 @@ async function api<T>(path: string, init?: { method?: string; body?: unknown }):
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error || `The server couldn’t do that (error ${res.status}). Try again.`);
   return json as T;
+}
+
+// ---------------------------------------------------------------------------------------------
+// MCF-4: suggestions from visitors for grounds no club looks after (a steward club sees its own)
+// ---------------------------------------------------------------------------------------------
+
+interface Suggestion { id: string; ground_name: string; suburb: string; ground_path: string; topic: string; message: string; contact: string | null; created_at: string }
+
+function SuggestionsPanel({ showToast }: { showToast: (m: string) => void }) {
+  const [rows, setRows] = useState<Suggestion[] | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const { data, error: e } = await getSupabaseClient()!.rpc('get_platform_ground_suggestions');
+    if (e) setError(/function|does not exist/i.test(e.message) ? 'Run migration 20261177_mission_control_features.sql to see suggestions here.' : e.message);
+    setRows((data || []) as Suggestion[]);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const resolve = async (id: string, status: 'done' | 'dismissed') => {
+    setBusy(id);
+    const { error: e } = await getSupabaseClient()!.rpc('platform_resolve_ground_suggestion', { p_id: id, p_status: status });
+    setBusy(null);
+    if (e) return showToast(e.message);
+    setRows(prev => (prev || []).filter(r => r.id !== id));
+    showToast(status === 'done' ? 'Marked done' : 'Dismissed');
+  };
+  if (error) return <div className="mc-card mc-empty" role="alert">{error}</div>;
+  if (!rows) return <div className="mc-card mc-empty" style={inline}><Loader2 size={15} className="spin" /> Loading suggestions…</div>;
+  if (!rows.length) return <div className="mc-card mc-empty">No suggestions waiting. Ones for grounds a club looks after go to that club.</div>;
+  return (
+    <div className="mc-card">
+      <div className="mc-card-h"><h3>Suggestions for grounds no club looks after</h3><span className="mc-flag warn">{rows.length}</span></div>
+      <p style={{ ...muted, marginBottom: 6 }}>Fix the ground&apos;s details in All grounds, then mark the suggestion done.</p>
+      {rows.map(r => (
+        <div key={r.id} className="mc-q">
+          <span className="mc-sq tone-site"><MapPin size={16} /></span>
+          <div className="body">
+            <div className="t"><b>{r.ground_name}, {r.suburb}</b> <span className="mc-flag">{SUGGESTION_TOPICS.find(t => t.key === r.topic)?.label || r.topic}</span></div>
+            <p>&ldquo;{r.message}&rdquo;{r.contact ? ` From ${r.contact}.` : ''} {new Date(r.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</p>
+            <div className="acts">
+              <button type="button" className="mc-pill-btn" disabled={busy === r.id} onClick={() => resolve(r.id, 'done')}><Check size={14} /> Done</button>
+              <button type="button" className="mc-pill-btn ghost" disabled={busy === r.id} onClick={() => resolve(r.id, 'dismissed')}>Dismiss</button>
+              <a className="mc-pill-btn ghost" href={r.ground_path} target="_blank" rel="noopener"><ExternalLink size={14} /> Open the ground page</a>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -454,8 +503,8 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
 // The tab
 // ---------------------------------------------------------------------------------------------
 
-export default function GroundsTab({ showToast }: { showToast: (msg: string) => void }) {
-  const [view, setView] = useState<View>('all');
+export default function GroundsTab({ showToast, startView = 'all' }: { showToast: (msg: string) => void; startView?: View }) {
+  const [view, setView] = useState<View>(startView);
   const [editing, setEditing] = useState<ListedGround | null>(null);
   const [grounds, setGrounds] = useState<ListedGround[]>([]);
   const [migrated, setMigrated] = useState(true);
@@ -540,6 +589,7 @@ export default function GroundsTab({ showToast }: { showToast: (msg: string) => 
           <span className="mc-seg" role="group" aria-label="Grounds view">
             <button type="button" aria-pressed={view === 'all'} onClick={() => { setView('all'); setEditing(null); }}>All grounds</button>
             <button type="button" aria-pressed={view === 'import'} onClick={() => { setView('import'); setEditing(null); }}>Import from map</button>
+            <button type="button" aria-pressed={view === 'suggestions'} onClick={() => { setView('suggestions'); setEditing(null); }}>Suggestions</button>
           </span>
           <button type="button" className="mc-pill-btn" onClick={() => { setEditing(null); setView('edit'); }}>
             <Plus size={14} /> Add a ground
@@ -562,6 +612,8 @@ export default function GroundsTab({ showToast }: { showToast: (msg: string) => 
       )}
 
       {view === 'import' && <ImportPanel showToast={showToast} onImported={load} />}
+
+      {view === 'suggestions' && <SuggestionsPanel showToast={showToast} />}
 
       {view === 'all' && (
         <div className="mc-wrap">

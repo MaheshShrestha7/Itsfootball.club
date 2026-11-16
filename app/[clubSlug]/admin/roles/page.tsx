@@ -10,6 +10,7 @@ import { useAccessRoles, AccessRole } from '@/lib/access-roles';
 import { ACCESS_AREAS, ACCESS_LEVELS, AccessLevel, memberLabels } from '@/lib/permissions';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import NonMemberAdmins from '@/components/admin/NonMemberAdmins';
+import SupportAccessPanel from '@/components/admin/SupportAccessPanel';
 
 const cell: React.CSSProperties = { padding: '0.5rem 0.75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '0.84rem', textAlign: 'left' };
 const groups = [...new Set(ACCESS_AREAS.map(a => a.group))];
@@ -25,7 +26,7 @@ const toDraft = (r: AccessRole): Draft => ({ name: r.name, description: r.descri
 export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
   const { clubs, selectClubBySlug, members } = useClub();
-  const { isClubSuperUser, refreshRoles } = useAuth();
+  const { isClubSuperUser, refreshRoles, user } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const db = getSupabaseClient();
   const { roles, loading, error, reload } = useAccessRoles(club.id);
@@ -269,6 +270,7 @@ export default function AdminRolesPage({ params }: { params: Promise<{ clubSlug:
         </div>
       )}
 
+      <SupportAccessPanel clubId={club.id} isOwner={!!user?.id && club.owner_id === user.id} />
       <NonMemberAdmins clubId={club.id} />
     </div>
   );

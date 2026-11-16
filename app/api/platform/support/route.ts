@@ -4,9 +4,13 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { isUuid } from '@/lib/ids';
 import { sendEmail } from '@/lib/email/send';
 import { logPlatformAction } from '@/lib/platform-audit';
+import { featureBuilt } from '@/lib/email/templates';
+import { SITE_URL } from '@/lib/slugs';
 
 // Mission Control -> Support: answer a request (components/admin/platform/SupportTab.tsx).
 //   POST { requestId, body, status: 'waiting' | 'done' }   Operators and Super admins
+//   POST { action: 'feature_built', featureId, email }      MCF-5: mark a feature built and (optionally)
+//        email everyone whose request is tagged with it, once (migration 20261177)
 // Saves the reply, emails it to the person (Reply-To SUPPORT_EMAIL, else your own address) and sets
 // the status. Reading requests and changing status alone go straight to the tables (RLS).
 
@@ -19,6 +23,7 @@ export async function POST(req: NextRequest) {
   if (!db) return NextResponse.json({ error: 'Support replies are not configured on the server.' }, { status: 503 });
 
   const input = await req.json().catch(() => null);
+  if (input?.action === 'feature_built') return featureBuiltAction(db, auth, input);
   const body = typeof input?.body === 'string' ? input.body.trim() : '';
   const status = input?.status === 'done' ? 'done' : 'waiting';
   if (!isUuid(input?.requestId)) return NextResponse.json({ error: 'Missing request.' }, { status: 400 });
@@ -51,4 +56,43 @@ export async function POST(req: NextRequest) {
     summary: `Replied to the support request "${request.topic.slice(0, 120)}"${status === 'done' ? ' and closed it' : ''}`,
   });
   return NextResponse.json({ ok: true });
+}
+
+type Db = NonNullable<ReturnType<typeof getServiceClient>>;
+type Auth = Extract<Awaited<ReturnType<typeof requirePlatformAdmin>>, { ok: true }>;
+
+async function featureBuiltAction(db: Db, auth: Auth, input: { featureId?: unknown; email?: unknown }) {
+  if (!isUuid(input.featureId)) return NextResponse.json({ error: 'Missing feature.' }, { status: 400 });
+  const { data: feature } = await db.from('platform_feature_requests').select('id, title, built_emailed_at').eq('id', input.featureId).maybeSingle();
+  if (!feature) return NextResponse.json({ error: 'Feature not found.' }, { status: 404 });
+  const { error } = await db.from('platform_feature_requests').update({ status: 'built', built_at: new Date().toISOString() }).eq('id', feature.id);
+  if (error) return NextResponse.json({ error: 'Could not save.' }, { status: 500 });
+
+  let sent = 0;
+  // Once per feature: marking it built again never emails twice
+  if (input.email === true && !feature.built_emailed_at) {
+    const { data: asks } = await db.from('support_requests').select('from_email, from_name, created_at, club_id').eq('feature_id', feature.id).order('created_at');
+    const seen = new Set<string>();
+    for (const a of (asks || []) as { from_email: string; from_name: string | null; created_at: string; club_id: string | null }[]) {
+      const to = a.from_email.toLowerCase();
+      if (seen.has(to)) continue;
+      seen.add(to);
+      const { data: club } = a.club_id ? await db.from('clubs').select('slug').eq('id', a.club_id).maybeSingle() : { data: null };
+      const message = featureBuilt({
+        name: (a.from_name || '').trim().split(/\s+/)[0] || 'there',
+        feature: feature.title,
+        asked: new Date(a.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' }),
+        link: club?.slug ? `${SITE_URL}/${club.slug}/admin` : SITE_URL,
+      });
+      const r = await sendEmail({ to: a.from_email, ...message, ...(process.env.SUPPORT_EMAIL ? { replyTo: process.env.SUPPORT_EMAIL } : {}) });
+      if (r.ok) sent++;
+      else console.error('[platform/support] feature email failed:', r.error);
+    }
+    if (sent) await db.from('platform_feature_requests').update({ built_emailed_at: new Date().toISOString() }).eq('id', feature.id);
+  }
+  await logPlatformAction(db, auth, {
+    clubId: null, action: 'support_feature_built', table: 'platform_feature_requests', targetId: feature.id,
+    summary: `Marked the feature request "${feature.title.slice(0, 120)}" built${sent ? ` and emailed ${sent}` : ''}`,
+  });
+  return NextResponse.json({ ok: true, sent });
 }

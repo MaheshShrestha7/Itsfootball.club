@@ -81,7 +81,7 @@ export function localDate(value: string): Date | null {
  * When a fixture kicks off, in local time. Tournament and some older fixtures store just the date
  * (midnight UTC) plus a "14:30" match_time, which means 14:30 on that day wherever the club is.
  */
-export function matchStart(m: Pick<Match, 'match_date' | 'match_time'>): { start: Date; timeKnown: boolean } | null {
+export function matchStart(m: { match_date: string; match_time?: string | null }): { start: Date; timeKnown: boolean } | null {
   const d = new Date(m.match_date);
   if (isNaN(d.getTime())) return null;
   const midnightUtc = d.getUTCHours() === 0 && d.getUTCMinutes() === 0;

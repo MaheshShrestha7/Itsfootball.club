@@ -11,7 +11,7 @@ import { platformApi } from '@/components/admin/platform/api';
 import type { PlatformAuditRow, PlatformClubItem, SupportRequest } from '@/lib/supabase/types';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import { Crest } from '@/components/admin/platform/McArt';
-import { Clock, CreditCard, Sparkles, UserPlus, Search, Inbox, AlertTriangle, Landmark, Mail, MapPin } from 'lucide-react';
+import { Clock, CreditCard, Sparkles, UserPlus, Search, Inbox, AlertTriangle, Landmark, Mail, MapPin, ShieldAlert, Trophy, UserX, CalendarClock } from 'lucide-react';
 
 interface Props {
   clubs: PlatformClubItem[];
@@ -24,6 +24,8 @@ interface Props {
   onOpenPalette: () => void;
   onOpenSupport: (id: string) => void;
   onOpenTab: (tab: MissionTab) => void;
+  /** Grounds, on its Suggestions view (MCF-4) */
+  onOpenGroundSuggestions?: () => void;
   showToast: (msg: string) => void;
 }
 
@@ -34,12 +36,17 @@ const KIND: Record<QueueKind, { icon: React.ElementType; tone: string }> = {
   enquiries: { icon: Mail, tone: 'support' },
   stalled: { icon: Sparkles, tone: 'setup' },
   welcome: { icon: UserPlus, tone: 'new' },
+  dispute: { icon: ShieldAlert, tone: 'money' },
+  unscored: { icon: Trophy, tone: 'wait' },
+  invite: { icon: UserX, tone: 'wait' },
 };
 
 /** get_platform_today() (migration 20261163) */
 interface TodayData extends TodayExtras {
   crashes?: { count: number; latest_at: string | null; latest_path: string | null };
   ground_drafts?: { count: number; newest_at: string | null };
+  ground_suggestions?: { count: number; latest_id: string | null; latest_message: string | null; latest_ground: string | null };
+  reminders?: { note_id: string; club_id: string; body: string; created_at: string; remind_on: string }[];
 }
 
 type Filter = 'all' | 'support' | 'money' | 'clubs' | 'site';
@@ -47,7 +54,7 @@ const dayOf = (v: string | null | undefined) => (v ? String(v).slice(0, 10) : 'n
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** Today: everything across the platform that needs the founder, each with its fix. */
-export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, onOpenTab, showToast }: Props) {
+export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, onOpenTab, onOpenGroundSuggestions, showToast }: Props) {
   const [snoozes, setSnoozes] = useState<{ key: string; until: string }[]>([]);
   const [recent, setRecent] = useState<PlatformAuditRow[]>([]);
   const [support, setSupport] = useState<SupportRequest[]>([]);
@@ -79,7 +86,10 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   useEffect(() => { load(); }, [load]);
 
   const snoozed = useMemo(() => new Set(snoozes.map(r => r.key)), [snoozes]);
-  const extras: TodayExtras = useMemo(() => ({ transfers: today?.transfers || [], enquiries: today?.enquiries || [] }), [today]);
+  const extras: TodayExtras = useMemo(() => ({
+    transfers: today?.transfers || [], enquiries: today?.enquiries || [],
+    disputes: today?.disputes || [], unscored: today?.unscored || [], expired_invites: today?.expired_invites || [],
+  }), [today]);
   const all = useMemo(() => buildQueue(clubs, snoozed, Date.now(), extras), [clubs, snoozed, extras]);
   const queue = all.filter(i => i.kind !== 'welcome');
   const welcomes = all.filter(i => i.kind === 'welcome');
@@ -91,6 +101,13 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   const draftKey = drafts ? `grounds:${dayOf(drafts.newest_at)}` : '';
   const showCrashes = crashes && !snoozed.has(crashKey);
   const showDrafts = drafts && !snoozed.has(draftKey);
+  // MCF-4: suggestions for grounds no club looks after, keyed by the newest so a new one shows again
+  const suggestions = today?.ground_suggestions && Number(today.ground_suggestions.count) > 0 ? today.ground_suggestions : null;
+  const suggestKey = suggestions ? `suggestions:${suggestions.latest_id}` : '';
+  const showSuggestions = suggestions && !snoozed.has(suggestKey);
+  // MCF-6: notes whose "remind me on" date has come
+  const [remindersDone, setRemindersDone] = useState<Set<string>>(new Set());
+  const reminders = (today?.reminders || []).filter(r => !remindersDone.has(r.note_id) && clubs.some(c => c.id === r.club_id));
 
   // A "done" whose problem has gone is cleared, so the problem shows again if it comes back (MC1).
   // Only once clubs and get_platform_today have both loaded, so nothing is cleared by mistake.
@@ -99,13 +116,38 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
     const live = new Set(queueItems(clubs, Date.now(), extras).map(i => i.key));
     if (crashKey) live.add(crashKey);
     if (draftKey) live.add(draftKey);
+    if (suggestKey) live.add(suggestKey);
     const stale = staleDoneKeys(snoozes.filter(r => isDoneSnooze(r.until)).map(r => r.key), live);
     if (!stale.length) return;
     const client = getSupabaseClient();
     client?.from('platform_snoozes').delete().in('key', stale).then(({ error }) => {
       if (!error) setSnoozes(prev => prev.filter(r => !stale.includes(r.key)));
     });
-  }, [loading, todayLoaded, clubs, extras, snoozes, crashKey, draftKey]);
+  }, [loading, todayLoaded, clubs, extras, snoozes, crashKey, draftKey, suggestKey]);
+
+  // Done clears the reminder; "Next week" moves it on 7 days
+  const moveReminder = async (noteId: string, remindOn: string | null) => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    setRemindersDone(prev => new Set(prev).add(noteId));
+    const { error } = await client.from('platform_club_notes').update({ remind_on: remindOn }).eq('id', noteId);
+    if (error) {
+      setRemindersDone(prev => { const n = new Set(prev); n.delete(noteId); return n; });
+      showToast(`Could not save: ${error.message}`);
+    } else {
+      showToast(remindOn ? 'Moved to next week' : 'Reminder cleared');
+    }
+  };
+
+  const [resending, setResending] = useState<string | null>(null);
+  const resendInvite = async (inviteId: string) => {
+    setResending(inviteId);
+    const res = await platformApi<{ ok?: boolean }>('club-invites', { action: 'resend', inviteId });
+    setResending(null);
+    if (res.error) return showToast(res.error);
+    showToast('Invite sent again. It lasts another 7 days.');
+    load();
+  };
 
   const snooze = async (key: string, until: string, title: string) => {
     const client = getSupabaseClient();
@@ -135,11 +177,11 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
 
   const week = () => new Date(Date.now() + 7 * 86400000).toISOString();
   const name = firstName(userName, userEmail);
-  const siteCount = broken.length + (showCrashes ? 1 : 0) + (showDrafts ? 1 : 0);
+  const siteCount = broken.length + (showCrashes ? 1 : 0) + (showDrafts ? 1 : 0) + (showSuggestions ? 1 : 0);
   const counts: Record<Exclude<Filter, 'all'>, number> = {
     support: support.length,
     money: queue.filter(i => QUEUE_GROUP[i.kind] === 'money').length,
-    clubs: queue.filter(i => QUEUE_GROUP[i.kind] === 'clubs').length,
+    clubs: queue.filter(i => QUEUE_GROUP[i.kind] === 'clubs').length + reminders.length,
     site: siteCount,
   };
   const urgent = counts.support + counts.money + counts.clubs + counts.site;
@@ -230,9 +272,16 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
                   </div>
                   <p>{item.detail}</p>
                   <div className="acts">
-                    <button type="button" className="mc-pill-btn" onClick={() => onEmail({ club: item.club, to: item.action.to, template: item.action.template })}>
-                      {item.action.label}
-                    </button>
+                    {item.inviteId ? (
+                      <button type="button" className="mc-pill-btn" disabled={resending === item.inviteId} onClick={() => resendInvite(item.inviteId!)}>
+                        {resending === item.inviteId ? 'Sending…' : 'Send the invite again'}
+                      </button>
+                    ) : (
+                      <button type="button" className="mc-pill-btn" onClick={() => onEmail({ club: item.club, to: item.action.to, template: item.action.template })}>
+                        {item.action.label}
+                      </button>
+                    )}
+                    {item.kind === 'unscored' && <button type="button" className="mc-pill-btn ghost" onClick={() => onOpenTab('matchday')}>See the games</button>}
                     <button type="button" className="mc-pill-btn ghost" onClick={() => onSelectClub(item.club)}>Open club</button>
                     {doneButtons(item.key, item.title)}
                   </div>
@@ -240,6 +289,46 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
               </div>
             );
           })}
+
+          {show('clubs') && reminders.map(r => {
+            const c = clubs.find(x => x.id === r.club_id)!;
+            const first = r.body.split('\n')[0];
+            const next = new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+            return (
+              <div key={r.note_id} className="mc-q">
+                <span className="mc-sq tone-setup"><CalendarClock size={16} /></span>
+                <div className="body">
+                  <div className="t">
+                    <button type="button" className="mc-q-club" onClick={() => onSelectClub(c)} aria-label={`Open ${c.name}`}>
+                      <Crest logoUrl={c.logo_url} label={c.short_name} color={c.primary_color} />
+                    </button>
+                    <b>Follow up with {c.name}</b>
+                  </div>
+                  <p>Your note from {new Date(r.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}: &ldquo;{first.length > 200 ? `${first.slice(0, 200)}…` : first}&rdquo;</p>
+                  <div className="acts">
+                    <button type="button" className="mc-pill-btn" onClick={() => onEmail({ club: c, to: 'owner', template: 'blank' })}>Email the owner</button>
+                    <button type="button" className="mc-pill-btn ghost" onClick={() => onSelectClub(c)}>Open the note</button>
+                    <button type="button" className="mc-pill-btn ghost" onClick={() => moveReminder(r.note_id, next)}>Next week</button>
+                    <button type="button" className="mc-pill-btn ghost" onClick={() => moveReminder(r.note_id, null)}>Done</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {show('site') && showSuggestions && suggestions && (
+            <div className="mc-q">
+              <span className="mc-sq tone-site"><MapPin size={16} /></span>
+              <div className="body">
+                <div className="t"><b>{plural(Number(suggestions.count), 'suggestion')} for grounds no club looks after</b></div>
+                <p>Latest, for {suggestions.latest_ground}: &ldquo;{(suggestions.latest_message || '').slice(0, 200)}&rdquo;</p>
+                <div className="acts">
+                  <button type="button" className="mc-pill-btn" onClick={() => (onOpenGroundSuggestions ? onOpenGroundSuggestions() : onOpenTab('grounds'))}>Review the suggestions</button>
+                  {doneButtons(suggestKey, 'Ground suggestions', false)}
+                </div>
+              </div>
+            </div>
+          )}
 
           {show('site') && showDrafts && drafts && (
             <div className="mc-q">

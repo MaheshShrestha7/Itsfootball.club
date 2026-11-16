@@ -22,6 +22,7 @@ import UsersTab from '@/components/admin/platform/UsersTab';
 import HealthTab from '@/components/admin/platform/HealthTab';
 import BroadcastsTab from '@/components/admin/platform/BroadcastsTab';
 import GroundsTab from '@/components/admin/platform/GroundsTab';
+import MatchdayTab from '@/components/admin/platform/MatchdayTab';
 import ClubDetailDrawer from '@/components/admin/platform/ClubDetailDrawer';
 import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal';
 import TodayTab from '@/components/admin/platform/TodayTab';
@@ -45,6 +46,7 @@ import {
   Lock,
   LogOut,
   MoreHorizontal,
+  Trophy,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import NewClubForm from '@/components/admin/platform/NewClubForm';
@@ -73,6 +75,8 @@ export default function PlatformOwnerDashboard() {
   const [supportOpen, setSupportOpen] = useState(0);
   const [supportId, setSupportId] = useState<string | null>(null);
   const [newClubOpen, setNewClubOpen] = useState(false);
+  // Today's "Review the suggestions" opens Grounds on its Suggestions view (MCF-4)
+  const [groundsView, setGroundsView] = useState<'all' | 'suggestions'>('all');
 
   // The page, open club and support request live in the web address, so refresh, back and shared links work
   const setActiveTab = useCallback((tab: TabType) => {
@@ -416,6 +420,7 @@ export default function PlatformOwnerDashboard() {
     ] },
     { label: 'Look', items: [
       { id: 'overview', label: 'Overview', icon: Eye },
+      { id: 'matchday', label: 'Matchday', icon: Trophy },
       { id: 'grounds', label: 'Grounds', icon: MapPin },
       { id: 'health', label: 'System health', icon: Activity },
     ] },
@@ -429,7 +434,7 @@ export default function PlatformOwnerDashboard() {
   const BAR: TabType[] = ['today', 'support', 'clubs', 'users'];
   const inMore = !BAR.includes(activeTab);
 
-  const go = (t: TabType) => { setActiveTab(t); window.scrollTo({ top: 0 }); };
+  const go = (t: TabType) => { setActiveTab(t); setGroundsView('all'); window.scrollTo({ top: 0 }); };
   const openClub = (c: PlatformClubItem) => {
     setSelectedClub(c);
     window.history.replaceState(null, '', `${window.location.pathname}${missionUrl(window.location.search, { club: c.id })}`);
@@ -544,8 +549,13 @@ export default function PlatformOwnerDashboard() {
             onOpenPalette={() => setPaletteOpen(true)}
             onOpenSupport={id => openSupport(id)}
             onOpenTab={go}
+            onOpenGroundSuggestions={() => { go('grounds'); setGroundsView('suggestions'); }}
             showToast={showToast}
           />
+        )}
+
+        {activeTab === 'matchday' && (
+          <MatchdayTab clubs={clubs} onSelectClub={openClub} onEmail={setEmailDraft} />
         )}
 
         {activeTab === 'support' && (
@@ -601,7 +611,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'grounds' && (
-          <GroundsTab showToast={showToast} />
+          <GroundsTab key={groundsView} startView={groundsView} showToast={showToast} />
         )}
 
         {activeTab === 'health' && (
@@ -609,7 +619,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'broadcasts' && (
-          <BroadcastsTab showToast={showToast} />
+          <BroadcastsTab showToast={showToast} clubs={clubs} />
         )}
       </main>
 

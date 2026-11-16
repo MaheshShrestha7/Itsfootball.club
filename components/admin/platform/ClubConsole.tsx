@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { memberLabels } from '@/lib/permissions';
 import { setupSteps, timeAgo } from '@/lib/mission-control';
-import type { ClubAdminInvite, PlatformAuditRow, PlatformClubItem, PlatformClubNote, PlatformClubPerson } from '@/lib/supabase/types';
+import type { ClubAdminInvite, PlatformAuditRow, PlatformClubItem, PlatformClubNote, PlatformClubPerson, SupportAccessRequest } from '@/lib/supabase/types';
 import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import { askText, confirmAction, confirmWithCheck, notify } from '@/components/ConfirmDialog';
 import { validateClubSlug } from '@/lib/club-context';
 import { platformApi, platformDownload } from '@/components/admin/platform/api';
-import { Check, Circle, Clock, Download } from 'lucide-react';
+import { Check, Circle, Clock, Download, ExternalLink, KeyRound } from 'lucide-react';
+import { formatMoney } from '@/lib/finance';
 import { Avatar } from '@/components/admin/platform/McArt';
 
 /** The day a closing club is deleted for good */
@@ -37,6 +38,11 @@ const expiresIn = (iso: string) => {
   return days <= 0 ? 'expired' : days === 1 ? 'expires tomorrow' : `expires in ${days} days`;
 };
 
+/** get_platform_club_recent() (migration 20261177) */
+interface Recent { games_played: number; games_unscored: number; new_members: number; new_waiting: number; paid_cents: number; emails: number; last_news_at: string | null }
+const ACCESS_HOURS = [2, 24, 72] as const;
+const atTime = (iso: string) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
 /** The working parts of the club panel, in the order they're used: setup, who runs it, (money,
  *  members), web address, notes, history, then data and closing. */
 export default function ClubConsole({ club, onEmail, showToast, onChanged, middle, beforeClosing, statusControl }: Props) {
@@ -52,17 +58,28 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
   const [slug, setSlug] = useState(club.slug);
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
+  const [remindOn, setRemindOn] = useState('');
+  const [recent, setRecent] = useState<Recent | null>(null);
+  const [access, setAccess] = useState<SupportAccessRequest[] | null>(null);
+  const [accessHours, setAccessHours] = useState<number>(24);
+  const [accessReason, setAccessReason] = useState('');
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
-    const [p, n, h, inv] = await Promise.all([
+    const [p, n, h, inv, rc, acc] = await Promise.all([
       client.rpc('get_platform_club_people', { p_club_id: club.id }),
-      client.from('platform_club_notes').select('id, club_id, kind, body, author_email, created_at').eq('club_id', club.id).order('created_at', { ascending: false }).limit(30),
+      // '*' so remind_on comes along once migration 20261177 has run
+      client.from('platform_club_notes').select('*').eq('club_id', club.id).order('created_at', { ascending: false }).limit(30),
       client.rpc('get_platform_audit', { p_club_id: club.id, p_limit: 12 }),
       // Before migration 20261160 this errors and the Waiting list stays empty
       client.from('club_admin_invites').select(INVITE_COLS).eq('club_id', club.id).is('accepted_at', null).is('cancelled_at', null).order('created_at', { ascending: false }),
+      // Before migration 20261177 these error and their sections stay hidden
+      client.rpc('get_platform_club_recent', { p_club_id: club.id }),
+      client.rpc('get_club_support_access', { p_club_id: club.id }),
     ]);
+    setRecent(rc.error ? null : (rc.data as Recent));
+    setAccess(acc.error ? null : ((acc.data || []) as SupportAccessRequest[]));
     setLoadError(p.error ? 'Run migration 20261145_mission_control_phase1.sql to manage people, notes and history here.' : '');
     setPeople((p.data || []) as PlatformClubPerson[]);
     setNotes((n.data || []) as PlatformClubNote[]);
@@ -162,12 +179,34 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
     if (!client || !body) return;
     setBusy(true);
     const { data: auth } = await client.auth.getUser();
-    const { error } = await client.from('platform_club_notes').insert({ club_id: club.id, body, author_id: auth.user?.id, author_email: auth.user?.email || null });
+    const { error } = await client.from('platform_club_notes').insert({
+      club_id: club.id, body, author_id: auth.user?.id, author_email: auth.user?.email || null, ...(remindOn ? { remind_on: remindOn } : {}),
+    });
     setBusy(false);
     if (error) { notify('Could not save the note', error.message); return; }
     setNoteText('');
+    setRemindOn('');
     load();
   };
+
+  // MCF-10: ask the Owner for a few hours of Club Admin access; they answer on the club's Roles page
+  const askAccess = async () => {
+    setBusy(true);
+    const res = await platformApi<{ ok?: boolean; emailed?: boolean }>('support-access', { clubId: club.id, hours: accessHours, reason: accessReason.trim() });
+    setBusy(false);
+    if (res.error && !res.ok) { notify('Could not ask', res.error); return; }
+    if (res.error) notify('Request saved', res.error);
+    else showToast('Asked the Owner by email');
+    setAccessReason('');
+    load();
+  };
+  const endAccess = async (r: SupportAccessRequest) => {
+    await run('end_support_access', { p_id: r.id }, r.status === 'pending' ? 'Request cancelled' : 'Access ended');
+  };
+  const now = Date.now();
+  const mine = (access || []).find(r => r.is_mine && (r.status === 'pending' || (r.status === 'approved' && !!r.expires_at && new Date(r.expires_at).getTime() > now)));
+  const lastAnswer = (access || []).find(r => r.is_mine && (r.status === 'declined' || r.status === 'ended'));
+  const clubOwner = people.find(p => p.is_owner);
 
   const changeSlug = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,6 +341,63 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
         </form>
       </section>
 
+      {access !== null && (
+        <section className="mc-cp-sec" aria-labelledby="mc-cp-access">
+          <h3 id="mc-cp-access">Support access</h3>
+          {mine?.status === 'approved' ? (
+            <>
+              <p className="mc-muted" style={{ marginBottom: 10 }}>You can open {club.name}&apos;s admin until {atTime(mine.expires_at!)}. Everything you change shows in their Activity log.</p>
+              <div className="mc-cp-acts">
+                <a href={`/${club.slug}/admin`} target="_blank" rel="noopener" className="mc-pill-btn"><ExternalLink size={14} /> Open club admin</a>
+                <button type="button" className="mc-pill-btn ghost" disabled={busy} onClick={() => endAccess(mine)}>End access now</button>
+              </div>
+            </>
+          ) : mine ? (
+            <div className="mc-person">
+              <span className="mc-sq tone-wait"><Clock size={14} /></span>
+              <div className="who">
+                <b>Waiting for {clubOwner?.name || 'the Owner'} to say yes</b>
+                <small>Asked {timeAgo(mine.created_at)} for {mine.hours} hours{mine.reason ? `. ${mine.reason}` : ''}</small>
+              </div>
+              <div className="acts"><button type="button" className="mc-pill-btn ghost" disabled={busy} onClick={() => endAccess(mine)}>Cancel</button></div>
+            </div>
+          ) : (
+            <>
+              <p className="mc-muted" style={{ marginBottom: 10 }}>
+                You can only open this club&apos;s admin when its Owner says yes. They get an email and answer on their Roles page. Access ends by itself.
+                {lastAnswer ? ` Last time: ${lastAnswer.status === 'declined' ? 'they said no' : 'access ended'} ${timeAgo(lastAnswer.decided_at || lastAnswer.created_at)}.` : ''}
+              </p>
+              <div className="mc-cp-form">
+                <div className="mc-seg" role="radiogroup" aria-label="How long">
+                  {ACCESS_HOURS.map(h => (
+                    <button key={h} type="button" role="radio" aria-checked={accessHours === h} aria-pressed={accessHours === h} onClick={() => setAccessHours(h)}>{h} hours</button>
+                  ))}
+                </div>
+                <div className="mc-cp-inline">
+                  <label htmlFor="mc-access-why" className="sr-only">Why (shown to the Owner)</label>
+                  <input id="mc-access-why" className="mc-input" maxLength={300} placeholder="Why, shown to the Owner (optional)" value={accessReason} onChange={e => setAccessReason(e.target.value)} />
+                  <button type="button" className="mc-pill-btn" disabled={busy || !clubOwner} onClick={askAccess}><KeyRound size={14} /> Ask the Owner</button>
+                </div>
+                {!clubOwner && people.length > 0 && <p className="mc-muted">This club has no Owner yet, so there&apos;s nobody to ask.</p>}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {recent && (
+        <section className="mc-cp-sec" aria-labelledby="mc-cp-recent">
+          <h3 id="mc-cp-recent">Last 30 days</h3>
+          <dl className="mc-kv">
+            <dt>Games played</dt><dd className="num">{recent.games_played}{recent.games_unscored ? `, ${recent.games_unscored} with no score` : ''}</dd>
+            <dt>New members</dt><dd className="num">{recent.new_members}{recent.new_waiting ? `, ${recent.new_waiting} waiting` : ''}</dd>
+            <dt>Paid through the site</dt><dd className="num">{formatMoney(Number(recent.paid_cents) || 0, 'AUD')}</dd>
+            <dt>Emails the site sent</dt><dd className="num">{Number(recent.emails).toLocaleString('en-AU')}</dd>
+            <dt>Last news article</dt><dd>{recent.last_news_at ? timeAgo(recent.last_news_at) : 'None yet'}</dd>
+          </dl>
+        </section>
+      )}
+
       {middle}
 
       <section className="mc-cp-sec" aria-labelledby="mc-cp-web">
@@ -325,7 +421,11 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
         <form onSubmit={addNote} className="mc-cp-form">
           <label htmlFor="mc-note" className="sr-only">Private note</label>
           <textarea id="mc-note" className="mc-input" rows={2} maxLength={4000} placeholder="Private note, only platform admins see it" value={noteText} onChange={e => setNoteText(e.target.value)} />
-          <button type="submit" className="mc-pill-btn ghost" disabled={busy || !noteText.trim()} style={{ alignSelf: 'flex-end' }}>Save note</button>
+          <div className="mc-follow">
+            <label htmlFor="mc-note-remind" className="mc-muted">Remind me on</label>
+            <input id="mc-note-remind" type="date" className="mc-input" value={remindOn} min={new Date().toLocaleDateString('en-CA')} onChange={e => setRemindOn(e.target.value)} />
+            <button type="submit" className="mc-pill-btn ghost" disabled={busy || !noteText.trim()}>Save note</button>
+          </div>
         </form>
         <div className="mc-feed" style={{ marginTop: 8 }}>
           {notes.map(n => {
@@ -334,7 +434,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
               <details key={n.id} className="mc-feed-row">
                 <summary>
                   <b>{n.kind === 'email' ? 'Email' : 'Note'}: {first}</b>
-                  <time dateTime={n.created_at}>{n.author_email || 'Platform admin'}, {timeAgo(n.created_at)}</time>
+                  <time dateTime={n.created_at}>{n.author_email || 'Platform admin'}, {timeAgo(n.created_at)}{n.remind_on ? `. Reminder ${new Date(`${n.remind_on}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : ''}</time>
                 </summary>
                 {rest.length > 0 && <p className="mc-muted" style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{rest.join('\n').trim()}</p>}
               </details>
