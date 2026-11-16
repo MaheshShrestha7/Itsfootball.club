@@ -817,10 +817,14 @@ export function ClubProvider({
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_inquiries', filter: filterOn('club_id') }, payload =>
         apply<ContactInquiry>('inquiries', setInquiries, payload)
-      )
-      // Say when the live feed drops (a phone on the sideline losing signal) and catch up when it's back:
-      // changes made while it was down never arrive on their own
-      .subscribe(status => {
+      );
+
+    // Say when the live feed drops (a phone on the sideline losing signal) and catch up when it's back:
+    // changes made while it was down never arrive on their own.
+    // Some browsers (in-app browsers, privacy add-ons) refuse to open a WebSocket and subscribe() throws.
+    // The page still works from the normal data load, so treat it as "no live feed" instead of crashing.
+    try {
+      channel.subscribe(status => {
         if (closing) return;
         if (status === 'SUBSCRIBED') {
           if (droppedRef.current) setLoadNonce(n => n + 1);
@@ -831,12 +835,16 @@ export function ClubProvider({
           setLiveFeed('off');
         }
       });
+    } catch (err) {
+      console.warn('Live updates unavailable in this browser:', err);
+      setLiveFeed('off');
+    }
 
     return () => {
       // Leaving on purpose (the page changing clubs or closing) isn't a dropped feed
       closing = true;
       droppedRef.current = false;
-      client.removeChannel(channel);
+      client.removeChannel(channel).catch(() => {});
     };
   }, [syncReady, clubIdsKey]);
 
