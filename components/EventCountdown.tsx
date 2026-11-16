@@ -34,19 +34,27 @@ export default function EventCountdown({ startTime, endTime, look }: { startTime
   const cells = left ? [[left.days, left.days === 1 ? 'day' : 'days'], [left.hrs, 'hrs'], [left.mins, 'mins'], [left.secs, 'secs']] as const : [];
 
   if (look === 'board') {
+    // Date in plain type above; the board does one job: days, hours and minutes, with a blinking lamp colon
+    const groups = left ? [[left.days, left.days === 1 ? 'Day' : 'Days'], [left.hrs, left.hrs === 1 ? 'Hour' : 'Hours'], [left.mins, left.mins === 1 ? 'Minute' : 'Minutes']] as const : [];
     return (
-      <div className="stb ecd-board">
-        <div className="stb-top"><span><LocalTime value={startTime} format="ordinal" /></span><span>{time}</span></div>
-        {left && (left.done ? <p className="stb-word ecd-now">Happening now</p> : (
-          <div className="ecd-board-cells" role="timer" aria-label={label}>
-            {cells.map(([n, u]) => (
-              <div key={u} className="ecd-board-cell">
-                <span className="stb-lamps"><Lamps text={u === 'days' || u === 'day' ? String(n) : pad(n)} /></span>
-                <span className="ecd-board-unit" aria-hidden="true">{u}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+      <div className="ecd-wrap">
+        <p className="ecd-date"><b><LocalTime value={startTime} format="ordinal" /></b><span>{time}</span></p>
+        <div className="stb ecd-board">
+          <p className="ecd-board-title">Starts in</p>
+          {left && (left.done ? <p className="stb-word ecd-now">Happening now</p> : (
+            <div className="ecd-board-cells" role="timer" aria-label={label}>
+              {groups.map(([n, u], i) => (
+                <div key={u} className="ecd-board-group">
+                  {i > 0 && <span className={`stb-lamps ecd-colon${left.secs % 2 ? ' is-off' : ''}`} aria-hidden="true"><Lamps text=":" /></span>}
+                  <div className="ecd-board-cell">
+                    <span className="stb-lamps"><Lamps text={i === 0 ? String(n) : pad(n)} /></span>
+                    <span className="ecd-board-unit" aria-hidden="true">{u}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

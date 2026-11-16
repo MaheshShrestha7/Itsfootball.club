@@ -4944,12 +4944,25 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .evp-count { display: flex; flex-direction: column; gap: 0.4rem; }
 .evp-when { margin: 0 0 1.25rem; }
 /* Countdown looks (components/EventCountdown.tsx) */
-.ecd-board { margin: 0; --lamp: 6px; --lamp-gap: 2px; }
-.ecd-board .stb-top { letter-spacing: 0.04em; }
-.ecd-board-cells { display: flex; flex-wrap: nowrap; justify-content: center; gap: 1rem; padding: 1.1rem 0.75rem 1rem; }
-.ecd-board-cell { display: grid; justify-items: center; gap: 0.4rem; }
-.ecd-board-unit { font: 700 0.72rem var(--font-heading); letter-spacing: 0.1em; text-transform: uppercase; color: var(--stb-soft); }
-.ecd-now { text-align: center; padding: 1.25rem; margin: 0; }
+.ecd-date { margin: 0 0 0.85rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.ecd-date b { font-family: var(--font-heading); font-size: clamp(1.25rem, 3vw, 1.6rem); font-weight: 800; line-height: 1.2; color: var(--text-primary); overflow-wrap: break-word; }
+.ecd-date span { font-size: 1rem; color: var(--text-secondary); }
+.ecd-board { margin: 0; --lamp: 7px; --lamp-gap: 2px; padding: 0.9rem 1rem 1.1rem; }
+.ecd-board-title { margin: 0 0 0.8rem; text-align: center; font: 700 0.8rem var(--font-heading); letter-spacing: 0.12em; text-transform: uppercase; color: var(--stb-lamp-on); }
+.ecd-board-cells { display: flex; justify-content: center; align-items: flex-start; }
+.ecd-board-group { display: flex; align-items: flex-start; }
+.ecd-board-cell { display: grid; justify-items: center; gap: 0.5rem; }
+.ecd-board .stb-lamps { border: 0; background: none; padding: 0 calc(var(--lamp) * 0.6); }
+.ecd-colon { padding: 0 calc(var(--lamp) * 2.2) !important; }
+.ecd-colon .stb-glyph i.on { transition: opacity 0.15s linear; }
+.ecd-colon.is-off .stb-glyph i.on { opacity: 0.25; }
+.ecd-board-unit { font: 600 0.85rem var(--font-body); color: var(--stb-soft); }
+.ecd-now { text-align: center; padding: 0.75rem; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .ecd-colon.is-off .stb-glyph i.on { opacity: 1; } }
+@media (max-width: 480px) {
+  .stb.ecd-board { --lamp: 4.5px; --lamp-gap: 1.5px; padding: 0.8rem 0.5rem 1rem; }
+  .ecd-board-unit { font-size: 0.8rem; }
+}
 .ecd-ticket { --notch: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; background: var(--club-primary); color: var(--club-primary-contrast, #FFFFFF); border-radius: var(--radius-lg);
   -webkit-mask: radial-gradient(circle var(--notch) at calc(100% - 9.5rem) 0, transparent 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle var(--notch) at calc(100% - 9.5rem) 100%, transparent 98%, #000) bottom / 100% 51% no-repeat;
   mask: radial-gradient(circle var(--notch) at calc(100% - 9.5rem) 0, transparent 98%, #000) top / 100% 51% no-repeat, radial-gradient(circle var(--notch) at calc(100% - 9.5rem) 100%, transparent 98%, #000) bottom / 100% 51% no-repeat; }
@@ -4973,9 +4986,7 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 @media (max-width: 480px) {
   .ecd-ticket { grid-template-columns: minmax(0, 1fr) 7.5rem; -webkit-mask: none; mask: none; }
   .ecd-ticket-stub { width: auto; }
-  .stb.ecd-board { --lamp: 3px; --lamp-gap: 1px; }
   .ecd-ticket-main b { font-size: 1.2rem; }
-  .ecd-board-cells { gap: 0.3rem; padding: 0.9rem 0.4rem; }
 }
 .evp-time { font-size: 1rem; font-weight: 500; color: var(--text-secondary); }
 .evp-checkins { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; font-size: 0.875rem; color: var(--text-secondary); margin: 0 0 1.25rem; }
