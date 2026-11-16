@@ -4937,10 +4937,6 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .evp-facts { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 0 0 1.25rem; }
 .evp-facts dt { font-size: 0.8rem; color: var(--text-muted); }
 .evp-facts dd { margin: 0.1rem 0 0; font-weight: 700; color: var(--text-primary); }
-.evp-record { display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; padding: 1rem 0; margin: 0 0 1.25rem; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
-.evp-record div { display: flex; align-items: baseline; gap: 0.4rem; }
-.evp-record b { font-family: var(--font-heading); font-size: 2.25rem; font-weight: 900; line-height: 1; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.evp-record span { font-size: 0.875rem; color: var(--text-muted); }
 .evp-when { margin: 0 0 1.25rem; }
 /* Upcoming event: the day and the countdown on a club-colour block (components/EventCountdown.tsx) */
 .ecd-club { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1.25rem 2rem; padding: 1.4rem 1.5rem;
@@ -5048,7 +5044,5 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
   .evp-hero.has-flyer { grid-template-columns: minmax(0, 1fr); }
   .evp-flyer { border-right: 0; border-bottom: 1px solid var(--border-subtle); }
   .evp-flyer { min-height: 200px; }
-  .evp-record b { font-size: 1.85rem; }
-  .evp-record { gap: 0.5rem 1.25rem; }
   .evp-main .match-article-in { padding: 1.25rem; }
 }
