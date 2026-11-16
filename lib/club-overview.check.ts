@@ -69,7 +69,7 @@ assert.equal(club.length, 7);
 const rec = seasonRecord(club, r);
 assert.deepEqual(rec, { played: 4, won: 2, drawn: 1, lost: 1, goalsFor: 5, goalsAgainst: 5 });
 assert.deepEqual(upcomingGames(club, 2, now).map(x => x.id), ['next', 'later']);
-assert.equal(opponentLine(club.find(x => x.id === 'next')!), 'at Northside');
+assert.equal(opponentLine(club.find(x => x.id === 'next')!), 'vs Northside');
 assert.equal(opponentLine(club.find(x => x.id === 'later')!), 'vs Eastside');
 
 // Played games: finished, in the season, oldest first, with the club's side of the score

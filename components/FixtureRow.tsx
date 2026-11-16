@@ -34,7 +34,7 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel }: { 
       <div className="min-w-0" style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
           {/* An in-house game is two of the club's own sides, so both names (never "vs Bibs") */}
-          {match.match_type === 'internal' ? `${match.home_team_name} v ${match.away_team_name}` : `${match.is_club_home ? 'vs' : 'at'} ${opponent}`}
+          {match.match_type === 'internal' ? `${match.home_team_name} v ${match.away_team_name}` : `vs ${opponent}`}
         </div>
         <div className="text-meta">
           <span className="sr-only"><LocalTime value={when} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />{' · '}</span>

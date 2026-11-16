@@ -97,13 +97,13 @@ export default function TeamsPage({ params }: { params: Promise<{ clubSlug: stri
                   {next && (
                     <div className="team-card-kv">
                       <span>Next</span>
-                      <span>{next.is_club_home ? 'vs' : 'at'} {opponentOf(next)}<small><LocalTime value={next.match_date} options={shortDate} /></small></span>
+                      <span>vs {opponentOf(next)}<small><LocalTime value={next.match_date} options={shortDate} /></small></span>
                     </div>
                   )}
                   {last && result && (
                     <div className="team-card-kv">
                       <span>Last</span>
-                      <span><b>{result.us}-{result.them}</b> {last.is_club_home ? 'vs' : 'at'} {opponentOf(last)}<small><LocalTime value={last.match_date} options={shortDate} /></small></span>
+                      <span><b>{result.us}-{result.them}</b> vs {opponentOf(last)}<small><LocalTime value={last.match_date} options={shortDate} /></small></span>
                     </div>
                   )}
                   {form.length > 0 && (

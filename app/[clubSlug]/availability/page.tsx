@@ -475,7 +475,7 @@ function AvailabilityHub() {
                   <ul style={{ listStyle: 'none', margin: '0 0 0.75rem', padding: 0, display: 'grid', gap: '0.35rem', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
                     {cupList.map(g => (
                       <li key={g.id} style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
-                        <span className="min-w-0">{g.is_club_home ? 'vs' : 'at'} {g.opponent_name || (g.is_club_home ? g.away_team_name : g.home_team_name)}</span>
+                        <span className="min-w-0">vs {g.opponent_name || (g.is_club_home ? g.away_team_name : g.home_team_name)}</span>
                         <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>{[formatShortDay(g.match_date), g.match_time, g.pitch_label].filter(Boolean).join(', ')}</span>
                       </li>
                     ))}

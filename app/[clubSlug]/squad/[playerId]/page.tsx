@@ -192,7 +192,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
                           <td className="pp-g-when"><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></td>
                           <td className="pp-g-opp">
                             <Link href={matchPath(club.slug, m)}>
-                              {m.match_type === 'internal' ? `${m.home_team_name} vs ${m.away_team_name}` : `${m.is_club_home ? 'vs' : 'at'} ${opponent}`}
+                              {m.match_type === 'internal' ? `${m.home_team_name} vs ${m.away_team_name}` : `vs ${opponent}`}
                             </Link>
                           </td>
                           <td className="pp-g-did">

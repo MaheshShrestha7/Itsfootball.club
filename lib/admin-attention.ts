@@ -91,7 +91,7 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   if (counts.staleSponsorSignups) items.push({ key: 'sponsors-stale', area: 'sponsors', count: counts.staleSponsorSignups, text: `${plural(counts.staleSponsorSignups, 'unpaid sponsor sign-up', 'unpaid sponsor sign-ups')} older than 60 days`, href: `${base}/sponsors?view=new`, tone: 'normal' });
   if (counts.ordersToHandOut) items.push({ key: 'orders', area: 'shop', count: counts.ordersToHandOut, text: `${plural(counts.ordersToHandOut, 'shop order', 'shop orders')} to hand out`, href: `${base}/shop#orders`, tone: 'normal' });
   for (const m of matches.filter(x => needsLineup(x, now)).sort((a, b) => kickoff(a) - kickoff(b))) {
-    items.push({ key: `lineup-${m.id}`, area: 'lineup', text: `Pick the line-up ${m.is_club_home ? 'vs' : 'at'} ${opponentOf(m)}`, href: `${base}/lineup/draft?match=${m.id}`, tone: 'normal' });
+    items.push({ key: `lineup-${m.id}`, area: 'lineup', text: `Pick the line-up vs ${opponentOf(m)}`, href: `${base}/lineup/draft?match=${m.id}`, tone: 'normal' });
   }
   return items;
 }

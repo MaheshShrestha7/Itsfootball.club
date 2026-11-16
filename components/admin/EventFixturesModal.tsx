@@ -14,7 +14,7 @@ import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 const RECENT_DAYS = 60;
 
 const opponentOf = (m: Match) =>
-  m.match_type === 'internal' ? `${m.home_team_name} v ${m.away_team_name}` : `${m.is_club_home ? 'vs' : 'at'} ${m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name)}`;
+  m.match_type === 'internal' ? `${m.home_team_name} v ${m.away_team_name}` : `vs ${m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name)}`;
 
 /** The day tile and "vs Opponent" of a fixture, as on the public fixture rows */
 function GameLine({ m }: { m: Match }) {
