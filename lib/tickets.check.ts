@@ -22,6 +22,7 @@ assert.equal(ticketOrderError(null, 1, null, now), 'Event not found.');
 assert.ok(salesOpen({ start_time: '2026-10-03T05:00:00Z' }, now), '5h after kick-off: still open');
 assert.ok(!salesOpen({ start_time: '2026-10-03T03:00:00Z' }, now), '7h after kick-off: closed');
 assert.ok(!salesOpen({ start_time: '2026-10-03T09:00:00Z', end_time: '2026-10-03T09:30:00Z' }, now), 'past its end time');
+assert.ok(!salesOpen({ start_time: '2026-10-04T09:00:00Z', completed_at: '2026-10-03T09:00:00Z' }, now), 'marked Completed: closed even before it starts');
 
 // Calendar: escaping and folding (RFC 5545)
 assert.equal(icsText('Smith, J; "Gala"\\Night\nBring ID'), 'Smith\\, J\\; "Gala"\\\\Night\\nBring ID');

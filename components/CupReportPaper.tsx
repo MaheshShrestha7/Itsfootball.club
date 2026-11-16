@@ -21,7 +21,14 @@ export function chartColours(club?: string | null): { us: string; them: string }
   return { us: hex, them: hue >= 180 && hue <= 280 ? '#C2410C' : THEIRS };
 }
 
-const CSS = `
+/** "ANCC" stays whole; "Moore Park FC" becomes "MPF" */
+export function crestInitials(club: string): string {
+  const words = club.split(/\s+/).filter(Boolean);
+  return (words.length === 1 ? words[0].slice(0, 4) : words.slice(0, 3).map(w => w[0]).join('')).toUpperCase() || 'FC';
+}
+
+/** The paper's look, shared with the event summary (components/EventReportPaper.tsx) */
+export const REPORT_CSS = `
 .cr-paper { --ink: #0f172a; --mut: #64748b; --rule: #e2e8f0; background: #fff; color: var(--ink); border-radius: 14px; padding: clamp(1.25rem, 5vw, 3rem); box-shadow: 0 20px 50px rgba(0,0,0,.35); font-size: .92rem; line-height: 1.45; max-width: 860px; margin: 0 auto; font-family: var(--font-body); text-align: left; }
 .cr-paper h1, .cr-paper h2, .cr-paper h3 { font-family: var(--font-heading); color: var(--ink); margin: 0; letter-spacing: 0; }
 .cr-paper h2 { font-size: 1.05rem; font-weight: 800; margin: 1.6rem 0 .5rem; break-after: avoid; }
@@ -87,7 +94,15 @@ img.cr-crest { background: none; }
 .cr-mbar.is-low i { background: #B45309; }
 .cr-flag { font-size: .7rem; font-weight: 700; color: #B45309; background: #FEF3C7; border-radius: 99px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
 .cr-foot { margin-top: 1.8rem; padding-top: 10px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: var(--mut); font-size: .74rem; }
+/* Event summary: figures in a row, names in columns */
+.cr-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin: 16px 0 0; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.cr-figs div { padding: 10px 8px; text-align: center; box-shadow: -1px 0 0 var(--rule); }
+.cr-figs dd { margin: 0; font: 700 1.5rem var(--font-heading); font-variant-numeric: tabular-nums; }
+.cr-figs dt { font-size: .7rem; color: var(--mut); }
+.cr-names { columns: 3; column-gap: 24px; margin: 0; padding: 0; list-style: none; font-size: .86rem; }
+.cr-names li { padding: .2rem 0; break-inside: avoid; }
 @media (max-width: 40rem) {
+  .cr-names { columns: 2; }
   .cr-games, .cr-cols, .cr-people, .cr-g-notes, .cr-chart { grid-template-columns: minmax(0, 1fr); }
   .cr-tag { display: none; }
   .cr-pies { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -178,14 +193,12 @@ export default function CupReportPaper({ report, colour, logoUrl, footer }: {
   footer: string;
 }) {
   const colours = chartColours(colour);
-  const words = report.club.split(/\s+/).filter(Boolean);
-  // "ANCC" stays whole; "Moore Park FC" becomes "MPF"
-  const initials = (words.length === 1 ? words[0].slice(0, 4) : words.slice(0, 3).map(w => w[0]).join('')).toUpperCase() || 'FC';
+  const initials = crestInitials(report.club);
   const coach = !!report.minutes || !!report.next;
   const goalCount = (halves: [number, number]) => halves[0] + halves[1];
   return (
     <article className="agm-paper cr-paper" style={{ '--club': colours.us } as CSSProperties}>
-      <style>{CSS + PAPER_PRINT_CSS}</style>
+      <style>{REPORT_CSS + PAPER_PRINT_CSS}</style>
       <header className="cr-head">
         {logoUrl
           ? <img className="cr-crest" src={logoUrl} alt="" width={54} height={54} />
