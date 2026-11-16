@@ -442,10 +442,28 @@ function matchReportNode(club: ClubMetadataRow, match: MatchMetadataRow): Json {
 }
 
 /** A public club event (social, AGM, training day...) */
-export function eventSchema(club: ClubMetadataRow, event: EventMetadataRow) {
+export function eventSchema(club: ClubMetadataRow, event: EventMetadataRow, report = false) {
   const place = event.location || club.stadium_name;
+  const url = abs(`/${club.slug}/events/${event.id}`);
+  const football = event.category === 'tournament' || event.category === 'match';
+  const logo = absUrl(club.logo_url);
+  // A completed cup's page carries its write-up: described as a news article about the event
+  const reportNode: Json[] = report && event.completed_at ? [{
+    '@type': 'NewsArticle',
+    '@id': `${url}#report`,
+    url,
+    mainEntityOfPage: url,
+    headline: `${event.title}: results and cup report`.slice(0, 110),
+    image: absUrl(event.flyer_url) || absUrl(club.banner_url) || logo,
+    datePublished: event.completed_at,
+    author: clubRef(club),
+    publisher: { '@type': 'Organization', name: club.name, url: clubUrl(club), logo: logo ? { '@type': 'ImageObject', url: logo } : undefined },
+    about: { '@id': `${url}#event` },
+    articleSection: 'Cup Report',
+  }] : [];
   return graph({
-    '@type': 'Event',
+    '@type': football ? 'SportsEvent' : 'Event',
+    ...(football ? { sport: 'Soccer' } : {}),
     '@id': abs(`/${club.slug}/events/${event.id}#event`),
     url: abs(`/${club.slug}/events/${event.id}`),
     name: event.title,
@@ -457,7 +475,7 @@ export function eventSchema(club: ClubMetadataRow, event: EventMetadataRow) {
     location: place ? { '@type': 'Place', name: place, address: place } : undefined,
     organizer: clubRef(club),
     image: absUrl(event.flyer_url) || absUrl(club.banner_url) || absUrl(club.logo_url),
-  });
+  }, ...reportNode);
 }
 
 /** A club-run tournament or cup */
