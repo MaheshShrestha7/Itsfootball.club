@@ -24,7 +24,7 @@ import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket }
 import { salesOpen } from '@/lib/tickets';
 
 // shortcut: mockup only, picks the countdown look from ?cd=; remove before build
-const MOCK_LOOK = ((typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cd')) || 'board') as 'board' | 'ticket' | 'band';
+const MOCK_LOOK = ((typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cd')) || 'club') as 'board' | 'ticket' | 'club';
 
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;

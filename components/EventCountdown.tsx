@@ -22,7 +22,7 @@ function useLeft(start: number) {
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** The day and the countdown at the top of an upcoming event page, in one of three looks */
-export default function EventCountdown({ startTime, endTime, look }: { startTime: string; endTime?: string; look: 'board' | 'ticket' | 'band' }) {
+export default function EventCountdown({ startTime, endTime, look }: { startTime: string; endTime?: string; look: 'board' | 'ticket' | 'club' }) {
   const left = useLeft(new Date(startTime).getTime());
   const time = (
     <>
@@ -80,14 +80,24 @@ export default function EventCountdown({ startTime, endTime, look }: { startTime
     );
   }
 
+  // Club colour: the day on the left, white tiles counting down on the right (under a day: hours, minutes, seconds)
+  const tiles = !left ? [] : left.days > 0
+    ? [[left.days, left.days === 1 ? 'day' : 'days'], [left.hrs, left.hrs === 1 ? 'hour' : 'hours'], [left.mins, left.mins === 1 ? 'minute' : 'minutes']]
+    : [[left.hrs, left.hrs === 1 ? 'hour' : 'hours'], [left.mins, left.mins === 1 ? 'minute' : 'minutes'], [left.secs, 'seconds']];
   return (
-    <div className="ecd-band">
-      <p className="ecd-band-date"><LocalTime value={startTime} format="ordinal" /><span>{time}</span></p>
-      {left && (left.done ? <p className="ecd-band-now">Happening now</p> : (
-        <div className="ecd-band-cells" role="timer" aria-label={label}>
-          {cells.map(([n, u]) => (
-            <div key={u} aria-hidden="true"><b>{u === 'days' || u === 'day' ? n : pad(n)}</b><span>{u}</span></div>
-          ))}
+    <div className="ecd-club">
+      <div className="ecd-club-day">
+        <b><LocalTime value={startTime} format="ordinal" /></b>
+        <span>{time}</span>
+      </div>
+      {left && (left.done ? <p className="ecd-club-now">Happening now</p> : (
+        <div className="ecd-club-count" role="timer" aria-label={label}>
+          <span className="ecd-club-label">Starts in</span>
+          <div className="ecd-club-tiles">
+            {tiles.map(([n, u], i) => (
+              <div key={String(u)} className="ecd-club-tile" aria-hidden="true"><b>{i === 0 ? n : pad(Number(n))}</b><span>{u}</span></div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
