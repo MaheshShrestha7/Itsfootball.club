@@ -4910,6 +4910,7 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
 .match-article-byline { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
 .match-article-lead { font-size: 1.1rem; line-height: 1.6; color: var(--text-primary); font-weight: 500; margin: 0 0 1.1rem; }
 .match-article-p { color: var(--text-secondary); font-size: 1rem; line-height: 1.75; margin: 0 0 1rem; }
+.match-article-note { border-left: 3px solid rgba(var(--club-primary-rgb), 0.45); padding-left: 0.9rem; white-space: pre-line; }
 .match-article-in a:not(.btn) { color: var(--club-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .match-article-facts { margin-top: 1.4rem; padding: 1rem 1.1rem; border-radius: var(--radius-lg); background: rgba(var(--tint-rgb), 0.05); border: 1px solid var(--border-subtle); }
 .match-article-facts h3 { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.7rem; }

@@ -18,6 +18,8 @@ import { AlbumGrid, groupAlbums } from '@/components/PhotoGallery';
 import { useRouter } from 'next/navigation';
 import { clubResult, soonestFirst } from '@/lib/fixtures';
 import { clubTeamsOf, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
+import MatchReport from '@/components/MatchReport';
+import { cupWriteupsFor } from '@/lib/cup-writeup';
 import {
   Shield,
   Calendar,
@@ -51,7 +53,7 @@ export default function EventDetailsPage({
   params: Promise<{ clubSlug: string; eventId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, sponsors, matches, clubTeams, gallery } = useClub();
+  const { clubs, selectClubBySlug, events, sponsors, matches, matchEvents, clubTeams, gallery } = useClub();
   const router = useRouter();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
@@ -95,7 +97,12 @@ export default function EventDetailsPage({
     }, { W: 0, D: 0, L: 0 });
   const played = record.W + record.D + record.L;
   // Photo albums linked to this event; each opens in the club gallery
-  const albums = groupAlbums(gallery.filter(g => g.club_id === club.id && g.event_id === event.id));
+  const eventPhotos = gallery.filter(g => g.club_id === club.id && g.event_id === event.id);
+  const albums = groupAlbums(eventPhotos);
+  // Once Completed: the write-up of the cup, one per team that played
+  const writeups = cupWriteupsFor({ club, event, matches, matchEvents, clubTeams });
+  const writeupCover = eventPhotos.find(g => g.media_type === 'image' && g.is_album_cover)?.media_url
+    || eventPhotos.find(g => g.media_type === 'image')?.media_url || event.flyer_url || club.banner_url || undefined;
   const recordLine = played > 0
     ? `${played} played · ${[record.W && `won ${record.W}`, record.D && `drew ${record.D}`, record.L && `lost ${record.L}`].filter(Boolean).join(', ')}`
     : `${games.length} game${games.length === 1 ? '' : 's'}`;
@@ -244,6 +251,28 @@ export default function EventDetailsPage({
           </div>
           </div>
         </div>
+
+        {writeups.map(({ key, team, writeup }) => (
+          <MatchReport
+            key={key}
+            label="Cup report"
+            article={writeup}
+            clubName={club.name}
+            coverUrl={writeupCover}
+            crestUrl={club.logo_url || undefined}
+            tags={['Cup Report', ...(team ? [team] : [])]}
+            publishedAt={event.completed_at || undefined}
+            shareUrl={`/${club.slug}/events/${event.id}`}
+            note={event.writeup_note?.trim() || undefined}
+            factsTitle="Cup facts"
+            facts={[
+              { label: 'Date', value: <LocalTime value={event.start_time} /> },
+              ...(place ? [{ label: 'Where', value: place }] : []),
+              ...(event.cup_winner?.trim() ? [{ label: 'Cup winner', value: event.cup_winner.trim() }] : []),
+            ]}
+            source={[`Written from the games ${club.name} logged at this event.`, event.cup_finish?.[key] && 'How the team finished comes from the club.', event.writeup_note?.trim() && 'The last paragraph is the club\'s own.'].filter(Boolean).join(' ')}
+          />
+        ))}
 
         {games.length > 0 && (
           <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }} aria-labelledby="event-games">

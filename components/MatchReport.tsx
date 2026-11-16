@@ -21,8 +21,8 @@ function Linked({ text }: { text: string }) {
 export interface MatchFact { label: string; value: React.ReactNode }
 
 /** The full-time report under the scoreboard, laid out like the club's news articles */
-export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref }: {
-  article: MatchArticle;
+export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref, label = 'Match report', factsTitle = 'Match facts', note }: {
+  article: Pick<MatchArticle, 'headline' | 'lead' | 'paragraphs'>;
   clubName: string;
   coverUrl?: string;
   crestUrl?: string;
@@ -33,9 +33,13 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
   source: string;
   /** Where the timeline, line-ups and stats sit on the page */
   moreHref?: string;
+  label?: string;
+  factsTitle?: string;
+  /** The club's own words, printed as typed after the story */
+  note?: string;
 }) {
   return (
-    <article aria-label="Match report" className="glass-panel match-article">
+    <article aria-label={label} className="glass-panel match-article">
       {/* The match flyer, else the club banner, else the club-colour panel with the crest: kept low so the story starts on the first screen */}
       <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: coverUrl ? 380 : 220, objectFit: 'cover' }} />
       <div className="match-article-in">
@@ -49,9 +53,10 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
         </div>
         <p className="match-article-lead"><Linked text={article.lead} /></p>
         {article.paragraphs.map((p, i) => <p key={i} className="match-article-p"><Linked text={p} /></p>)}
+        {note && <p className="match-article-p match-article-note">{note}</p>}
         {facts.length > 0 && (
           <div className="match-article-facts">
-            <h3>Match facts</h3>
+            <h3>{factsTitle}</h3>
             <dl>
               {facts.map(f => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
             </dl>
