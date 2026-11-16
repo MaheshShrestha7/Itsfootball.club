@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { DATE_LOCALE, SITE_TIME_ZONE, dayOptions } from '@/lib/dates';
+import { DATE_LOCALE, SITE_TIME_ZONE, dayOptions, ordinalDate } from '@/lib/dates';
 
 const subscribeNothing = () => () => {};
 
@@ -39,11 +39,3 @@ export default function LocalTime({
   return <>{options?.month === 'short' ? text.replace(/\b(June|July|Sept)\b/g, m => m.slice(0, 3)) : text}</>;
 }
 
-/** "5th December, 2026 (Saturday)": the long form for an event's day */
-function ordinalDate(date: Date, locale: string, opts?: Intl.DateTimeFormatOptions) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat(locale, { ...opts, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    .formatToParts(date).map(p => [p.type, p.value]));
-  const d = Number(parts.day);
-  const suffix = d % 100 >= 11 && d % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][d % 10] || 'th';
-  return `${d}${suffix} ${parts.month}, ${parts.year} (${parts.weekday})`;
-}

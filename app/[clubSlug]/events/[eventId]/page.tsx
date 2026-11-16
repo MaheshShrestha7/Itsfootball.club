@@ -23,9 +23,6 @@ import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
 
-// shortcut: mockup only, picks the countdown look from ?cd=; remove before build
-const MOCK_LOOK = ((typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cd')) || 'club') as 'board' | 'ticket' | 'club';
-
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;
 
@@ -92,7 +89,6 @@ export default function EventDetailsPage({
   const end = event.end_time ? new Date(event.end_time).getTime() : start + DEFAULT_LENGTH;
   // Marked Completed by the committee: treated as over, even if its end time hasn't come
   const completed = !!event.completed_at;
-  const upcoming = start > now && !completed;
   const over = end < now || completed;
   const place = event.location || club.stadium_name;
   // "0 / 150 checked in" days out reads as nobody coming: the count shows once people arrive (admins always)
@@ -133,7 +129,7 @@ export default function EventDetailsPage({
             {!over && (
               /* Before the day: the date is what people come for, set big, with the countdown beside it */
               <div className="evp-when">
-                <EventCountdown startTime={event.start_time} endTime={event.end_time} look={MOCK_LOOK} />
+                <EventCountdown startTime={event.start_time} endTime={event.end_time} />
               </div>
             )}
 
