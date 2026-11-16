@@ -12,7 +12,7 @@ import SponsorLogo from '@/components/SponsorLogo';
 import { isSponsorOnSite, sortSponsorsByTier, sponsorLabel } from '@/lib/sponsors';
 import { useAuth } from '@/lib/auth-context';
 import { downloadEventIcs, directionsUrl } from '@/lib/match-ics';
-import KickoffCountdown from '@/components/KickoffCountdown';
+import EventCountdown from '@/components/EventCountdown';
 import FixtureRow from '@/components/FixtureRow';
 import { groupAlbums } from '@/components/PhotoGallery';
 import { useRouter } from 'next/navigation';
@@ -22,6 +22,9 @@ import MatchReport from '@/components/MatchReport';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
+
+// shortcut: mockup only, picks the countdown look from ?cd=; remove before build
+const MOCK_LOOK = ((typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cd')) || 'board') as 'board' | 'ticket' | 'band';
 
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;
@@ -130,22 +133,7 @@ export default function EventDetailsPage({
             {!over && (
               /* Before the day: the date is what people come for, set big, with the countdown beside it */
               <div className="evp-when">
-                <div className="evp-date">
-                  <b><LocalTime value={event.start_time} options={{ day: 'numeric' }} /></b>
-                  <span>
-                    <span><LocalTime value={event.start_time} options={{ weekday: 'long' }} />, <LocalTime value={event.start_time} options={{ month: 'long' }} /></span>
-                    <span className="evp-time">
-                      <LocalTime value={event.start_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />
-                      {event.end_time && <> to <LocalTime value={event.end_time} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
-                    </span>
-                  </span>
-                </div>
-                {upcoming && (
-                  <div className="evp-count">
-                    <span className="text-meta">Starts in</span>
-                    <KickoffCountdown kickoff={start} event />
-                  </div>
-                )}
+                <EventCountdown startTime={event.start_time} endTime={event.end_time} look={MOCK_LOOK} />
               </div>
             )}
 
