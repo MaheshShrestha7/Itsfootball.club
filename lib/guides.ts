@@ -1,7 +1,7 @@
 // The guides under /guides: short pages that each answer one question people ask (Australia-first, with
 // sources) and lead into the free tool that does the job. Used for the index page, the sitemap, llms.txt
 // and the "Read the guide" links on the tool pages.
-import { LINEUP_FORMAT_PAGES, PLAYING_TIME_FORMAT_PAGES, PLAYING_TIME_TOOL, SEASON_FEE_TOOL, TOURNAMENT_FORMAT_PAGES, TOURNAMENT_TOOL, LINEUP_TOOL, type ToolPageLink } from '@/lib/tool-pages';
+import { LINEUP_FORMAT_PAGES, PLAYING_TIME_FORMAT_PAGES, PLAYING_TIME_TOOL, RESULT_TOOL, SEASON_FEE_TOOL, TOURNAMENT_FORMAT_PAGES, TOURNAMENT_TOOL, LINEUP_TOOL, type ToolPageLink } from '@/lib/tool-pages';
 
 export interface Guide extends ToolPageLink {
   /** The question the guide answers, as people ask it */
@@ -20,6 +20,13 @@ export const GUIDES_HUB: ToolPageLink = { path: '/guides', label: 'Guides', blur
 
 /** When the guides were last checked against their sources: shown as "Updated" and as dateModified */
 export const GUIDES_UPDATED = '2026-10-18';
+
+/** The comparison page a guide can lead into instead of a tool */
+export const BUILDERS_COMPARED: ToolPageLink = {
+  path: '/best-free-football-club-website-builders-australia',
+  label: 'Club website builders compared',
+  blurb: 'Six platforms side by side, every fact linked to its source',
+};
 
 export const GUIDES: Guide[] = [
   {
@@ -198,6 +205,24 @@ export const GUIDES: Guide[] = [
     question: 'What are the basic rules of soccer?',
     tool: LINEUP_TOOL,
     linkedFrom: [LINEUP_TOOL.path],
+  },
+  {
+    path: '/guides/choosing-a-junior-football-club-website',
+    published: '2026-11-18',
+    label: 'Choosing a website for a junior club',
+    blurb: 'What to compare: real cost, card fees, kids’ names and photos, phones, handover',
+    question: 'What should I compare when choosing a website platform for a junior football club in Australia?',
+    tool: BUILDERS_COMPARED,
+    linkedFrom: [],
+  },
+  {
+    path: '/guides/live-scores-without-an-app',
+    published: '2026-11-18',
+    label: 'Live scores without an app',
+    blurb: 'Ways to post a grassroots score as it happens, and what supporters need',
+    question: 'How can a grassroots football club post live match updates without supporters installing an app?',
+    tool: RESULT_TOOL,
+    linkedFrom: [],
   },
 ];
 
@@ -483,6 +508,24 @@ export const SOURCES = {
     publisher: 'The IFAB',
     url: 'https://www.theifab.com/law-changes/latest/',
     note: 'The 10-second substitution exit, one minute off after treatment, five-second restart countdowns and the seven-player minimum',
+  },
+  faSaImages: {
+    title: 'Acquiring and Displaying of Images of Children',
+    publisher: 'Football SA',
+    url: 'https://www.footballsa.com.au/sites/ffsa/files/2024-06/Acquiring_and_Displaying_of_Images_of_Children_-_April_2024.pdf',
+    note: 'Parent or guardian permission before taking images; avoid naming the child, or at least avoid first name and surname together',
+  },
+  pbtrImages: {
+    title: 'Taking and sharing images in sport',
+    publisher: 'Play by the Rules',
+    url: 'https://www.playbytherules.net.au/common-issues/taking-and-sharing-images-sport',
+    note: 'Get member or parent consent, check who has opted out, and avoid naming people in shared images',
+  },
+  pitcheroScores: {
+    title: 'Manage Scores and Events using the Pitchero Club app',
+    publisher: 'Pitchero',
+    url: 'https://help.pitchero.com/knowledge/club-app/scores-match-events',
+    note: 'Scores entered in the Pitchero Club app show on the club’s Pitchero website and in the app',
   },
   stripeAu: {
     title: 'Stripe pricing, Australia',

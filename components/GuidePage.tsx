@@ -32,7 +32,7 @@ export interface GuidePageProps {
   answerMore?: ReactNode;
   sections: { id: string; heading: string; body: ReactNode }[];
   /** The tool the guide leads into, and why to open it */
-  cta: { tool: ToolPageLink; text: string; more?: ToolPageLink[] };
+  cta: { tool: ToolPageLink; text: string; more?: ToolPageLink[]; button?: string };
   questions: { q: string; a: string }[];
   sources: GuideSource[];
 }
@@ -100,13 +100,13 @@ export default function GuidePage(p: GuidePageProps) {
           name: 'Mahesh Shrestha',
           jobTitle: 'Founder',
           url: `${SITE_URL}/about`,
-          sameAs: 'https://www.linkedin.com/in/maheshshrestha',
+          sameAs: 'https://www.linkedin.com/in/mahesh-shrestha7',
         },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
         about: guide.question,
         citation: p.sources.map(s => ({ '@type': 'CreativeWork', name: s.title, url: s.url, publisher: { '@type': 'Organization', name: s.publisher } })),
-        mentions: { '@type': 'WebApplication', name: p.cta.tool.label, url: `${SITE_URL}${p.cta.tool.path}` },
+        mentions: { '@type': p.cta.tool.path.startsWith('/tools') ? 'WebApplication' : 'WebPage', name: p.cta.tool.label, url: `${SITE_URL}${p.cta.tool.path}` },
       },
       {
         '@type': 'BreadcrumbList',
@@ -155,7 +155,7 @@ export default function GuidePage(p: GuidePageProps) {
             }}
           >
             <span>
-              <strong>By:</strong> Mahesh Shrestha (Founder &amp; Sydney volunteer)
+              <strong>By:</strong> <Link href="/about" style={linkStyle}>Mahesh Shrestha</Link> (Founder &amp; Sydney volunteer)
             </span>
             <span style={{ opacity: 0.35 }}>•</span>
             <span>
@@ -190,7 +190,7 @@ export default function GuidePage(p: GuidePageProps) {
             <h2 id="cta">{p.cta.tool.label}</h2>
             <p>{p.cta.text}</p>
           </div>
-          <Link href={p.cta.tool.path} className="btn btn-primary">Open the free tool <ArrowRight size={16} aria-hidden="true" /></Link>
+          <Link href={p.cta.tool.path} className="btn btn-primary">{p.cta.button ?? 'Open the free tool'} <ArrowRight size={16} aria-hidden="true" /></Link>
           {p.cta.more && p.cta.more.length > 0 && (
             <p className="guide-cta-more">
               Also: {p.cta.more.map((t, i) => (

@@ -51,7 +51,7 @@ export const FOUNDER = {
   name: 'Mahesh Shrestha',
   jobTitle: 'Founder',
   url: `${SITE_URL}/about`,
-  sameAs: ['https://www.linkedin.com/in/maheshshrestha'],
+  sameAs: ['https://www.linkedin.com/in/mahesh-shrestha7'],
 };
 const clubUrl = (club: ClubMetadataRow) => abs(`/${club.slug}`);
 const clubId = (club: ClubMetadataRow) => `${clubUrl(club)}#club`;
