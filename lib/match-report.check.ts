@@ -52,7 +52,7 @@ assert.equal(turning.lead, 'ANCC and Marrickville were level at 1-1 at half-time
 // Nothing stands out: the opening rotates by match between the ones the data allows
 const pool = { ...base, homeScore: 1, awayScore: 0, goals: [{ minute: 5, side: 'home' as const, player: 'Sam Oduya' }], record: { played: 9, won: 6, drawn: 1, lost: 2, goalsFor: 21, goalsAgainst: 12 }, next: { opponent: 'Leichhardt', when: 'at 3:00 pm on Saturday 29 November' } };
 assert.deepEqual(['a', 'b', 'c'].map(id => matchArticle({ ...pool, id })!.style), ['season', 'next', 'result']);
-assert.equal(matchArticle({ ...pool, id: 'c' })!.lead, 'ANCC beat Marrickville 1-0. Sam Oduya scored the only goal.');
+assert.equal(matchArticle({ ...pool, id: 'c' })!.lead, 'ANCC won 1-0. Sam Oduya scored the only goal.');
 assert.equal(matchArticle({ ...pool, id: 'a' })!.headline, 'ANCC make it six wins from nine with 1-0 win over Marrickville');
 assert.equal(matchArticle({ ...pool, id: 'b' })!.lead, 'ANCC will play Leichhardt at 3:00 pm on Saturday 29 November after beating Marrickville 1-0.');
 // A loss never gets the "wins from" opening, and is written from our side
@@ -63,7 +63,7 @@ assert.equal(lost.paragraphs.at(-1), "Marrickville's record this season is six w
 // Score only: a line that follows from the score, how the game was played, no scorers claimed
 const thin = matchArticle({ ...base, homeScore: 2, awayScore: 2, venue: 'Moore Park Fields', day: 'Saturday' })!;
 assert.equal(thin.headline, 'ANCC and Marrickville draw 2-2');
-assert.equal(thin.lead, 'ANCC and Marrickville drew 2-2 at Moore Park Fields on Saturday.');
+assert.equal(thin.lead, 'ANCC drew 2-2 at Moore Park Fields on Saturday.');
 assert.deepEqual(thin.paragraphs, ['Neither side could find a winner before the final whistle.', 'The game was played over two 30-minute halves.']);
 
 // The short cup-day game from the live site: no goals logged, three games in a day, a line-up saved

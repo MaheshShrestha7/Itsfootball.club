@@ -64,7 +64,7 @@ export default function GettingThere({ match }: { match: MatchLike }) {
           <h2 id="getting-there" style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Getting there</h2>
           <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>{ground.name}{pitch ? `, ${pitch}` : ''}</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            {[ground.address, `${ground.suburb} ${ground.state}`].filter(Boolean).join(', ')}{councilName(ground) ? ` · ${councilName(ground)}` : ''}
+            {[ground.address, `${ground.suburb} ${ground.state}`].filter(Boolean).join(', ')}{councilName(ground) ? `, ${councilName(ground)}` : ''}
           </div>
         </div>
       </div>

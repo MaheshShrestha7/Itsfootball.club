@@ -193,7 +193,9 @@ export function matchArticle(r: ArticleInput): MatchArticle | null {
   } else {
     headline = `${resultHeadline}${plainText(inComp(false))}`;
     only = hi + lo === 1 && goals.length === 1 && known(goals[0].player, goals[0].side) && !goals[0].ownGoal;
-    leadText = `${result}${where}${when}.${starGoals >= 2 ? ` ${nm(star)} scored ${times(starGoals)}.` : only ? ` ${nm(goals[0].player)} scored the only goal.` : ''}`;
+    // The headline already names both sides and the score: the lead adds where and when without saying it word for word again
+    const brief = !our ? result : draw ? `${us} drew ${hs}-${as}` : `${us} ${weWon ? 'won' : 'lost'} ${hi}-${lo}`;
+    leadText = `${brief}${where}${when}.${starGoals >= 2 ? ` ${nm(star)} scored ${times(starGoals)}.` : only ? ` ${nm(goals[0].player)} scored the only goal.` : ''}`;
   }
   leadText += penalties;
 

@@ -229,7 +229,7 @@ export default function TournamentBracketView({
                             )}
                             {!isLive && !isCompleted && (
                               <span className="text-secondary">
-                                {match.match_date ? `${fixtureWhenLabel(match)}${match.pitch_label ? ` · ${match.pitch_label}` : ''}` : 'Upcoming'}
+                                {match.match_date ? `${fixtureWhenLabel(match)}${match.pitch_label ? `, ${match.pitch_label}` : ''}` : 'Upcoming'}
                               </span>
                             )}
                             {isAdmin && (

@@ -488,7 +488,7 @@ export default function ResultGraphicTool({ defaultGraphic = 'result' }: Props =
             </div>
           ))}
         </div>
-        {mismatch.length > 0 && <p className="rg-warn">{mismatch.join(' · ')}. That&apos;s fine if you&apos;re leaving some out.</p>}
+        {mismatch.length > 0 && <p className="rg-warn">{mismatch.join(', ')}. That&apos;s fine if you&apos;re leaving some out.</p>}
 
         <h2 className="lineup-tool-section">Player of the Match <span className="lineup-tool-optional">{state.graphic === 'motm' ? '' : '(optional)'}</span></h2>
         <div className="rg-motm">

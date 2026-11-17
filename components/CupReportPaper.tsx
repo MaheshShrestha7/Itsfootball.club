@@ -205,7 +205,7 @@ export default function CupReportPaper({ report, colour, logoUrl, footer }: {
           : <div className="cr-crest" aria-hidden="true">{initials}</div>}
         <div>
           <h1>{report.cup}</h1>
-          <p>{[report.team || report.club, report.dates, report.venue].filter(Boolean).join(' · ')}</p>
+          <p>{[report.team || report.club, report.dates, report.venue].filter(Boolean).join(', ')}</p>
         </div>
         <span className="cr-tag">{coach ? 'Coaches and committee' : 'For the squad'}</span>
       </header>

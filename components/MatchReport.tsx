@@ -42,10 +42,10 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
 }) {
   return (
     <article aria-label={label} className={bare ? 'match-article match-article-bare' : 'glass-panel match-article'}>
-      {!bare && <>
-      {/* The match flyer, else the club banner, else the club-colour panel with the crest: kept low so the story starts on the first screen */}
-      <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: coverUrl ? 380 : 220, objectFit: 'cover' }} />
-      </>}
+      {/* The match flyer, else the club banner. No picture, no cover: an empty club-colour block above the story says nothing */}
+      {!bare && coverUrl && (
+        <CoverImage loading="eager" src={coverUrl} alt={plainText(article.headline)} crestUrl={crestUrl} style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 380, objectFit: 'cover' }} />
+      )}
       <div className="match-article-in">
         {!bare && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>

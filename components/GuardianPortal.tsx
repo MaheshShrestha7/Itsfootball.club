@@ -172,7 +172,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>{child.full_name}</h3>
                     <div className="text-note">
                       {child.membership_tier}
-                      {approved && child.membership_expires_at ? ` · ${days !== null && days < 0 ? 'expired' : 'expires'} ${longDate(child.membership_expires_at)}` : ''}
+                      {approved && child.membership_expires_at ? `, ${days !== null && days < 0 ? 'expired' : 'expires'} ${longDate(child.membership_expires_at)}` : ''}
                     </div>
                   </div>
                 </div>
@@ -182,8 +182,8 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
               {approved && (
                 <dl className="family-summary">
                   <div><dt>Team</dt><dd>{childTeams.map(t => t.name).join(', ') || 'Not placed yet'}</dd></div>
-                  <div><dt>Next game</dt><dd>{nextMatch ? <>{fixtureWhen(nextMatch.match_date)}<br /><span className="text-meta">{nextMatch.home_team_name} v {nextMatch.away_team_name}{nextMatch.venue ? ` · ${nextMatch.venue}` : ''}</span></> : 'None scheduled'}</dd></div>
-                  <div><dt>{season}</dt><dd>{stats ? `${stats.appearances} games · ${stats.goals} goals` : 'No games yet'}</dd></div>
+                  <div><dt>Next game</dt><dd>{nextMatch ? <>{fixtureWhen(nextMatch.match_date)}<br /><span className="text-meta">{nextMatch.home_team_name} v {nextMatch.away_team_name}{nextMatch.venue ? `, ${nextMatch.venue}` : ''}</span></> : 'None scheduled'}</dd></div>
+                  <div><dt>{season}</dt><dd>{stats ? `${stats.appearances} games, ${stats.goals} goals` : 'No games yet'}</dd></div>
                   <div><dt>Fees</dt><dd style={{ color: feeText ? 'var(--c-amber)' : undefined }}>{feeText || 'Nothing due'}</dd></div>
                 </dl>
               )}
@@ -217,7 +217,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
                   </button>
                 )}
                 <button type="button" className={`btn btn-sm ${section === 'messages' ? 'btn-primary' : 'btn-secondary'}`} aria-expanded={section === 'messages'} onClick={() => toggle(child.id, 'messages')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <MessageSquare size={15} /> Messages{thread.length ? ` (${thread.length})` : ''}{unread ? ` · ${unread} new` : ''}
+                  <MessageSquare size={15} /> Messages{thread.length ? ` (${thread.length})` : ''}{unread ? `, ${unread} new` : ''}
                 </button>
                 <button type="button" className={`btn btn-sm ${section === 'details' ? 'btn-primary' : 'btn-secondary'}`} aria-expanded={section === 'details'} onClick={() => toggle(child.id, 'details')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                   <HeartPulse size={15} /> Consent &amp; medical

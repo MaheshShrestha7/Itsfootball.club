@@ -66,7 +66,7 @@ export default function PlayerCardDialog({ club, playerId, colour, onClose }: {
           </div>
           <div>
             <h2 id="pc-name" className="pc-name">{player.full_name}</h2>
-            <p className="pc-pos">{[player.jersey_number != null ? `#${player.jersey_number}` : null, position].filter(Boolean).join(' · ')}</p>
+            <p className="pc-pos">{[player.jersey_number != null ? `#${player.jersey_number}` : null, position].filter(Boolean).join(', ')}</p>
             {teams.length > 0 && <div className="pc-teams">{teams.map(t => <span key={t.id}>{t.name}</span>)}</div>}
           </div>
           <div className="pc-season">

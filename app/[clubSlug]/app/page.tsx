@@ -160,7 +160,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     const outsideCups = cupEventIds.map(eid => {
       const games = clubGames.filter(m => m.event_id === eid);
       const name = events.find(e => e.id === eid)?.title || games[0].competition || 'Cup';
-      return { kind: 'match' as const, id: `event:${eid}`, title: `${name} · ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/events/${eid}`, price: 0 };
+      return { kind: 'match' as const, id: `event:${eid}`, title: `${name}, ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/events/${eid}`, price: 0 };
     });
     const ms = clubGames
       .filter(m => !m.event_id)
@@ -171,7 +171,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
     const cups = [...new Set(ours.filter(m => m.tournament_id).map(m => m.tournament_id!))].map(tid => {
       const games = ours.filter(m => m.tournament_id === tid);
       const name = tournaments.find(t => t.id === tid)?.name || 'Tournament';
-      return { kind: 'match' as const, id: `cup:${tid}`, title: `${name} · ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/tournaments/${tid}`, price: 0 };
+      return { kind: 'match' as const, id: `cup:${tid}`, title: `${name}, ${games.length} game${games.length === 1 ? '' : 's'}`, at: games[0].match_date, where: games[0].venue, match: undefined as typeof games[number] | undefined, gameIds: games.map(g => g.id), href: `${base}/tournaments/${tid}`, price: 0 };
     });
     const es = events
       // A supporter isn't asked about training (players and parents of players are)
@@ -382,12 +382,12 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
                     : `${lastResult.home_team_name} ${lastResult.home_score ?? 0}–${lastResult.away_score ?? 0} ${lastResult.away_team_name}`}
                 </strong>
               </span>
-              <span className="text-meta"><LocalTime value={lastResult.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /> · Match report</span>
+              <span className="text-meta"><LocalTime value={lastResult.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />, match report</span>
             </Link>
           )}
           {player && (
             <div className="glass-panel app-me-tile">
-              <span className="app-heading">My season · {seasonName}</span>
+              <span className="app-heading">My {seasonName} season</span>
               <dl className="app-me-stats">
                 <div><dt>Apps</dt><dd>{myStats?.appearances ?? 0}</dd></div>
                 <div><dt>Goals</dt><dd>{myStats?.goals ?? 0}</dd></div>
@@ -413,7 +413,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
               ? `${live.home_team_name} v ${live.away_team_name}`
               : `${live.home_team_name} ${live.home_score ?? 0} – ${live.away_score ?? 0} ${live.away_team_name}`}
           </strong>
-          <span className="text-meta">Follow the match →</span>
+          <span className="text-meta">Follow the match</span>
         </Link>
       )}
 
@@ -426,7 +426,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
             <div key={item.id} className="glass-panel" style={{ padding: '0.85rem 1rem' }}>
               <Link href={item.href} style={{ display: 'block', color: 'inherit' }}>
                 <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.title}</div>
-                <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? ` · ${item.where}` : ''}</div>
+                <div className="text-meta"><LocalTime value={item.at} format="both" options={WHEN} />{item.where ? `, ${item.where}` : ''}</div>
                 {item.kind === 'match' && !item.match && canAnswer(item) && (
                   <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
                     One answer for your {myGameIds(item).length} game{myGameIds(item).length === 1 ? '' : 's'}

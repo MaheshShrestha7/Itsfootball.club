@@ -45,10 +45,10 @@ export default function FixtureRow({ match, clubSlug, hideScore, teamLabel, flat
           {match.match_type === 'internal' ? `${match.home_team_name} v ${match.away_team_name}` : `vs ${opponent}`}
         </div>
         <div className="text-meta">
-          <span className="sr-only"><LocalTime value={when} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />{' · '}</span>
-          {!played && !timeTile && kickoffTime && <>{kickoffTime}{' · '}</>}
+          <span className="sr-only"><LocalTime value={when} options={{ weekday: 'long', day: 'numeric', month: 'long' }} />{', '}</span>
+          {!played && !timeTile && kickoffTime && <>{kickoffTime}{', '}</>}
           {/* Flat rows sit under their cup's own name, so the competition isn't repeated */}
-          {[teamLabel, !flat && match.competition, match.venue].filter(Boolean).join(' · ')}
+          {[teamLabel, !flat && match.competition, match.venue].filter(Boolean).join(', ')}
         </div>
       </div>
       <div className="shrink-0 fixture-row-end">

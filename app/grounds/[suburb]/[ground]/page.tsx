@@ -87,7 +87,7 @@ function FixtureRow({ f, timeZone }: { f: GroundFixture; timeZone: string }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700 }}>{done && f.homeScore != null && f.awayScore != null ? `${f.home} ${f.homeScore}–${f.awayScore} ${f.away}` : `${f.home} v ${f.away}`}</div>
-        {(f.competition || f.pitch) && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{[f.competition, f.pitch].filter(Boolean).join(' · ')}</div>}
+        {(f.competition || f.pitch) && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{[f.competition, f.pitch].filter(Boolean).join(', ')}</div>}
       </div>
     </Link>
   );
@@ -199,7 +199,7 @@ export default async function GroundPage({ params }: Params) {
                 <li key={p.label} id={pitchAnchor(p.label)}>
                   <div className="glass-panel tool-link" style={{ borderLeft: '3px solid var(--club-primary)' }}>
                     <strong>{p.label}</strong>
-                    <span>{[p.surface, p.size, p.lights ? 'Lights' : ''].filter(Boolean).join(' · ') || 'Pitch'}</span>
+                    <span>{[p.surface, p.size, p.lights ? 'Lights' : ''].filter(Boolean).join(', ') || 'Pitch'}</span>
                   </div>
                 </li>
               ))}

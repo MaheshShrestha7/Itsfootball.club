@@ -58,7 +58,7 @@ export function friendlyPayload(f: FriendlyForm, teamName: string) {
 }
 
 const teamMeta = (t: ClubTeam) =>
-  [t.age_group || 'Open age', FORMAT_LABEL[t.match_format], t.half_minutes ? `usually 2 × ${t.half_minutes} min` : null].filter(Boolean).join(' · ');
+  [t.age_group || 'Open age', FORMAT_LABEL[t.match_format], t.half_minutes ? `usually 2 × ${t.half_minutes} min` : null].filter(Boolean).join(', ');
 
 /**
  * The friendly-invitation part of the contact form: which of our teams, their team, the game, up

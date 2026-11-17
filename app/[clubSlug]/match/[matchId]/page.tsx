@@ -1009,10 +1009,9 @@ export default function MatchCenterPage({
             publishedAt={match.match_date}
             shareUrl={matchPath(club.slug, match)}
             source={`Written from the match events ${club.name} logged.`}
+            // The scoreboard above already shows the date, the venue and the length: only what it doesn't, with its link
             facts={[
-              { label: 'Kick-off', value: <><LocalTime value={match.match_date} />{match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}</> },
-              ...(ground || match.venue ? [{ label: 'Ground', value: <>{ground ? <Link href={groundPath(ground)}>{ground.name}</Link> : match.venue}{match.pitch_label ? `, ${match.pitch_label}` : ''}</> }] : []),
-              { label: 'Length', value: `${lengthLabel(match)}${match.match_format && match.match_format !== '11v11' ? `, ${match.match_format.replace(/v\d+$/, '-a-side')}` : ''}` },
+              ...(ground ? [{ label: 'Ground', value: <><Link href={groundPath(ground)}>{ground.name}</Link>{match.pitch_label ? `, ${match.pitch_label}` : ''}</> }] : []),
               ...(reportTeam?.slug ? [{ label: 'Team', value: <Link href={`/${club.slug}/teams/${reportTeam.slug}`}>{teamLabel(reportTeam)}</Link> }] : []),
             ]}
           />

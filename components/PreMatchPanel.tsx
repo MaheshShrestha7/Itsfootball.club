@@ -108,7 +108,7 @@ export default function PreMatchPanel({ club, match, previous, previousScoreHidd
           </div>
           <div className="text-meta">
             <LocalTime value={prev.match_date} />
-            {prev.venue ? ` · ${prev.venue}` : ''}
+            {prev.venue ? `, ${prev.venue}` : ''}
           </div>
           <span className="matchday-link">Match report <ChevronRight size={14} aria-hidden="true" /></span>
         </Link>

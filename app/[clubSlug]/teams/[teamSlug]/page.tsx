@@ -37,7 +37,7 @@ function SquadRow({ player, open }: {
       : <span className={`team-tile${player.jersey_number == null ? ' team-tile-none' : ''}`} aria-hidden="true">{player.jersey_number ?? initialsOf(player.full_name)}</span>}
     <span className="min-w-0">
       <strong>{player.full_name}</strong>
-      <small>{[player.photo_url && player.jersey_number != null ? `#${player.jersey_number}` : null, position].filter(Boolean).join(' · ')}</small>
+      <small>{[player.photo_url && player.jersey_number != null ? `#${player.jersey_number}` : null, position].filter(Boolean).join(', ')}</small>
     </span>
   </>);
   return open
@@ -118,7 +118,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
   // A team that hides its scores publicly (junior grassroots rules) shows no record or form
   const record = team.hide_public_scores ? null : teamRecord(teamMatches, season);
   const form = team.hide_public_scores ? [] : teamForm(teamMatches);
-  const meta = [publicTeamType(team.team_type), team.age_group, team.match_format].filter(Boolean).join(' · ');
+  const meta = [publicTeamType(team.team_type), team.age_group, team.match_format].filter(Boolean).join(', ');
   const seeAll = (view: 'upcoming' | 'past', count: number) => (
     <Link href={`/${club.slug}/fixtures?team=${encodeURIComponent(team.slug)}${view === 'past' ? '&view=past&season=all' : ''}`} className="tp-more">
       See all {count} {view === 'past' ? 'results' : 'fixtures'} <ChevronRight size={16} aria-hidden="true" />

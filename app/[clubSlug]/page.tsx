@@ -526,9 +526,9 @@ export default function ClubPublicPage({
                   ) : (
                     <>
                       {currentSlide.kicker}
-                      {heroMatch && <> · <MatchWhen m={heroMatch} /></>}
-                      {heroNews?.published_at && <> · <LocalTime value={heroNews.published_at} options={SHORT_DATE} /></>}
-                      {heroEvent?.flyer_url && <> · <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /></>}
+                      {heroMatch && <span style={{ marginLeft: '0.6rem', fontWeight: 500 }}><MatchWhen m={heroMatch} /></span>}
+                      {heroNews?.published_at && <span style={{ marginLeft: '0.6rem', fontWeight: 500 }}><LocalTime value={heroNews.published_at} options={SHORT_DATE} /></span>}
+                      {heroEvent?.flyer_url && <span style={{ marginLeft: '0.6rem', fontWeight: 500 }}><LocalTime value={heroEvent.start_time} options={SHORT_DATE} /></span>}
                     </>
                   )}
                 </p>
@@ -672,7 +672,7 @@ export default function ClubPublicPage({
                   </div>
 
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '1rem' }}>
-                    <MatchWhen m={heroMatch} />{heroMatch.venue ? ` · ${heroMatch.venue}` : ''}
+                    <MatchWhen m={heroMatch} />{heroMatch.venue ? `, ${heroMatch.venue}` : ''}
                   </div>
                   <span className="btn btn-primary btn-sm" style={{ width: '100%' }}>
                     {heroIsLive ? 'Follow live' : heroMatch.status === 'completed' ? 'Match report' : 'Match preview'}
@@ -696,11 +696,11 @@ export default function ClubPublicPage({
                     />
                   </div>
                   <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {!!heroNews.tags?.length && <div className="text-meta">{heroNews.tags.join(' · ')}</div>}
+                    {!!heroNews.tags?.length && <div className="text-meta">{heroNews.tags.join(', ')}</div>}
                     <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{heroNews.title}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       <span>{heroNews.author_name ? `By ${heroNews.author_name}` : ''}</span>
-                      <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article &rarr;</span>
+                      <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article</span>
                     </div>
                   </div>
                 </Link>
@@ -755,7 +755,7 @@ export default function ClubPublicPage({
                   </div>
                   <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{currentSlide.title}</h3>
-                    <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>{currentSlide.ctaLabel || 'Find out more'} &rarr;</span>
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>{currentSlide.ctaLabel || 'Find out more'}</span>
                   </div>
                 </Link>
               )}
@@ -921,7 +921,7 @@ export default function ClubPublicPage({
                   or download .ics
                 </a>
                 <Link href={`/${club.slug}/fixtures`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--club-ink)' }}>
-                  All fixtures &amp; results →
+                  All fixtures &amp; results
                 </Link>
               </div>
             </div>
@@ -1031,9 +1031,9 @@ export default function ClubPublicPage({
             >
               <span>
                 <strong>Next up: {nextFootballEvent.title}</strong>
-                <span className="text-meta"> · <LocalTime value={nextFootballEvent.start_time} options={SHORT_DATE} />{nextFootballEvent.location ? ` · ${nextFootballEvent.location}` : ''}</span>
+                <span className="text-meta">, <LocalTime value={nextFootballEvent.start_time} options={SHORT_DATE} />{nextFootballEvent.location ? `, ${nextFootballEvent.location}` : ''}</span>
               </span>
-              <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View event &rarr;</span>
+              <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View event</span>
             </Link>
           )}
 
@@ -1055,14 +1055,14 @@ export default function ClubPublicPage({
                   match.venue,
                   matchTeam ? teamLabel(matchTeam) : '',
                   fixturesSeasonFilter === 'ALL' ? match.season : '',
-                ].filter(Boolean))].join(' · ');
+                ].filter(Boolean))].join(', ');
                 return (
                   // data-glide-card: opening the match glides this row into the match page's scoreboard (MatchGlideLink)
                   <div key={match.id} data-glide-card className="fx-row">
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                         <LocalTime value={match.match_date} options={SHORT_DATE} />
-                        {(hasKickoffTime(match) || match.match_time) && <> · <KickoffTime m={match} /></>}
+                        {(hasKickoffTime(match) || match.match_time) && <>, <KickoffTime m={match} /></>}
                       </div>
                       <div className="text-meta">{details}</div>
                       {match.status === 'postponed' && (
@@ -1105,7 +1105,7 @@ export default function ClubPublicPage({
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>Thank you to our sponsors</h2>
               <Link href={`/${club.slug}/sponsor`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontSize: '0.875rem', fontWeight: 700 }}>
-                Become a sponsor &rarr;
+                Become a sponsor
               </Link>
             </div>
             {/* Highest tier first (a size override changes a card's size, not its place in the order) */}
@@ -1120,7 +1120,7 @@ export default function ClubPublicPage({
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: '2rem', fontWeight: 900 }}>Events &amp; training</h2>
             <Link href={`/${club.slug}/events`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontSize: '0.875rem', fontWeight: 700 }}>
-              All events &amp; tickets &rarr;
+              All events &amp; tickets
             </Link>
           </div>
 
@@ -1148,9 +1148,9 @@ export default function ClubPublicPage({
                     <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 0.75rem' }}>{evt.description}</p>
                   )}
                   <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
-                    <LocalTime value={evt.start_time} />{evt.location ? ` · ${evt.location}` : ''}
+                    <LocalTime value={evt.start_time} />{evt.location ? `, ${evt.location}` : ''}
                   </p>
-                  <span style={{ marginTop: 'auto', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View details &rarr;</span>
+                  <span style={{ marginTop: 'auto', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>View details</span>
                 </div>
               </Link>
             ))}
@@ -1194,7 +1194,7 @@ export default function ClubPublicPage({
 
                 <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
-                    {!!featuredArticle.tags?.length && <p className="text-meta" style={{ margin: '0 0 0.35rem' }}>{featuredArticle.tags.slice(0, 2).join(' · ')}</p>}
+                    {!!featuredArticle.tags?.length && <p className="text-meta" style={{ margin: '0 0 0.35rem' }}>{featuredArticle.tags.slice(0, 2).join(', ')}</p>}
                     <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.6rem', lineHeight: 1.3 }}>
                       {featuredArticle.title}
                     </h3>
@@ -1205,7 +1205,7 @@ export default function ClubPublicPage({
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     <span>{featuredArticle.author_name ? `By ${featuredArticle.author_name}` : ''}</span>
-                    <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article &rarr;</span>
+                    <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article</span>
                   </div>
                 </div>
               </Link>
@@ -1237,7 +1237,7 @@ export default function ClubPublicPage({
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p className="text-meta" style={{ margin: '0 0 0.2rem' }}>
-                      {[...(article.tags?.slice(0, 2) || [])].join(' · ')}{article.tags?.length ? ' · ' : ''}<LocalTime value={article.published_at} options={SHORT_DATE} />
+                      {[...(article.tags?.slice(0, 2) || [])].join(', ')}{article.tags?.length ? ', ' : ''}<LocalTime value={article.published_at} options={SHORT_DATE} />
                     </p>
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>
                       {article.title}
@@ -1247,7 +1247,7 @@ export default function ClubPublicPage({
               ))}
               {clubNews.length > 0 && (
                 <Link href={`/${club.slug}/news`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>
-                  All news &rarr;
+                  All news
                 </Link>
               )}
             </div>
