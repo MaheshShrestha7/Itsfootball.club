@@ -276,8 +276,8 @@ export default function OverviewTab({ clubs, metrics, periodDays, periodOptions,
 
           <div className="mc-card">
             <div className="mc-card-h"><h3>Waiting on clubs</h3><span className="mc-flag warn">{money(m.awaiting_review.cents + m.pending.cents)}</span></div>
-            <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-amber)' }} /><span>Bank transfers to confirm</span><small>{n(m.awaiting_review.count)} · {money(m.awaiting_review.cents)}</small></div>
-            <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-ink-3)' }} /><span>Started or invoiced, not paid yet</span><small>{n(m.pending.count)} · {money(m.pending.cents)}</small></div>
+            <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-amber)' }} /><span>Bank transfers to confirm</span><small>{n(m.awaiting_review.count)}, {money(m.awaiting_review.cents)}</small></div>
+            <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-ink-3)' }} /><span>Started or invoiced, not paid yet</span><small>{n(m.pending.count)}, {money(m.pending.cents)}</small></div>
             <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-red)' }} /><span>Failed</span><small>{n(m.failed)}</small></div>
             <div className="mc-ov-light"><i className="lt" style={{ background: 'var(--mc-red)' }} /><span>Refunded</span><small>{n(m.refunded)}</small></div>
           </div>
@@ -466,7 +466,7 @@ export default function OverviewTab({ clubs, metrics, periodDays, periodOptions,
         <ClubList
           rows={list.map(c => ({
             ref: c,
-            sub: `${n(c.member_count)} members · ${(u.by_club[c.id] || []).length} of ${FEATURES.length} features`,
+            sub: `${n(c.member_count)} members, uses ${(u.by_club[c.id] || []).length} of ${FEATURES.length} features`,
             right: <ChevronRight size={14} />,
           }))}
           empty="No clubs here."
@@ -632,7 +632,7 @@ function MembersList({ clubId, club, onOpenConsole }: { clubId: string; club?: P
     if (lapsed(r)) bits.push(`lapsed ${dayLabel(r.expires_at)}`);
     else if (r.expires_at && r.membership_status === 'approved') bits.push(`renews ${dayLabel(r.expires_at)}`);
     if (!r.has_account) bits.push('no account');
-    return bits.join(' · ');
+    return bits.join(', ');
   };
 
   return (
@@ -642,7 +642,7 @@ function MembersList({ clubId, club, onOpenConsole }: { clubId: string; club?: P
           <Crest logoUrl={club.logo_url} label={club.short_name} color={club.primary_color} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <b style={{ display: 'block', color: 'var(--mc-ink)' }}>{club.name}</b>
-            <small className="mc-muted">{rows ? `${n(rows.length)} members · ${n(pending)} pending` : 'Loading…'}</small>
+            <small className="mc-muted">{rows ? `${n(rows.length)} members, ${n(pending)} pending` : 'Loading…'}</small>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {onOpenConsole && <button type="button" className="mc-pill-btn soft" onClick={onOpenConsole}>Club console</button>}
@@ -667,7 +667,7 @@ function MembersList({ clubId, club, onOpenConsole }: { clubId: string; club?: P
             return (
               <div key={r.id} className="mc-ov-mrow">
                 <Avatar name={r.full_name} />
-                <div style={{ minWidth: 0 }}><b>{r.full_name}</b><small>{r.email ? `${r.email} · ` : ''}{detail(r)}</small></div>
+                <div style={{ minWidth: 0 }}><b>{r.full_name}</b>{r.email && <small>{r.email}</small>}<small>{detail(r)}</small></div>
                 <span className={`mc-flag ${STATUS_FLAG[status] || ''}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
               </div>
             );

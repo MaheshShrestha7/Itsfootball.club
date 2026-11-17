@@ -27,6 +27,10 @@ interface Props {
   /** Grounds, on its Suggestions view (MCF-4) */
   onOpenGroundSuggestions?: () => void;
   showToast: (msg: string) => void;
+  /** Changes when you come back to Mission Control after a while, so Today reloads (MCX-8) */
+  refreshKey?: number;
+  /** How many things need you, for the Today badge (MCX-15) */
+  onCount?: (n: number) => void;
 }
 
 const KIND: Record<QueueKind, { icon: React.ElementType; tone: string }> = {
@@ -54,10 +58,14 @@ const dayOf = (v: string | null | undefined) => (v ? String(v).slice(0, 10) : 'n
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** Today: everything across the platform that needs the founder, each with its fix. */
-export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, onOpenTab, onOpenGroundSuggestions, showToast }: Props) {
+export default function TodayTab({ clubs, loading, userName, userEmail, onSelectClub, onEmail, onOpenLog, onOpenPalette, onOpenSupport, onOpenTab, onOpenGroundSuggestions, showToast, refreshKey = 0, onCount }: Props) {
   const [snoozes, setSnoozes] = useState<{ key: string; until: string }[]>([]);
   const [recent, setRecent] = useState<PlatformAuditRow[]>([]);
   const [support, setSupport] = useState<SupportRequest[]>([]);
+  // Every open request is counted, even though only the oldest 10 are listed (MCX-2)
+  const [supportTotal, setSupportTotal] = useState(0);
+  // Requests waiting on the person for more than 5 days: their answer lands in the mailbox, not here (MCX-6)
+  const [stale, setStale] = useState<{ count: number; oldest: SupportRequest | null }>({ count: 0, oldest: null });
   const [broken, setBroken] = useState<HealthSignal[]>([]);
   const [today, setToday] = useState<TodayData | null>(null);
   const [todayLoaded, setTodayLoaded] = useState(false);
@@ -67,13 +75,17 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   const load = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
-    const [s, a, q, h, t] = await Promise.all([
+    const [s, a, q, h, t, w] = await Promise.all([
       client.from('platform_snoozes').select('key, until').gt('until', new Date().toISOString()),
       client.rpc('get_platform_audit', { p_club_id: null, p_limit: 6 }),
-      client.from('support_requests').select('*').eq('status', 'open').order('created_at').limit(10),
+      client.from('support_requests').select('*', { count: 'exact' }).eq('status', 'open').order('created_at').limit(10),
       platformApi<HealthReport>('health?quick=1'),
       client.rpc('get_platform_today'),
+      client.from('support_requests').select('*', { count: 'exact' }).eq('status', 'waiting')
+        .lt('updated_at', new Date(Date.now() - 5 * 86400000).toISOString()).order('updated_at').limit(1),
     ]);
+    setSupportTotal(q.count ?? (q.data || []).length);
+    setStale({ count: w.count ?? (w.data || []).length, oldest: ((w.data || []) as SupportRequest[])[0] || null });
     setSupport((q.data || []) as SupportRequest[]);
     setBroken((h.signals || []).filter(x => x.light === 'red'));
     setSnoozes((s.data || []) as { key: string; until: string }[]);
@@ -83,7 +95,7 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
     setTodayLoaded(!t.error);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const snoozed = useMemo(() => new Set(snoozes.map(r => r.key)), [snoozes]);
   const extras: TodayExtras = useMemo(() => ({
@@ -179,7 +191,7 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
   const name = firstName(userName, userEmail);
   const siteCount = broken.length + (showCrashes ? 1 : 0) + (showDrafts ? 1 : 0) + (showSuggestions ? 1 : 0);
   const counts: Record<Exclude<Filter, 'all'>, number> = {
-    support: support.length,
+    support: supportTotal + (stale.count ? 1 : 0),
     money: queue.filter(i => QUEUE_GROUP[i.kind] === 'money').length,
     clubs: queue.filter(i => QUEUE_GROUP[i.kind] === 'clubs').length + reminders.length,
     site: siteCount,
@@ -194,6 +206,7 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
     { id: 'clubs', label: 'Clubs', count: counts.clubs },
     { id: 'site', label: 'Site', count: counts.site },
   ];
+  useEffect(() => { if (!loading) onCount?.(urgent); }, [urgent, loading, onCount]);
   const nothing = !loading && (filter === 'all' ? urgent === 0 : counts[filter as Exclude<Filter, 'all'>] === 0);
 
   const doneButtons = (key: string, title: string, withDone = true) => (
@@ -245,6 +258,28 @@ export default function TodayTab({ clubs, loading, userName, userEmail, onSelect
               </div>
             </div>
           ))}
+
+          {show('support') && supportTotal > support.length && (
+            <div className="mc-q">
+              <span className="mc-sq tone-support"><Inbox size={16} /></span>
+              <div className="body">
+                <div className="t"><b>{plural(supportTotal - support.length, 'more open request')} in Support</b></div>
+                <p>Today lists the oldest {support.length}. The rest are in the Support inbox.</p>
+                <div className="acts"><button type="button" className="mc-pill-btn ghost" onClick={() => onOpenTab('support')}>Open Support</button></div>
+              </div>
+            </div>
+          )}
+
+          {show('support') && stale.oldest && (
+            <div className="mc-q">
+              <span className="mc-sq tone-wait"><Clock size={16} /></span>
+              <div className="body">
+                <div className="t"><b>{plural(stale.count, 'request')} waiting on them for more than 5 days</b> <span className="when">{timeAgo(stale.oldest.updated_at)}</span></div>
+                <p>Their answers go to the support mailbox, not here. Check it, then reopen or mark each one done. Oldest: &ldquo;{stale.oldest.topic}&rdquo;.</p>
+                <div className="acts"><button type="button" className="mc-pill-btn" onClick={() => onOpenSupport(stale.oldest!.id)}>Open the oldest</button></div>
+              </div>
+            </div>
+          )}
 
           {show('site') && broken.map(s => (
             <div key={s.key} className="mc-q">

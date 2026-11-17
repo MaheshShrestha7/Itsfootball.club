@@ -37,7 +37,7 @@ export default function CommandPalette({ open, onClose, clubs, tabs, onSelectClu
     const clubHits = clubs
       .filter(c => !s || [c.name, c.slug, c.short_name, c.owner_email, c.owner_name, c.custom_domain].some(v => (v || '').toLowerCase().includes(s)))
       .slice(0, s ? 8 : 5)
-      .map<Item>(c => ({ id: `c:${c.id}`, label: c.name, hint: `${c.member_count} members${c.owner_email ? ` · ${c.owner_email}` : ''}${c.is_active ? '' : ' · suspended'}`, club: c, run: done(() => onSelectClub(c)) }));
+      .map<Item>(c => ({ id: `c:${c.id}`, label: c.name, hint: `${c.member_count} members${c.owner_email ? `, ${c.owner_email}` : ''}${c.is_active ? '' : ', suspended'}`, club: c, run: done(() => onSelectClub(c)) }));
     const tabHits = tabs
       .filter(t => !s || t.label.toLowerCase().includes(s))
       .map<Item>(t => ({ id: `t:${t.id}`, label: `Go to ${t.label}`, run: done(() => onSelectTab(t.id)) }));

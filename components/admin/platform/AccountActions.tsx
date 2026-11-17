@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { platformApi } from '@/components/admin/platform/api';
+import { platformApi, useCanChange } from '@/components/admin/platform/api';
 import { askText, confirmAction, notify } from '@/components/ConfirmDialog';
 import type { AccountStatus } from '@/lib/supabase/types';
 import { KeyRound, Link2, ShieldOff, LogOut, AtSign, Ban, Trash2, CheckCircle2 } from 'lucide-react';
@@ -16,6 +16,7 @@ interface Props {
 
 /** "Fix their account" on the People tab (POST /api/platform/users). */
 export default function AccountActions({ userId, name, showToast, onChanged }: Props) {
+  const canChange = useCanChange();
   const [status, setStatus] = useState<AccountStatus | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function AccountActions({ userId, name, showToast, onChanged }: P
     const res = await platformApi<{ message?: string }>('users', { userId, action, ...extra });
     setBusy(null);
     if (res.error) { notify('That didn\'t work', res.error); return false; }
-    showToast(`âœ“ ${res.message || 'Done'}`);
+    showToast(`✓ ${res.message || 'Done'}`);
     return true;
   };
 
@@ -69,7 +70,7 @@ export default function AccountActions({ userId, name, showToast, onChanged }: P
   ];
 
   return (
-    <div className="mc-card">
+    <fieldset className="mc-fs mc-card" disabled={!canChange}>
       <div className="mc-card-h" style={{ flexWrap: 'wrap', gap: 8 }}>
         <h3>Fix their account</h3>
         {status && (
@@ -95,12 +96,12 @@ export default function AccountActions({ userId, name, showToast, onChanged }: P
                 title={a.disabled}
                 onClick={a.onClick}
               >
-                {busy === a.key ? 'Workingâ€¦' : a.cta}
+                {busy === a.key ? 'Working…' : a.cta}
               </button>
             </div>
           );
         })}
       </div>
-    </div>
+    </fieldset>
   );
 }

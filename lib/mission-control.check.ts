@@ -144,6 +144,10 @@ assert.equal(light({ stripe: { ...base.stripe, needDetails: 1 } }, 'stripe'), 'a
 assert.equal(light({ domains: { total: 2, pending: ['a.com'] } }, 'domains'), 'amber');
 assert.equal(light({ domains: null }, 'domains'), 'grey');
 assert.equal(light({ dbMs: 900 }, 'db'), 'red');
+assert.equal(light({ dbMs: 400 }, 'db'), 'amber');
+// An error is never "fast": a failed query that returns in 5 ms is still red
+assert.equal(light({ dbMs: 5, dbError: 'connection refused' }, 'db'), 'red');
+assert.ok(healthSignals({ ...base, dbError: 'timeout' }, NOW).find(s => s.key === 'db')!.summary.includes("Didn't answer"));
 
 
 // ---- Overview helpers ----
@@ -239,3 +243,8 @@ assert.equal(missionUrl('?tab=support&request=r1', { tab: 'log' }), '?tab=log');
   assert.equal(gameState({ status: 'upcoming', match_date: '2026-11-16T09:00:00Z', match_time: null }, t), 'later');
 }
 console.log('mission-control: ok');
+// MCX-7: missing migrations are amber (never emailed), named in the summary; not checked = no light
+assert.equal(light({ missingMigrations: [] }, 'migrations'), 'green');
+assert.equal(light({ missingMigrations: ['20261177_mission_control_features.sql'] }, 'migrations'), 'amber');
+assert.ok(healthSignals({ ...base, missingMigrations: ['a.sql', 'b.sql'] }, NOW).find(s => s.key === 'migrations')!.summary.includes('a.sql, b.sql'));
+assert.equal(healthSignals(base, NOW).some(s => s.key === 'migrations'), false);

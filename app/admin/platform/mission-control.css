@@ -951,3 +951,26 @@ textarea.mc-input { resize: vertical; }
   .mc-md-scroll .mc-table th, .mc-md-scroll .mc-table td { padding-left: 6px; padding-right: 6px; }
   .mc-md-scroll .mc-flag { white-space: normal; }
 }
+
+/* ---- Mission Control fixes (MCX, 2026-11-17) ---- */
+/* MCX-4: a fieldset turns off every control inside it for Analysts, without changing the layout */
+.mc-fs { border: 0; margin: 0; padding: 0; min-width: 0; }
+.mc-fs.mc-card { padding: 18px 20px; border: 1px solid var(--mc-glass-edge); }
+.mc-fs:disabled .mc-pill-btn, .mc-fs:disabled .mc-input, .mc-fs:disabled textarea, .mc-fs:disabled select { cursor: not-allowed; }
+.mc-role-note { margin: 0 0 16px; font-size: 13.5px; color: var(--mc-ink-2); background: var(--mc-amber-bg); border-color: transparent; }
+/* MCX-5: role list in Manage admins, the description left-aligned */
+.mc-kv-left { grid-template-columns: max-content minmax(0, 1fr); }
+.mc-kv-left dd { text-align: left; font-weight: 400; color: var(--mc-ink-2); }
+/* MCX-16: who, address and time on their own, never dot-joined */
+.mc-msg small { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; }
+.mc-msg small b { color: var(--mc-ink-2); }
+/* MCX-14: the two-step form inside the locked card */
+.mc-locked-2fa { width: 100%; }
+/* MCX-13: the site's form fields and buttons take the Mission Control look inside it */
+.mc .form-input, .mc .form-select, .mc .form-textarea {
+  min-height: 38px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--mc-line);
+  background: var(--mc-bar); color: var(--mc-ink); font: inherit; font-size: 14px; box-shadow: none;
+}
+.mc .form-input:focus, .mc .form-select:focus, .mc .form-textarea:focus { border-color: var(--mc-green); }
+.mc .form-label { font-size: 13px; font-weight: 600; color: var(--mc-ink-2); text-transform: none; letter-spacing: 0; }
+.mc .glass-panel h3 { color: var(--mc-ink); }

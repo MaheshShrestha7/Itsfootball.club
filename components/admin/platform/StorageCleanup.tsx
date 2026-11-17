@@ -56,7 +56,7 @@ export default function StorageCleanup({ showToast }: { showToast: (msg: string)
         <div key={f.clubId} className="mc-sig">
           <div className="body">
             <b>{f.name || 'Deleted club'}</b>
-            <p className="num">{f.files} {f.files === 1 ? 'file' : 'files'} · {size(f.bytes)} · <code style={{ fontSize: 11 }}>clubs/{f.clubId}/</code></p>
+            <p className="num">{f.files} {f.files === 1 ? 'file' : 'files'}, {size(f.bytes)}, in <code style={{ fontSize: 11 }}>clubs/{f.clubId}/</code></p>
           </div>
           {canDelete && (
             <button type="button" className="mc-pill-btn danger" disabled={!!busy || f.files === 0} onClick={() => remove(f)}>

@@ -11,6 +11,8 @@ import { isCloudflareConfigured, removeHostname } from '@/lib/cloudflare';
 // Emails the platform Super admins and Operators when a light turns red, at most once every
 // 12 hours per light. Also clears platform_events rows older than 60 days, and deletes clubs closed
 // more than 30 days ago (purge_closed_clubs), releasing their custom domains.
+// A slow database only emails once the previous run saw it slow too (two hours in a row), since a
+// single slow hour is usually a cold start; a database that errors or doesn't answer emails at once.
 
 const REPEAT_HOURS = 12;
 const KEEP_DAYS = 60;
@@ -40,7 +42,13 @@ export async function POST(req: NextRequest) {
   const { data: recent } = await db.from('platform_events').select('name').eq('kind', 'alert')
     .gte('created_at', new Date(Date.now() - REPEAT_HOURS * 3600000).toISOString());
   const told = new Set((recent || []).map(r => r.name));
-  const fresh = red.filter(s => !told.has(s.key));
+  // What the previous run saw red (its own result is logged below as kind 'cron', name 'health')
+  const { data: prev } = await db.from('platform_events').select('detail').eq('kind', 'cron').eq('name', 'health')
+    .order('created_at', { ascending: false }).limit(1);
+  const prevRed = new Set(((prev?.[0]?.detail as { red?: string[] } | null)?.red) || []);
+  const slowOnce = (s: { key: string; summary: string }) => s.key === 'db' && !s.summary.startsWith("Didn't answer") && !prevRed.has('db');
+  const held = red.filter(slowOnce);
+  const fresh = red.filter(s => !told.has(s.key) && !slowOnce(s));
 
   let emailed = 0;
   if (fresh.length) {
@@ -73,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const body = { red: red.map(s => s.key), alerted: fresh.map(s => s.key), emailed, deletedClubs: gone.map(c => ({ id: c.id, name: c.name })), ...(purgeError ? { purgeError: purgeError.message } : {}) };
+  const body = { red: red.map(s => s.key), held: held.map(s => s.key), alerted: fresh.map(s => s.key), emailed, deletedClubs: gone.map(c => ({ id: c.id, name: c.name })), ...(purgeError ? { purgeError: purgeError.message } : {}) };
   await logEvent('cron', 'health', true, body);
   return NextResponse.json(body);
 }

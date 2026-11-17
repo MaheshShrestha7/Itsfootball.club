@@ -13,6 +13,7 @@ import { SUGGESTION_TOPICS, councilName, groundPath, mapEmbedUrl, parseLatLng, p
 import { OSM_COPYRIGHT_URL, findExisting, pitchesLine, type Candidate } from '@/lib/ground-import';
 import { councilAreas, findGroundsInCouncil } from '@/lib/ground-import-fetch';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import { useCanChange } from '@/components/admin/platform/api';
 
 interface ListedGround extends GroundRow {
   source?: string | null;
@@ -28,10 +29,9 @@ type Row = Candidate & { picked: boolean; unnamed: boolean };
 type Filter = 'all' | 'drafts' | 'live' | 'noclub';
 type View = 'all' | 'import' | 'edit' | 'suggestions';
 
-const ACCENT = '#818CF8';
+const ACCENT = 'var(--mc-indigo)';
 const muted: React.CSSProperties = { fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 };
 const inline: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.4rem' };
-const badge = (bg: string, color: string): React.CSSProperties => ({ background: bg, color, fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.04em' });
 const SURFACES = ['Grass', 'Synthetic', 'Hybrid'];
 
 async function api<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
@@ -115,6 +115,7 @@ const toForm = (g: ListedGround | null): Form => ({
 });
 
 function GroundForm({ ground, onDone, showToast }: { ground: ListedGround | null; onDone: (changed: boolean) => void; showToast: (m: string) => void }) {
+  const canChange = useCanChange();
   const [form, setForm] = useState<Form>(() => toForm(ground));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,7 +154,7 @@ function GroundForm({ ground, onDone, showToast }: { ground: ListedGround | null
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.75rem' }}>
+    <div className="mc-card" style={{ padding: '1.75rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, ...inline }}>
@@ -165,7 +166,7 @@ function GroundForm({ ground, onDone, showToast }: { ground: ListedGround | null
             {!ground?.steward_club_id && ' The first club to pick it as its home ground takes it over.'}
           </p>
         </div>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onDone(false)} aria-label="Close"><X size={16} /></button>
+        <button type="button" className="mc-pill-btn ghost" onClick={() => onDone(false)} aria-label="Close"><X size={16} /></button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0 1rem' }}>
@@ -234,11 +235,11 @@ function GroundForm({ ground, onDone, showToast }: { ground: ListedGround | null
                 <label style={{ ...inline, fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                   <input type="checkbox" checked={!!p.lights} onChange={e => set('pitches', form.pitches.map((x, j) => (j === i ? { ...x, lights: e.target.checked } : x)))} /> Lights
                 </label>
-                <button type="button" className="btn btn-secondary btn-sm" aria-label={`Remove ${p.label || 'pitch'}`}
+                <button type="button" className="mc-pill-btn ghost" aria-label={`Remove ${p.label || 'pitch'}`}
                   onClick={() => set('pitches', form.pitches.filter((_, j) => j !== i))}><Trash2 size={15} /></button>
               </div>
             ))}
-            <button type="button" className="btn btn-secondary btn-sm" style={{ ...inline, alignSelf: 'flex-start' }}
+            <button type="button" className="mc-pill-btn ghost" style={{ ...inline, alignSelf: 'flex-start' }}
               onClick={() => set('pitches', [...form.pitches, { label: `Pitch ${form.pitches.length + 1}`, surface: 'Grass' }])}>
               <Plus size={15} /> Add a pitch
             </button>
@@ -267,10 +268,11 @@ function GroundForm({ ground, onDone, showToast }: { ground: ListedGround | null
 
       {error && <p role="alert" style={{ ...muted, color: 'var(--c-red)', marginBottom: '0.75rem' }}>{error}</p>}
       <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-        <button type="button" className="btn btn-primary" style={inline} onClick={save} disabled={busy}>
+        <button type="button" className="mc-pill-btn" style={inline} onClick={save} disabled={busy || !canChange}>
           {busy ? <Loader2 size={15} className="spin" /> : <CheckCircle2 size={15} />} {ground ? 'Save ground' : 'Add ground'}
         </button>
-        <button type="button" className="btn btn-secondary" onClick={() => onDone(false)}>Cancel</button>
+        <button type="button" className="mc-pill-btn ghost" onClick={() => onDone(false)}>Cancel</button>
+        {!canChange && <p className="mc-muted" style={{ alignSelf: 'center' }}>Only Super admins and Operators can save grounds.</p>}
       </div>
     </div>
   );
@@ -382,7 +384,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
 
   return (
     <>
-      <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
+      <div className="mc-card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
         <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 0.3rem', ...inline }}>
           <Layers size={18} color={ACCENT} /> Find grounds in a council area
         </h3>
@@ -408,7 +410,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
               </optgroup>
             </select>
           </div>
-          <button type="button" className="btn btn-primary" style={inline} onClick={find} disabled={!code || finding}>
+          <button type="button" className="mc-pill-btn" style={inline} onClick={find} disabled={!code || finding}>
             {finding ? <Loader2 size={16} className="spin" /> : <Search size={16} />} {finding ? 'Searching the map…' : 'Find grounds'}
           </button>
         </div>
@@ -417,7 +419,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
       </div>
 
       {rows && council && (
-        <div className="glass-panel" style={{ padding: '0.4rem' }}>
+        <div className="mc-card" style={{ padding: '0.4rem' }}>
           <div style={{ padding: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <div>
               <strong style={{ color: 'var(--text-primary)' }}>
@@ -430,7 +432,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
               )}
             </div>
             {rows.some(canTick) && (
-              <button type="button" className="btn btn-secondary btn-sm" style={{ ...inline, color: ACCENT }}
+              <button type="button" className="mc-pill-btn ghost" style={{ ...inline, color: ACCENT }}
                 onClick={() => setRows(rs => (rs ? rs.map(r => (canTick(r) && r.name && r.suburb && !r.school && !r.private ? { ...r, picked: true } : r)) : rs))}>
                 <CheckCircle2 size={15} /> Select all new
               </button>
@@ -441,23 +443,23 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
             return (
               <div key={r.ref} style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', padding: '0.75rem 0.9rem', borderTop: '1px solid var(--border-subtle)', opacity: off ? 0.55 : 1 }}>
                 <input type="checkbox" aria-label={`Add ${r.name || 'this ground'}`} checked={r.picked && !off} disabled={off}
-                  onChange={e => update(i, { picked: e.target.checked })} style={{ width: 20, height: 20, accentColor: '#6366F1', flexShrink: 0 }} />
+                  onChange={e => update(i, { picked: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--mc-indigo)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {r.unnamed && !off
                     ? (
                       <div style={{ ...inline, flexWrap: 'wrap' }}>
                         <input className="form-input" style={{ padding: '0.4rem 0.6rem', fontSize: '0.9rem', maxWidth: 320 }} placeholder="Name this ground" value={r.name}
                           onChange={e => update(i, { name: e.target.value, picked: true })} maxLength={120} />
-                        {r.school && <span className="badge" style={badge('rgba(245, 158, 11, 0.15)', 'var(--c-amber)')}>SCHOOL GROUNDS</span>}
-                        {r.private && <span className="badge" style={badge('rgba(245, 158, 11, 0.15)', 'var(--c-amber)')}>PRIVATE</span>}
+                        {r.school && <span className="mc-flag warn">School grounds</span>}
+                        {r.private && <span className="mc-flag warn">Private</span>}
                       </div>
                     )
                     : (
                       <div style={{ ...inline, flexWrap: 'wrap', fontWeight: 800, color: 'var(--text-primary)' }}>
                         {r.name}
-                        {r.existing && <span className="badge" style={badge('rgba(var(--tint-rgb), 0.08)', 'var(--text-secondary)')}>{r.existing.name === r.name ? 'ALREADY LISTED' : `LISTED AS ${r.existing.name.toUpperCase()}`}</span>}
-                        {!r.existing && r.school && <span className="badge" style={badge('rgba(245, 158, 11, 0.15)', 'var(--c-amber)')}>SCHOOL GROUNDS</span>}
-                        {!r.existing && r.private && <span className="badge" style={badge('rgba(245, 158, 11, 0.15)', 'var(--c-amber)')}>PRIVATE</span>}
+                        {r.existing && <span className="mc-flag">{r.existing.name === r.name ? 'Already listed' : `Listed as ${r.existing.name}`}</span>}
+                        {!r.existing && r.school && <span className="mc-flag warn">School grounds</span>}
+                        {!r.existing && r.private && <span className="mc-flag warn">Private</span>}
                       </div>
                     )}
                   <div style={{ ...muted, display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.15rem' }}>
@@ -480,7 +482,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
               <p style={{ ...muted, flex: '1 1 300px' }}>
                 They go in as <strong style={{ color: 'var(--text-secondary)' }}>drafts</strong>: not public until you publish them, and kept out of Google until a club plays there and they have three facts like parking or toilets.
               </p>
-              <button type="button" className="btn btn-primary" style={inline} onClick={add} disabled={!picked.length || adding}>
+              <button type="button" className="mc-pill-btn" style={inline} onClick={add} disabled={!picked.length || adding}>
                 {adding ? <Loader2 size={16} className="spin" /> : <Download size={16} />} Add {picked.length} {picked.length === 1 ? 'ground' : 'grounds'} as drafts
               </button>
             </div>
@@ -504,6 +506,7 @@ function ImportPanel({ showToast, onImported }: { showToast: (m: string) => void
 // ---------------------------------------------------------------------------------------------
 
 export default function GroundsTab({ showToast, startView = 'all' }: { showToast: (msg: string) => void; startView?: View }) {
+  const canChange = useCanChange();
   const [view, setView] = useState<View>(startView);
   const [editing, setEditing] = useState<ListedGround | null>(null);
   const [grounds, setGrounds] = useState<ListedGround[]>([]);
@@ -566,10 +569,10 @@ export default function GroundsTab({ showToast, startView = 'all' }: { showToast
   ).sort((a, b) => b[1] - a[1]);
   const councilMax = Math.max(1, ...byCouncil.map(([, c]) => c));
   const COUNCIL_TINTS = [
-    ['var(--mc-mint)', 'var(--mc-green-ink)', '#10B981'],
-    ['var(--mc-lilac)', 'var(--mc-indigo)', '#818CF8'],
-    ['var(--mc-pink)', 'var(--mc-pink-ink)', '#F472B6'],
-    ['var(--mc-sky)', 'var(--mc-sky-ink)', '#60A5FA'],
+    ['var(--mc-mint)', 'var(--mc-green-ink)', 'var(--mc-green)'],
+    ['var(--mc-lilac)', 'var(--mc-indigo)', 'var(--mc-indigo)'],
+    ['var(--mc-pink)', 'var(--mc-pink-ink)', 'var(--mc-pink-ink)'],
+    ['var(--mc-sky)', 'var(--mc-sky-ink)', 'var(--mc-sky-ink)'],
   ];
 
   const surfaceClass = (g: ListedGround) => {
@@ -588,12 +591,14 @@ export default function GroundsTab({ showToast, startView = 'all' }: { showToast
         <div className="right">
           <span className="mc-seg" role="group" aria-label="Grounds view">
             <button type="button" aria-pressed={view === 'all'} onClick={() => { setView('all'); setEditing(null); }}>All grounds</button>
-            <button type="button" aria-pressed={view === 'import'} onClick={() => { setView('import'); setEditing(null); }}>Import from map</button>
+            {canChange && <button type="button" aria-pressed={view === 'import'} onClick={() => { setView('import'); setEditing(null); }}>Import from map</button>}
             <button type="button" aria-pressed={view === 'suggestions'} onClick={() => { setView('suggestions'); setEditing(null); }}>Suggestions</button>
           </span>
-          <button type="button" className="mc-pill-btn" onClick={() => { setEditing(null); setView('edit'); }}>
-            <Plus size={14} /> Add a ground
-          </button>
+          {canChange && (
+            <button type="button" className="mc-pill-btn" onClick={() => { setEditing(null); setView('edit'); }}>
+              <Plus size={14} /> Add a ground
+            </button>
+          )}
           <a href="/grounds" target="_blank" rel="noopener" className="mc-icon-btn" aria-label="Open the public directory" title="Open the public directory">
             <ExternalLink size={14} />
           </a>
@@ -648,15 +653,16 @@ export default function GroundsTab({ showToast, startView = 'all' }: { showToast
                   <div key={g.id} className="mc-card mc-gcard mc-lift">
                     <button type="button" className={`top mc-pitch ${surfaceClass(g)}`} onClick={() => { setEditing(g); setView('edit'); }} aria-label={`Edit ${g.name}`}>
                       <span className="mid" />
-                      <span className={`st${g.is_published ? '' : ' draft'}`}>{g.is_published ? (g.indexable ? 'Live · in Google' : 'Live') : 'Draft'}</span>
+                      <span className={`st${g.is_published ? '' : ' draft'}`}>{g.is_published ? (g.indexable ? 'Live, in Google' : 'Live') : 'Draft'}</span>
                     </button>
                     <h3><button type="button" onClick={() => { setEditing(g); setView('edit'); }}>{g.name}</button></h3>
                     <div className="meta">
-                      {[`${g.suburb} ${g.state}${g.postcode ? ` ${g.postcode}` : ''}`, councilName(g)].filter(Boolean).join(' · ')}
+                      {`${g.suburb} ${g.state}${g.postcode ? ` ${g.postcode}` : ''}`}
                     </div>
+                    {councilName(g) && <div className="meta">{councilName(g)}</div>}
                     <div className="meta" style={{ marginTop: 4 }}>
                       Looked after by {g.steward_name || 'itsfootball.club'}
-                      {g.clubs_using > 0 && <> · home of {g.clubs_using} {g.clubs_using === 1 ? 'club' : 'clubs'}</>}
+                      {g.clubs_using > 0 && <>, home of {g.clubs_using} {g.clubs_using === 1 ? 'club' : 'clubs'}</>}
                     </div>
                     <div className="flags">
                       <span className={`mc-flag${(g.pitches || []).length ? ' ok' : ' warn'}`}>{(g.pitches || []).length ? pitchSummary(g.pitches) : 'No pitches yet'}</span>

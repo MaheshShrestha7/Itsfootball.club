@@ -342,7 +342,7 @@ export default function ClubConsole({ club, onEmail, showToast, onChanged, middl
       </section>
 
       {access !== null && (
-        <section className="mc-cp-sec" aria-labelledby="mc-cp-access">
+        <section id="mc-cp-access-sec" className="mc-cp-sec" aria-labelledby="mc-cp-access">
           <h3 id="mc-cp-access">Support access</h3>
           {mine?.status === 'approved' ? (
             <>
