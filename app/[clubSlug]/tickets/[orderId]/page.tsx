@@ -4,6 +4,7 @@ import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, Calendar, MapPin, Ticket, Loader2, AlertCircle } from 'lucide-react';
+import { trackClubSignup } from '@/lib/platform-tracking';
 import { useClub } from '@/lib/club-context';
 import LocalTime from '@/components/LocalTime';
 import GroundSponsors from '@/components/GroundSponsors';
@@ -38,6 +39,13 @@ export default function TicketsPage({ params }: { params: Promise<{ clubSlug: st
         if (stopped) return;
         if (!res.ok) return setError(json.error || 'Could not load your tickets.');
         setOrder(json);
+        // Back from paying in this browser: counted once under the source that brought the buyer
+        if (json.status === 'paid') {
+          try {
+            const from = sessionStorage.getItem('itsfootball_ticket_src');
+            if (from) { sessionStorage.removeItem('itsfootball_ticket_src'); trackClubSignup(from, 'ticket'); }
+          } catch { /* not counted */ }
+        }
         if (json.status === 'pending' && ++polls < MAX_POLLS) timer = setTimeout(load, POLL_MS);
         else if (json.status === 'pending') setGaveUp(true);
       } catch {

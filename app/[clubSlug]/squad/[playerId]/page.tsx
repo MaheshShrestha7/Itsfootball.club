@@ -117,7 +117,7 @@ export default function PlayerPage({ params }: { params: Promise<{ clubSlug: str
   // The card maker opens filled in with them and the picked season's stats (cardFromLink)
   const cardLink = playerCardLink(player, club, season, stats);
   const share = (
-    <ShareLinkButton url={`/${club.slug}/squad/${player.id}`} title={`${player.full_name}, ${club.name}`} className="pp-btn pp-btn-ghost" />
+    <ShareLinkButton url={`/${club.slug}/squad/${player.id}`} title={`${player.full_name}, ${club.name}`} campaign={`player/${player.full_name}`} className="pp-btn pp-btn-ghost" />
   );
 
   return (

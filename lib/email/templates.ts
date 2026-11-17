@@ -2,6 +2,7 @@
 // all render the same) plus a builder per email. Every value is escaped; builders pass plain text.
 import { SITE_URL } from '@/lib/seo';
 import { evaluateColorContrast } from '@/lib/theme-utils';
+import { tagLink } from '@/lib/visit-source';
 
 /** Who the email is from: a club, or the platform itself when omitted */
 export interface EmailBrand {
@@ -441,7 +442,7 @@ export function matchNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientN
     heading: p.fixture,
     paragraphs: [`Hi ${firstName(p.recipientName)}, here are the details for the next ${p.brand.name} match. Follow it live on the day from the match page.`],
     details: [['Match', p.fixture], ...(p.competition ? [['Competition', p.competition] as [string, string]] : []), ['When', p.when], ['Where', p.venue]],
-    cta: { label: 'Open match centre', url: p.link },
+    cta: { label: 'Open match centre', url: tagLink(p.link, 'email', 'email', 'match-email') },
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }
@@ -458,7 +459,7 @@ export function eventNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientN
       ...(blurb ? [blurb.length > 400 ? blurb.slice(0, 397) + '...' : blurb] : []),
     ],
     details: [['Event', p.event], ['When', p.when], ['Where', p.venue]],
-    cta: { label: 'View event and register', url: p.link },
+    cta: { label: 'View event and register', url: tagLink(p.link, 'email', 'email', 'event-email') },
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }
@@ -471,7 +472,7 @@ export function newsNotice(p: ClubEmailExtras & { brand: EmailBrand; recipientNa
     preheader: summary?.slice(0, 120) || `New from ${p.brand.name}`,
     heading: p.title,
     paragraphs: [summary || `Hi ${firstName(p.recipientName)}, there's news from ${p.brand.name}.`],
-    cta: { label: 'Read on the club site', url: p.link },
+    cta: { label: 'Read on the club site', url: tagLink(p.link, 'email', 'email', 'news-email') },
     reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }

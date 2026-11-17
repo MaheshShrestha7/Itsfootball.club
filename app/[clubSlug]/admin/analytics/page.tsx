@@ -27,6 +27,7 @@ export default function AdminAnalyticsPage({
   const days = analytics.weeklyDays;
   const trafficData = analytics.weeklyVisits;
   const maxTraffic = Math.max(...trafficData, 1);
+  const sources = analytics.sources;
 
   return (
     <div>
@@ -147,7 +148,91 @@ export default function AdminAnalyticsPage({
           </div>
         </div>
       </div>
+
+      {/* Where visits came from: referrer, fbclid and our own link tags (lib/visit-source.ts) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '2rem', marginTop: '2rem' }}>
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+            Where visitors came from
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+            One visit is one phone or computer on one day. &ldquo;Direct or an app&rdquo; is a typed address, a bookmark, or an app that hides where it came from, like WhatsApp.
+          </p>
+          <div className="stack">
+            {sources.sources.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No visits in the last 90 days yet.</p>}
+            {sources.sources.slice(0, 8).map(([name, count]) => (
+              <SourceBar key={name} name={name} count={count} of={sources.visits} />
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+            Links you shared
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+            Visits from links made by your Share buttons, QR posters, event flyers and club emails.
+          </p>
+          <div className="stack">
+            {sources.campaigns.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nothing yet. Share a match, news story or event from your site and it shows up here.</p>}
+            {sources.campaigns.slice(0, 8).map(c => (
+              <div key={`${c.campaign}|${c.how}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.85rem' }}>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600, overflowWrap: 'anywhere' }}>{c.campaign}</span>
+                  <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>{c.how}{c.from ? ` · ${c.from}` : ''}</span>
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{c.visits.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-panel" style={{ padding: '1.75rem' }}>
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+            What brought sign-ups
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+            Where people first came from before they applied to join or bought tickets on this device.
+          </p>
+          <SignupList title="Membership applications" rows={analytics.memberSources} />
+          <div style={{ height: '1.25rem' }} />
+          <SignupList title="Ticket orders" rows={analytics.ticketSources} />
+        </div>
+      </div>
       </>
+      )}
+    </div>
+  );
+}
+
+function SourceBar({ name, count, of }: { name: string; count: number; of: number }) {
+  const pct = of ? Math.round((count / of) * 1000) / 10 : 0;
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600, overflowWrap: 'anywhere' }}>{name}</span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{count.toLocaleString()}</span>
+      </div>
+      <div style={{ height: '6px', background: 'color-mix(in oklab, var(--color-ink) 6%, transparent)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: 'var(--color-accent)' }} />
+      </div>
+    </div>
+  );
+}
+
+function SignupList({ title, rows }: { title: string; rows: [string, number][] }) {
+  const total = rows.reduce((a, [, n]) => a + n, 0);
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+        <span>{title}</span><span>{total.toLocaleString()}</span>
+      </div>
+      {rows.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>None counted yet.</p>
+      ) : (
+        <div className="stack">
+          {rows.slice(0, 5).map(([name, n]) => <SourceBar key={name} name={name} count={n} of={total} />)}
+        </div>
       )}
     </div>
   );

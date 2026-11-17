@@ -78,6 +78,8 @@ export default function PaymentStep(props: PaymentStepProps) {
       });
       const json = await res.json();
       if (!res.ok || !json.url) throw new Error(json.error || 'Card payment could not be started.');
+      // The tickets page counts the purchase for the club's visit sources once it's paid
+      if (kind === 'event_ticket') try { sessionStorage.setItem('itsfootball_ticket_src', clubId); } catch { /* not counted */ }
       window.location.href = json.url;
     } catch (e) {
       setError((e as Error).message);

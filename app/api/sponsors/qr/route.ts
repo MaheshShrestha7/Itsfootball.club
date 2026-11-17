@@ -5,6 +5,7 @@ import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { clubBaseUrl } from '@/lib/email/club-brand';
 import { SITE_URL } from '@/lib/slugs';
 import { isCheckinPath, isPosterPlace, type PosterPlace } from '@/lib/sponsors';
+import { tagLink } from '@/lib/visit-source';
 import { loadGroundSponsors } from '@/lib/sponsor-ground-server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -53,7 +54,9 @@ export async function GET(req: NextRequest) {
   if (await durableRateLimit(`poster-scan:${ip}:${clubId}:${place}:${eventId || to || ''}`, 1, 30 * 60 * 1000)) {
     await record(db, clubId, place, eventId, 'scan').catch(() => 0);
   }
-  return NextResponse.redirect(target, 302);
+  // Tagged so the club's Analytics shows the visit under this poster (lib/visit-source.ts)
+  const how = place === 'event_flyers' ? ['flyer', 'event-flyer'] : ['poster', place === 'thanks_poster' ? 'sponsor-thanks-poster' : 'checkin-poster'];
+  return NextResponse.redirect(tagLink(target, 'qr', how[0], how[1]), 302);
 }
 
 export async function POST(req: NextRequest) {

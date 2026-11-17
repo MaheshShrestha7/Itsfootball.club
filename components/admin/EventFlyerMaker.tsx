@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { Download, ImagePlus, Printer, X } from 'lucide-react';
 import { countPosterPrint, useGroundSponsors } from '@/components/GroundSponsors';
 import { posterQrLink } from '@/lib/sponsors';
+import { tagLink } from '@/lib/visit-source';
 import { uploadImage } from '@/components/ImageUploadZone';
 import { drawEventFlyer, type FlyerSize } from '@/lib/event-flyer';
 import { savePassImage } from '@/lib/pass-image';
@@ -53,7 +54,8 @@ export default function EventFlyerMaker({ club, event, price, canSaveFlyer, onSa
   const sponsorKey = JSON.stringify(showSponsors ? (sponsors || []).map(s => [s.logo_url || '', s.name]) : []);
   // With sponsors on it, the QR goes through a tracked link that counts the scan for them, then on to the event
   const withSponsors = showSponsors && !!sponsors?.length;
-  const qrValue = withSponsors && !isFixture ? posterQrLink(window.location.origin, club.id, 'event_flyers', { eventId: event.id }) : eventUrl;
+  const qrValue = withSponsors && !isFixture ? posterQrLink(window.location.origin, club.id, 'event_flyers', { eventId: event.id })
+    : tagLink(eventUrl, 'qr', 'flyer', isFixture ? 'match-flyer' : 'event-flyer');
 
   useEffect(() => {
     if (sponsors === null) return;

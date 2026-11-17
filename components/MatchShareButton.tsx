@@ -5,6 +5,7 @@ import { Share2, Download, X } from 'lucide-react';
 import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
+import { tagLink } from '@/lib/visit-source';
 import { useClub } from '@/lib/club-context';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 import { useOneSponsor } from './GroundSponsors';
@@ -113,7 +114,9 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   const share = async () => {
     if (!image) return;
     const file = new File([image.blob], fileName, { type: 'image/png' });
-    const link = `${window.location.origin}${matchPath(club.slug, match)}`;
+    const path = matchPath(club.slug, match);
+    // Tagged so visits from the shared graphic's link show up in Analytics
+    const link = tagLink(`${window.location.origin}${path}`, 'share', 'share', path.split('/').filter(Boolean).slice(1).join('/'));
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file], title: `${match.home_team_name} vs ${match.away_team_name}`, text: link });
