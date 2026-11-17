@@ -3,7 +3,7 @@ import nextTs from "eslint-config-next/typescript";
 
 const eslintConfig = [
   // Build output and generated files (plain `eslint .` otherwise reports thousands of problems in them)
-  { ignores: [".next/**", ".open-next/**", ".wrangler/**", "node_modules/**", "next-env.d.ts",
+  { ignores: [".next/**", ".open-next/**", ".wrangler/**", "node_modules/**", "next-env.d.ts", ".claude/**",
     // Cloudflare Worker entry: bundled by wrangler around the generated .open-next/worker.js, not part of the Next app
     "worker.ts",
     // MediaPipe's wasm loaders, copied from node_modules by scripts/copy-mediapipe.mjs on build

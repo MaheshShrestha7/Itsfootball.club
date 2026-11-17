@@ -36,7 +36,8 @@ yarn-error.log*
 .idea/
 .vscode/
 *.swp
-/.claude/
+/.claude/*
+!/.claude/skills/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
