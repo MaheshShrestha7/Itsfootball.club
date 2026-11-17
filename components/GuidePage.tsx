@@ -100,7 +100,7 @@ export default function GuidePage(p: GuidePageProps) {
           name: 'Mahesh Shrestha',
           jobTitle: 'Founder',
           url: `${SITE_URL}/about`,
-          sameAs: 'https://www.linkedin.com/in/maheshshrestha',
+          sameAs: 'https://www.linkedin.com/in/mahesh-shrestha7',
         },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
