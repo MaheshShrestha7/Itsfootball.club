@@ -43,6 +43,10 @@ import {
   AlertTriangle,
   Share2,
   PenLine,
+  Sun,
+  WifiOff,
+  Loader2,
+  Maximize2,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -132,6 +136,7 @@ export default function AdminMatchCenterControllerPage({
     draftLineups,
     saveDraftLineup,
     activityLogs,
+    syncStatus,
   } = useClub();
   const { user } = useAuth();
   // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
@@ -197,6 +202,9 @@ export default function AdminMatchCenterControllerPage({
     ? [...liveCupGames, ...(upNextCupGame ? [upNextCupGame] : [])]
     : [];
   const nextGameOnPitch = match && (isLiveGame(match) || match.status === 'completed') ? nextOnPitch(match, tournamentGames) : undefined;
+  // A junior Saturday: two or more of the club's own (non-tournament) games live at once, one tap apart too
+  const liveClubGames = kind === 'tournament' ? [] : filteredMatches.filter(m => matchKind(m) !== 'tournament' && isLiveGame(m)).sort(pickerOrder);
+  const liveBoard = pitchBoard.length > 0 ? pitchBoard : liveClubGames.length >= 2 ? liveClubGames : [];
 
   // Followers' live-score alerts (kick-off, each goal, full time) are sent by the admin layout
   // (lib/use-match-alerts.ts), so they also go out when a result is entered on another admin page.
@@ -255,12 +263,32 @@ export default function AdminMatchCenterControllerPage({
   // Keep the phone's screen on while scoring (Screen Wake Lock); remembered on this device
   const [keepAwake, setKeepAwake] = useState(false);
   const [canWakeLock, setCanWakeLock] = useState(false);
+  // Touchline mode: only the score and big buttons, for whoever keeps score from the sideline; remembered on this device
+  const [touchline, setTouchlineState] = useState(false);
+  const setTouchline = (on: boolean) => {
+    setTouchlineState(on);
+    try { localStorage.setItem('mc-touchline', on ? '1' : '0'); } catch { /* this visit only */ }
+    window.scrollTo(0, 0);
+  };
+  const [touchMore, setTouchMore] = useState(false);
+  // The last event this phone logged, for "Undo last"
+  const [lastLoggedId, setLastLoggedId] = useState<string | null>(null);
+  // Saves wait on the phone while it's offline; the touchline score says so
+  const [online, setOnline] = useState(true);
   useEffect(() => {
     setCanWakeLock(typeof navigator !== 'undefined' && 'wakeLock' in navigator);
-    try { setKeepAwake(localStorage.getItem('mc-keep-awake') === '1'); } catch { /* off by default */ }
+    // On unless this phone turned it off (it only holds while a game is live)
+    try { setKeepAwake(localStorage.getItem('mc-keep-awake') !== '0'); } catch { setKeepAwake(true); }
+    try { setTouchlineState(localStorage.getItem('mc-touchline') === '1'); } catch { /* full view */ }
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
+  const gameLive = !!match && isLiveGame(match);
   useEffect(() => {
-    if (!keepAwake || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    if (!keepAwake || !gameLive || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
     let lock: { release: () => Promise<void> } | null = null;
     let cancelled = false;
     const acquire = async () => {
@@ -278,7 +306,7 @@ export default function AdminMatchCenterControllerPage({
       document.removeEventListener('visibilitychange', onVisible);
       if (lock) void lock.release();
     };
-  }, [keepAwake]);
+  }, [keepAwake, gameLive]);
   const toggleKeepAwake = () => {
     setKeepAwake(v => {
       try { localStorage.setItem('mc-keep-awake', v ? '0' : '1'); } catch { /* this visit only */ }
@@ -510,7 +538,7 @@ export default function AdminMatchCenterControllerPage({
   };
 
   // Save what the popup picked, as the old form did: player names, the minute split into stoppage time
-  const handleSheetSave = (r: SheetResult) => {
+  const handleSheetSave = (r: SheetResult, toast?: string) => {
     if (inShootout && (r.eventType === 'goal' || r.eventType === 'penalty' || r.eventType === 'own_goal')) {
       showFeedback('During the shootout, count kicks in the shootout score instead.', 'error');
       return;
@@ -530,14 +558,32 @@ export default function AdminMatchCenterControllerPage({
       detail_text: r.detail || undefined,
     });
     setSheet(null);
+    setLastLoggedId(saved?.id ?? null);
     const what = (EVENT_LABEL[r.eventType] || r.eventType).replace(/^./, c => c.toUpperCase());
     const who = r.eventType === 'commentary' || r.eventType === 'whistle' ? '' : `, ${r.playerName}`;
-    showFeedback(`${what}${who} ${minuteText}'`, 'success', saved?.id);
+    showFeedback(toast ? `${toast} ${minuteText}'. Score is now ${goalsAfter(r)}` : `${what}${who} ${minuteText}'`, 'success', saved?.id);
+  };
+
+  // The score once a just-logged goal is counted (the match in hand is from before the save)
+  const goalsAfter = (r: SheetResult) => {
+    const side = r.eventType === 'own_goal' ? (r.side === 'home' ? 'away' : 'home') : r.side;
+    const counts = r.eventType === 'goal' || r.eventType === 'penalty' || r.eventType === 'own_goal';
+    return `${(match.home_score ?? 0) + (counts && side === 'home' ? 1 : 0)}–${(match.away_score ?? 0) + (counts && side === 'away' ? 1 : 0)}`;
+  };
+
+  // A goal: the club's own side asks who scored; an outside team's goal is one tap (nobody here knows
+  // their scorer), with Undo on the toast. A shootout kick only counts in the shootout score.
+  const addGoal = (side: 'home' | 'away') => {
+    if (inShootout) return handleScoreAdjust(side, 1);
+    if ((side === 'home' ? homePlayers : awayPlayers) !== null) return openSheet('goal', 'goal', side, true);
+    const name = side === 'home' ? match.home_team_name : match.away_team_name;
+    handleSheetSave({ eventType: 'goal', side, minute: getLiveMinute(match), playerName: `${name} Player` }, `${name} goal,`);
   };
 
   // Undo from the toast: the same as deleting it from the match log (a goal comes off the score too)
   const handleUndo = (eventId: string) => {
     deleteMatchEvent(eventId);
+    if (eventId === lastLoggedId) setLastLoggedId(null);
     setFeedback({ text: 'Undone. It is off the match log and the score.', type: 'info' });
   };
 
@@ -592,8 +638,168 @@ export default function AdminMatchCenterControllerPage({
       : { label: 'End match', hint: `Full time at ${scoreText}, then player stats`, go: () => setConfirmEnd(true) };
   const endMinute = match.period === 'extra_time' || match.period === 'penalties' ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match);
 
+  // Tournament day, or several club games live at once: the games on now (plus the next on a pitch), one tap apart
+  const liveBoardEl = liveBoard.length > 0 && (
+    <div className="mc-pitch-board-wrap">
+      <span className="mc-pitch-board-title">{kind === 'tournament' ? 'On the pitches now' : 'Live now'}</span>
+      <div className="mc-pitch-board">
+        {liveBoard.map(g => {
+          const live = isLiveGame(g);
+          return (
+            <button data-view-ok
+              key={g.id}
+              type="button"
+              className={`mc-pitch-card${g.id === match.id ? ' is-open' : ''}${live ? '' : ' is-next'}`}
+              aria-pressed={g.id === match.id}
+              onClick={() => setSelectedMatchId(g.id)}
+            >
+              <span className="mc-pitch-card-top">
+                <span>{live ? g.pitch_label || tournamentMatchLabel(g) || 'Live' : 'Up next'}</span>
+                {live
+                  ? <span className="mc-pitch-card-min"><span className="pulse-dot" aria-hidden="true" /><span>{g.status === 'halftime' ? 'HT' : <><LiveMinute match={g} />&apos;</>}</span></span>
+                  : <span>{g.match_time || ''}</span>}
+              </span>
+              <span className="mc-pitch-card-row"><span>{g.home_team_name}</span><b>{live ? g.home_score ?? 0 : '–'}</b></span>
+              <span className="mc-pitch-card-row"><span>{g.away_team_name}</span><b>{live ? g.away_score ?? 0 : '–'}</b></span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // Touchline mode covers the game from kick-off to full time (a shootout needs its own counter: full view)
+  const touchlineOn = touchline && !inShootout && match.status !== 'completed' && match.status !== 'cancelled' && match.status !== 'postponed';
+  const waitingToSend = !online || syncStatus.phase === 'error' || syncStatus.phase === 'readonly';
+  const canUndoLast = !!lastLoggedId && events.some(e => e.id === lastLoggedId);
+  // The sides the club has players on (an outside team only scores: its goal is one tap)
+  const ourSides = (['home', 'away'] as const).filter(s => (s === 'home' ? homePlayers : awayPlayers) !== null);
+  const shortName = (side: 'home' | 'away') => (side === 'home' ? match.home_team_name : match.away_team_name);
+
   return (
     <div>
+      {/* Feedback toast, along the bottom so it's in view wherever the page is scrolled */}
+      {/* Touchline mode: at the top, so Undo never covers the buttons a thumb is on */}
+      <div role="status" aria-live="polite" className={touchlineOn ? 'mc-toast-slot is-top' : 'mc-toast-slot'}>
+        {feedback && (
+          <div className={feedback.type === 'error' ? 'mc-toast is-error' : 'mc-toast'}>
+            {feedback.type === 'error' ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}
+            <span>{feedback.text}</span>
+            {feedback.undoId && (
+              <button type="button" className="mc-toast-undo" onClick={() => handleUndo(feedback.undoId!)}>Undo</button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {touchlineOn && (
+        <div className="mc-tl">
+          <div className="mc-tl-top">
+            <div>
+              <b>{match.home_team_name} vs {match.away_team_name}</b>
+              <small>Touchline mode</small>
+            </div>
+            <button type="button" className="mc-link-btn" onClick={() => setTouchline(false)} data-view-ok>Full view</button>
+          </div>
+
+          {liveBoardEl}
+
+          <section className="glass-panel mc-tl-board" aria-label="Score and clock">
+            <div className="mc-tl-clock-row">
+              <div className="mc-tl-clock">
+                <span><LiveMinute match={match} />&prime;</span>
+                {match.added_time > 0 && <small>+{match.added_time}</small>}
+              </div>
+              <span className={isLiveGame(match) ? 'mc-now is-live' : 'mc-now'}>
+                {isLiveGame(match) && <span className="mc-now-dot" aria-hidden="true" />}
+                {PERIOD_NAME[match.period] || 'Before kick-off'}
+              </span>
+            </div>
+            <div className="mc-tl-score">
+              {(['home', 'away'] as const).map((side, i) => (
+                <React.Fragment key={side}>
+                  {i === 1 && <span className="mc-tl-sep" aria-hidden="true">:</span>}
+                  <div className="mc-tl-side">
+                    <span className="mc-tl-n">{side === 'home' ? match.home_score ?? 0 : match.away_score ?? 0}</span>
+                    <span className="mc-tl-name">{shortName(side)}</span>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+            <p className={waitingToSend ? 'mc-tl-sync is-wait' : 'mc-tl-sync'} role="status">
+              {waitingToSend
+                ? <><WifiOff size={14} aria-hidden="true" /> Updates waiting to send</>
+                : syncStatus.phase === 'saving'
+                  ? <><Loader2 size={14} className="spin" aria-hidden="true" /> Sending…</>
+                  : <><CheckCircle2 size={14} aria-hidden="true" /> All sent</>}
+            </p>
+            {waitingToSend && (
+              <div className="mc-tl-wait">
+                <WifiOff size={16} aria-hidden="true" />
+                <div>
+                  <b>{online ? 'Not sent yet' : 'No signal right now'}</b>
+                  <span>Keep scoring. Your updates are kept on this phone and go out as soon as it can reach the club again.</span>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <div className="mc-tl-thumb">
+            {match.status === 'live' && (
+              <div className="mc-tl-goals">
+                {(['home', 'away'] as const).map(side => {
+                  const ours = ourSides.includes(side);
+                  return (
+                    <button key={side} type="button" className={`btn ${ours ? 'btn-primary' : 'btn-secondary'} mc-tl-goal`} onClick={() => addGoal(side)}>
+                      <Goal size={22} aria-hidden="true" />
+                      <span>Goal {shortName(side)}</span>
+                      <small>{ours ? 'Then tap who scored' : 'One tap, with Undo'}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {nextStep && (
+              <button type="button" className="btn btn-primary mc-tl-next" onClick={nextStep.go}>
+                <span>{nextStep.label}</span>
+                <small>{nextStep.label === 'End match' ? 'Asks you to check the score first' : nextStep.hint}</small>
+              </button>
+            )}
+            {isLiveGame(match) && (
+              <div className="mc-tl-row">
+                <button type="button" className="btn btn-secondary" onClick={() => setTouchMore(true)}>
+                  <RectangleVertical size={16} aria-hidden="true" /> Card or sub
+                </button>
+                <button type="button" className="btn btn-secondary" disabled={!canUndoLast} onClick={() => lastLoggedId && handleUndo(lastLoggedId)}>
+                  <Undo2 size={16} aria-hidden="true" /> Undo last
+                </button>
+              </div>
+            )}
+            {canWakeLock && (
+              <p className="mc-tl-awake">
+                <Sun size={14} aria-hidden="true" />
+                {keepAwake ? 'Screen stays on while the game is live.' : 'The screen can go to sleep.'}
+                <button type="button" className="mc-link-btn" onClick={toggleKeepAwake} data-view-ok>{keepAwake ? 'Turn off' : 'Keep it on'}</button>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!touchlineOn && (<>
+      {/* Phones, on the day: just keeping score? Touchline mode hides everything else */}
+      {(isLiveGame(match) || (match.status === 'upcoming' && !kickoffIsOffSchedule)) && !inShootout && (
+        <section className="glass-panel mc-tl-entry">
+          <div>
+            <b>{isLiveGame(match) ? `${match.home_team_name} ${scoreText} ${match.away_team_name}, live` : `${match.home_team_name} vs ${match.away_team_name} is on today`}</b>
+            <span>Just keeping score? Touchline mode shows only what you need.</span>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm touch-target" onClick={() => setTouchline(true)}>
+            <Maximize2 size={15} aria-hidden="true" /> Touchline mode
+          </button>
+        </section>
+      )}
+
       {/* Header (trimmed on phones so the scoreboard is near the top) */}
       <div className="admin-head mc-header">
         <div>
@@ -661,18 +867,6 @@ export default function AdminMatchCenterControllerPage({
         </div>
       </div>
 
-      {/* Feedback toast, along the bottom so it's in view wherever the page is scrolled */}
-      <div role="status" aria-live="polite" className="mc-toast-slot">
-        {feedback && (
-          <div className={feedback.type === 'error' ? 'mc-toast is-error' : 'mc-toast'}>
-            {feedback.type === 'error' ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}
-            <span>{feedback.text}</span>
-            {feedback.undoId && (
-              <button type="button" className="mc-toast-undo" onClick={() => handleUndo(feedback.undoId!)}>Undo</button>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Before kick-off: who's coming and whether the team is picked, from the answers and line-up saved for this game */}
       {match.status === 'upcoming' && !match.tournament_id && squadPlayers.length > 0 && (() => {
@@ -883,35 +1077,7 @@ export default function AdminMatchCenterControllerPage({
           </span>
         </div>
 
-        {/* Tournament day: the games on the pitches now, one tap apart */}
-        {pitchBoard.length > 0 && (
-          <div className="mc-pitch-board-wrap">
-            <span className="mc-pitch-board-title">On the pitches now</span>
-            <div className="mc-pitch-board">
-              {pitchBoard.map(g => {
-                const live = isLiveGame(g);
-                return (
-                  <button data-view-ok
-                    key={g.id}
-                    type="button"
-                    className={`mc-pitch-card${g.id === match.id ? ' is-open' : ''}${live ? '' : ' is-next'}`}
-                    aria-pressed={g.id === match.id}
-                    onClick={() => setSelectedMatchId(g.id)}
-                  >
-                    <span className="mc-pitch-card-top">
-                      <span>{live ? g.pitch_label || tournamentMatchLabel(g) || 'Live' : 'Up next'}</span>
-                      {live
-                        ? <span className="mc-pitch-card-min"><span className="pulse-dot" aria-hidden="true" /><span>{g.status === 'halftime' ? 'HT' : <><LiveMinute match={g} />&apos;</>}</span></span>
-                        : <span>{g.match_time || ''}</span>}
-                    </span>
-                    <span className="mc-pitch-card-row"><span>{g.home_team_name}</span><b>{live ? g.home_score ?? 0 : '–'}</b></span>
-                    <span className="mc-pitch-card-row"><span>{g.away_team_name}</span><b>{live ? g.away_score ?? 0 : '–'}</b></span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {liveBoardEl}
       </div>
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
@@ -1015,7 +1181,7 @@ export default function AdminMatchCenterControllerPage({
                         </button>
                         <span className="mc-goals">{side === 'home' ? match.home_score : match.away_score}</span>
                         {/* A goal asks who scored, so it reaches the scorer's stats (the shootout keeps its own count below) */}
-                        <button type="button" onClick={() => (inShootout ? handleScoreAdjust(side, 1) : openSheet('goal', 'goal', side, true))} className="btn btn-primary" aria-label={`Add a goal for ${name}`}>
+                        <button type="button" onClick={() => addGoal(side)} className="btn btn-primary" aria-label={`Add a goal for ${name}`}>
                           <Plus size={15} aria-hidden="true" />
                         </button>
                       </div>
@@ -1325,6 +1491,63 @@ export default function AdminMatchCenterControllerPage({
               </button>
             </div>
           </section>
+        </div>
+      )}
+
+      </>)}
+
+      {/* Touchline mode's "Card or sub": the less common buttons in one sheet */}
+      {touchMore && touchlineOn && (
+        <div className="mc-sheet-wrap" onClick={() => setTouchMore(false)}>
+          <PopupPanel onClose={() => setTouchMore(false)} label="What happened?" className="mc-sheet" onClick={e => e.stopPropagation()}>
+            <div className="mc-sheet-grab" aria-hidden="true" />
+            <div className="mc-sheet-head"><h2>What happened?</h2></div>
+            {(ourSides.length ? ourSides : (['home'] as const)).map(side => (
+              <div key={side}>
+                {ourSides.length > 1 && <h3 className="mc-tl-more-title">{shortName(side)}</h3>}
+                <div className="mc-tl-more">
+                  {([
+                    ['sub', 'Substitution', 'sub', 'sub'],
+                    ['yellow_card', 'Yellow card', 'card', 'card'],
+                    ['red_card', 'Red card', 'card', 'bad'],
+                    ['penalty', 'Penalty goal', 'goal', 'good'],
+                    ['own_goal', 'Own goal', 'goal', 'bad'],
+                  ] as const).map(([type, label, mode, tone]) => (
+                    <button key={type} type="button" className="mc-event-btn" data-tone={tone}
+                      // An own goal counts for the other side, so its popup opens on that side
+                      onClick={() => { setTouchMore(false); openSheet(mode, type, type === 'own_goal' ? (side === 'home' ? 'away' : 'home') : side); }}>
+                      <EventIcon type={type} size={20} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <h3 className="mc-tl-more-title">The clock</h3>
+            <div className="mc-tl-more">
+              {match.status === 'live' && RUNNING_PERIODS.has(match.period) && (
+                <button type="button" className="mc-event-btn" onClick={() => { setTouchMore(false); handleTogglePause(); }}>
+                  {match.is_paused ? <Play size={20} aria-hidden="true" /> : <Pause size={20} aria-hidden="true" />}
+                  <span>{match.is_paused ? 'Resume clock' : 'Pause clock'}</span>
+                </button>
+              )}
+              <button type="button" className="mc-event-btn" onClick={() => handleMinuteAdjust(-1)}><Minus size={20} aria-hidden="true" /><span>1 min back</span></button>
+              <button type="button" className="mc-event-btn" onClick={() => handleMinuteAdjust(1)}><Plus size={20} aria-hidden="true" /><span>1 min on</span></button>
+            </div>
+            {match.status === 'live' && (
+              <div className="mc-added-row" role="group" aria-label="Added time">
+                <span>Added time</span>
+                {Array.from(new Set([0, 1, 2, 3, 5, match.added_time || 0])).sort((a, b) => a - b).map(mins => (
+                  <button key={mins} type="button" className="mc-period" aria-pressed={(match.added_time || 0) === mins} onClick={() => handleSetAddedTime(mins)}>
+                    +{mins}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button type="button" className="mc-link-btn mc-tl-more-change" onClick={() => { setTouchMore(false); setShowPeriods(true); setTouchline(false); }}>
+              Change the period (full view)
+            </button>
+          </PopupPanel>
         </div>
       )}
 
