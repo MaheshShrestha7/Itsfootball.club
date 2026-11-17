@@ -17,6 +17,7 @@ import SponsorShowcase from '@/components/SponsorShowcase';
 import CoverImage from '@/components/CoverImage';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 import LocalTime from '@/components/LocalTime';
+import EventCountdown from '@/components/EventCountdown';
 import { DEFAULT_CREST, crestFallbackRef, crestOnError } from '@/lib/crest';
 import {
   Shield,
@@ -527,7 +528,7 @@ export default function ClubPublicPage({
                       {currentSlide.kicker}
                       {heroMatch && <> · <MatchWhen m={heroMatch} /></>}
                       {heroNews?.published_at && <> · <LocalTime value={heroNews.published_at} options={SHORT_DATE} /></>}
-                      {heroEvent && <> · <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /></>}
+                      {heroEvent?.flyer_url && <> · <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /></>}
                     </>
                   )}
                 </p>
@@ -576,7 +577,7 @@ export default function ClubPublicPage({
                 )}
                 {currentSlide.category === 'event' && heroEvent && (
                   <>
-                    <Link href={`/${club.slug}/events/${heroEvent.id}`} className="btn btn-primary">Event details</Link>
+                    <Link href={`/${club.slug}/events/${heroEvent.id}`} className="btn btn-primary">{(heroEvent.ticket_price_cents ?? 0) > 0 ? 'Get tickets' : 'Event details'}</Link>
                     <Link href={`/${club.slug}/calendar`} className="btn btn-secondary">Club calendar</Link>
                   </>
                 )}
@@ -705,38 +706,21 @@ export default function ClubPublicPage({
                 </Link>
               )}
 
-              {currentSlide.category === 'event' && heroEvent && (
-                <Link
-                  href={`/${club.slug}/events/${heroEvent.id}`}
-                  className="glass-panel glass-panel-interactive"
-                  style={{ display: 'block', overflow: 'hidden', color: 'inherit', background: 'rgba(var(--dk-14-20-30), 0.9)' }}
-                >
-                  {heroEvent.flyer_url && (
-                    <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', height: '220px', overflow: 'hidden', background: 'rgba(0, 0, 0, 0.35)' }}>
-                      <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(heroEvent.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
-                      <img src={heroEvent.flyer_url} alt={`${heroEvent.title} flyer`} decoding="async" style={{ position: 'relative', height: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                    </div>
-                  )}
-                  <div style={{ padding: '1.5rem' }}>
-                    <p className="text-meta" style={{ margin: '0 0 0.35rem' }}>
-                      {EVENT_TAB_LABELS[heroEvent.category] || 'Event'} · {heroEvent.is_public ? 'All welcome' : 'Members only'}
-                    </p>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{heroEvent.title}</h3>
-                    <p style={{ margin: '0 0 0.85rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                      <LocalTime value={heroEvent.start_time} options={SHORT_DATE} /> · {heroEvent.location || club.stadium_name}
-                    </p>
-                    {/* Only once people have checked in ("0 checked in" reads as nobody coming) */}
-                    {heroEvent.rsvp_count > 0 && (
-                      <p className="text-meta" style={{ margin: '0 0 0.85rem' }}>
-                        {heroEvent.rsvp_count}{heroEvent.max_capacity > 0 ? ` / ${heroEvent.max_capacity}` : ''} checked in
-                      </p>
-                    )}
-                    <span style={{ color: 'var(--club-ink)', fontWeight: 700, fontSize: '0.875rem' }}>
-                      {(heroEvent.ticket_price_cents ?? 0) > 0 ? 'Get tickets' : 'View event'} &rarr;
-                    </span>
-                  </div>
+              {/* The headline already names the event: the side shows what it doesn't (the flyer, or how long to go and where) */}
+              {currentSlide.category === 'event' && heroEvent && (heroEvent.flyer_url ? (
+                <Link href={`/${club.slug}/events/${heroEvent.id}`} className="glass-panel glass-panel-interactive club-hero-flyer" aria-label={`${heroEvent.title} flyer`}>
+                  <div aria-hidden style={{ position: 'absolute', inset: '-20px', backgroundImage: `url(${JSON.stringify(heroEvent.flyer_url)})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', opacity: 0.45 }} />
+                  <img src={heroEvent.flyer_url} alt="" decoding="async" />
                 </Link>
-              )}
+              ) : (
+                <div className="club-hero-countdown">
+                  <EventCountdown startTime={heroEvent.start_time} endTime={heroEvent.end_time} />
+                  <p>
+                    {heroEvent.location || club.stadium_name}, {heroEvent.is_public ? 'all welcome' : 'members only'}
+                    {heroEvent.rsvp_count > 0 && <>, {heroEvent.rsvp_count}{heroEvent.max_capacity > 0 ? ` of ${heroEvent.max_capacity}` : ''} checked in</>}
+                  </p>
+                </div>
+              ))}
 
               {currentSlide.category === 'stadium' && (
                 <a
