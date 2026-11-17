@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import { getAccessToken } from '@/lib/supabase/client';
 
 /** Downloads a file from a Mission Control route. Returns an error message, or null when saved. */
@@ -34,3 +35,10 @@ export async function platformApi<T = Record<string, unknown>>(path: string, bod
     return { error: 'Network error. Check your connection and try again.' } as T & { error?: string };
   }
 }
+
+/** The signed-in admin's platform role (MCX-4): 'super_admin' | 'operator' | 'analyst'. null while loading or before
+ *  migration 20261116, when the screens allow everything and the server still decides. */
+export const PlatformRole = createContext<string | null>(null);
+/** Analysts look but don't change anything; the database enforces the same (is_platform_operator) */
+export const useCanChange = () => useContext(PlatformRole) !== 'analyst';
+export const useIsSuperAdmin = () => { const r = useContext(PlatformRole); return r === null || r === 'super_admin'; };

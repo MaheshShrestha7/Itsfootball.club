@@ -4,8 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import PlatformNavbar from '@/components/PlatformNavbar';
-import Footer from '@/components/Footer';
 import ThemeToggle from '@/components/ThemeToggle';
 import { RailLogo } from '@/components/admin/platform/McArt';
 import { readMissionUrl, missionUrl, type MissionTab } from '@/lib/mission-control';
@@ -30,6 +28,7 @@ import LogTab from '@/components/admin/platform/LogTab';
 import SupportTab from '@/components/admin/platform/SupportTab';
 import CommandPalette from '@/components/admin/platform/CommandPalette';
 import EmailComposer, { type EmailDraft } from '@/components/admin/platform/EmailComposer';
+import { PlatformRole, platformApi } from '@/components/admin/platform/api';
 
 import {
   ListChecks,
@@ -217,13 +216,37 @@ export default function PlatformOwnerDashboard() {
     if (isAuthenticated && isPlatformAdmin) fetchAdmins();
   }, [isAuthenticated, isPlatformAdmin, fetchAdmins]);
 
+  // Your platform role, so the screens only offer what you can do (MCX-4). Before migration 20261116 it errors: null allows all
+  const [platformRole, setPlatformRole] = useState<string | null>(null);
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !isAuthenticated || !isPlatformAdmin) return;
+    client.rpc('platform_admin_role').then(({ data }) => setPlatformRole(typeof data === 'string' ? data : null), () => setPlatformRole(null));
+  }, [isAuthenticated, isPlatformAdmin]);
+
+  // Coming back to Mission Control after a minute or more reloads Today, the club list and the badges (MCX-8)
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
+  useEffect(() => {
+    let hiddenAt = 0;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > 60000) setRefreshKey(k => k + 1);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  useEffect(() => {
+    if (refreshKey && isAuthenticated && isPlatformAdmin) fetchClubs('');
+  }, [refreshKey, isAuthenticated, isPlatformAdmin, fetchClubs]);
+
   // Open support requests, for the rail badge (the Support tab keeps it current)
   useEffect(() => {
     const client = getSupabaseClient();
     if (!client || !isAuthenticated || !isPlatformAdmin) return;
     client.from('support_requests').select('id', { count: 'exact', head: true }).eq('status', 'open')
       .then(({ count }) => setSupportOpen(count || 0));
-  }, [isAuthenticated, isPlatformAdmin]);
+  }, [isAuthenticated, isPlatformAdmin, refreshKey]);
 
   // Initial setup claim handler if no platform admins exist yet
   const handleClaimInitialAdmin = async () => {
@@ -243,23 +266,15 @@ export default function PlatformOwnerDashboard() {
     }
   };
 
-  // Add new platform admin
-  const handleAddAdmin = async (email: string, role: 'super_admin' | 'operator' | 'analyst') => {
-    const client = getSupabaseClient();
-    if (!client) return;
-    try {
-      const { error } = await client.rpc('add_platform_admin', {
-        p_email: email,
-        p_role: role,
-      });
-      if (error) {
-        notify(error.message);
-      } else {
-        showToast(`✓ Added ${email} as platform ${role}`);
-        fetchAdmins();
-      }
-    } catch (err: any) {
-      notify(err.message);
+  // Add a platform admin (invite emails them) or change someone's role, through the server so the invite email goes out (MCX-5)
+  const handleAddAdmin = async (email: string, role: 'super_admin' | 'operator' | 'analyst', invite: boolean) => {
+    const res = await platformApi<{ ok?: boolean; emailed?: boolean }>('admins', { email, role, invite });
+    if (res.ok) {
+      const label = role === 'super_admin' ? 'Super admin' : role === 'operator' ? 'Operator' : 'Analyst';
+      showToast(res.error ? res.error : invite ? `✓ Added ${email} as ${label} and emailed them` : `✓ ${email} is now ${label}`);
+      fetchAdmins();
+    } else {
+      notify(res.error || 'That didn\'t work');
     }
   };
 
@@ -297,20 +312,12 @@ export default function PlatformOwnerDashboard() {
     }
 
     try {
-      // Try RPC first
+      // No fallback to a direct table update: RLS lets only club admins write clubs, so it changed nothing yet looked like success (MCX-1)
       const { error } = await client.rpc('toggle_platform_club_status', {
         p_club_id: clubId,
         p_is_active: newStatus,
       });
-
-      if (error) {
-        // Fallback direct update
-        const { error: directError } = await client
-          .from('clubs')
-          .update({ is_active: newStatus })
-          .eq('id', clubId);
-        if (directError) throw directError;
-      }
+      if (error) throw error;
 
       showToast(newStatus ? '✓ Club successfully reactivated' : '✓ Club suspended');
 
@@ -334,16 +341,15 @@ export default function PlatformOwnerDashboard() {
     }
   };
 
-  // 1. Loading state
+  // 1. Loading state, in the same card as the locked screen (MCX-14)
   if (authLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
-        <PlatformNavbar />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-          <RefreshCw size={24} className="spin" style={{ marginRight: '0.75rem' }} />
-          <span>Verifying platform credentials...</span>
-        </div>
-        <Footer />
+      <div className="mc mc-locked">
+        <section className="mc-card mc-locked-card" role="status">
+          <span className="mc-sq" style={{ background: 'var(--mc-lilac)', color: 'var(--mc-indigo)', width: 44, height: 44 }}><RefreshCw size={20} className="spin" /></span>
+          <h1>Checking it&apos;s you</h1>
+          <p>One moment while Mission Control checks your sign-in.</p>
+        </section>
       </div>
     );
   }
@@ -351,22 +357,18 @@ export default function PlatformOwnerDashboard() {
   // 2. A platform admin who still needs the second sign-in step
   if (isAuthenticated && !isPlatformAdmin && listedRole) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)' }}>
-        <PlatformNavbar />
-        <main className="container" style={{ flex: 1, padding: '4rem 1rem', maxWidth: '680px', margin: 'auto' }}>
-          <div className="glass-panel" style={{ padding: '2.25rem' }}>
-            <div className="row" style={{ gap: '0.75rem', marginBottom: '0.75rem' }}>
-              <ShieldCheck size={26} style={{ color: 'var(--c-green)' }} aria-hidden="true" />
-              <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--text-primary)' }}>Two-step sign-in needed</h1>
-            </div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Mission Control now needs a code from an authenticator app as well as your password, so a stolen password alone can&apos;t open it.
-              Signed in as <strong>{user?.email}</strong>.
-            </p>
+      <div className="mc mc-locked">
+        <section className="mc-card mc-locked-card">
+          <span className="mc-sq" style={{ background: 'var(--mc-mint)', color: 'var(--mc-green-ink)', width: 44, height: 44 }}><ShieldCheck size={20} /></span>
+          <h1>Two-step sign-in needed</h1>
+          <p>
+            Mission Control needs a code from an authenticator app as well as your password, so a stolen password alone can&apos;t open it.
+          </p>
+          <div className="mc-locked-me"><small>Signed in as</small>{user?.email}</div>
+          <div className="mc-locked-2fa">
             <TwoStepSignIn reloadWhenOn intro="Set it up once with an app such as Google Authenticator or 1Password. If it's already on, enter today's code." />
           </div>
-        </main>
-        <Footer />
+        </section>
       </div>
     );
   }
@@ -413,7 +415,7 @@ export default function PlatformOwnerDashboard() {
   type NavItem = { id: TabType; label: string; icon: React.ElementType; count?: number; warn?: boolean };
   const GROUPS: { label: string; items: NavItem[] }[] = [
     { label: 'Work', items: [
-      { id: 'today', label: 'Today', icon: ListChecks },
+      { id: 'today', label: 'Today', icon: ListChecks, count: todayCount || undefined, warn: todayCount > 0 },
       { id: 'support', label: 'Support', icon: Inbox, count: supportOpen || undefined, warn: supportOpen > 0 },
       { id: 'clubs', label: 'Clubs', icon: Building, count: clubs.length || undefined, warn: clubsNeedingAttention > 0 },
       { id: 'users', label: 'People', icon: Users },
@@ -469,6 +471,7 @@ export default function PlatformOwnerDashboard() {
   };
 
   return (
+    <PlatformRole.Provider value={platformRole}>
     <div className={`mc${moreOpen ? ' mc-more-open' : ''}`}>
       {/* Floating Save Toast */}
       {toastMessage && (
@@ -502,7 +505,7 @@ export default function PlatformOwnerDashboard() {
         {BAR.map(id => {
           const item = ALL_NAV.find(i => i.id === id)!;
           const Icon = item.icon;
-          const badge = id === 'today' ? undefined : id === 'support' ? (supportOpen || undefined) : undefined;
+          const badge = id === 'today' ? (todayCount || undefined) : id === 'support' ? (supportOpen || undefined) : undefined;
           return (
             <button key={id} type="button" className="mc-tab" aria-current={activeTab === id && !moreOpen ? 'page' : undefined} onClick={() => go(id)}>
               <Icon size={19} aria-hidden="true" />
@@ -536,6 +539,9 @@ export default function PlatformOwnerDashboard() {
       )}
 
       <main className="mc-main">
+        {platformRole === 'analyst' && (
+          <p className="mc-card mc-role-note" role="note">You&apos;re an Analyst, so you can look at everything here but not change it. Ask a Super admin if you need more.</p>
+        )}
         {/* ACTIVE TAB CONTENT */}
         {activeTab === 'today' && (
           <TodayTab
@@ -551,6 +557,8 @@ export default function PlatformOwnerDashboard() {
             onOpenTab={go}
             onOpenGroundSuggestions={() => { go('grounds'); setGroundsView('suggestions'); }}
             showToast={showToast}
+            refreshKey={refreshKey}
+            onCount={setTodayCount}
           />
         )}
 
@@ -602,7 +610,7 @@ export default function PlatformOwnerDashboard() {
             clubs={clubs}
             loading={loadingClubs}
             onSelectClub={openClub}
-            onNewClub={() => { closeClub(); setNewClubOpen(true); window.scrollTo({ top: 0 }); }}
+            onNewClub={platformRole === 'analyst' ? undefined : () => { closeClub(); setNewClubOpen(true); window.scrollTo({ top: 0 }); }}
           />
         ))}
 
@@ -656,5 +664,6 @@ export default function PlatformOwnerDashboard() {
         onRemoveAdmin={handleRemoveAdmin}
       />
     </div>
+    </PlatformRole.Provider>
   );
 }

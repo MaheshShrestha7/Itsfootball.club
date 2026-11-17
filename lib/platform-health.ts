@@ -19,6 +19,7 @@ export async function collectHealth(db: SupabaseClient, opts: { domains: boolean
   const since = new Date(Date.now() - DAY_MS).toISOString();
 
   const { ms: dbMs, error: dbError } = await timeDatabase(db);
+  const missingMigrations = dbError ? undefined : await findMissingMigrations(db);
 
   const [sent, failed, stripeAll, stripeBad, stripeLast, connected, needDetails, jobs, domains] = await Promise.all([
     db.from('email_log').select('key', { count: 'exact', head: true }).gte('sent_at', since),
@@ -58,6 +59,7 @@ export async function collectHealth(db: SupabaseClient, opts: { domains: boolean
     domains,
     dbMs,
     dbError,
+    missingMigrations,
   };
   return { checkedAt: new Date().toISOString(), signals: healthSignals(input), failures: failures.slice(0, 50) };
 }
@@ -79,6 +81,36 @@ export async function timeDatabase(db: SupabaseClient, samples = DB_SAMPLES): Pr
     best = Math.min(best, Date.now() - t0);
   }
   return { ms: best, error: null };
+}
+
+/** One table or column each migration adds, newest last. Only migrations that add one are listed. */
+export const MIGRATION_PROBES: { file: string; table: string; column?: string }[] = [
+  { file: '20261145_mission_control_phase1.sql', table: 'platform_club_notes' },
+  { file: '20261146_mission_control_phase2.sql', table: 'support_requests' },
+  { file: '20261149_mission_control_overview.sql', table: 'payments', column: 'booking_fee_cents' },
+  { file: '20261160_club_admin_invites.sql', table: 'club_admin_invites' },
+  { file: '20261162_home_demo_club.sql', table: 'platform_home_demo' },
+  { file: '20261168_dashboard_budget_cash.sql', table: 'club_opening_balance' },
+  { file: '20261169_event_fixtures.sql', table: 'matches', column: 'event_id' },
+  { file: '20261170_tactics_boards.sql', table: 'match_tactics' },
+  { file: '20261171_event_gallery.sql', table: 'media_gallery', column: 'event_id' },
+  { file: '20261173_match_reviews.sql', table: 'match_reviews' },
+  { file: '20261174_cup_report_share.sql', table: 'cup_reviews', column: 'share_token' },
+  { file: '20261175_event_wrapup.sql', table: 'event_reviews' },
+  { file: '20261176_event_writeup.sql', table: 'events', column: 'writeup_note' },
+  { file: '20261177_mission_control_features.sql', table: 'platform_support_access' },
+];
+
+/** Postgres and PostgREST codes for "no such table / column"; anything else is a hiccup, not a missing migration */
+const MISSING = new Set(['42P01', '42703', 'PGRST204', 'PGRST205']);
+
+/** Which migrations haven't run, found by asking for what each one adds (no rows are read) */
+export async function findMissingMigrations(db: SupabaseClient): Promise<string[]> {
+  const checks = await Promise.all(MIGRATION_PROBES.map(async p => {
+    const { error } = await db.from(p.table).select(p.column || '*', { head: true }).limit(1);
+    return error && MISSING.has(error.code || '') ? p.file : null;
+  }));
+  return checks.filter((f): f is string => !!f);
 }
 
 /** Each club domain's Cloudflare status; null when Cloudflare isn't set up */

@@ -243,3 +243,8 @@ assert.equal(missionUrl('?tab=support&request=r1', { tab: 'log' }), '?tab=log');
   assert.equal(gameState({ status: 'upcoming', match_date: '2026-11-16T09:00:00Z', match_time: null }, t), 'later');
 }
 console.log('mission-control: ok');
+// MCX-7: missing migrations are amber (never emailed), named in the summary; not checked = no light
+assert.equal(light({ missingMigrations: [] }, 'migrations'), 'green');
+assert.equal(light({ missingMigrations: ['20261177_mission_control_features.sql'] }, 'migrations'), 'amber');
+assert.ok(healthSignals({ ...base, missingMigrations: ['a.sql', 'b.sql'] }, NOW).find(s => s.key === 'migrations')!.summary.includes('a.sql, b.sql'));
+assert.equal(healthSignals(base, NOW).some(s => s.key === 'migrations'), false);

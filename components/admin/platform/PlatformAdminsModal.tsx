@@ -3,18 +3,30 @@
 import React, { useState } from 'react';
 import { PlatformAdmin } from '@/lib/supabase/types';
 import { formatDate } from '@/lib/dates';
-import { ShieldCheck, X, UserPlus, Trash2 } from 'lucide-react';
+import { ShieldCheck, X, UserPlus } from 'lucide-react';
 import PopupPanel from '@/components/PopupPanel';
+import { useIsSuperAdmin } from '@/components/admin/platform/api';
+
+type Role = PlatformAdmin['role'];
 
 interface PlatformAdminsModalProps {
   isOpen: boolean;
   onClose: () => void;
   adminsList: PlatformAdmin[];
   currentAdminEmail?: string;
-  onAddAdmin: (email: string, role: 'super_admin' | 'operator' | 'analyst') => Promise<void>;
+  /** Adds someone (invite: true emails them) or changes the role of someone already on the list */
+  onAddAdmin: (email: string, role: Role, invite: boolean) => Promise<void>;
   onRemoveAdmin: (email: string) => Promise<void>;
 }
 
+const ROLES: { id: Role; label: string; what: string }[] = [
+  { id: 'analyst', label: 'Analyst', what: 'Looks at everything, changes nothing.' },
+  { id: 'operator', label: 'Operator', what: 'Suspends clubs, answers support, posts broadcasts, edits grounds.' },
+  { id: 'super_admin', label: 'Super admin', what: 'Everything, including adding and removing admins.' },
+];
+const roleLabel = (r: Role) => ROLES.find(x => x.id === r)?.label || r;
+
+/** Manage admins: who can open Mission Control, and what each of them can do (MCX-5, MCX-12). */
 export default function PlatformAdminsModal({
   isOpen,
   onClose,
@@ -23,161 +35,107 @@ export default function PlatformAdminsModal({
   onAddAdmin,
   onRemoveAdmin,
 }: PlatformAdminsModalProps) {
+  const isSuper = useIsSuperAdmin();
   const [newAdminEmail, setNewAdminEmail] = useState('');
-  const [newAdminRole, setNewAdminRole] = useState<'super_admin' | 'operator' | 'analyst'>('super_admin');
-  const [saving, setSaving] = useState(false);
+  // No default: a new admin's power is always a deliberate choice
+  const [newAdminRole, setNewAdminRole] = useState<Role | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAdminEmail.trim()) return;
-    setSaving(true);
+    if (!newAdminEmail.trim() || !newAdminRole) return;
+    setSaving('new');
     try {
-      await onAddAdmin(newAdminEmail.trim().toLowerCase(), newAdminRole);
+      await onAddAdmin(newAdminEmail.trim().toLowerCase(), newAdminRole, true);
       setNewAdminEmail('');
+      setNewAdminRole(null);
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   };
 
+  const changeRole = async (adm: PlatformAdmin, role: Role) => {
+    if (role === adm.role) return;
+    setSaving(adm.email);
+    try { await onAddAdmin(adm.email, role, false); } finally { setSaving(null); }
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-      }}
-      onClick={e => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <PopupPanel onClose={onClose} label="Platform admins" className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '1.75rem', background: 'rgb(var(--dk-9-13-22))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={22} color="#818CF8" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Platform Super-Admins
-            </h3>
+    <div className="mc-cp-scrim" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <PopupPanel onClose={onClose} label="Platform admins" className="mc-cp">
+        <header className="mc-cp-h">
+          <div className="mc-cp-top">
+            <span className="mc-sq tone-new"><ShieldCheck size={18} aria-hidden="true" /></span>
+            <div className="who">
+              <h2>Platform admins</h2>
+              <small>Who can open Mission Control</small>
+            </div>
+            <button type="button" className="mc-icon-btn" onClick={onClose} aria-label="Close"><X size={15} /></button>
           </div>
-          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
-            <X size={20} aria-hidden="true" />
-          </button>
-        </div>
+        </header>
 
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-          Platform admins have global authority to access this control room, review metrics, inspect clubs, and manage announcements.
-        </p>
+        <section className="mc-cp-sec" aria-labelledby="mc-adm-roles">
+          <h3 id="mc-adm-roles">What each role can do</h3>
+          <dl className="mc-kv mc-kv-left">
+            {ROLES.map(r => <React.Fragment key={r.id}><dt>{r.label}</dt><dd>{r.what}</dd></React.Fragment>)}
+          </dl>
+        </section>
 
-        {/* Existing Admins List */}
-        <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Platform admins ({adminsList.length})
-          </div>
-          {adminsList.map(adm => (
-            <div
-              key={adm.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.65rem 0.85rem',
-                background: 'rgba(var(--tint-rgb), 0.04)',
-                borderRadius: '6px',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
-                  {adm.email} {adm.email === currentAdminEmail && <span style={{ color: 'var(--c-green)', fontSize: '0.72rem' }}>(You)</span>}
+        <section className="mc-cp-sec" aria-labelledby="mc-adm-list">
+          <h3 id="mc-adm-list">On the list <span className="mc-muted num">{adminsList.length}</span></h3>
+          {adminsList.map(adm => {
+            const me = adm.email === currentAdminEmail;
+            return (
+              <div key={adm.id} className="mc-person">
+                <div className="who">
+                  <b>{adm.full_name || adm.email}{me ? ' (you)' : ''}</b>
+                  {adm.full_name && <small>{adm.email}</small>}
+                  <small>Added {formatDate(adm.created_at)}{adm.user_id ? '' : ', has not signed in yet'}</small>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Role: <strong style={{ color: '#818CF8' }}>{adm.role}</strong> · Added {formatDate(adm.created_at)}
+                <div className="acts">
+                  {isSuper && !me ? (
+                    <>
+                      <label htmlFor={`mc-adm-role-${adm.id}`} className="sr-only">Role for {adm.email}</label>
+                      <select id={`mc-adm-role-${adm.id}`} className="mc-select" value={adm.role} disabled={saving === adm.email} onChange={e => changeRole(adm, e.target.value as Role)}>
+                        {ROLES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                      </select>
+                      <button type="button" className="mc-pill-btn danger" onClick={() => onRemoveAdmin(adm.email)}>Remove</button>
+                    </>
+                  ) : (
+                    <span className={`mc-flag${adm.role === 'super_admin' ? ' info' : ''}`}>{roleLabel(adm.role)}</span>
+                  )}
                 </div>
               </div>
+            );
+          })}
+        </section>
 
-              {adm.email !== currentAdminEmail && (
-                <button
-                  type="button"
-                  onClick={() => onRemoveAdmin(adm.email)}
-                  style={{ background: 'none', border: 'none', color: 'var(--c-red)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-                >
-                  Revoke
+        {isSuper ? (
+          <section className="mc-cp-sec" aria-labelledby="mc-adm-add">
+            <h3 id="mc-adm-add">Add someone</h3>
+            <form className="mc-cp-form" onSubmit={handleSubmit}>
+              <label htmlFor="mc-adm-email" className="sr-only">Their email</label>
+              <input id="mc-adm-email" className="mc-input" type="email" required placeholder="Their email" value={newAdminEmail} onChange={e => setNewAdminEmail(e.target.value)} />
+              <div className="mc-seg" role="radiogroup" aria-label="Their role">
+                {ROLES.map(r => (
+                  <button key={r.id} type="button" role="radio" aria-checked={newAdminRole === r.id} aria-pressed={newAdminRole === r.id} onClick={() => setNewAdminRole(r.id)}>{r.label}</button>
+                ))}
+              </div>
+              <p className="mc-muted">We email them how to get in. Someone without an account gets access once they sign up with this email.</p>
+              <div>
+                <button type="submit" className="mc-pill-btn" disabled={saving === 'new' || !newAdminEmail.trim() || !newAdminRole}>
+                  <UserPlus size={14} aria-hidden="true" /> {saving === 'new' ? 'Adding…' : newAdminRole ? `Add as ${roleLabel(newAdminRole)}` : 'Pick a role first'}
                 </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Add New Admin Form */}
-        <form onSubmit={handleSubmit} style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.25rem' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.6rem' }}>
-            Invite a platform admin
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <input
-              type="email"
-              required
-              placeholder="Enter email (e.g. founder@domain.com)"
-              value={newAdminEmail}
-              onChange={e => setNewAdminEmail(e.target.value)}
-              style={{
-                flex: 1,
-                padding: '0.55rem 0.75rem',
-                background: 'rgba(var(--shade-rgb), 0.5)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-              }}
-            />
-            <select
-              value={newAdminRole}
-              onChange={e => setNewAdminRole(e.target.value as any)}
-              style={{
-                padding: '0.55rem 0.75rem',
-                background: 'rgba(var(--shade-rgb), 0.5)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '0.85rem',
-              }}
-            >
-              <option value="super_admin">Super Admin</option>
-              <option value="operator">Operator</option>
-              <option value="analyst">Analyst</option>
-            </select>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: '-0.25rem 0 0.9rem' }}>
-            Super Admins can do everything, including adding and removing admins. Operators can suspend clubs, post
-            announcements and edit grounds. Analysts can only look. Someone without an account yet gets access once
-            they sign up and confirm this email address.
-          </p>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary btn-sm"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !newAdminEmail.trim()}
-              className="btn btn-sm"
-              style={{ background: '#6366F1', color: '#FFFFFF', border: 'none' }}
-            >
-              {saving ? 'Granting...' : 'Grant Access'}
-            </button>
-          </div>
-        </form>
+              </div>
+            </form>
+          </section>
+        ) : (
+          <section className="mc-cp-sec">
+            <p className="mc-muted">Only a Super admin can add, change or remove admins.</p>
+          </section>
+        )}
       </PopupPanel>
     </div>
   );

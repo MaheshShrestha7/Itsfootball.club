@@ -402,6 +402,8 @@ export interface HealthInput {
   dbMs: number;
   /** Set when the database returned an error instead of answering */
   dbError?: string | null;
+  /** Migration files that haven't run yet (see MIGRATION_PROBES in lib/platform-health.ts); undefined: not checked */
+  missingMigrations?: string[];
 }
 
 const ago = (iso: string | null, now: number) => (iso ? timeAgo(iso, now) : 'never');
@@ -453,6 +455,18 @@ export function healthSignals(i: HealthInput, now: number = Date.now()): HealthS
       light: i.dbMs < 300 ? 'green' : i.dbMs < 800 ? 'amber' : 'red',
       summary: `Answered in ${i.dbMs} ms from the server (best of 3 tries).`,
     });
+
+  // MCX-7: parts of Mission Control and club admin hide themselves until their migration runs. Amber, so it never emails.
+  if (i.missingMigrations) {
+    const m = i.missingMigrations;
+    out.push({
+      key: 'migrations', label: 'Database up to date',
+      light: m.length ? 'amber' : 'green',
+      summary: m.length
+        ? `${m.length === 1 ? 'This migration has' : `${m.length} migrations have`} not run yet: ${m.join(', ')}. Run ${m.length === 1 ? 'it' : 'them, oldest first,'} in the Supabase SQL editor. Until then the parts that need ${m.length === 1 ? 'it' : 'them'} stay hidden.`
+        : 'Every migration Mission Control checks for has run.',
+    });
+  }
   return out;
 }
 

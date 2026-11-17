@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { platformApi } from '@/components/admin/platform/api';
+import { platformApi, useCanChange } from '@/components/admin/platform/api';
 import StorageCleanup from '@/components/admin/platform/StorageCleanup';
 import { timeAgo, type Light } from '@/lib/mission-control';
 import type { HealthReport } from '@/lib/platform-health';
@@ -78,14 +78,15 @@ function EmailsCard() {
 }
 
 const LIGHT: Record<Light, { color: string; flag: string; word: string }> = {
-  red: { color: '#DC2626', flag: 'bad', word: 'Problem' },
-  amber: { color: '#F59E0B', flag: 'warn', word: 'Watch' },
-  green: { color: '#10B981', flag: 'ok', word: 'OK' },
-  grey: { color: '#94A3B8', flag: '', word: 'No data' },
+  red: { color: 'var(--mc-red)', flag: 'bad', word: 'Problem' },
+  amber: { color: 'var(--mc-amber)', flag: 'warn', word: 'Watch' },
+  green: { color: 'var(--mc-green)', flag: 'ok', word: 'OK' },
+  grey: { color: 'var(--mc-ink-3)', flag: '', word: 'No data' },
 };
 
 /** Real signals from platform_events and live checks (GET /api/platform/health). */
 export default function HealthTab({ showToast }: { showToast: (msg: string) => void }) {
+  const canChange = useCanChange();
   const [report, setReport] = useState<HealthReport | null>(null);
   const [stats, setStats] = useState<PlatformHealthStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,7 +156,7 @@ export default function HealthTab({ showToast }: { showToast: (msg: string) => v
                     <p>{s.summary}</p>
                   </div>
                   {job && (
-                    <button type="button" className="mc-pill-btn ghost" disabled={!!running} onClick={() => runJob(job)}>
+                    <button type="button" className="mc-pill-btn ghost" disabled={!!running || !canChange} onClick={() => runJob(job)}>
                       <Play size={13} /> {running === job ? 'Running…' : 'Run now'}
                     </button>
                   )}

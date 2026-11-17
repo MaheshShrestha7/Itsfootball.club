@@ -10,6 +10,8 @@ import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import PopupPanel from '@/components/PopupPanel';
 import { Crest } from '@/components/admin/platform/McArt';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useCanChange } from '@/components/admin/platform/api';
+import { notify } from '@/components/ConfirmDialog';
 import { X, Mail, Users, ExternalLink, Shield, Link2, Check } from 'lucide-react';
 
 interface ClubDetailDrawerProps {
@@ -39,6 +41,7 @@ export default function ClubDetailDrawer({
   showToast,
   onChanged,
 }: ClubDetailDrawerProps) {
+  const canChange = useCanChange();
   const [copiedLink, setCopiedLink] = React.useState(false);
   // The home page's "See a live club site" (F10-9): undefined while loading, 'missing' before migration 20261162
   const [demoId, setDemoId] = React.useState<string | null | 'missing' | undefined>(undefined);
@@ -51,6 +54,12 @@ export default function ClubDetailDrawer({
   }, [club]);
 
   if (!club) return null;
+
+  const goToAccess = () => {
+    const sec = document.getElementById('mc-cp-access-sec');
+    if (sec) { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); sec.querySelector<HTMLElement>('a, button:not([disabled]), input')?.focus({ preventScroll: true }); }
+    else notify('Support access is not on yet', 'Run migration 20261177_mission_control_features.sql, then ask the club\'s Owner for access here.');
+  };
 
   const isDemo = demoId === club.id;
   const setDemo = async (on: boolean) => {
@@ -91,13 +100,15 @@ export default function ClubDetailDrawer({
             </button>
           </div>
           <div className="mc-cp-acts">
-            <Link href={`/${club.slug}/admin`} target="_blank" className="mc-pill-btn"><Shield size={14} /> Enter club admin</Link>
+            {/* A platform admin only gets into a club's admin once its Owner approves support access (MCX-3) */}
+            <button type="button" className="mc-pill-btn" onClick={goToAccess}><Shield size={14} /> Club admin access</button>
             <Link href={`/${club.slug}`} target="_blank" className="mc-pill-btn ghost"><ExternalLink size={14} /> Open public site</Link>
-            <button type="button" className="mc-pill-btn ghost" onClick={() => onEmail({ club, to: 'owner', template: 'blank' })}><Mail size={14} /> Email owner</button>
-            <button type="button" className="mc-pill-btn ghost" onClick={() => onEmail({ club, to: 'admins', template: 'blank' })}><Users size={14} /> Email all admins</button>
+            <button type="button" className="mc-pill-btn ghost" disabled={!canChange} onClick={() => onEmail({ club, to: 'owner', template: 'blank' })}><Mail size={14} /> Email owner</button>
+            <button type="button" className="mc-pill-btn ghost" disabled={!canChange} onClick={() => onEmail({ club, to: 'admins', template: 'blank' })}><Users size={14} /> Email all admins</button>
           </div>
         </header>
 
+        <fieldset className="mc-fs" disabled={!canChange}>
         <ClubConsole
           key={club.id}
           club={club}
@@ -170,6 +181,7 @@ export default function ClubDetailDrawer({
             </div>
           }
         />
+        </fieldset>
       </PopupPanel>
     </div>
   );

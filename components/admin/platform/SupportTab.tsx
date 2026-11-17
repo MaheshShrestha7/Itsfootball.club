@@ -2,11 +2,12 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { platformApi } from '@/components/admin/platform/api';
+import { platformApi, useCanChange } from '@/components/admin/platform/api';
+import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { SUPPORT_SNIPPETS, setupSteps, timeAgo } from '@/lib/mission-control';
 import type { PlatformClubItem, PlatformFeatureRequest, SupportReply, SupportRequest } from '@/lib/supabase/types';
 import FeatureRequests, { FeatureTag } from '@/components/admin/platform/FeatureRequests';
-import { Send, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Send, RefreshCw, CheckCircle2, RotateCcw, ArrowLeft } from 'lucide-react';
 
 type Status = SupportRequest['status'];
 
@@ -37,6 +38,12 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [counts, setCounts] = useState<Record<Status, number>>({ open: 0, waiting: 0, done: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(initialId || null);
+  const canChange = useCanChange();
+  // Phones: a request opens as a full-screen panel over the list, like People (MCX-11)
+  const [open, setOpen] = useState(!!initialId);
+  const backBtn = useRef<HTMLButtonElement>(null);
+  useEscapeToClose(open, setOpen);
+  useEffect(() => { if (open) backBtn.current?.focus({ preventScroll: true }); }, [open, selectedId]);
   const [replies, setReplies] = useState<SupportReply[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -150,15 +157,16 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
           showToast={showToast}
         />
       ) : (
-        <div className="mc-users">
+        <div className={`mc-users mc-users-sheet${open ? ' is-open' : ''}`}>
           <div className="mc-card">
             <div className="mc-ulist">
               {!loading && shown.length === 0 && <p className="mc-muted" style={{ padding: 8 }}>Nothing here.</p>}
               {shown.map(r => (
-                <button key={r.id} type="button" className="mc-urow" aria-pressed={selected?.id === r.id} onClick={() => { setSelectedId(r.id); onSelectRequest?.(r.id); }}>
+                <button key={r.id} type="button" className="mc-urow" aria-pressed={selected?.id === r.id} onClick={() => { setSelectedId(r.id); setOpen(true); onSelectRequest?.(r.id); }}>
                   <div style={{ minWidth: 0 }}>
                     <b>{r.topic}</b>
-                    <small>{clubs.find(c => c.id === r.club_id)?.name || r.from_email} · {timeAgo(r.created_at)}</small>
+                    <small>{clubs.find(c => c.id === r.club_id)?.name || r.from_email}</small>
+                    <small>{timeAgo(r.created_at)}</small>
                   </div>
                 </button>
               ))}
@@ -167,7 +175,10 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
 
           {selected ? (
             <div className="mc-col">
-              <div className="mc-card">
+              <div className="mc-sheet-bar">
+                <button ref={backBtn} type="button" className="mc-pill-btn ghost" onClick={() => setOpen(false)}><ArrowLeft size={16} aria-hidden="true" /> Support</button>
+              </div>
+              <fieldset className="mc-fs mc-card" disabled={!canChange}>
                 <div className="mc-card-h" style={{ flexWrap: 'wrap', gap: 8 }}>
                   <h3>{selected.topic}</h3>
                   {selected.status === 'done'
@@ -176,13 +187,15 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
                 </div>
                 <div className="mc-msg">
                   <small>
-                    <b>{selected.from_name || selected.from_email}</b> · {selected.from_email} · {new Date(selected.created_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}
+                    <b>{selected.from_name || selected.from_email}</b>
+                    {selected.from_name ? <span>{selected.from_email}</span> : null}
+                    <time dateTime={selected.created_at}>{new Date(selected.created_at).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</time>
                   </small>
                   <p>{selected.message}</p>
                 </div>
                 {replies.map(r => (
                   <div key={r.id} className="mc-msg me">
-                    <small><b>{r.author_email || 'You'}</b> · {timeAgo(r.created_at)}{r.emailed ? '' : ' · not emailed'}</small>
+                    <small><b>{r.author_email || 'You'}</b><time dateTime={r.created_at}>{timeAgo(r.created_at)}</time>{r.emailed ? null : <span className="mc-flag warn">Not emailed</span>}</small>
                     <p>{r.body}</p>
                   </div>
                 ))}
@@ -210,11 +223,17 @@ export default function SupportTab({ clubs, initialId, onSelectClub, onSearchPeo
                     <button type="button" className="mc-pill-btn" disabled={sending || !draft.trim()} onClick={() => send('done')}><Send size={14} /> Send and mark done</button>
                   </span>
                 </div>
-              </div>
+              </fieldset>
 
               <div className="mc-card">
                 <div className="mc-card-h"><h3>{club ? club.name : 'No club'}</h3></div>
-                {club && <p className="mc-muted" style={{ margin: '0 0 10px' }}>Setup {steps.filter(s => s.done).length} of {steps.length} · {club.member_count} members · {club.stripe_ready ? 'Stripe on' : 'no Stripe'}</p>}
+                {club && (
+                  <dl className="mc-kv" style={{ marginBottom: 10 }}>
+                    <dt>Setup</dt><dd className="num">{steps.filter(s => s.done).length} of {steps.length}</dd>
+                    <dt>Members</dt><dd className="num">{club.member_count}</dd>
+                    <dt>Card payments</dt><dd>{club.stripe_ready ? 'Stripe connected' : 'No Stripe'}</dd>
+                  </dl>
+                )}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {club && <button type="button" className="mc-pill-btn ghost" onClick={() => onSelectClub(club)}>Open club console</button>}
                   <button type="button" className="mc-pill-btn ghost" onClick={() => onSearchPeople(selected.from_email)}>Look up {selected.from_name || 'the sender'}</button>

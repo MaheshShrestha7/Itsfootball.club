@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
+import { useCanChange } from '@/components/admin/platform/api';
 
 interface BroadcastsTabProps {
   showToast: (msg: string) => void;
@@ -31,6 +32,7 @@ const dayStart = (d: string) => (d ? new Date(`${d}T00:00:00`).toISOString() : n
 const dayEnd = (d: string) => (d ? new Date(`${d}T23:59:59`).toISOString() : null);
 
 export default function BroadcastsTab({ showToast, clubs }: BroadcastsTabProps) {
+  const canChange = useCanChange();
   const [announcements, setAnnouncements] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -196,7 +198,7 @@ export default function BroadcastsTab({ showToast, clubs }: BroadcastsTabProps) 
   const PreviewIcon = preview.icon;
 
   return (
-    <div>
+    <fieldset className="mc-fs" disabled={!canChange}>
       <div className="mc-page-h">
         <div>
           <h1>Broadcasts</h1>
@@ -360,6 +362,6 @@ export default function BroadcastsTab({ showToast, clubs }: BroadcastsTabProps) 
           </form>
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }
