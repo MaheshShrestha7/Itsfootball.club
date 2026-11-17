@@ -13,7 +13,7 @@ import { isUuid } from '@/lib/ids';
 //   GET    ?clubId=           switches, setup status, opt-out count, recent sends
 //   PATCH  { clubId, settings }   save the automatic-reminder switches
 //   POST   { clubId, kind, refId?, audience?, message?, memberId?, send? }
-//          (memberId: a renewal email to that one member, from Members Administration)
+//          (memberId / memberIds: a renewal email to that member / those ticked members, from Member passes)
 //          without send: who would get it + a preview; with send: true: sends it
 
 const MAX_RECIPIENTS = 2000;
@@ -89,7 +89,9 @@ export async function POST(req: NextRequest) {
     audience: body.audience === 'players' ? 'players' : 'members',
     message: typeof body.message === 'string' ? body.message : undefined,
     memberId: body.kind === 'renewal' && isUuid(body.memberId) ? body.memberId : undefined,
+    memberIds: body.kind === 'renewal' && Array.isArray(body.memberIds) ? [...new Set(body.memberIds)].filter(isUuid) : undefined,
   };
+  if (request.memberIds && request.memberIds.length > MAX_RECIPIENTS) return NextResponse.json({ error: `A notice can go to at most ${MAX_RECIPIENTS} people.` }, { status: 400 });
 
   const prepared = await prepareNotice(db, club, request);
   if (!prepared.ok) return NextResponse.json({ error: prepared.error }, { status: prepared.status });

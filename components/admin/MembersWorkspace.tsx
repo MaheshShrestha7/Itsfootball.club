@@ -37,6 +37,7 @@ import { formatMoney, parseMoneyToCents, policyAllowsWaiver, MEMBERSHIP_PAYMENT_
 import { useMemberHealth } from '@/lib/use-member-health';
 import MedicalNote from '@/components/admin/MedicalNote';
 import PopupPanel from '@/components/PopupPanel';
+import BulkRenewal, { hasExpired, isDueForRenewal } from '@/components/admin/BulkRenewal';
 
 /** '2026-10-01' or an ISO timestamp as "1 Oct 2026"; date-only values stay on their calendar day */
 function formatDate(value: string | null | undefined) {
@@ -179,6 +180,7 @@ export default function MembersWorkspace({
 
   // Last paid renewal per member (newest first, so the first one seen wins)
   const [lastRenewed, setLastRenewed] = useState<Record<string, string>>({});
+  const [renewedAt, setRenewedAt] = useState(0);
   useEffect(() => {
     getSupabaseClient()?.from('payments').select('member_id, paid_at')
       .eq('club_id', club.id).eq('kind', 'membership_renewal').eq('status', 'paid').not('paid_at', 'is', null)
@@ -188,7 +190,12 @@ export default function MembersWorkspace({
         (data || []).forEach(p => { if (p.member_id && !latest[p.member_id]) latest[p.member_id] = p.paid_at; });
         setLastRenewed(latest);
       });
-  }, [club.id]);
+  }, [club.id, renewedAt]);
+
+  // Member passes: ticked members for renewing in bulk, and a quick filter to find them
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [passFilter, setPassFilter] = useState<'all' | 'due' | 'expired'>('all');
+  const togglePick = (id: string) => setPicked(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
 
   // Renewal reminder email to one member (same email as the bulk notice in Email Notifications)
   const [sendingRenewal, setSendingRenewal] = useState<string | null>(null);
@@ -331,7 +338,7 @@ export default function MembersWorkspace({
     activeTab === 'pending'
       ? filterList(pendingMembers)
       : activeTab === 'active'
-      ? filterList(approvedMembers)
+      ? filterList(approvedMembers.filter(m => passFilter === 'all' || (passFilter === 'due' ? isDueForRenewal(m) : hasExpired(m))))
       : filterList(rejectedMembers);
 
   return (
@@ -420,6 +427,34 @@ export default function MembersWorkspace({
           {activeTab === 'pending' ? `${pendingMembers.length} waiting` : activeTab === 'active' ? `${approvedMembers.length} members` : `${rejectedMembers.length} rejected`}
         </span>
 
+        {activeTab === 'active' && (() => {
+          const shownIds = displayedList.map(m => m.id);
+          const allPicked = shownIds.length > 0 && shownIds.every(id => picked.has(id));
+          const chips = [
+            { id: 'all' as const, label: 'All', count: approvedMembers.length },
+            { id: 'due' as const, label: 'Due for renewal', count: approvedMembers.filter(m => isDueForRenewal(m)).length },
+            { id: 'expired' as const, label: 'Expired', count: approvedMembers.filter(m => hasExpired(m)).length },
+          ];
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem 1rem', marginRight: 'auto' }}>
+              <div className="admin-chips" role="group" aria-label="Show">
+                {chips.map(c => (
+                  <button key={c.id} type="button" data-view-ok className="admin-chip" aria-pressed={passFilter === c.id} onClick={() => setPassFilter(c.id)}>
+                    {c.label} <span className="num">{c.count}</span>
+                  </button>
+                ))}
+              </div>
+              {shownIds.length > 0 && (
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={allPicked} style={{ width: 18, height: 18, accentColor: 'var(--club-primary)' }}
+                    onChange={() => setPicked(prev => { const next = new Set(prev); shownIds.forEach(id => allPicked ? next.delete(id) : next.add(id)); return next; })} />
+                  Select all {shownIds.length}
+                </label>
+              )}
+            </div>
+          );
+        })()}
+
         {(
           <div style={{ position: 'relative', minWidth: 'min(240px, 100%)' }}>
             <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -469,13 +504,17 @@ export default function MembersWorkspace({
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                       position: 'relative',
-                      ...(member.id === focusMemberId ? { boxShadow: '0 0 0 2px var(--club-primary)' } : {}),
+                      ...(member.id === focusMemberId || (activeTab === 'active' && picked.has(member.id)) ? { boxShadow: '0 0 0 2px var(--club-primary)' } : {}),
                     }}
                   >
                     <div>
                       {/* Top Header of Card */}
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <div className="row row-loose">
+                          {activeTab === 'active' && (
+                            <input type="checkbox" aria-label={`Select ${member.full_name}`} checked={picked.has(member.id)} onChange={() => togglePick(member.id)}
+                              style={{ width: 18, height: 18, flex: 'none', accentColor: 'var(--club-primary)', cursor: 'pointer' }} />
+                          )}
                           <PlayerAvatar photoUrl={member.photo_url} name={member.full_name} size={46} style={{ borderRadius: '12px', border: '1px solid var(--border-subtle)' }} />
                           <div>
                             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
@@ -1056,6 +1095,18 @@ export default function MembersWorkspace({
             </div>
           </PopupPanel>
         </div>
+      )}
+
+      {activeTab === 'active' && (
+        <BulkRenewal club={club} plans={plans} currency={currency}
+          picked={approvedMembers.filter(m => picked.has(m.id))}
+          onClear={() => setPicked(new Set())}
+          onDone={(message, changedIds) => {
+            showToast(message);
+            setPicked(new Set());
+            changedIds.forEach(id => refreshMemberRow(id));
+            if (changedIds.length) setRenewedAt(Date.now());
+          }} />
       )}
 
       {/* Record Payment Modal */}
