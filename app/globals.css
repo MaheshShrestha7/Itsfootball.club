@@ -5046,3 +5046,9 @@ dialog.pc-dialog[open] { animation: pc-in 180ms cubic-bezier(0.23, 1, 0.32, 1); 
   .evp-flyer { min-height: 200px; }
   .evp-main .match-article-in { padding: 1.25rem; }
 }
+
+/* Event slide with a flyer: the right side is the poster itself, not a second copy of the event's words */
+.club-hero-flyer { position: relative; display: flex; justify-content: center; height: 360px; overflow: hidden; background: rgba(0, 0, 0, 0.35); }
+.club-hero-flyer img { position: relative; height: 100%; max-width: 100%; object-fit: contain; }
+@media (max-width: 640px) { .club-hero-flyer { height: 220px; } }
+.club-hero-countdown > p { margin: 0.75rem 0 0; font-size: 0.95rem; color: var(--text-secondary); }
