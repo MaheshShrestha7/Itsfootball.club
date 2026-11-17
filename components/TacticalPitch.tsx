@@ -1379,7 +1379,15 @@ export default function TacticalPitch({
                   {sub.player_position && (
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{sub.player_position}</span>
                   )}
-                  {badges.hasGoal && <span title="Goal">⚽</span>}
+                  {badges.hasGoal && (
+                    // A drawn ball, not the emoji: the same on every phone (as on the public player page)
+                    <svg viewBox="0 0 24 24" width={13} height={13} role="img" aria-label="Goal" style={{ flexShrink: 0 }}>
+                      <title>Goal</title>
+                      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="2" />
+                      <path d="M12 8l3.4 2.5-1.3 4h-4.2l-1.3-4z" fill="currentColor" />
+                      <path d="M12 2.5V8M15.4 10.5l5.2-1.8M14.1 14.5l3.3 4.4M9.9 14.5l-3.3 4.4M8.6 10.5L3.4 8.7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
+                  )}
                   {badges.hasRed ? (
                     <span title="Red Card" style={{ width: '8px', height: '11px', borderRadius: '2px', background: '#EF4444' }} />
                   ) : badges.hasYellow ? (

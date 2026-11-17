@@ -281,7 +281,7 @@ export default function PublicTournamentView({ slug, fallbackName }: { slug: str
   const live = matches.filter(m => m.status === 'live' || m.status === 'halftime');
   const start = parseTournamentDate(tournament.start_date);
   const canManage = hasClubAdminAccess(club.id);
-  const formatLabel = [FORMAT_LABELS[tournament.format] || 'Tournament', config.team_size].filter(Boolean).join(' · ');
+  const formatLabel = [FORMAT_LABELS[tournament.format] || 'Tournament', config.team_size].filter(Boolean).join(', ');
   const sponsors = (config.sponsors || []).filter(s => s?.name);
   const progress = tournamentProgress(matches);
   const teamNames = participants.map(p => p.name);

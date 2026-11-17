@@ -186,8 +186,8 @@ export default function ClubIdentitySection({
       <div className="container">
         <p className="cn-club" style={reveal(0)}>
           <b>{club.name}</b>
-          {club.founded_year ? <> · Est. {club.founded_year}</> : null}
-          {club.motto ? <> · &ldquo;{club.motto}&rdquo;</> : null}
+          {club.founded_year ? <>, est. {club.founded_year}</> : null}
+          {club.motto ? <>, &ldquo;{club.motto}&rdquo;</> : null}
         </p>
         <h2 id="club-numbers-heading" className="cn-title" style={reveal(0)}>{n.season} season</h2>
 
@@ -232,7 +232,7 @@ export default function ClubIdentitySection({
 
               {seasonGames && n.allTimeGames > n.games && (
                 <div className="cn-alltime">
-                  All time: {n.allTimeGames} {plural(n.allTimeGames, 'game', 'games')} · {n.allTimeGoals} {plural(n.allTimeGoals, 'goal', 'goals')}
+                  All time: {n.allTimeGames} {plural(n.allTimeGames, 'game', 'games')}, {n.allTimeGoals} {plural(n.allTimeGoals, 'goal', 'goals')}
                 </div>
               )}
             </div>
@@ -250,9 +250,9 @@ export default function ClubIdentitySection({
                     {n.upcomingEvents > 0 && <span className="cn-tile-sub">{n.upcomingEvents} coming up</span>}
                     {n.eventSignups > 0 && <span className="cn-tile-sub">{n.eventSignups} {plural(n.eventSignups, 'sign-up', 'sign-ups')}</span>}
                     {n.eventTypes.length > 0 && (
-                      <span className="cn-tile-sub">{n.eventTypes.map(t => `${t.count} ${t.label}`).join(' · ')}</span>
+                      <span className="cn-tile-sub">{n.eventTypes.map(t => `${t.count} ${t.label}`).join(', ')}</span>
                     )}
-                    <span className="cn-go">Events →</span>
+                    <span className="cn-go">Events</span>
                   </Link>
                 )}
                 {n.sponsors > 0 && (
@@ -263,9 +263,9 @@ export default function ClubIdentitySection({
                     <span className="cn-tile-label">{plural(n.sponsors, 'Sponsor', 'Sponsors')}</span>
                     <span className="cn-tile-sub">Backing the club</span>
                     {n.sponsorTiers.length > 0 && (
-                      <span className="cn-tile-sub">{n.sponsorTiers.map(t => `${t.count} ${t.label}`).join(' · ')}</span>
+                      <span className="cn-tile-sub">{n.sponsorTiers.map(t => `${t.count} ${t.label}`).join(', ')}</span>
                     )}
-                    <span className="cn-go">Become a sponsor →</span>
+                    <span className="cn-go">Become a sponsor</span>
                   </Link>
                 )}
               </div>
@@ -278,7 +278,7 @@ export default function ClubIdentitySection({
                     <>
                       <span className="cn-v"><AnimatedCounter value={r.value} enabled={isInView} duration={850} /></span>
                       <span className="cn-t">{r.label}</span>
-                      {r.go ? <span className="cn-go">{r.go} →</span> : <span />}
+                      {r.go ? <span className="cn-go">{r.go}</span> : <span />}
                     </>
                   );
                   return (

@@ -21,7 +21,7 @@ const H1 = 'Free football tools for coaches, clubs and organisers';
 export const metadata = pageMetadata({ title: TITLE, description: DESCRIPTION, path: TOOLS_HUB.path, image: toolOgImage(TOOLS_HUB.path) });
 
 const GROUP_ICONS = TOOL_GROUP_ICONS;
-const MORE = { id: 'guides-and-grounds', short: 'Guides & grounds', color: 'var(--c-purple)' };
+const MORE = { id: 'guides-and-grounds', short: 'Guides & grounds' };
 
 // "Which tool do I need?": the job someone has in mind, and the tool that does it
 const NEEDS: { need: string; tool: ToolPageLink; answer: string }[] = [
@@ -75,15 +75,13 @@ const schema = {
   ],
 };
 
-const iconStyle = (color: string): CSSProperties => ({
-  width: 38, height: 38, borderRadius: 11, display: 'grid', placeItems: 'center', flexShrink: 0,
-  background: `color-mix(in srgb, ${color} 16%, transparent)`, color,
-});
+// One colour for every group, the site's green: a plain icon beside the heading, no coloured tile
+const iconStyle: CSSProperties = { display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: '0.3rem', color: 'var(--club-ink)' };
 
-function GroupHeading({ id, heading, blurb, Icon, color }: { id: string; heading: string; blurb: string; Icon: LucideIcon; color: string }) {
+function GroupHeading({ id, heading, blurb, Icon }: { id: string; heading: string; blurb: string; Icon: LucideIcon }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1rem' }}>
-      <span style={iconStyle(color)} aria-hidden="true"><Icon size={19} /></span>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.7rem', marginBottom: '1rem' }}>
+      <span style={iconStyle} aria-hidden="true"><Icon size={22} /></span>
       <div>
         <h2 id={`${id}-h`} style={{ ...h2Style, marginBottom: '0.2rem' }}>{heading}</h2>
         <p style={{ ...bodyStyle, margin: 0 }}>{blurb}</p>
@@ -93,11 +91,11 @@ function GroupHeading({ id, heading, blurb, Icon, color }: { id: string; heading
 }
 
 /** One main tool: its example output, what it does, and its format pages as "Start with" buttons */
-function ToolCard({ tool, color }: { tool: ToolPageLink; color: string }) {
+function ToolCard({ tool }: { tool: ToolPageLink }) {
   const example = toolExample(tool.path);
   const formats = TOOL_FORMATS[tool.path] ?? [];
   return (
-    <article className="glass-panel tool-card" style={{ '--tc': color } as CSSProperties}>
+    <article className="glass-panel tool-card">
       {example && (
         <Link href={tool.path} className="tool-card-thumb" tabIndex={-1} aria-hidden="true">
           <img src={example.src} width={example.width} height={example.height} alt="" loading="lazy" decoding="async" />
@@ -128,12 +126,12 @@ function ToolCard({ tool, color }: { tool: ToolPageLink; color: string }) {
 
 function GroupSection({ index }: { index: number }) {
   const g = TOOL_GROUPS[index];
-  const { Icon, color } = GROUP_ICONS[g.id];
+  const { Icon } = GROUP_ICONS[g.id];
   return (
     <section id={g.id} className="tools-group" aria-labelledby={`${g.id}-h`}>
-      <GroupHeading id={g.id} heading={g.heading} blurb={g.blurb} Icon={Icon} color={color} />
+      <GroupHeading id={g.id} heading={g.heading} blurb={g.blurb} Icon={Icon} />
       <div className="tool-cards">
-        {g.main.map(t => <ToolCard key={t.path} tool={t} color={color} />)}
+        {g.main.map(t => <ToolCard key={t.path} tool={t} />)}
       </div>
     </section>
   );
@@ -150,22 +148,19 @@ export default function ToolsHubPage() {
 
       <main className="container" style={{ padding: '2.6rem 1rem 3rem', flex: 1, maxWidth: '1120px' }}>
         <header style={{ textAlign: 'center', marginBottom: '1.4rem' }}>
-          <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE TOOLS · NO SIGN-UP</div>
           <h1 style={{ fontSize: 'clamp(1.9rem, 5vw, 2.6rem)', fontWeight: 900, lineHeight: 1.1 }}>{H1}</h1>
           {/* Answer first: the sentence search and AI engines lift as the summary */}
           <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', margin: '0.9rem auto 0', fontSize: '1.02rem', lineHeight: 1.6 }}>
-            Free soccer tools for grassroots football: build a lineup, plan fair substitutions, post your full-time result, make a player card,
-            run a tournament with a live bracket and set the season&apos;s fees. They work in the browser on a phone or
-            computer, with no sign-up and nothing to install.
+            Free tools for grassroots football that work on a phone or computer, with no sign-up and nothing to install.
           </p>
           <ToolUpdated />
         </header>
 
         <nav className="tools-jump" aria-label="Jump to a group of tools">
           {TOOL_GROUPS.map(g => (
-            <a key={g.id} href={`#${g.id}`}><i style={{ background: GROUP_ICONS[g.id].color }} aria-hidden="true" />{g.short}</a>
+            <a key={g.id} href={`#${g.id}`}>{g.short}</a>
           ))}
-          <a href={`#${MORE.id}`}><i style={{ background: MORE.color }} aria-hidden="true" />{MORE.short}</a>
+          <a href={`#${MORE.id}`}>{MORE.short}</a>
         </nav>
 
         {pairs.map(i => <GroupSection key={i} index={i} />)}
@@ -174,7 +169,7 @@ export default function ToolsHubPage() {
         </div>
 
         <section id={MORE.id} className="tools-group" aria-labelledby={`${MORE.id}-h`}>
-          <GroupHeading id={MORE.id} heading="Guides and grounds" Icon={BookOpen} color={MORE.color}
+          <GroupHeading id={MORE.id} heading="Guides and grounds" Icon={BookOpen}
             blurb="Short, sourced answers to the rules and numbers behind the tools, and where to find the ground." />
           <ul className="tool-links tool-resources">
             {GUIDES.map(g => (

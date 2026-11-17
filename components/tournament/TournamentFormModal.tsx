@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Club, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
-import { Trophy, X, Sparkles, Save } from 'lucide-react';
+import { Trophy, X, Sparkles, Save, AlertTriangle } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -445,8 +445,8 @@ export default function TournamentFormModal({
           </div>
 
           {error && (
-            <div role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-              ⚠ {error}
+            <div role="alert" style={{ display: 'flex', gap: '0.4rem', color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+              <AlertTriangle size={14} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
             </div>
           )}
 

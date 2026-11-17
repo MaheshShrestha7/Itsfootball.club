@@ -17,9 +17,9 @@ const competitionOf = (m: Match) => (m.competition && m.competition !== 'Premier
 /** Date (and kick-off time when the fixture has one) in the site's style */
 export function When({ m }: { m: Match }) {
   if (!hasKickoffTime(m)) {
-    return <><LocalTime value={`${m.match_date.slice(0, 10)}T12:00:00`} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{m.match_time ? ` · ${formatClock(m.match_time)}` : ''}</>;
+    return <><LocalTime value={`${m.match_date.slice(0, 10)}T12:00:00`} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{m.match_time ? `, ${formatClock(m.match_time)}` : ''}</>;
   }
-  return <><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{' · '}<KickoffTime m={m} /></>;
+  return <><LocalTime value={m.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} />{', '}<KickoffTime m={m} /></>;
 }
 
 /** Kick-off time alone in the site's style ("3:00 pm"), or nothing when the fixture has none */
@@ -67,7 +67,7 @@ export default function MatchdayStrip({ club, next, live, hideScore }: {
               <span className={!first.is_club_home ? 'matchday-us' : undefined}>{first.away_team_name}</span>
             </div>
             <div className="text-meta matchday-when">
-              <When m={first} />{first.venue ? ` · ${first.venue}` : ''}
+              <When m={first} />{first.venue ? `, ${first.venue}` : ''}
             </div>
             {!live && hasKickoffTime(first) && (
               <KickoffCountdown kickoff={kickoff(first)} size="sm" />

@@ -65,8 +65,8 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .lp-claim:focus-within {
-  border-color: #3B82F6;
-  box-shadow: var(--shadow-md), 0 0 0 4px rgba(59, 130, 246, 0.2);
+  border-color: var(--club-primary);
+  box-shadow: var(--shadow-md), 0 0 0 4px rgba(var(--club-primary-rgb), 0.2);
 }
 .lp-claim-field { flex: 1; min-width: 0; display: flex; align-items: center; }
 .lp-claim-prefix { padding-left: 0.75rem; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
@@ -79,13 +79,14 @@
   display: inline-flex; align-items: center; justify-content: center;
   border: 0; cursor: pointer; border-radius: 10px; padding: 0.7rem 1.35rem;
   font-weight: 800; font-size: 0.92rem; font-family: var(--font-heading);
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  /* The site's one main button colour, the same green as "Launch your club" and "Claim it" */
+  background: var(--club-primary);
+  color: var(--club-primary-contrast, #090D16);
+  box-shadow: none;
   transition: transform 0.15s var(--ease-out), filter 0.2s ease, box-shadow 0.2s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .lp-claim-btn:hover { filter: brightness(1.15); box-shadow: 0 6px 18px rgba(37, 99, 235, 0.55); }
+  .lp-claim-btn:hover { filter: brightness(1.08); }
 }
 .lp-claim-btn:active { transform: scale(0.97); }
 .lp-claim-status { min-height: 1.4rem; margin-top: 0.45rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); }
@@ -1126,7 +1127,7 @@ button.mw-role { background: transparent; font: inherit; font-weight: 600; font-
 .rc-points li { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--text-secondary); line-height: 1.4; }
 .rc-points svg { flex-shrink: 0; margin-top: 0.15rem; color: var(--club-ink, var(--c-green)); }
 .rc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-top: 1.5rem; }
-.rc-cta { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1.15rem; border-radius: 9999px; background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #fff; font-weight: 700; text-decoration: none; }
+.rc-cta { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1.15rem; border-radius: 9999px; background: var(--club-primary); color: var(--club-primary-contrast, #090D16); font-weight: 700; text-decoration: none; }
 .rc-cta:hover { filter: brightness(1.08); }
 .rc-faq { min-height: 44px; display: inline-flex; align-items: center; color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; text-decoration: underline; text-underline-offset: 3px; }
 .rc-faq:hover { color: var(--text-primary); }

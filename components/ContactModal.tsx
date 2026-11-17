@@ -331,7 +331,7 @@ export default function ContactModal({ club, isOpen, onClose, defaultType = 'Gen
                   </select>
                   {inquiryType === 'Sponsorship' && (
                     <a href={`/${club.slug}/sponsor`} style={{ display: 'block', marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--club-ink)', fontWeight: 700 }}>
-                      See sponsorship packages and sign up online →
+                      See sponsorship packages and sign up online
                     </a>
                   )}
                 </div>

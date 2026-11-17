@@ -30,7 +30,7 @@ export default function AboutPage({ params }: { params: Promise<{ clubSlug: stri
       icon={<img src={club.logo_url || DEFAULT_CREST} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'contain', flexShrink: 0 }} />}
       intro={(club.motto || club.founded_year) ? <>
         {club.motto && <em>&ldquo;{club.motto}&rdquo;</em>}
-        {club.motto && club.founded_year ? ' · ' : ''}
+        {club.motto && club.founded_year ? ', ' : ''}
         {club.founded_year ? `Est. ${club.founded_year}` : ''}
       </> : undefined}
     >

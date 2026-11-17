@@ -34,7 +34,7 @@ export default function ClubSquadPage({ params }: { params: Promise<{ clubSlug: 
           <p className="text-body" style={{ marginBottom: '1.5rem' }}>
             By team:{' '}
             {teams.map((t, i) => (
-              <React.Fragment key={t.id}>{i > 0 && ' · '}<Link href={`/${club.slug}/teams/${t.slug}`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>{t.name}</Link></React.Fragment>
+              <React.Fragment key={t.id}>{i > 0 && ', '}<Link href={`/${club.slug}/teams/${t.slug}`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>{t.name}</Link></React.Fragment>
             ))}
           </p>
         )}

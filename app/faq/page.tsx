@@ -32,7 +32,6 @@ export default function FaqPage() {
       <main className="container" style={{ padding: '3.5rem 1rem', flex: 1, maxWidth: '960px' }}>
         {/* Hero */}
         <header style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div className="badge badge-primary" style={{ marginBottom: '0.75rem' }}>FREE FOR EVERY CLUB · EVERY FEATURE</div>
           <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.8rem)', fontWeight: 900, lineHeight: 1.1 }}>
             Questions about itsfootball.club
           </h1>
@@ -57,14 +56,14 @@ export default function FaqPage() {
 
         {/* Role picker */}
         <nav aria-label="FAQ sections" style={{ marginBottom: '3rem' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>
             I am a…
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-            {FAQ.map(({ id, audience, Icon, color, pitch }) => (
-              <a key={id} href={`#${id}`} className="glass-panel glass-panel-interactive" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', textDecoration: 'none', borderTop: `3px solid ${color}` }}>
+            {FAQ.map(({ id, audience, Icon, pitch }) => (
+              <a key={id} href={`#${id}`} className="glass-panel glass-panel-interactive" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', textDecoration: 'none' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                  <Icon size={18} color={color} /> {audience}
+                  <Icon size={18} color="var(--club-ink)" aria-hidden="true" /> {audience}
                 </span>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.45 }}>{pitch}</span>
               </a>
@@ -73,12 +72,12 @@ export default function FaqPage() {
         </nav>
 
         {/* Sections */}
-        {FAQ.map(({ id, audience, Icon, color, pitch, cta, items }) => (
+        {FAQ.map(({ id, audience, Icon, pitch, cta, items }) => (
           <section key={id} id={id} aria-labelledby={`${id}-h`} style={{ marginBottom: '3rem', scrollMarginTop: '90px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.75rem 1.5rem', marginBottom: '1rem' }}>
               <div style={{ flex: '1 1 320px' }}>
                 <h2 id={`${id}-h`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.45rem', fontWeight: 800 }}>
-                  <Icon size={22} color={color} /> {audience}
+                  <Icon size={22} color="var(--club-ink)" aria-hidden="true" /> {audience}
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', marginTop: '0.3rem' }}>{pitch}</p>
               </div>
@@ -90,7 +89,7 @@ export default function FaqPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {items.map((i, n) => (
-                <details key={i.q} open={id === 'pricing' && n === 0} className="glass-panel" style={{ padding: '1rem 1.25rem', borderLeft: `3px solid ${color}` }}>
+                <details key={i.q} open={id === 'pricing' && n === 0} className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-primary)' }}>{i.q}</summary>
                   <p style={{ color: 'var(--text-secondary)', marginTop: '0.75rem', lineHeight: 1.65 }}>{withEmailLink(i.a)}</p>
                 </details>
@@ -100,7 +99,7 @@ export default function FaqPage() {
         ))}
 
         {/* Closing CTA */}
-        <section className="glass-panel" style={{ padding: '2.25rem 1.5rem', textAlign: 'center', borderTop: '3px solid var(--c-green)' }}>
+        <section className="glass-panel" style={{ padding: '2.25rem 1.5rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 900 }}>Start your club&apos;s site for free</h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '520px', margin: '0.6rem auto 0', lineHeight: 1.6 }}>
             It takes a few minutes and you don&apos;t need a card. Every feature is there from the first day.

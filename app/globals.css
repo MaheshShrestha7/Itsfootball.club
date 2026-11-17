@@ -3424,7 +3424,6 @@ dialog.form-dialog::backdrop {
 .tools-jump::-webkit-scrollbar { display: none; }
 .tools-jump a { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.42rem 0.85rem; border-radius: 999px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
 .tools-jump a:hover { color: var(--text-primary); border-color: rgba(var(--club-primary-rgb), 0.5); }
-.tools-jump i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .tools-group { margin-top: 2.6rem; scroll-margin-top: 140px; }
 .tools-group-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 0 1.25rem; }
 .tools-group-pair .tool-cards { grid-template-columns: 1fr; }
@@ -3438,7 +3437,7 @@ dialog.form-dialog::backdrop {
 .tool-card-body h3 a:hover { color: var(--club-ink); }
 .tool-card-body p { margin: 0; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; }
 .tool-card-formats { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.35rem; }
-.tool-card-formats > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-weight: 700; margin-right: 0.15rem; }
+.tool-card-formats > span { font-size: 0.82rem; color: var(--text-muted); font-weight: 700; margin-right: 0.15rem; }
 .tool-chip { font-size: 0.8rem; font-weight: 600; padding: 0.28rem 0.62rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent); background: color-mix(in srgb, var(--tc) 10%, transparent); color: var(--text-primary); text-decoration: none; transition: background 0.15s; }
 .tool-chip:hover { background: color-mix(in srgb, var(--tc) 22%, transparent); }
 .tool-card-open { margin-top: auto; padding-top: 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--club-ink); display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none; align-self: flex-start; }

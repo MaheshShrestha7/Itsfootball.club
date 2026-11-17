@@ -84,7 +84,7 @@ export default function EventDetailsPage({
   const writeupCover = eventPhotos.find(g => g.media_type === 'image' && g.is_album_cover)?.media_url
     || eventPhotos.find(g => g.media_type === 'image')?.media_url || event.flyer_url || club.banner_url || undefined;
   const recordLine = played > 0
-    ? `${played} played · ${[record.W && `won ${record.W}`, record.D && `drew ${record.D}`, record.L && `lost ${record.L}`].filter(Boolean).join(', ')}`
+    ? `${played} played, ${[record.W && `won ${record.W}`, record.D && `drew ${record.D}`, record.L && `lost ${record.L}`].filter(Boolean).join(', ')}`
     : `${games.length} game${games.length === 1 ? '' : 's'}`;
   const rsvpPct = event.max_capacity > 0 ? Math.min(100, Math.round((event.rsvp_count / event.max_capacity) * 100)) : 0;
   const start = new Date(event.start_time).getTime();

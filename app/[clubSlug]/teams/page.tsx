@@ -86,7 +86,7 @@ export default function TeamsPage({ params }: { params: Promise<{ clubSlug: stri
             const last = team.hide_public_scores ? undefined : latestResult(games);
             const form = team.hide_public_scores ? [] : teamForm(games);
             const result = last ? clubResult(last) : null;
-            const meta = [publicTeamType(team.team_type), team.age_group, team.match_format].filter(Boolean).join(' · ');
+            const meta = [publicTeamType(team.team_type), team.age_group, team.match_format].filter(Boolean).join(', ');
             return (
               <Link key={team.id} href={`/${club.slug}/teams/${team.slug}`} className="team-card" style={teamColourVars(team.color || club.primary_color) as React.CSSProperties}>
                 <div className="team-card-band">

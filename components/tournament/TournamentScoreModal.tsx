@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match } from '@/lib/supabase/types';
-import { X, Trophy, Radio, CheckCircle2 } from 'lucide-react';
+import { X, Trophy, Radio, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { useDialog } from '@/lib/use-escape-to-close';
 
@@ -328,8 +328,8 @@ export default function TournamentScoreModal({
           )}
 
           {error && (
-            <div role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700 }}>
-              ⚠ {error}
+            <div role="alert" style={{ display: 'flex', gap: '0.4rem', color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700 }}>
+              <AlertTriangle size={14} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
             </div>
           )}
 

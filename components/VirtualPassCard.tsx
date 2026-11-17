@@ -534,7 +534,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
               </div>
               {(teams.length > 0 || roleLabel) && (
                 <div style={{ color: GLASS_MUTED, marginTop: '0.35rem' }}>
-                  {[...teams.map(t => t.name), roleLabel].filter(Boolean).join(' · ')}
+                  {[...teams.map(t => t.name), roleLabel].filter(Boolean).join(', ')}
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -548,7 +548,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                       </span>
                       {onRenew && daysLeft <= 30 && (
                         <>
-                          {' · '}
+                          {', '}
                           <button type="button" onClick={e => { e.stopPropagation(); onRenew(); }} style={linkButton}>Renew</button>
                         </>
                       )}
@@ -575,7 +575,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                       </>
                     )}
                     <div style={{ color: GLASS_MUTED }}>
-                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? ` · ${formatClock(nextMatch.match_time)}` : ''}
+                      {formatDay(nextMatch.match_date, true)}{nextMatch.match_time ? `, ${formatClock(nextMatch.match_time)}` : ''}
                     </div>
                   </>
                 ) : (
@@ -596,7 +596,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                             Directions
                           </a>
                         )}
-                        {directionsUrl && club.stadium_parking_info ? ' · ' : ''}
+                        {directionsUrl && club.stadium_parking_info ? ', ' : ''}
                         {club.stadium_parking_info}
                       </div>
                     )}
@@ -634,11 +634,11 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
               )}
               {(club.motto || club.founded_year) && (
                 <div style={{ fontSize: '0.78rem', color: GLASS_TEXT, fontStyle: club.motto ? 'italic' : 'normal' }}>
-                  {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(' · ')}
+                  {[club.motto ? `“${club.motto}”` : '', club.founded_year ? `Est. ${club.founded_year}` : ''].filter(Boolean).join(', ')}
                 </div>
               )}
               <div style={{ fontSize: '0.68rem', color: GLASS_MUTED, marginTop: '0.15rem' }}>
-                Scan the front at the gate · Not transferable
+                Scan the front at the gate. Not transferable.
               </div>
             </div>
           </div>
