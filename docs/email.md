@@ -67,7 +67,7 @@ the secrets before enabling it.
 
 Also check **Authentication** -> **URL Configuration**: Site URL `https://itsfootball.club`, and
 `https://itsfootball.club/**` in **Redirect URLs**. Club custom domains don't need listing: their
-sign-in links go through `/auth/confirm` (see [custom-domains.md](custom-domains.md)).
+sign-in links always end on itsfootball.club (see [custom-domains.md](custom-domains.md)).
 
 Rate limits: **Authentication** -> **Rate Limits** -> "emails sent" applies to the hook too; raise it
 from the default if members sign in in bursts (e.g. matchday).
