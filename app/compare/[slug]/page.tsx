@@ -29,7 +29,7 @@ import {
   ALL_COMPARE_SLUGS,
   type Competitor,
 } from '@/lib/competitors';
-import { ORGANIZATION_ID } from '@/lib/schema';
+import { FOUNDER, ORGANIZATION_ID } from '@/lib/schema';
 import { SITE_NAME, SITE_URL, fitDescription, fitTitle, pageMetadata } from '@/lib/seo';
 
 export const dynamicParams = false;
@@ -71,6 +71,8 @@ function schemaFor(c: Competitor) {
         name: titleFor(c),
         description: c.aiOverview,
         about: { '@id': ORGANIZATION_ID },
+        author: FOUNDER,
+        ...(c.unchecked ? {} : { dateModified: c.checkedOn }),
         mentions: { '@type': 'SoftwareApplication', name: c.name },
         breadcrumb: { '@id': `${pageUrl}#breadcrumb` },
         isPartOf: { '@type': 'WebSite', url: SITE_URL, name: SITE_NAME },
@@ -145,7 +147,7 @@ export default async function CompareAlternativePage({ params }: Props) {
           </p>
           {!c.unchecked && (
             <p className="tool-updated" style={{ marginTop: '0.85rem' }}>
-              {c.name} facts checked: <time dateTime={c.checkedOn}>{checkedLabel}</time>
+              By <Link href="/about" style={{ color: 'inherit' }}>Mahesh Shrestha</Link>, founder · {c.name} facts checked: <time dateTime={c.checkedOn}>{checkedLabel}</time>
             </p>
           )}
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.85rem', marginTop: '1.75rem' }}>

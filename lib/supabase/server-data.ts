@@ -17,7 +17,7 @@ const CRAWLER_UA = new RegExp(
   [
     'googlebot', 'google-inspectiontool', 'bingbot', 'duckduckbot', 'yandexbot', 'baiduspider', 'applebot',
     'gptbot', 'oai-searchbot', 'chatgpt-user', 'claudebot', 'claude-user', 'claude-searchbot',
-    'perplexitybot', 'perplexity-user', 'ccbot', 'amazonbot', 'meta-externalagent', 'petalbot', 'bytespider',
+    'perplexitybot', 'perplexity-user', 'ccbot', 'amazonbot', 'meta-externalagent', 'meta-webindexer', 'petalbot', 'bytespider',
   ].join('|'),
   'i'
 );
