@@ -16,9 +16,9 @@ to **Live** by itself once that record is in place. Nobody on our side has to do
    slug (every link the app renders), `/api` and `/auth` pass through. Platform pages
    (`/my-clubs`, ...) and unknown domains redirect to itsfootball.club.
 4. **Sign-in**: Supabase only returns people to allowlisted URLs, so club-domain pages ask for
-   `itsfootball.club/auth/confirm?to=<page>` (`authReturnUrl`). The email hook checks `to` is a
-   registered club domain and emails a link to `<club domain>/auth/confirm`, which verifies the token
-   on that domain and signs the member in there.
+   `itsfootball.club/auth/confirm?to=<page>` (`authReturnUrl`). The email hook brands the email as
+   the club but the link always ends on itsfootball.club, on the same page (`/{slug}/...`). A sign-in
+   token never goes to a club's own domain: the owner controls it, so it could be harvested (SEC17-1).
 
 ## One-time setup
 

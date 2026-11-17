@@ -38,8 +38,8 @@ export function isPlatformHost(host: string): boolean {
 }
 
 // Supabase only sends sign-in links back to allowlisted URLs, and a club's own domain isn't one. So a
-// page there asks for SITE_URL/auth/confirm?to=<page>, and the email hook (app/api/auth/email-hook)
-// turns that into a link to <club domain>/auth/confirm, which verifies the token on the club's domain.
+// page there asks for SITE_URL/auth/confirm?to=<page>; the email hook (app/api/auth/email-hook) brands the
+// email as that club and links to the same path on SITE_URL (never the club's domain, SEC17-1).
 const CONFIRM_PATH = '/auth/confirm';
 
 /** The emailRedirectTo for a sign-in link that should land on `path` of the site at `origin` */

@@ -165,33 +165,22 @@ async function main() {
     assert.ok(!expenseClaimUpdate({ ...claim, outcome: 'approved', reason: null }).text.includes('Reason:'), 'no empty reason line');
   }
 
-  // --- sign-in link destination (SEC11-1): a club domain only receives the token when it is live ---
+  // --- sign-in link destination (SEC11-1, SEC17-1): the token never goes to a club's own domain ---
   {
     const SUPA = 'https://proj.supabase.co';
-    // A sign-in asking to land on a club's own domain: redirect goes via SITE_URL/auth/confirm?to=<domain>
-    const toClub = `https://itsfootball.club/auth/confirm?to=${encodeURIComponent('https://rovers.example/rovers/member')}`;
-    const base = { supabaseUrl: SUPA, redirectTo: toClub, tokenHash: 'TH', type: 'magiclink', clubCustomDomain: 'rovers.example' };
+    // A sign-in asked for on a club's own domain: redirect goes via SITE_URL/auth/confirm?to=<domain page>
+    const toClub = `https://itsfootball.club/auth/confirm?to=${encodeURIComponent('https://rovers.example/rovers/member?x=1')}`;
+    const club = authSignInLink({ supabaseUrl: SUPA + '/', redirectTo: toClub, tokenHash: 'TH', type: 'magiclink' });
+    assert.equal(club, `${SUPA}/auth/v1/verify?token=TH&type=magiclink&redirect_to=${encodeURIComponent('https://itsfootball.club/rovers/member?x=1')}`, 'club domain sign-in lands on the same page at itsfootball.club');
+    assert.ok(!club.includes('rovers.example'), 'the club domain never appears in the link (SEC17-1)');
 
-    // Live domain (DNS points at us, so our own /auth/confirm runs there): link may go to the domain.
-    const live = authSignInLink({ ...base, domainIsLive: true });
-    assert.ok(live.startsWith('https://rovers.example/auth/confirm?token_hash=TH'), 'live club domain gets the token');
+    // An attacker naming any host in `to` still only gets a link back to itsfootball.club
+    const attack = authSignInLink({ supabaseUrl: SUPA, redirectTo: `https://itsfootball.club/auth/confirm?to=${encodeURIComponent('https://evil.example/auth/confirm')}`, tokenHash: 'TH', type: 'recovery' });
+    assert.ok(!attack.includes('evil.example') && attack.includes(encodeURIComponent('https://itsfootball.club/auth/confirm')), 'no token to an attacker host');
 
-    // Not live (pending, or pointed at the owner's own server): the token must NOT go to the domain.
-    const pending = authSignInLink({ ...base, domainIsLive: false });
-    assert.ok(pending.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'a domain that is not live falls back to the platform link');
-    assert.ok(!pending.includes('rovers.example/auth/confirm'), 'no token is sent to a non-live domain (SEC11-1)');
-
-    // The attack: redirect names a domain the attacker set but that was never verified -> not live -> no token leak.
-    const attack = authSignInLink({ ...base, clubCustomDomain: 'rovers.example', domainIsLive: false });
-    assert.ok(!attack.includes('rovers.example/auth/confirm'), 'attacker-controlled domain never receives the token');
-
-    // A plain platform sign-in (no custom domain) always uses the verify link, live flag irrelevant.
-    const platform = authSignInLink({ supabaseUrl: SUPA, redirectTo: 'https://itsfootball.club/my-clubs', tokenHash: 'TH', type: 'magiclink', clubCustomDomain: null, domainIsLive: true });
-    assert.ok(platform.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'platform sign-in uses the verify link');
-
-    // A mismatch (redirect targets a different host than the club's stored domain) is not trusted either.
-    const mismatch = authSignInLink({ ...base, clubCustomDomain: 'other.example', domainIsLive: true });
-    assert.ok(mismatch.startsWith(`${SUPA}/auth/v1/verify?token=TH`), 'redirect host must match the club domain');
+    // A plain platform sign-in keeps its redirect
+    const platform = authSignInLink({ supabaseUrl: SUPA, redirectTo: 'https://itsfootball.club/my-clubs', tokenHash: 'TH', type: 'magiclink' });
+    assert.equal(platform, `${SUPA}/auth/v1/verify?token=TH&type=magiclink&redirect_to=${encodeURIComponent('https://itsfootball.club/my-clubs')}`);
   }
 
 console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');
