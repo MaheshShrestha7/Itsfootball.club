@@ -142,7 +142,7 @@ export function loadImage(src: string): Promise<HTMLImageElement | null> {
 }
 
 /** The sponsors that can be drawn: a logo that loaded, or else a name */
-async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
+export async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
   const items = await Promise.all((list || []).slice(0, max).map(async s => {
     const src = typeof s === 'string' ? s : s.src;
     const name = typeof s === 'string' ? '' : s.name.trim();
@@ -154,7 +154,7 @@ async function loadSponsors(list: CardSponsor[] | undefined, max: number) {
   return items.filter((i): i is SponsorItem => !!i);
 }
 
-type SponsorItem = { img: HTMLImageElement | HTMLCanvasElement | null; name: string; top: boolean };
+export type SponsorItem = { img: HTMLImageElement | HTMLCanvasElement | null; name: string; top: boolean };
 
 /** The logo without its blank (white or see-through) margins, so it fills its tile: a small badge
  *  saved on a big white square otherwise shrinks to a dot. Scaled to 512px at most, plenty for a tile */
@@ -198,7 +198,7 @@ function trimmed(img: HTMLImageElement): HTMLImageElement | HTMLCanvasElement {
 }
 
 /** The most sponsors a graphic shows */
-const MAX_SPONSORS = 9;
+export const MAX_SPONSORS = 9;
 const SPONSOR_ROW_GAP = 14;
 /** How tall a lower-tier tile is next to a top-tier one */
 const SMALL_TILE = 0.72;
@@ -209,7 +209,7 @@ type SponsorBlock = { rows: { items: SponsorItem[]; per: number; big: boolean }[
  *  together, the top tier gets the first rows, up to three to a row on bigger tiles, and the rest
  *  follow smaller, up to five to a row. Otherwise every tile is the same, up to three to a row. A top-tier
  *  tile is `tileH` tall, shrunk until the whole block fits `maxH` */
-function sponsorBlock(items: SponsorItem[], labelH: number, baseTileH: number, maxH: number): SponsorBlock {
+export function sponsorBlock(items: SponsorItem[], labelH: number, baseTileH: number, maxH: number): SponsorBlock {
   const split = (list: SponsorItem[], max: number, big: boolean) => {
     if (!list.length) return [];
     const per = Math.ceil(list.length / Math.ceil(list.length / max)); // 4 is two and two, 5 is three and two
@@ -227,7 +227,7 @@ function sponsorBlock(items: SponsorItem[], labelH: number, baseTileH: number, m
 /** White sponsor tiles under a small spaced heading, row by row as `sponsorBlock` laid them out, each
  *  row centred, the list's order kept (the highest tier first). White tiles, so a logo made for a
  *  light page reads on the dark card */
-function sponsorRow(ctx: CanvasRenderingContext2D, block: SponsorBlock, top: number, labelH: number,
+export function sponsorRow(ctx: CanvasRenderingContext2D, block: SponsorBlock, top: number, labelH: number,
   label: string, W: number, M: number, maxTileW: number, body: string, heading: string) {
   ctx.textAlign = 'center';
   ctx.fillStyle = FAINT;

@@ -47,7 +47,7 @@ export function useMatchReviewsReady(): boolean {
  * writing over saved work. A change still waiting is saved before another key loads and when the
  * page is left; a failed save stays queued for Retry.
  */
-function useAutosaved<T>(key: string | null, blank: T, load: () => Promise<T | null>, save: (value: T) => Promise<boolean>) {
+export function useAutosaved<T>(key: string | null, blank: T, load: () => Promise<T | null>, save: (value: T) => Promise<boolean>) {
   const [value, setValue] = useState<T>(blank);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null);
@@ -201,7 +201,7 @@ async function cupRowId(clubId: string, cup: CupRef, fields: Record<string, unkn
 /** A tournament report's share link: the token in the link and when the shared copy was saved */
 export interface CupShare { token: string; sharedAt: string }
 
-const newToken = () => {
+export const newToken = () => {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 };

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, use } from 'react';
+import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
-import { Award, Plus, CheckCircle2, CalendarDays, X } from 'lucide-react';
+import { Award, Plus, CheckCircle2, CalendarDays, X, Trophy } from 'lucide-react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { defaultSeasonLabel } from '@/lib/season';
 
@@ -72,6 +73,7 @@ export default function AdminCommitteePage({
           <p>Appoint members and players to club posts: president, secretary, head coach, treasurer.</p>
         </div>
         <div className="admin-head-actions">
+          <Link href={`/${club.slug}/admin/committee/season-review`} className="btn btn-secondary row"><Trophy size={16} aria-hidden="true" /><span>Season review</span></Link>
           <button type="button" className="btn btn-primary row" onClick={openAppointForm}>
             <Plus size={16} aria-hidden="true" />
             <span>Appoint a member</span>
