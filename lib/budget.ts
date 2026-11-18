@@ -196,6 +196,12 @@ export function paceSeries(items: { day: string; cents: number }[], budget: numb
   });
 }
 
+/** Money in each month of a season, up to today: the same months and edge rules as paceSeries */
+export function monthTotals(items: { day: string; cents: number }[], start: string, end: string, today: string): { month: string; label: string; cents: number }[] {
+  const points = paceSeries(items, 0, start, end, today < end ? today : end);
+  return points.flatMap((p, i) => (p.actual === null ? [] : [{ month: p.month, label: p.label, cents: p.actual - (i ? points[i - 1].actual ?? 0 : 0) }]));
+}
+
 export interface PieSlice {
   key: string;
   label: string;
