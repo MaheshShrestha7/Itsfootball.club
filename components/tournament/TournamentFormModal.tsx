@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Club, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
-import { Trophy, X, Sparkles, Save, AlertTriangle, Pencil, Plus, Send } from 'lucide-react';
+import { Trophy, X, Save, AlertTriangle, Pencil, Plus, Send } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -227,7 +227,9 @@ export default function TournamentFormModal({
       const slug = fields.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       const created = createTournament(
         { ...fields, club_id: club.id, slug: `${slug}-${Date.now().toString().slice(-4)}`, status: 'draft', points_win: 3, points_draw: 1, points_loss: 0 },
-        participantInputs
+        participantInputs,
+        // The draw waits: clubs enter first, the host presses Generate tiesheet when the teams are in
+        { noDraw: true }
       );
       const emailNote = askContacts && Object.keys(contacts).length ? await saveContacts(created.id, sendInvites) : '';
       if (ageGroupOf) {
@@ -236,8 +238,8 @@ export default function TournamentFormModal({
       }
       onSaved(
         participantInputs.length >= 2
-          ? `✓ Created "${fields.name}" with ${participantInputs.length} teams and a generated tiesheet.${emailNote}`
-          : `✓ Created "${fields.name}" as a draft. Add at least 2 teams to generate fixtures.${emailNote}`
+          ? `✓ Created "${fields.name}" with ${participantInputs.length} teams.${emailNote} Open it and press Generate tiesheet when your teams are in.`
+          : `✓ Created "${fields.name}".${emailNote} Add at least 2 teams, then press Generate tiesheet.`
       );
       return;
     }
@@ -610,14 +612,14 @@ export default function TournamentFormModal({
               className={emailCount ? 'btn btn-secondary' : 'btn btn-primary'}
               style={{ padding: '0.65rem 1.5rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              {isEdit ? <Save size={16} /> : <Sparkles size={16} />}
-              <span>{isEdit ? 'Save Changes' : emailCount ? 'Launch, email later' : 'Generate Tiesheet & Launch'}</span>
+              {isEdit ? <Save size={16} /> : <Plus size={16} aria-hidden="true" />}
+              <span>{isEdit ? 'Save Changes' : emailCount ? 'Create, email later' : 'Create tournament'}</span>
             </button>
             {emailCount > 0 && (
               <button type="submit" value="send" disabled={sending} className="btn btn-primary" title="Each club with an email gets its own link to enter its players"
                 style={{ maxWidth: '100%', padding: '0.65rem 1.5rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                 <Send size={16} aria-hidden="true" />
-                <span>{sending ? 'Sending…' : `Launch and email ${emailCount} club${emailCount === 1 ? '' : 's'}`}</span>
+                <span>{sending ? 'Sending…' : `Create and email ${emailCount} club${emailCount === 1 ? '' : 's'}`}</span>
               </button>
             )}
           </div>

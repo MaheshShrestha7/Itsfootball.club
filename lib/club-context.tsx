@@ -55,6 +55,9 @@ import {
   computeStandings,
   resolveTournament,
   upgradeLegacyMatches, type TiesheetOptions } from './tournament-engine';
+
+/** Tiesheet options, plus noDraw: save the teams only and make the draw later */
+type DrawOptions = TiesheetOptions & { noDraw?: boolean };
 import { getAccessToken, getSupabaseClient, isSupabaseConfigured } from './supabase/client';
 import { newId, stableId, secureToken, isUuid } from './ids';
 import { defaultSeasonLabel } from './season';
@@ -292,7 +295,7 @@ interface ClubContextType {
   createInternalTeam: (teamData: Omit<InternalTeam, 'id' | 'created_at' | 'updated_at'>) => InternalTeam;
   updateInternalTeam: (teamId: string, updates: Partial<InternalTeam>) => void;
   deleteInternalTeam: (teamId: string) => void;
-  createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[], options?: TiesheetOptions) => Tournament;
+  createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[], options?: DrawOptions) => Tournament;
   updateTournament: (tournamentId: string, updates: Partial<Tournament>) => void;
   /** Edit a tournament; pass participantInputs to replace the teams and rebuild the tiesheet */
   saveTournament: (tournamentId: string, updates: Partial<Tournament>, participantInputs?: (Omit<TournamentParticipant, 'id' | 'tournament_id'> & { id?: string })[]) => void;
@@ -3423,9 +3426,12 @@ export function ClubProvider({
   const applyTiesheet = useCallback((
     tournament: Tournament,
     participants: TournamentParticipant[],
-    options?: TiesheetOptions
+    options?: DrawOptions
   ) => {
-    const res = buildTiesheet(tournament, participants, options);
+    // noDraw: only the teams are saved; the host makes the draw later (Generate tiesheet)
+    const res = options?.noDraw
+      ? { participants: participants.map((p, i) => ({ ...p, seed: p.seed ?? i + 1 })), matches: [] as Match[], tournamentUpdates: {} }
+      : buildTiesheet(tournament, participants, options);
     const keptParticipants = new Set(res.participants.map(p => p.id));
     const keptMatches = new Set(res.matches.map(m => m.id));
     setTournamentParticipants(prev => {
@@ -3448,7 +3454,7 @@ export function ClubProvider({
   const createTournament = useCallback((
     tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>,
     participantInputs: Omit<TournamentParticipant, 'id' | 'tournament_id'>[] = [],
-    options?: TiesheetOptions
+    options?: DrawOptions
   ) => {
     const tournId = newId();
     const newTournament: Tournament = {
@@ -3479,8 +3485,10 @@ export function ClubProvider({
 
     // Teams or structure changed: rebuild the tiesheet
     if (participantInputs) {
-      // A team that stays keeps its id, so its entry link, squad and crest stay with it
-      applyTiesheet(merged, participantInputs.map(p => ({ ...p, id: p.id || newId(), tournament_id: tournamentId })));
+      // A team that stays keeps its id, so its entry link, squad and crest stay with it. No draw
+      // yet: still none (the host makes it when the teams are in).
+      const drawn = matches.some(m => m.tournament_id === tournamentId);
+      applyTiesheet(merged, participantInputs.map(p => ({ ...p, id: p.id || newId(), tournament_id: tournamentId })), drawn ? undefined : { noDraw: true });
       return;
     }
 
@@ -3500,7 +3508,7 @@ export function ClubProvider({
       }
       return next;
     }));
-  }, [tournaments, tournamentParticipants, updateTournament, applyTiesheet]);
+  }, [tournaments, tournamentParticipants, matches, updateTournament, applyTiesheet]);
 
   const deleteTournament = useCallback((tournamentId: string) => {
     // Its age groups go with it (the database deletes them too: parent_id ON DELETE CASCADE)
@@ -3608,7 +3616,8 @@ export function ClubProvider({
       const parts = tournamentParticipants.filter(p => p.tournament_id === t.id);
       const own = matches.filter(m => m.tournament_id === t.id);
       if (own.length === 0) {
-        if (parts.length >= 2) applyTiesheet(t, parts);
+        // A draft with no fixtures is waiting for its draw on purpose (draw later)
+        if (parts.length >= 2 && t.status !== 'draft') applyTiesheet(t, parts);
         continue;
       }
       const repaired = resolveTournament(upgradeLegacyMatches(own), t, parts);
