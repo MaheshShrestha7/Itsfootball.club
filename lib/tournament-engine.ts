@@ -13,6 +13,7 @@ import {
 import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
 import { DATE_LOCALE } from './dates';
+import { packKickoffs } from './hosted-tournaments';
 
 // Human-readable stage titles
 export const STAGE_TITLES: Record<string, string> = {
@@ -389,7 +390,16 @@ export function buildTiesheet(
   });
 
   if (participants.length < 2) return { matches: [], participants, tournamentUpdates: {} };
-  const timed = (matches: Match[]) => (options?.matchMinutes ? spreadKickoffs(matches, { matchMinutes: options.matchMinutes, pitches: options.pitches }) : matches);
+  // The free maker passes its own slot length; a club tournament with a match length gets the
+  // day-by-day timetable (packKickoffs), which also carries games over to the next day
+  const start = parseTournamentDate(tournament.start_date);
+  const timed = (matches: Match[]) => {
+    if (options?.matchMinutes) return spreadKickoffs(matches, { matchMinutes: options.matchMinutes, pitches: options.pitches });
+    if (tournament.match_minutes && start) {
+      packKickoffs(matches, { start, end: parseTournamentDate(tournament.end_date), matchMinutes: tournament.match_minutes, pitches: tournament.pitches || 1, dayEnd: tournament.day_end_time });
+    }
+    return matches;
+  };
 
   if (tournament.format === 'knockout') {
     const entries = participants.map(p => ({ name: p.name, logo: p.logo_url || DEFAULT_CREST, source: `Seed #${p.seed}` }));

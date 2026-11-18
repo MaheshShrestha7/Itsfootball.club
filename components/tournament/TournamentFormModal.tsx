@@ -9,51 +9,73 @@ import CoverPresetPicker from '@/components/CoverPresetPicker';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { COVER_PRESETS } from '@/lib/cover-presets';
 import { defaultSeasonLabel } from '@/lib/season';
-import { STAGE_TITLES, effectiveGroupRules, knockoutStageFor, toDateTimeLocal } from '@/lib/tournament-engine';
+import { STAGE_TITLES, buildTiesheet, effectiveGroupRules, knockoutStageFor, parseTournamentDate, toDateTimeLocal } from '@/lib/tournament-engine';
+import { packKickoffs, shortCode } from '@/lib/hosted-tournaments';
+import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PopupPanel from '@/components/PopupPanel';
 
-type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'>;
+// A team that was already in the tournament keeps its id (and with it its crest, entry link and squad)
+type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'> & { id?: string };
 
 /** Create a tournament, or edit one when `tournament` is given */
 export default function TournamentFormModal({
   club,
   tournament,
+  ageGroupOf,
   onClose,
   onSaved,
 }: {
   club: Club;
   tournament?: Tournament;
+  /** New age group of this hosted tournament: starts from its settings, with its own teams and draw */
+  ageGroupOf?: Tournament;
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
-  const { internalTeams, tournamentParticipants, matches, createTournament, saveTournament, getActiveSeason } = useClub();
+  const { internalTeams, tournamentParticipants, matches, events, createTournament, saveTournament, getActiveSeason } = useClub();
+  const hosted = useHostedTournamentsReady();
+  // A new age group copies the event's settings; its teams start empty
+  const base = tournament ?? ageGroupOf;
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
   const existing = tournament ? tournamentParticipants.filter(p => p.tournament_id === tournament.id) : [];
   const isEdit = !!tournament;
 
   const startDefault = new Date();
   startDefault.setHours(15, 0, 0, 0);
-  const [name, setName] = useState(tournament?.name ?? '');
-  const [season, setSeason] = useState(tournament?.season ?? (getActiveSeason(club.id)?.name || defaultSeasonLabel()));
-  const [format, setFormat] = useState<TournamentFormat>(tournament?.format ?? 'group_knockout');
-  const [venue, setVenue] = useState(tournament?.venue ?? club.stadium_name ?? '');
-  const [bannerUrl, setBannerUrl] = useState(tournament?.banner_url ?? COVER_PRESETS[0].url);
-  const [startAt, setStartAt] = useState(toDateTimeLocal(tournament?.start_date ?? startDefault.toISOString()));
+  const [name, setName] = useState(base?.name ?? '');
+  const [season, setSeason] = useState(base?.season ?? (getActiveSeason(club.id)?.name || defaultSeasonLabel()));
+  const [format, setFormat] = useState<TournamentFormat>(base?.format ?? 'group_knockout');
+  const [venue, setVenue] = useState(base?.venue ?? club.stadium_name ?? '');
+  const [bannerUrl, setBannerUrl] = useState(base?.banner_url ?? COVER_PRESETS[0].url);
+  const [startAt, setStartAt] = useState(toDateTimeLocal(base?.start_date ?? startDefault.toISOString()));
   const [endAt, setEndAt] = useState(
-    toDateTimeLocal(tournament ? tournament.end_date : new Date(startDefault.getTime() + 30 * 86400000).toISOString())
+    toDateTimeLocal(base ? base.end_date : new Date(startDefault.getTime() + 30 * 86400000).toISOString())
   );
-  const [description, setDescription] = useState(tournament?.description ?? '');
-  const [groupCount, setGroupCount] = useState(tournament?.group_count ?? 2);
-  const [teamsAdvancing, setTeamsAdvancing] = useState(tournament?.teams_advancing_per_group ?? 2);
-  const [hasThirdPlace, setHasThirdPlace] = useState(tournament?.has_third_place_match ?? true);
+  const [description, setDescription] = useState(base?.description ?? '');
+  const [groupCount, setGroupCount] = useState(base?.group_count ?? 2);
+  const [teamsAdvancing, setTeamsAdvancing] = useState(base?.teams_advancing_per_group ?? 2);
+  const [hasThirdPlace, setHasThirdPlace] = useState(base?.has_third_place_match ?? true);
+  // Hosted tournament settings (migration 20261180)
+  const [ageGroup, setAgeGroup] = useState(tournament?.age_group ?? '');
+  const [isJunior, setIsJunior] = useState(base?.is_junior ?? false);
+  const [timed, setTimed] = useState(!!base?.match_minutes);
+  const [matchMinutes, setMatchMinutes] = useState(base?.match_minutes ?? 25);
+  const [pitches, setPitches] = useState(base?.pitches ?? 2);
+  const [dayEnd, setDayEnd] = useState(base?.day_end_time ?? '17:00');
+  const [entryFee, setEntryFee] = useState(base?.entry_fee_cents ? (base.entry_fee_cents / 100).toFixed(2) : '');
+  const [deadline, setDeadline] = useState(toDateTimeLocal(base?.entry_deadline ?? undefined));
+  const [maxSquad, setMaxSquad] = useState(base?.max_squad ? String(base.max_squad) : '');
+  const [teamInfo, setTeamInfo] = useState(base?.team_info ?? '');
+  const [eventId, setEventId] = useState(base?.event_id ?? '');
+  const clubEvents = events.filter(ev => ev.club_id === club.id).sort((a, b) => b.start_time.localeCompare(a.start_time)).slice(0, 40);
   const [selectedInternalTeamIds, setSelectedInternalTeamIds] = useState<string[]>(
     isEdit
       ? existing.filter(p => p.team_type === 'internal' && p.internal_team_id).map(p => p.internal_team_id!)
-      : clubInternalTeams.map(t => t.id)
+      : ageGroupOf ? [] : clubInternalTeams.map(t => t.id)
   );
-  const [externalTeams, setExternalTeams] = useState<{ name: string; short_name: string }[]>(
-    existing.filter(p => p.team_type === 'external').map(p => ({ name: p.name, short_name: p.short_name }))
+  const [externalTeams, setExternalTeams] = useState<ParticipantInput[]>(
+    existing.filter(p => p.team_type === 'external').map(({ tournament_id: _t, ...p }) => p)
   );
   const [newExternalName, setNewExternalName] = useState('');
   const [newExternalCode, setNewExternalCode] = useState('');
@@ -66,10 +88,45 @@ export default function TournamentFormModal({
   const handleAddExternalTeam = () => {
     const teamName = newExternalName.trim();
     if (!teamName) return;
-    setExternalTeams(prev => [...prev, { name: teamName, short_name: newExternalCode.trim() || teamName.slice(0, 3).toUpperCase() }]);
+    setExternalTeams(prev => [...prev, { team_type: 'external', name: teamName, short_name: newExternalCode.trim() || shortCode(teamName), logo_url: DEFAULT_CREST, color: '#2563EB' }]);
     setNewExternalName('');
     setNewExternalCode('');
   };
+
+  const hostedFields = (): Partial<Tournament> => {
+    const fee = Math.round(parseFloat(entryFee) * 100);
+    const close = deadline ? new Date(deadline) : null;
+    const squad = parseInt(maxSquad, 10);
+    return {
+      age_group: ageGroup.trim() || null,
+      is_junior: isJunior,
+      match_minutes: timed ? Math.min(180, Math.max(5, matchMinutes || 25)) : null,
+      pitches: timed ? Math.min(20, Math.max(1, pitches || 1)) : null,
+      day_end_time: timed && /^\d{2}:\d{2}$/.test(dayEnd) ? dayEnd : null,
+      entry_fee_cents: fee > 0 ? fee : null,
+      entry_deadline: close && !isNaN(close.getTime()) ? close.toISOString() : null,
+      max_squad: squad > 0 ? Math.min(60, squad) : null,
+      team_info: teamInfo.trim().slice(0, 4000) || null,
+      event_id: eventId || null,
+      ...(ageGroupOf && !isEdit ? { parent_id: ageGroupOf.parent_id || ageGroupOf.id } : {}),
+    };
+  };
+
+  // How the day works out with these settings: games, days and when the last one finishes
+  const preview = (() => {
+    if (!hosted || !timed) return null;
+    const start = parseTournamentDate(startAt ? new Date(startAt).toISOString() : undefined);
+    if (!start || teamCount < 2) return null;
+    const draft = {
+      id: 'preview', club_id: club.id, name: name || 'Cup', slug: 'preview', season, format, status: 'draft', points_win: 3, points_draw: 1, points_loss: 0,
+      group_count: groupCount, teams_advancing_per_group: teamsAdvancing, has_third_place_match: format !== 'league' && hasThirdPlace,
+      start_date: start.toISOString(), end_date: endAt ? new Date(endAt).toISOString() : undefined,
+    } as Tournament;
+    const teams = Array.from({ length: teamCount }, (_, i) => ({ id: `p${i}`, tournament_id: 'preview', team_type: 'external' as const, name: `Team ${i + 1}`, short_name: `T${i + 1}`, logo_url: '' }));
+    const games = buildTiesheet(draft, teams).matches;
+    const res = packKickoffs(games, { start, end: endAt ? new Date(endAt) : null, matchMinutes, pitches, dayEnd });
+    return { games: games.length, ...res };
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,11 +145,12 @@ export default function TournamentFormModal({
     const participantInputs: ParticipantInput[] = [
       ...selectedInternalTeamIds.flatMap(id => {
         const team = clubInternalTeams.find(t => t.id === id);
+        const kept = existing.find(p => p.internal_team_id === id);
         return team
-          ? [{ team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)' }]
+          ? [{ ...(kept ? { id: kept.id } : {}), team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)' }]
           : [];
       }),
-      ...externalTeams.map(ext => ({ team_type: 'external' as const, name: ext.name, short_name: ext.short_name, logo_url: DEFAULT_CREST, color: '#2563EB' })),
+      ...externalTeams,
     ].map((p, idx) => ({ ...p, seed: idx + 1 }));
 
     const fields = {
@@ -107,6 +165,8 @@ export default function TournamentFormModal({
       venue: venue.trim(),
       description: description.trim(),
       banner_url: bannerUrl.trim() || COVER_PRESETS[0].url,
+      // Only once the database has these columns: sending them before would fail the whole save
+      ...(hosted ? hostedFields() : {}),
     };
 
     if (!isEdit) {
@@ -115,6 +175,10 @@ export default function TournamentFormModal({
         { ...fields, club_id: club.id, slug: `${slug}-${Date.now().toString().slice(-4)}`, status: 'draft', points_win: 3, points_draw: 1, points_loss: 0 },
         participantInputs
       );
+      if (ageGroupOf) {
+        onSaved(`✓ Added the ${ageGroup.trim() || fields.name} age group. Add its teams on the Teams tab.`);
+        return;
+      }
       onSaved(
         participantInputs.length >= 2
           ? `✓ Created "${fields.name}" with ${participantInputs.length} teams and a generated tiesheet.`
@@ -187,7 +251,7 @@ export default function TournamentFormModal({
           <div className="row">
             <Trophy size={20} color="var(--c-green)" />
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-              {isEdit ? 'Edit Tournament' : 'Tournament Setup Wizard'}
+              {isEdit ? 'Edit Tournament' : ageGroupOf ? 'Add an age group' : 'Tournament Setup Wizard'}
             </h3>
           </div>
           <button
@@ -236,6 +300,81 @@ export default function TournamentFormModal({
             <label htmlFor="tournamentformmodal-description" className="form-label">Description</label>
             <textarea id="tournamentformmodal-description" className="form-textarea" rows={2} value={description} onChange={e => setDescription(e.target.value)} style={{ resize: 'vertical' }} />
           </div>
+
+          {hosted && (
+            <div className="ht-form-block">
+              <div className="ht-two">
+                <div className="form-group">
+                  <label htmlFor="tfm-age" className="form-label">Age group {ageGroupOf ? '*' : '(optional)'}</label>
+                  <input id="tfm-age" className="form-input" type="text" maxLength={32} required={!!ageGroupOf} placeholder="e.g. Under 11s" value={ageGroup} onChange={e => setAgeGroup(e.target.value)} />
+                </div>
+                <label className="form-check" style={{ alignSelf: 'end', marginBottom: '0.6rem' }}>
+                  <input type="checkbox" checked={isJunior} onChange={e => setIsJunior(e.target.checked)} />
+                  Junior players: show first name and last initial on public pages
+                </label>
+              </div>
+
+              <label className="form-check">
+                <input type="checkbox" checked={timed} onChange={e => setTimed(e.target.checked)} />
+                Give every game its own kick-off time and pitch
+              </label>
+              {timed && (
+                <>
+                  <div className="ht-three">
+                    <div className="form-group">
+                      <label htmlFor="tfm-slot" className="form-label">Minutes per game</label>
+                      <input id="tfm-slot" className="form-input" type="number" inputMode="numeric" min={5} max={180} value={matchMinutes} onChange={e => setMatchMinutes(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="tfm-pitches" className="form-label">Pitches</label>
+                      <input id="tfm-pitches" className="form-input" type="number" inputMode="numeric" min={1} max={20} value={pitches} onChange={e => setPitches(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="tfm-dayend" className="form-label">Last game ends by</label>
+                      <input id="tfm-dayend" className="form-input" type="time" value={dayEnd} onChange={e => setDayEnd(e.target.value)} />
+                    </div>
+                  </div>
+                  <p className="ht-hint">Count the game and the changeover, e.g. 2 x 10 minutes plus 5 = 25. Games that don&rsquo;t fit before the finish time carry on the next day from the start time.</p>
+                  {preview && (
+                    <p className={preview.overflow ? 'ht-error' : 'ht-ok'} role="status">
+                      {preview.games} games over {preview.days} day{preview.days === 1 ? '' : 's'}, last game ends {preview.finish}.
+                      {preview.overflow && ' That runs past the end date: add a pitch, shorten the games or move the end date.'}
+                    </p>
+                  )}
+                </>
+              )}
+
+              <div className="ht-three">
+                <div className="form-group">
+                  <label htmlFor="tfm-fee" className="form-label">Entry fee per team ($)</label>
+                  <input id="tfm-fee" className="form-input" type="number" inputMode="decimal" min={0} step="0.01" placeholder="None" value={entryFee} onChange={e => setEntryFee(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="tfm-deadline" className="form-label">Entries close</label>
+                  <input id="tfm-deadline" className="form-input" type="datetime-local" max={startAt} value={deadline} onChange={e => setDeadline(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="tfm-squad" className="form-label">Most players per team</label>
+                  <input id="tfm-squad" className="form-input" type="number" inputMode="numeric" min={1} max={60} placeholder="No limit" value={maxSquad} onChange={e => setMaxSquad(e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="tfm-info" className="form-label">Info for teams</label>
+                <textarea id="tfm-info" className="form-textarea" rows={3} maxLength={4000} placeholder="Parking, canteen, first aid, rules, what to bring" value={teamInfo} onChange={e => setTeamInfo(e.target.value)} style={{ resize: 'vertical' }} />
+                <p className="ht-hint">Shown on every team&rsquo;s entry page and in the info pack email.</p>
+              </div>
+              {clubEvents.length > 0 && (
+                <div className="form-group">
+                  <label htmlFor="tfm-event" className="form-label">Part of a club event</label>
+                  <select id="tfm-event" className="form-select" value={eventId} onChange={e => setEventId(e.target.value)}>
+                    <option value="">Not linked</option>
+                    {clubEvents.map(ev => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                  </select>
+                  <p className="ht-hint">The event page links to the draw, and the event&rsquo;s sponsors show on the tournament page.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginBottom: '1.25rem' }}>
             <ImageUploadZone

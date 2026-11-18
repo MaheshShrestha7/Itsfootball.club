@@ -8,7 +8,8 @@ import { isUuid } from '@/lib/ids';
 import type { Payment } from '@/lib/supabase/types';
 
 // The treasurer settles bills themselves (finance editors):
-//   POST { clubId, paymentId, action: 'cash' | 'excuse' | 'reopen' }    one person
+//   POST { clubId, paymentId, action: 'cash' | 'bank' | 'excuse' | 'reopen' }    one person ('bank': a
+//        bank transfer the treasurer saw arrive, e.g. a guest team's tournament entry fee)
 //   POST { clubId, requestId, action: 'close' }                         excuse everyone still owing
 // Writes go through the caller's own session, so row-level security and the audit log see who did it.
 // A card checkout left open is closed first: paying it afterwards would charge someone who no longer owes.
@@ -18,7 +19,7 @@ const CHUNK = 100;
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const action: string = body?.action;
-  const single = ['cash', 'excuse', 'reopen'].includes(action) && isUuid(body?.paymentId);
+  const single = ['cash', 'bank', 'excuse', 'reopen'].includes(action) && isUuid(body?.paymentId);
   const whole = action === 'close' && isUuid(body?.requestId);
   if (!isUuid(body?.clubId) || (!single && !whole)) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
 
@@ -65,9 +66,9 @@ export async function POST(req: NextRequest) {
   const ids = open.filter(b => !justPaid.has(b.id)).map(b => b.id);
   if (!ids.length) return NextResponse.json({ error: 'They have just paid by card. It will show here shortly.' }, { status: 409 });
 
-  if (action === 'cash') {
+  if (action === 'cash' || action === 'bank') {
     const { error: updateError } = await auth.supabase.from('payments')
-      .update({ method: 'cash', stripe_session_id: null, stripe_payment_intent_id: null }).eq('id', ids[0]).eq('status', 'pending');
+      .update({ method: action === 'bank' ? 'bank_transfer' : 'cash', stripe_session_id: null, stripe_payment_intent_id: null }).eq('id', ids[0]).eq('status', 'pending');
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
     const { error } = await auth.supabase.rpc('fulfil_payment', { p_payment_id: ids[0] });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -21,3 +21,7 @@ export const useEventFixturesReady = () => useColumnReady('matches', 'event_id')
 
 /** True once gallery photos can be linked to an event (media_gallery.event_id, migration 20261171) */
 export const useEventGalleryReady = () => useColumnReady('media_gallery', 'event_id');
+
+/** True once hosted tournaments are switched on (migration 20261180): age groups, timing, guest team
+ *  details, entry links and squads. Until then those controls stay hidden and the new columns are never sent. */
+export const useHostedTournamentsReady = () => useColumnReady('tournaments', 'match_minutes');

@@ -35,7 +35,7 @@ export default function EventDetailsPage({
   params: Promise<{ clubSlug: string; eventId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, sponsors, matches, matchEvents, clubTeams, gallery, isHydrated, syncStatus } = useClub();
+  const { clubs, selectClubBySlug, events, sponsors, tournaments, matches, matchEvents, clubTeams, gallery, isHydrated, syncStatus } = useClub();
   const router = useRouter();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
@@ -108,7 +108,9 @@ export default function EventDetailsPage({
   const goals = games
     .filter(m => m.status === 'completed' && !publicScoreHidden(m, clubTeams) && clubResult(m).outcome)
     .reduce((g, m) => { const r = clubResult(m); return { for: g.for + r.us, against: g.against + r.them }; }, { for: 0, against: 0 });
-  const side = games.length > 0 || albums.length > 0 || eventSponsors.length > 0;
+  // Tournaments the club hosts as part of this event (TX-13): the draw, one link per age group family
+  const cups = event ? tournaments.filter(t => t.event_id === event.id && !t.parent_id) : [];
+  const side = games.length > 0 || albums.length > 0 || eventSponsors.length > 0 || cups.length > 0;
   const photosShown = eventPhotos.filter(g => g.media_type === 'image').slice(0, 3);
 
   return (
@@ -236,6 +238,15 @@ export default function EventDetailsPage({
                       const t = teams.length > 1 ? teamOfMatch(m, clubTeams) : undefined;
                       return <FixtureRow key={m.id} flat timeTile={oneDay} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={t ? teamLabel(t) : undefined} />;
                     })}
+                  </div>
+                </section>
+              )}
+
+              {cups.length > 0 && (
+                <section className="glass-panel evp-box" aria-labelledby="event-draw">
+                  <h2 id="event-draw">The draw</h2>
+                  <div className="ht-ages">
+                    {cups.map(t => <Link key={t.id} className="ht-age" href={`/${club.slug}/tournaments/${t.id}`}>{t.age_group ? `${t.name} (${t.age_group})` : t.name}</Link>)}
                   </div>
                 </section>
               )}

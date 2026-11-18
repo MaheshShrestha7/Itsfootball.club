@@ -22,15 +22,18 @@ export default function PublicTournamentsPage({ params }: { params: Promise<{ cl
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const [view, setView] = useUrlTab(VIEWS, 'view');
 
-  const clubTournaments = tournaments.filter(t => t.club_id === club.id);
+  // Age groups open from their tournament's page
+  const clubTournaments = tournaments.filter(t => t.club_id === club.id && !t.parent_id);
+  const familyIds = (t: Tournament) => [t.id, ...tournaments.filter(x => x.parent_id === t.id).map(x => x.id)];
   const upcoming = clubTournaments.filter(t => !isPastTournament(t))
     .sort((a, b) => Number(b.status === 'ongoing') - Number(a.status === 'ongoing') || startOf(a) - startOf(b));
   const past = clubTournaments.filter(t => isPastTournament(t)).sort((a, b) => startOf(b) - startOf(a));
   const list = view === 'upcoming' ? upcoming : past;
 
   const card = (t: Tournament) => {
-    const teams = tournamentParticipants.filter(p => p.tournament_id === t.id).length;
-    const games = matches.filter(m => m.tournament_id === t.id);
+    const ids = familyIds(t);
+    const teams = tournamentParticipants.filter(p => ids.includes(p.tournament_id)).length;
+    const games = matches.filter(m => !!m.tournament_id && ids.includes(m.tournament_id));
     const played = games.filter(m => m.status === 'completed').length;
     const live = t.status === 'ongoing';
     const done = isPastTournament(t);
@@ -46,7 +49,7 @@ export default function PublicTournamentsPage({ params }: { params: Promise<{ cl
           <h2 className="club-tourn-name"><Trophy size={17} color="var(--c-amber)" aria-hidden="true" className="shrink-0" /> {t.name}</h2>
           <div className="text-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem 0.9rem' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Calendar size={13} aria-hidden="true" />{start ? <LocalTime value={start} options={{ day: 'numeric', month: 'short', year: 'numeric' }} /> : 'Date to be confirmed'}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Layers size={13} aria-hidden="true" />{FORMAT[t.format] || 'Groups + knockout'}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Layers size={13} aria-hidden="true" />{ids.length > 1 ? `${ids.length} age groups` : FORMAT[t.format] || 'Groups + knockout'}</span>
           </div>
           {t.description && <p className="text-note club-tourn-desc">{t.description}</p>}
           <div className="club-tourn-stats">

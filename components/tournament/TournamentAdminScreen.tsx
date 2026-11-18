@@ -10,13 +10,17 @@ import TournamentMatchesList from '@/components/tournament/TournamentMatchesList
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
+import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
+import { ageGroupFamily, ageGroupLabel } from '@/lib/hosted-tournaments';
+import GuestTeamsPanel from '@/components/tournament/GuestTeamsPanel';
+import FairPlayTable from '@/components/tournament/FairPlayTable';
 
 // Inline and on the app's own tokens, not the admin's classes: this screen also shows on
 // /tournaments/{slug}/manage, outside the admin shell (inside it, the shell re-points these tokens)
@@ -44,14 +48,17 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     repairTournaments,
     members,
     updateTournament,
+    matchEvents,
   } = useClub();
   const reviewsReady = useMatchReviewsReady();
+  const hosted = useHostedTournamentsReady();
+  const [addAgeGroup, setAddAgeGroup] = useState(false);
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
 
   // A league has no bracket tab, so it opens on its standings
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>(() => (tournament?.format === 'league' ? 'standings' : 'bracket'));
+  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>(() => (tournament?.format === 'league' ? 'standings' : 'bracket'));
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
@@ -152,7 +159,15 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     { id: 'standings', label: 'Standings', Icon: Layers, show: tournament.format !== 'knockout' },
     { id: 'fixtures', label: `Fixtures and results (${tourneyMatches.length})`, Icon: Calendar, show: true },
     { id: 'teams', label: `Teams (${participants.length})`, Icon: Users, show: true },
+    { id: 'fairplay', label: 'Fair play', Icon: ShieldCheck, show: hosted },
   ] as const).filter(t => t.show);
+  // Age groups of a hosted tournament (one tournament each); not on free public tournaments
+  const family = hosted && !isEvent ? ageGroupFamily(tournaments, tournament) : [];
+  const showFeedback = (tone: 'success' | 'error', message: string) => {
+    setFeedbackTone(tone);
+    setFeedback(message);
+    setTimeout(() => setFeedback(null), 5000);
+  };
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
@@ -214,6 +229,19 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           </button>
         </div>
       </div>
+
+      {family.length > 0 && (
+        <nav className="ht-ages" aria-label="Age groups">
+          {family.length > 1 && family.map(t => (
+            <Link key={t.id} href={`/${club.slug}/admin/tournaments/${t.id}`} className="ht-age" aria-current={t.id === tournament.id ? 'page' : undefined}>
+              {ageGroupLabel(t)}
+            </Link>
+          ))}
+          <button type="button" className="ht-age ht-age-add" onClick={() => setAddAgeGroup(true)} title="Another age group on the same days, with its own teams and draw">
+            <Plus size={14} aria-hidden="true" /> Add an age group
+          </button>
+        </nav>
+      )}
 
       {feedback && (
         <div
@@ -339,7 +367,15 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       )}
 
       {/* Tab 4: Teams & Roster */}
-      {activeTab === 'teams' && (
+      {activeTab === 'teams' && hosted && (
+        <GuestTeamsPanel club={club} tournament={tournament} participants={participants} matches={tourneyMatches} isEvent={isEvent} onFeedback={showFeedback} />
+      )}
+
+      {activeTab === 'fairplay' && hosted && (
+        <FairPlayTable matches={tourneyMatches} events={matchEvents} participants={participants} />
+      )}
+
+      {activeTab === 'teams' && !hosted && (
         <div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <span style={{ flex: '1 1 260px', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
@@ -488,6 +524,14 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             setFeedback(msg);
             setTimeout(() => setFeedback(null), 4000);
           }}
+        />
+      )}
+      {addAgeGroup && (
+        <TournamentFormModal
+          club={club}
+          ageGroupOf={tournament}
+          onClose={() => setAddAgeGroup(false)}
+          onSaved={msg => { setAddAgeGroup(false); showFeedback('success', msg); }}
         />
       )}
     </div>

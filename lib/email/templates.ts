@@ -866,3 +866,59 @@ export function welcomePack(p: {
       : `You're receiving this because you asked for your setup guide on ${p.clubName}'s admin.`,
   });
 }
+
+/** A guest team's tournament emails (hosted tournaments, migration 20261180): the entry link, a
+ *  reminder before the deadline, and the info pack with their games. Transactional: no unsubscribe. */
+export function tournamentTeamEmail(p: {
+  brand: EmailBrand;
+  kind: 'invite' | 'reminder' | 'info';
+  contactName: string;
+  team: string;
+  tournament: string;
+  when: string;
+  venue: string;
+  deadline?: string | null;
+  fee?: string | null;
+  feePaid?: boolean;
+  /** "Sat 9:00 am · Pitch 2 · v Bayside FC" */
+  games?: string[];
+  info?: string | null;
+  link: string;
+  publicLink: string;
+}): RenderedEmail {
+  const hi = `Hi ${firstName(p.contactName)},`;
+  const details: [string, string][] = [['Team', p.team], ['When', p.when], ['Where', p.venue]];
+  if (p.deadline) details.push(['Entries close', p.deadline]);
+  if (p.fee) details.push(['Entry fee', p.feePaid ? `${p.fee} (paid, thank you)` : p.fee]);
+  const games = (p.games || []).slice(0, 12);
+  const common = { brand: p.brand, details, links: [{ label: 'Draw, tables and results', url: p.publicLink }], reason: `You're receiving this because ${p.brand.name} has your team in ${p.tournament}.` };
+  if (p.kind === 'info') {
+    return renderEmail({
+      ...common,
+      subject: `${p.tournament}: ${p.team}'s games and info`,
+      preheader: games[0] ? `First game: ${games[0]}.` : `Everything ${p.team} needs for the day.`,
+      heading: `${p.team} at ${p.tournament}`,
+      paragraphs: [
+        `${hi} here's everything ${p.team} needs for ${p.tournament}.`,
+        ...(games.length ? [`Your games: ${games.join('; ')}.`] : ['The draw isn\'t out yet. We\'ll send your game times once it is.']),
+        ...(p.info ? [p.info] : []),
+      ],
+      cta: { label: 'Open your team entry', url: p.link },
+      note: 'Times can change on the day. The draw page always has the latest.',
+    });
+  }
+  return renderEmail({
+    ...common,
+    subject: p.kind === 'reminder' ? `Reminder: enter ${p.team}'s players for ${p.tournament}` : `${p.tournament}: enter your team`,
+    preheader: p.deadline ? `Entries close ${p.deadline}.` : `Add your players, manager and coach.`,
+    heading: p.kind === 'reminder' ? `${p.team}'s entry isn't finished yet` : `Enter ${p.team} for ${p.tournament}`,
+    paragraphs: [
+      p.kind === 'reminder'
+        ? `${hi} we haven't had ${p.team}'s players yet. It takes a few minutes and you can come back to it.`
+        : `${hi} ${p.brand.name} has added ${p.team} to ${p.tournament}. Use your team's own link to add your crest, colours, manager, coach and players. No account needed.`,
+      ...(p.fee && !p.feePaid ? [`You can pay the ${p.fee} entry fee from the same page, by card or bank transfer.`] : []),
+    ],
+    cta: { label: 'Enter your team', url: p.link },
+    note: 'Keep this link to your team. Anyone with it can change your entry until entries close.',
+  });
+}
