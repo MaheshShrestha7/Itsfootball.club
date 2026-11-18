@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { Club, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
-import { Trophy, X, Sparkles, Save, AlertTriangle } from 'lucide-react';
+import { Trophy, X, Sparkles, Save, AlertTriangle, Pencil, Plus } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -14,6 +14,7 @@ import { packKickoffs, shortCode } from '@/lib/hosted-tournaments';
 import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PopupPanel from '@/components/PopupPanel';
+import { TeamEditor } from '@/components/tournament/GuestTeamsPanel';
 import '@/components/tournament/hosted.css';
 
 // A team that was already in the tournament keeps its id (and with it its crest, entry link and squad)
@@ -73,16 +74,20 @@ export default function TournamentFormModal({
   const [selectedInternalTeamIds, setSelectedInternalTeamIds] = useState<string[]>(
     isEdit
       ? existing.filter(p => p.team_type === 'internal' && p.internal_team_id).map(p => p.internal_team_id!)
-      : ageGroupOf ? [] : clubInternalTeams.map(t => t.id)
+      : []
   );
+  // Own club teams are opt-in: a hosted cup is often all guest clubs
+  const [withOwn, setWithOwn] = useState(selectedInternalTeamIds.length > 0);
   const [externalTeams, setExternalTeams] = useState<ParticipantInput[]>(
     existing.filter(p => p.team_type === 'external').map(({ tournament_id: _t, ...p }) => p)
   );
   const [newExternalName, setNewExternalName] = useState('');
   const [newExternalCode, setNewExternalCode] = useState('');
+  const [editingGuest, setEditingGuest] = useState<number | 'new' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const teamCount = selectedInternalTeamIds.length + externalTeams.length;
+  const ownIds = withOwn ? selectedInternalTeamIds : [];
+  const teamCount = ownIds.length + externalTeams.length;
   const rules = effectiveGroupRules({ group_count: groupCount, teams_advancing_per_group: teamsAdvancing }, teamCount);
   const qualifiers = rules.groupCount * rules.advancing;
 
@@ -138,20 +143,21 @@ export default function TournamentFormModal({
     if (end && end < start) return setError('End date must be after the start date.');
 
     const names = [
-      ...selectedInternalTeamIds.map(id => clubInternalTeams.find(t => t.id === id)?.name),
+      ...ownIds.map(id => clubInternalTeams.find(t => t.id === id)?.name),
       ...externalTeams.map(t => t.name),
     ].filter(Boolean).map(n => n!.toLowerCase());
     if (new Set(names).size !== names.length) return setError('Two teams share a name. Team names must be unique.');
 
     const participantInputs: ParticipantInput[] = [
-      ...selectedInternalTeamIds.flatMap(id => {
+      ...ownIds.flatMap(id => {
         const team = clubInternalTeams.find(t => t.id === id);
         const kept = existing.find(p => p.internal_team_id === id);
         return team
           ? [{ ...(kept ? { id: kept.id } : {}), team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)' }]
           : [];
       }),
-      ...externalTeams,
+      // Kit second colour and staff are hosted-tournament columns (migration 20261180)
+      ...externalTeams.map(t => (hosted ? t : { ...t, secondary_color: undefined, manager_name: undefined, coach_name: undefined })),
     ].map((p, idx) => ({ ...p, seed: idx + 1 }));
 
     const fields = {
@@ -478,110 +484,64 @@ export default function TournamentFormModal({
             </div>
           )}
 
-          {/* Internal Teams */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-              <div className="form-label">Internal Teams ({selectedInternalTeamIds.length} selected)</div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--c-green)' }}>From your club squads</span>
+          {/* Guest clubs: the heart of a hosted tournament */}
+          <fieldset className="ht-fieldset ht-setup-teams">
+            <legend>Guest clubs ({externalTeams.length})</legend>
+            <div className="ht-setup-quick">
+              <input aria-label="Guest club name" className="form-input" type="text" placeholder="Club name" value={newExternalName}
+                onChange={e => setNewExternalName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddExternalTeam(); } }} />
+              <input className="form-input ht-setup-code" type="text" maxLength={4} placeholder="Code" aria-label="Short code" value={newExternalCode}
+                onChange={e => setNewExternalCode(e.target.value.toUpperCase())} />
+              <button type="button" onClick={handleAddExternalTeam} className="btn btn-secondary btn-sm">Add</button>
             </div>
-            {clubInternalTeams.length === 0 ? (
-              <div style={{ padding: '0.75rem', background: 'rgba(var(--tint-rgb), 0.03)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                No internal teams yet. Create them in{' '}
-                {/* A plain link: on the Tournaments screen it switches tab (hashchange) and closes this form */}
-                <a href={`/${club.slug}/admin/tournaments#tournament-sides`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Tournaments &amp; Cups → Tournament Sides</a>, or add guest teams below.
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 180px), 1fr))', gap: '0.5rem' }}>
-                {clubInternalTeams.map(t => {
-                  const isSelected = selectedInternalTeamIds.includes(t.id);
+            <p className="ht-hint">Type a name to add a club fast, then tap it to add its crest, kit colours, manager and coach. Or <button type="button" className="ht-link-btn" onClick={() => setEditingGuest('new')}><Plus size={14} aria-hidden="true" />add a club with all its details</button>. Each club also gets its own entry link for its players once the tournament is set up.</p>
+            {externalTeams.length > 0 && (
+              <ul className="ht-setup-list">
+                {externalTeams.map((ext, idx) => {
+                  const staff = [ext.manager_name && `Manager ${ext.manager_name}`, ext.coach_name && `coach ${ext.coach_name}`].filter(Boolean).join(', ');
                   return (
-                    <label
-                      key={t.id}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.03)',
-                        border: isSelected ? '1px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.08)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => setSelectedInternalTeamIds(prev => (prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]))}
-                      />
-                      <img loading="lazy" decoding="async" width={20} height={20} src={t.logo_url || DEFAULT_CREST} alt="" style={{ width: '20px', height: '20px' }} />
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span>
-                    </label>
+                    <li key={`${ext.name}-${idx}`}>
+                      <span className="ht-crest" style={{ width: 36, height: 36, '--ht-c1': ext.color || undefined, '--ht-c2': ext.secondary_color || ext.color || undefined } as React.CSSProperties}>
+                        <img loading="lazy" decoding="async" src={ext.logo_url || DEFAULT_CREST} alt="" width={28} height={28} />
+                      </span>
+                      <button type="button" className="ht-setup-name" onClick={() => setEditingGuest(idx)}>
+                        <span className="ht-name">{ext.name}</span>
+                        <span className="ht-sub">{staff || (ext.logo_url && ext.logo_url !== DEFAULT_CREST ? ext.short_name : 'Add crest, colours and staff')}</span>
+                      </button>
+                      <button type="button" className="ht-icon-btn" aria-label={`Edit ${ext.name}`} onClick={() => setEditingGuest(idx)}><Pencil size={15} aria-hidden="true" /></button>
+                      <button type="button" className="ht-icon-btn is-danger" aria-label={`Remove ${ext.name}`} onClick={() => setExternalTeams(prev => prev.filter((_, i) => i !== idx))}><X size={15} aria-hidden="true" /></button>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
-          </div>
+          </fieldset>
 
-          {/* Guest Teams (optional) */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div className="form-label" style={{ marginBottom: '0.4rem' }}>Guest Teams ({externalTeams.length}) — optional</div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <input aria-label="Guest club name"
-                className="form-input"
-                type="text"
-                placeholder="Guest club name"
-                value={newExternalName}
-                onChange={e => setNewExternalName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddExternalTeam();
-                  }
-                }}
-                style={{ flex: 2, minWidth: 0 }}
-              />
-              <input
-                className="form-input"
-                type="text"
-                maxLength={4}
-                placeholder="Code"
-                aria-label="Short code"
-                value={newExternalCode}
-                onChange={e => setNewExternalCode(e.target.value.toUpperCase())}
-                style={{ width: '80px', flexShrink: 0, padding: '0.5rem', textAlign: 'center' }}
-              />
-              <button type="button" onClick={handleAddExternalTeam} className="btn btn-secondary" style={{ padding: '0.5rem 0.85rem', fontSize: '0.8rem' }}>
-                Add
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-              {externalTeams.map((ext, idx) => (
-                <span
-                  key={`${ext.name}-${idx}`}
-                  style={{
-                    padding: '3px 8px',
-                    background: 'rgba(59, 130, 246, 0.12)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '12px',
-                    color: 'var(--c-sky)',
-                    fontSize: '0.75rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
-                >
-                  {ext.name} ({ext.short_name})
-                  <button
-                    type="button"
-                    aria-label={`Remove ${ext.name}`}
-                    onClick={() => setExternalTeams(prev => prev.filter((_, i) => i !== idx))}
-                    style={{ background: 'none', border: 'none', color: 'var(--c-red)', cursor: 'pointer', padding: 0 }}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
+          {/* Own club teams: opt-in */}
+          <div className="ht-setup-own">
+            <label className="form-check">
+              <input type="checkbox" checked={withOwn} onChange={e => setWithOwn(e.target.checked)} />
+              Our own club teams play in it too
+            </label>
+            {withOwn && (clubInternalTeams.length === 0 ? (
+              <p className="ht-hint">
+                No club teams yet. Create them in{' '}
+                {/* A plain link: on the Tournaments screen it switches tab (hashchange) and closes this form */}
+                <a href={`/${club.slug}/admin/tournaments#tournament-sides`} className="te-link">Tournament sides</a>.
+              </p>
+            ) : (
+              <div className="ht-setup-own-grid">
+                {clubInternalTeams.map(t => (
+                  <label key={t.id} className="ht-setup-own-item">
+                    <input type="checkbox" checked={selectedInternalTeamIds.includes(t.id)}
+                      onChange={() => setSelectedInternalTeamIds(prev => (prev.includes(t.id) ? prev.filter(id => id !== t.id) : [...prev, t.id]))} />
+                    <img loading="lazy" decoding="async" width={20} height={20} src={t.logo_url || DEFAULT_CREST} alt="" />
+                    <span>{t.name}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
           </div>
 
           {error && (
@@ -604,6 +564,24 @@ export default function TournamentFormModal({
             </button>
           </div>
         </form>
+        {editingGuest !== null && (
+          <TeamEditor
+            club={club}
+            team={editingGuest === 'new' ? null : externalTeams[editingGuest]}
+            isEvent={false}
+            taken={[
+              ...ownIds.map(id => clubInternalTeams.find(t => t.id === id)?.name.toLowerCase() || ''),
+              ...externalTeams.filter((_, i) => i !== editingGuest).map(t => t.name.toLowerCase()),
+            ]}
+            onClose={() => setEditingGuest(null)}
+            onSave={fields => {
+              setExternalTeams(prev => editingGuest === 'new'
+                ? [...prev, { team_type: 'external', ...fields }]
+                : prev.map((t, i) => (i === editingGuest ? { ...t, ...fields } : t)));
+              setEditingGuest(null);
+            }}
+          />
+        )}
       </PopupPanel>
     </div>
   );
