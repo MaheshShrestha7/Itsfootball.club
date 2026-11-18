@@ -21,8 +21,10 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   club_teams: ['id', 'club_id', 'name', 'short_name', 'slug', 'team_type', 'age_group', 'gender', 'is_junior', 'hide_public_scores', 'match_format', 'half_minutes', 'open_to_friendlies', 'color', 'logo_url', 'description', 'sort_order', 'is_default', 'is_active', 'created_at', 'updated_at'],
   club_team_members: ['id', 'club_id', 'team_id', 'member_id', 'team_role', 'jersey_number', 'is_active', 'created_at'],
   internal_teams: ['id', 'club_id', 'name', 'short_name', 'color', 'logo_url', 'cover_url', 'captain_id', 'coach_name', 'player_ids', 'created_at', 'updated_at'],
-  tournaments: ['id', 'club_id', 'name', 'slug', 'season', 'format', 'status', 'points_win', 'points_draw', 'points_loss', 'group_count', 'teams_advancing_per_group', 'has_third_place_match', 'start_date', 'end_date', 'venue', 'description', 'banner_url', 'created_at', 'updated_at'],
-  tournament_participants: ['id', 'tournament_id', 'team_type', 'internal_team_id', 'name', 'short_name', 'logo_url', 'color', 'seed', 'group'],
+  tournaments: ['id', 'club_id', 'name', 'slug', 'season', 'format', 'status', 'points_win', 'points_draw', 'points_loss', 'group_count', 'teams_advancing_per_group', 'has_third_place_match', 'start_date', 'end_date', 'venue', 'description', 'banner_url', 'created_at', 'updated_at',
+    // Migration 20261180: only sent once the app has seen the columns (useHostedTournamentsReady)
+    'parent_id', 'age_group', 'is_junior', 'match_minutes', 'pitches', 'day_end_time', 'entry_fee_cents', 'entry_deadline', 'max_squad', 'team_info', 'event_id'],
+  tournament_participants: ['id', 'tournament_id', 'team_type', 'internal_team_id', 'name', 'short_name', 'logo_url', 'color', 'seed', 'group', 'secondary_color', 'manager_name', 'coach_name'],
   gate_scans: ['id', 'club_id', 'scan_type', 'token', 'member_id', 'member_name', 'event_id', 'event_title', 'match_id', 'match_title', 'valid', 'scanned_at'],
   contact_inquiries: ['id', 'club_id', 'sender_name', 'sender_email', 'sender_phone', 'inquiry_type', 'message', 'status', 'details', 'team_id', 'match_id', 'created_at'],
 };

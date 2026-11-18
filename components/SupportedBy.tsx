@@ -8,10 +8,13 @@ import SponsorLogo from './SponsorLogo';
 
 /** "Supported by" (SP-F8): the club's top-tier sponsors on the site, under a match report and at the
  *  end of a news story. Counted as "Match reports and news" in the Sponsor Report. */
-export default function SupportedBy({ clubId }: { clubId: string }) {
+export default function SupportedBy({ clubId, eventId }: { clubId: string; eventId?: string }) {
   const { sponsors } = useClub();
-  // Club-wide sponsors only; admins load hidden and ended ones too, so they see what fans see
-  const shown = topTierSponsors(sponsors.filter(s => s.club_id === clubId && !s.event_id && isSponsorOnSite(s)));
+  // Club-wide sponsors, or an event's own when it has some (a hosted tournament, TX-12); admins load
+  // hidden and ended ones too, so they see what fans see
+  const onSite = sponsors.filter(s => s.club_id === clubId && isSponsorOnSite(s));
+  const forEvent = eventId ? onSite.filter(s => s.event_id === eventId) : [];
+  const shown = topTierSponsors(forEvent.length ? forEvent : onSite.filter(s => !s.event_id));
   if (!shown.length) return null;
   return (
     <aside aria-label="Supported by" className="glass-panel" style={{ padding: '1.1rem 1.25rem', marginBottom: '2rem', borderRadius: 'var(--radius-xl)', textAlign: 'center' }}>

@@ -206,3 +206,17 @@ assert.equal(fixtureWhenLabel({ match_date: '2026-10-24', match_time: '' }), 'Sa
 assert.equal(fixtureWhenLabel({ match_date: '', match_time: '' }), 'TBD');
 
 console.log('tournament engine: all formats OK');
+
+{
+  // Groups set by hand survive a redraw with keepGroups; uneven groups cap who goes through
+  const t = { id: 'kg', club_id: 'c', name: 'Cup', slug: 'cup', season: '2026', format: 'group_knockout', status: 'draft', points_win: 3, points_draw: 1, points_loss: 0, group_count: 2, teams_advancing_per_group: 3 } as Tournament;
+  const parts = Array.from({ length: 6 }, (_, i) => ({ id: `k${i}`, tournament_id: 'kg', team_type: 'external', name: `K${i}`, group: i < 4 ? 'A' : 'B' })) as TournamentParticipant[];
+  const kept = buildTiesheet(t, parts, { keepGroups: true });
+  assert.deepEqual(kept.participants.map(p => p.group), ['A', 'A', 'A', 'A', 'B', 'B']);
+  assert.ok(kept.matches.filter(m => m.tournament_group === 'B').every(m => ['K4', 'K5'].includes(m.home_team_name)));
+  assert.equal(kept.tournamentUpdates.teams_advancing_per_group, 2);
+  assert.notDeepEqual(buildTiesheet(t, parts).participants.map(p => p.group), ['A', 'A', 'A', 'A', 'B', 'B']);
+  // A group with one team can't be kept: deal again
+  const lone = parts.map((p, i) => ({ ...p, group: i < 5 ? 'A' : 'B' }));
+  assert.deepEqual(buildTiesheet(t, lone, { keepGroups: true }).participants.map(p => p.group), ['A', 'B', 'A', 'B', 'A', 'B']);
+}

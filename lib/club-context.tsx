@@ -295,11 +295,13 @@ interface ClubContextType {
   createTournament: (tournamentData: Omit<Tournament, 'id' | 'created_at' | 'updated_at'>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[], options?: TiesheetOptions) => Tournament;
   updateTournament: (tournamentId: string, updates: Partial<Tournament>) => void;
   /** Edit a tournament; pass participantInputs to replace the teams and rebuild the tiesheet */
-  saveTournament: (tournamentId: string, updates: Partial<Tournament>, participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]) => void;
+  saveTournament: (tournamentId: string, updates: Partial<Tournament>, participantInputs?: (Omit<TournamentParticipant, 'id' | 'tournament_id'> & { id?: string })[]) => void;
   deleteTournament: (tournamentId: string) => void;
   addTournamentParticipant: (participantData: Omit<TournamentParticipant, 'id'>) => TournamentParticipant;
+  /** Edit a team in a tournament: a new name or crest also shows on its fixtures */
+  updateTournamentParticipant: (participantId: string, updates: Partial<TournamentParticipant>) => void;
   deleteTournamentParticipant: (participantId: string) => void;
-  generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean }) => Match[];
+  generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean; keepGroups?: boolean }) => Match[];
   updateTournamentMatchScore: (matchId: string, homeScore: number, awayScore: number, homePens?: number, awayPens?: number, status?: 'upcoming' | 'live' | 'completed') => void;
   progressKnockoutStage: (tournamentId: string) => void;
   /** Upgrades a club's tournaments built by older versions (safe to call repeatedly) */
@@ -3468,7 +3470,7 @@ export function ClubProvider({
   const saveTournament = useCallback((
     tournamentId: string,
     updates: Partial<Tournament>,
-    participantInputs?: Omit<TournamentParticipant, 'id' | 'tournament_id'>[]
+    participantInputs?: (Omit<TournamentParticipant, 'id' | 'tournament_id'> & { id?: string })[]
   ) => {
     const current = tournaments.find(t => t.id === tournamentId);
     if (!current) return;
@@ -3477,12 +3479,14 @@ export function ClubProvider({
 
     // Teams or structure changed: rebuild the tiesheet
     if (participantInputs) {
-      applyTiesheet(merged, participantInputs.map(p => ({ ...p, id: newId(), tournament_id: tournamentId })));
+      // A team that stays keeps its id, so its entry link, squad and crest stay with it
+      applyTiesheet(merged, participantInputs.map(p => ({ ...p, id: p.id || newId(), tournament_id: tournamentId })));
       return;
     }
 
     // Otherwise keep results; carry the new name / season / venue / dates onto unplayed fixtures
-    const datesChanged = merged.start_date !== current.start_date || merged.end_date !== current.end_date;
+    const datesChanged = merged.start_date !== current.start_date || merged.end_date !== current.end_date
+      || merged.match_minutes !== current.match_minutes || merged.pitches !== current.pitches || merged.day_end_time !== current.day_end_time;
     const fresh = datesChanged
       ? new Map(buildTiesheet(merged, tournamentParticipants.filter(p => p.tournament_id === tournamentId)).matches.map(m => [m.id, m]))
       : null;
@@ -3492,18 +3496,20 @@ export function ClubProvider({
       if (m.status === 'upcoming') {
         if (merged.venue && m.venue === current.venue) next.venue = merged.venue;
         const f = fresh?.get(m.id);
-        if (f) Object.assign(next, { match_date: f.match_date, match_time: f.match_time });
+        if (f) Object.assign(next, { match_date: f.match_date, match_time: f.match_time, ...(merged.match_minutes ? { pitch_label: f.pitch_label } : {}) });
       }
       return next;
     }));
   }, [tournaments, tournamentParticipants, updateTournament, applyTiesheet]);
 
   const deleteTournament = useCallback((tournamentId: string) => {
-    queueDelete('tournaments', [tournamentId]);
-    setTournaments(prev => prev.filter(t => t.id !== tournamentId));
-    setTournamentParticipants(prev => prev.filter(p => p.tournament_id !== tournamentId));
-    setMatches(prev => prev.filter(m => m.tournament_id !== tournamentId));
-  }, [queueDelete]);
+    // Its age groups go with it (the database deletes them too: parent_id ON DELETE CASCADE)
+    const ids = [tournamentId, ...tournaments.filter(t => t.parent_id === tournamentId).map(t => t.id)];
+    queueDelete('tournaments', ids);
+    setTournaments(prev => prev.filter(t => !ids.includes(t.id)));
+    setTournamentParticipants(prev => prev.filter(p => !ids.includes(p.tournament_id)));
+    setMatches(prev => prev.filter(m => !m.tournament_id || !ids.includes(m.tournament_id)));
+  }, [queueDelete, tournaments]);
 
   const addTournamentParticipant = useCallback((participantData: Omit<TournamentParticipant, 'id'>) => {
     const newParticipant: TournamentParticipant = {
@@ -3514,12 +3520,32 @@ export function ClubProvider({
     return newParticipant;
   }, []);
 
+  const updateTournamentParticipant = useCallback((participantId: string, updates: Partial<TournamentParticipant>) => {
+    const current = tournamentParticipants.find(p => p.id === participantId);
+    if (!current) return;
+    const next = { ...current, ...updates };
+    setTournamentParticipants(prev => prev.map(p => p.id === participantId ? next : p));
+    if (next.name === current.name && next.logo_url === current.logo_url) return;
+    // Fixtures hold the team's name and crest themselves (standings and the bracket match by name)
+    setMatches(prev => prev.map(m => {
+      if (m.tournament_id !== current.tournament_id) return m;
+      const home = m.home_team_name === current.name;
+      const away = m.away_team_name === current.name;
+      if (!home && !away) return m;
+      return {
+        ...m,
+        ...(home ? { home_team_name: next.name, home_team_logo: next.logo_url } : {}),
+        ...(away ? { away_team_name: next.name, away_team_logo: next.logo_url } : {}),
+      };
+    }));
+  }, [tournamentParticipants]);
+
   const deleteTournamentParticipant = useCallback((participantId: string) => {
     queueDelete('tournamentParticipants', [participantId]);
     setTournamentParticipants(prev => prev.filter(p => p.id !== participantId));
   }, [queueDelete]);
 
-  const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean }) => {
+  const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean; keepGroups?: boolean }) => {
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (!tournament) return [];
     return applyTiesheet(tournament, tournamentParticipants.filter(p => p.tournament_id === tournamentId), options);
@@ -3741,6 +3767,7 @@ export function ClubProvider({
         deleteTournament,
         addTournamentParticipant,
         deleteTournamentParticipant,
+        updateTournamentParticipant,
         generateTournamentTiesheet,
         updateTournamentMatchScore,
         progressKnockoutStage,

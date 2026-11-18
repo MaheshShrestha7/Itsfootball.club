@@ -34,7 +34,9 @@ export default function AdminTournamentsPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const activeSeason = getActiveSeason(club.id);
 
-  const clubTournaments = tournaments.filter(t => t.club_id === club.id);
+  // An age group is listed under its tournament (it opens from there), not as a tournament of its own
+  const clubTournaments = tournaments.filter(t => t.club_id === club.id && !t.parent_id);
+  const familyIds = (t: { id: string }) => [t.id, ...tournaments.filter(x => x.parent_id === t.id).map(x => x.id)];
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
 
   const [seasonFilter, setSeasonFilter] = useState('ALL');
@@ -215,8 +217,9 @@ export default function AdminTournamentsPage({
                 <div className="admin-panel admin-empty" style={{ gridColumn: '1 / -1' }}><p style={{ margin: 0 }}>No tournaments match these filters.</p></div>
               )}
               {shownTournaments.map(tourn => {
-                const participants = tournamentParticipants.filter(p => p.tournament_id === tourn.id);
-                const tourneyMatches = matches.filter(m => m.tournament_id === tourn.id);
+                const ids = familyIds(tourn);
+                const participants = tournamentParticipants.filter(p => ids.includes(p.tournament_id));
+                const tourneyMatches = matches.filter(m => !!m.tournament_id && ids.includes(m.tournament_id));
                 const completedMatches = tourneyMatches.filter(m => m.status === 'completed').length;
 
                 const formatLabel =
@@ -311,7 +314,7 @@ export default function AdminTournamentsPage({
                     <div style={{ padding: '1rem 1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>
                         <Layers size={14} aria-hidden="true" />
-                        <span>{formatLabel}</span>
+                        <span>{ids.length > 1 ? `${formatLabel}, ${ids.length} age groups` : formatLabel}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                         <Calendar size={13} aria-hidden="true" />

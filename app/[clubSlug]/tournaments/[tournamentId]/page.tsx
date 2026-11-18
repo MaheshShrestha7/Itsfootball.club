@@ -17,8 +17,14 @@ import {
   Radio,
   MapPin,
   Clock,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
+import FairPlayTable from '@/components/tournament/FairPlayTable';
+import SupportedBy from '@/components/SupportedBy';
+import { AgeGroupTabs, TeamDetail } from '@/components/tournament/HostedPublic';
+import { usePublicSquads } from '@/lib/use-tournament-entries';
+import { juniorPublicName } from '@/lib/teams';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
 
@@ -36,12 +42,27 @@ export default function PublicTournamentDetailPage({
     matches,
     members,
     getTournamentStandings,
+    matchEvents,
+    events,
   } = useClub();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === resolvedParams.tournamentId);
 
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams'>('bracket');
+  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>('bracket');
+  // ?team=<id> opens one team's page (the link in its entry email and the share card)
+  const [teamId, setTeamId] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('team');
+    if (id) { setTeamId(id); setActiveTab('teams'); }
+  }, []);
+  const openTeam = (id: string | null) => {
+    setTeamId(id);
+    const u = new URL(window.location.href);
+    if (id) u.searchParams.set('team', id); else u.searchParams.delete('team');
+    window.history.replaceState(null, '', u);
+  };
+  const squads = usePublicSquads(tournament?.id, !!tournament);
 
   // Open on the standings for a league, and for a group stage whose knockout rounds aren't drawn
   // yet (an empty bracket isn't much to land on); otherwise the bracket
@@ -50,7 +71,7 @@ export default function PublicTournamentDetailPage({
   const tournamentFormat = tournament?.format;
   useEffect(() => {
     if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && !hasKnockout)) {
-      setActiveTab('standings');
+      setActiveTab(t => (t === 'teams' ? t : 'standings'));
     }
   }, [tournamentId, tournamentFormat, hasKnockout]);
 
@@ -71,6 +92,9 @@ export default function PublicTournamentDetailPage({
   const participants = tournamentParticipants.filter(p => p.tournament_id === tournament.id);
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
   const liveCount = tourneyMatches.filter(m => m.status === 'live').length;
+  const showName = (n: string) => (tournament.is_junior ? juniorPublicName(n) : n);
+  const linkedEvent = tournament.event_id ? events.find(e => e.id === tournament.event_id) : undefined;
+  const openTeamRow = teamId ? participants.find(p => p.id === teamId) : undefined;
 
   const formatLabel =
     tournament.format === 'knockout'
@@ -190,6 +214,12 @@ export default function PublicTournamentDetailPage({
                       <span>{tournament.venue}</span>
                     </span>
                   )}
+                  {linkedEvent && (
+                    <Link href={`/${club.slug}/events/${linkedEvent.id}`} className="row row-tight" style={{ color: 'var(--club-ink)', fontWeight: 700 }}>
+                      <Sparkles size={14} />
+                      <span>Part of {linkedEvent.title}</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -200,6 +230,7 @@ export default function PublicTournamentDetailPage({
 
       {/* Main Tabs and Content */}
       <main style={{ maxWidth: '1300px', margin: '0 auto', padding: '2rem 1.5rem 4rem 1.5rem' }}>
+        <AgeGroupTabs tournaments={tournaments} tournament={tournament} href={t => `/${club.slug}/tournaments/${t.id}`} />
         {/* Shown only once the club has awarded it */}
         <PlayerOfTournament tournament={tournament} members={members.filter(m => m.club_id === club.id)} />
 
@@ -300,6 +331,25 @@ export default function PublicTournamentDetailPage({
             <Users size={16} />
             <span>Teams & Rosters ({participants.length})</span>
           </button>
+          <button
+            onClick={() => setActiveTab('fairplay')}
+            style={{
+              padding: '0.85rem 1.5rem',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'fairplay' ? '2px solid var(--club-primary)' : '2px solid transparent',
+              color: activeTab === 'fairplay' ? 'var(--club-ink)' : 'var(--text-secondary)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <ShieldCheck size={16} />
+            <span>Fair play</span>
+          </button>
         </div>
 
         {/* Tab 1: Bracket */}
@@ -344,6 +394,15 @@ export default function PublicTournamentDetailPage({
           />
         )}
 
+        {activeTab === 'fairplay' && (
+          <FairPlayTable matches={tourneyMatches} events={matchEvents} participants={participants} showName={showName} />
+        )}
+
+        {activeTab === 'teams' && openTeamRow && (
+          <TeamDetail team={openTeamRow} tournament={tournament} matches={tourneyMatches} events={matchEvents}
+            squad={squads} host={club} showName={showName} onClose={() => openTeam(null)} />
+        )}
+
         {/* Tab 4: Teams */}
         {activeTab === 'teams' && (
           <div
@@ -354,17 +413,28 @@ export default function PublicTournamentDetailPage({
             }}
           >
             {participants.map(part => (
-              <div
+              <button
+                type="button"
                 key={part.id}
+                onClick={() => { openTeam(part.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                aria-pressed={part.id === teamId}
+                className="ht-team-card"
                 style={{
+                  '--ht-c1': part.color || 'rgba(var(--tint-rgb), 0.08)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  font: 'inherit',
+                  color: 'inherit',
+                  width: '100%',
                   background: 'rgba(var(--dk-15-23-42), 0.75)',
                   border: '1px solid rgba(var(--tint-rgb), 0.08)',
+                  borderLeft: '4px solid var(--ht-c1)',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.85rem',
-                }}
+                } as React.CSSProperties}
               >
                 <img loading="lazy" decoding="async" width={42} height={42}
                   src={part.logo_url || DEFAULT_CREST}
@@ -403,10 +473,11 @@ export default function PublicTournamentDetailPage({
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
+        <div style={{ marginTop: '2.5rem' }}><SupportedBy clubId={club.id} eventId={tournament.event_id || undefined} /></div>
       </main>
     </div>
   );

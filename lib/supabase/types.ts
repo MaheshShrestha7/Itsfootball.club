@@ -861,6 +861,23 @@ export interface Tournament {
   player_of_tournament_member_id?: string | null;
   player_of_tournament_name?: string | null;
   player_of_tournament_note?: string | null;
+  /** Hosted tournaments (migration 20261180). An age group is its own tournament whose parent_id
+   *  points at the event's first one. */
+  parent_id?: string | null;
+  age_group?: string | null;
+  /** Player names shortened on public pages ("Ruby S.") */
+  is_junior?: boolean;
+  /** One game plus changeover, in minutes: set, every game gets its own kick-off and pitch */
+  match_minutes?: number | null;
+  pitches?: number | null;
+  /** "17:00": no game runs past this; the rest carry on the next day */
+  day_end_time?: string | null;
+  entry_fee_cents?: number | null;
+  entry_deadline?: string | null;
+  max_squad?: number | null;
+  /** Parking, canteen, rules: sent to every team and shown on their entry page */
+  team_info?: string | null;
+  event_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -876,6 +893,43 @@ export interface TournamentParticipant {
   color?: string;
   seed?: number;
   group?: string; // 'A', 'B', 'C', etc.
+  /** Migration 20261180: second kit colour, and the staff shown on the public team page */
+  secondary_color?: string | null;
+  manager_name?: string | null;
+  coach_name?: string | null;
+}
+
+/** A guest team's private entry details (tournament_entries, migration 20261180) */
+export interface TournamentEntry {
+  participant_id: string;
+  tournament_id: string;
+  club_id: string;
+  entry_key: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  assistant_name: string | null;
+  first_aid_name: string | null;
+  status: 'not_started' | 'in_progress' | 'submitted';
+  submitted_at: string | null;
+  reminded_at: string | null;
+  info_sent_at: string | null;
+  payment_id: string | null;
+  checked_in_at: string | null;
+}
+
+/** A player a guest club entered (tournament_squads; visitors read tournament_squads_public) */
+export interface TournamentSquadPlayer {
+  id: string;
+  participant_id: string;
+  tournament_id: string;
+  name: string;
+  shirt_number: number | null;
+  position: string | null;
+  is_junior?: boolean;
+  hide_public?: boolean;
+  present?: boolean;
+  sort_order: number;
 }
 
 export interface TournamentStanding {
