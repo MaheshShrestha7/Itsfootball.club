@@ -396,6 +396,8 @@ export default function MatchCenterPage({
     const logo = side === 'home' ? match.home_team_logo : match.away_team_logo;
     const crest = logo && !logoFailed[side] ? logo : isClubSide(side) ? club.logo_url : undefined;
     const markFailed = () => setLogoFailed(prev => (prev[side] ? prev : { ...prev, [side]: true }));
+    const useShort = name.split(/\s+/).some(w => w.length > 9);
+    const shown = useShort ? (side === 'home' ? homeShort : awayShort) : name;
     return (
       <span className={`stb-team is-${side}`} style={{ '--side': side === 'home' ? homeColor : awayColor } as React.CSSProperties}>
         <span className="stb-crest">
@@ -408,9 +410,10 @@ export default function MatchCenterPage({
             <span>{(side === 'home' ? homeShort : awayShort).slice(0, 4)}</span>
           )}
         </span>
-        {/* A word too long for the phone column ("Marrickville") would break mid-word, so phones get the short name then */}
-        <span className="stb-name" title={name}>
-          {name.split(/\s+/).some(w => w.length > 9)
+        {/* A word too long for the phone column ("Marrickville") gets the short name on phones; the longest word
+            left sets the phone font size so it fits the column whole (globals.css .stb-name) */}
+        <span className="stb-name" title={name} style={{ '--longest': Math.max(...shown.split(/\s+/).map(w => w.length)) } as React.CSSProperties}>
+          {useShort
             ? <><span className="team-name-full">{name}</span><span className="team-name-short">{side === 'home' ? homeShort : awayShort}</span></>
             : name}
         </span>

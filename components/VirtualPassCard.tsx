@@ -570,7 +570,7 @@ export default function VirtualPassCard({ club, member, teams = [], nextMatch, o
                       </>
                     ) : (
                       <>
-                        <strong>{nextMatch.is_club_home ? 'vs' : '@'} {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>
+                        <strong>vs {nextMatch.opponent_name || (nextMatch.is_club_home ? nextMatch.away_team_name : nextMatch.home_team_name)}</strong>
                         <span style={{ color: GLASS_MUTED }}> ({nextMatch.is_club_home ? 'Home' : 'Away'})</span>
                       </>
                     )}

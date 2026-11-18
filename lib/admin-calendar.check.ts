@@ -60,7 +60,7 @@ assert.ok(!byKey.has('match:other-club'));
 assert.equal(byKey.get('match:won')!.title, 'vs Eastfield');
 assert.equal(byKey.get('match:won')!.result, 'W');
 assert.equal(byKey.get('match:won')!.score, '3-1');
-assert.equal(byKey.get('match:away-loss')!.title, '@ Kingsway');
+assert.equal(byKey.get('match:away-loss')!.title, 'vs Kingsway');
 assert.equal(byKey.get('match:away-loss')!.result, 'L');
 assert.equal(byKey.get('match:away-loss')!.score, '0-2');
 assert.equal(byKey.get('match:off')!.off, true);

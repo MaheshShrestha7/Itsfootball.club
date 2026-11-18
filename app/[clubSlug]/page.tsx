@@ -415,6 +415,10 @@ export default function ClubPublicPage({
   const heroNews = currentSlide?.targetNews;
   const heroEvent = currentSlide?.targetEvent;
   const heroIsLive = heroMatch?.status === 'live' || heroMatch?.status === 'halftime';
+  // The right-hand side only shows what the headline doesn't; with nothing new to add the slide takes the full width
+  const heroHasSide = currentSlide?.category === 'match' ? !!heroMatch && (heroIsLive || heroMatch.id !== stripNextMatch?.id)
+    : currentSlide?.category === 'news' ? !!heroNews?.cover_image_url
+    : currentSlide?.category !== 'club';
   // A club with nothing posted and no photo: a flat field of its colour, so the text and buttons can't sit on a photo
   const heroIsFlat = currentSlide?.category === 'club' && !currentSlide.bgImage;
 
@@ -607,11 +611,13 @@ export default function ClubPublicPage({
             {/* Right column: one clickable card for the slide. On phones an upcoming fixture's or a
                 story's card only repeats the headline (and the matchday strip below), so it's left out
                 there and the slide tabs stay above the bottom menu; a live score always shows. */}
-            {currentSlide.category !== 'club' && (
+            {heroHasSide && (
             <div className={
               (currentSlide.category === 'match' && !['live', 'halftime'].includes(heroMatch?.status || ''))
               || currentSlide.category === 'news' ? 'club-hero-side-repeat' : undefined
             }>
+              {/* The matchday strip just below already shows the next game (teams, countdown, buttons), so the
+                  side card is only for a live score or a pinned game the strip doesn't show */}
               {currentSlide.category === 'match' && heroMatch && (
                 <Link
                   href={matchPath(club.slug, heroMatch)}
@@ -680,29 +686,11 @@ export default function ClubPublicPage({
                 </Link>
               )}
 
+              {/* The headline already names the story: the side shows only its own photo, when it has one */}
               {currentSlide.category === 'news' && heroNews && (
-                <Link
-                  href={newsPath(club.slug, heroNews.slug)}
-                  className="glass-panel glass-panel-interactive"
-                  style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', color: 'inherit' }}
-                >
-                  <div style={{ height: '200px', position: 'relative' }}>
-                    <CoverImage
-                      loading="eager"
-                      src={heroNews.cover_image_url || club.banner_url}
-                      alt={heroNews.title}
-                      crestUrl={club.logo_url}
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  </div>
-                  <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {!!heroNews.tags?.length && <div className="text-meta">{heroNews.tags.join(', ')}</div>}
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{heroNews.title}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      <span>{heroNews.author_name ? `By ${heroNews.author_name}` : ''}</span>
-                      <span style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Read article</span>
-                    </div>
-                  </div>
+                <Link href={newsPath(club.slug, heroNews.slug)} className="glass-panel glass-panel-interactive"
+                  aria-label={heroNews.title} style={{ display: 'block', overflow: 'hidden', height: '320px' }}>
+                  <CoverImage loading="eager" src={heroNews.cover_image_url} alt="" crestUrl={club.logo_url} style={{ width: '100%', height: '100%' }} />
                 </Link>
               )}
 

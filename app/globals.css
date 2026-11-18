@@ -2466,15 +2466,18 @@ textarea {
 .stb-top a { text-decoration-color: rgba(255, 184, 28, 0.4); }
 .stb-field { position: relative; }
 .stb-main { margin: 0; font: inherit; color: var(--stb-ink); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 0.5rem; padding: 1.15rem 0.6rem 1rem; }
-.stb-team { display: grid; justify-items: center; gap: 0.55rem; text-align: center; min-width: 0; }
+.stb-team { display: grid; justify-items: center; gap: 0.55rem; text-align: center; min-width: 0; container-type: inline-size; }
 .stb-crest { width: 52px; aspect-ratio: 1; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center; overflow: hidden; }
 .stb-crest img { width: 100%; height: 100%; object-fit: contain; }
 .stb-crest span { font: 800 0.9rem var(--font-heading); color: var(--stb-frame); }
 .stb-name { font: 800 0.82rem/1.15 var(--font-heading); text-transform: uppercase; letter-spacing: 0.02em; overflow-wrap: break-word; min-width: 0; max-width: 100%; }
+/* Phones: shrink so the longest word (--longest letters, set in the match page) fits the column whole.
+   The kick-off clock leaves the names less room than a score does, so a fixed letter limit wasn't enough. */
+.stb-team .stb-name { font-size: clamp(0.56rem, 100cqi / (var(--longest, 9) * 0.8), 0.82rem); hyphens: auto; }
 .stb-bar { width: 36px; height: 4px; background: var(--side); }
 .stb-centre { display: grid; justify-items: center; gap: 0.65rem; }
 .stb-lamps { display: flex; align-items: center; gap: calc(var(--lamp) * 1.5); padding: calc(var(--lamp) * 0.8); background: #0C1015; border: 1px solid var(--stb-rule); border-radius: 6px; }
-.stb-lamps.is-small { --lamp: 5px; --lamp-gap: 2px; gap: calc(var(--lamp) * 1.2); }
+.stb-lamps.is-small { --lamp: clamp(3px, 1.2vw, 5px); --lamp-gap: 2px; gap: calc(var(--lamp) * 1.2); }
 .stb-glyph { display: grid; gap: var(--lamp-gap); }
 .stb-glyph i { width: var(--lamp); height: var(--lamp); border-radius: 50%; background: var(--stb-lamp-off); transition: background-color 90ms linear, box-shadow 90ms linear; }
 .stb-glyph i.on { background: var(--stb-lamp-on); box-shadow: 0 0 calc(var(--lamp) * 0.75) var(--stb-glow); }
@@ -2511,7 +2514,8 @@ textarea {
   .stb-team.is-home .stb-name { grid-column: 1; grid-row: 1; }
   .stb-team.is-away { justify-content: start; text-align: left; }
   .stb-bar { display: none; }
-  .stb-name { font-size: 1.45rem; border-bottom: 4px solid var(--side); padding-bottom: 0.3rem; }
+  .stb-team { container-type: normal; }
+  .stb-team .stb-name { font-size: 1.45rem; border-bottom: 4px solid var(--side); padding-bottom: 0.3rem; }
   .stb-crest { width: 76px; }
   .stb-crest span { font-size: 1.2rem; }
   .stb-lamps.is-small { --lamp: 8px; --lamp-gap: 3px; }

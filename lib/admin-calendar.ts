@@ -98,7 +98,8 @@ function matchTitle(m: Match): string {
   if (m.match_type === 'internal') return m.title?.trim() || `${m.home_team_name} vs ${m.away_team_name}`;
   const home = m.is_club_home !== false;
   const opponent = m.opponent_name?.trim() || (home ? m.away_team_name : m.home_team_name);
-  return `${home ? 'vs' : '@'} ${opponent}`;
+  // Always "vs Opponent", home or away (the Home/Away label says which)
+  return `vs ${opponent}`;
 }
 
 function matchScore(m: Match): Pick<CalendarItem, 'score' | 'result'> {
