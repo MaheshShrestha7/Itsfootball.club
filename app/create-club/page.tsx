@@ -9,6 +9,7 @@ import AuthModal from '@/components/AuthModal';
 import { useClub, validateClubSlug, isClubSlugAvailable } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { getAccessToken } from '@/lib/supabase/client';
+import { trackClubCreated } from '@/lib/platform-tracking';
 import { CREATE_CLUB_STEPS } from '@/lib/faq';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import WizardGroundSearch, { type WizardGround } from '@/components/grounds/WizardGroundSearch';
@@ -222,6 +223,8 @@ export default function CreateClubPage() {
     }
     // The new owner's setup guide (what, where and how); Start here shows the same steps
     if (saved) void sendWelcomePack({ clubId: newClub.id });
+    // Mission Control's "Clubs created, by first source"
+    if (saved) trackClubCreated();
     router.push(saved ? `/${newClub.slug}/admin` : '/my-clubs');
   };
 

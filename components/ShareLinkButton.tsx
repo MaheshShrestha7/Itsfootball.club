@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Check, Share2 } from 'lucide-react';
+import { tagLink } from '@/lib/visit-source';
 
 /**
  * "Share": the phone's share sheet where there is one, otherwise copies the link. If the browser
@@ -9,8 +10,10 @@ import { Check, Share2 } from 'lucide-react';
  * `url` may be a path ('/club/news/x'): it's shared on the domain the visitor is on (a club's own
  * domain included).
  */
-export default function ShareLinkButton({ url, title, text, className = 'btn btn-secondary btn-sm', label = 'Share' }: {
+export default function ShareLinkButton({ url, title, text, className = 'btn btn-secondary btn-sm', label = 'Share', campaign }: {
   url: string;
+  /** The name this link shows under in the club's Analytics, "Links you shared" (default: the page's address) */
+  campaign?: string;
   title: string;
   text?: string;
   className?: string;
@@ -22,7 +25,9 @@ export default function ShareLinkButton({ url, title, text, className = 'btn btn
   const [shown, setShown] = useState(url);
 
   const share = async () => {
-    const link = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+    const full = url.startsWith('/') ? `${window.location.origin}${url}` : url;
+    // Tagged so visits from it show up in Analytics; the share sheet doesn't say which app it went to
+    const link = tagLink(full, 'share', 'share', campaign || shareCampaign(full));
     setShown(link);
     if (navigator.share) {
       try {
@@ -52,4 +57,14 @@ export default function ShareLinkButton({ url, title, text, className = 'btn btn
       )}
     </span>
   );
+}
+
+/** '/rfc/news/presentation-night' -> 'news/presentation-night': the page, without the club's part */
+function shareCampaign(link: string): string {
+  try {
+    const parts = new URL(link).pathname.split('/').filter(Boolean);
+    return (parts.length > 2 ? parts.slice(1) : parts).join('/') || 'home';
+  } catch {
+    return 'shared-link';
+  }
 }

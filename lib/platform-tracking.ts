@@ -1,6 +1,7 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { secureToken } from '@/lib/ids';
 import { isPlatformHost } from '@/lib/slugs';
+import { signupRow, visitTags } from '@/lib/visit-source';
 
 /**
  * Record a platform-level visit (to itsfootball.club home, pricing, about, directory, etc.)
@@ -31,6 +32,42 @@ export function trackToolUse(action: string) {
   record('tool_use', window.location.pathname, { action: action.slice(0, 40) }, 60 * 1000, action);
 }
 
+/** A club was created: one row with the source that first brought this browser here (no name, no account) */
+export function trackClubCreated() {
+  if (typeof window === 'undefined') return;
+  const client = getSupabaseClient();
+  if (!client) return;
+  const { referrer, metadata } = signupRow('club');
+  client.from('platform_analytics')
+    .insert({ event_type: 'club_created', page_path: '/create-club', visitor_hash: visitorId(), referrer, metadata })
+    .then(({ error }) => { if (error) console.debug('Platform tracking notice:', error.message); });
+}
+
+/** Someone applied to join a club or bought tickets: one row in the club's visit stats with the source
+ *  that first brought this browser to the club's site. Only the club's admins can read it. */
+export function trackClubSignup(clubId: string, kind: 'member' | 'ticket') {
+  if (typeof window === 'undefined') return;
+  const client = getSupabaseClient();
+  if (!client) return;
+  const { referrer, metadata } = signupRow(kind);
+  client.from('club_analytics')
+    .insert({ club_id: clubId, event_type: 'signup', page_path: kind === 'ticket' ? '/tickets' : '/member', visitor_hash: visitorId(), referrer, metadata })
+    .then(({ error }) => { if (error) console.debug('Club tracking notice:', error.message); });
+}
+
+function visitorId(): string {
+  try {
+    let visitor = localStorage.getItem('itsfootball_vid') || '';
+    if (!visitor) {
+      visitor = secureToken('v').slice(0, 24);
+      localStorage.setItem('itsfootball_vid', visitor);
+    }
+    return visitor;
+  } catch {
+    return 'anon';
+  }
+}
+
 function record(eventType: 'page_view' | 'tool_use', path: string, extra: Record<string, string> = {}, gapMs = 30 * 60 * 1000, keySuffix = '') {
   if (typeof window === 'undefined') return;
   const client = getSupabaseClient();
@@ -53,16 +90,9 @@ function record(eventType: 'page_view' | 'tool_use', path: string, extra: Record
     device = 'Mobile';
   }
 
-  let visitor = '';
-  try {
-    visitor = localStorage.getItem('itsfootball_vid') || '';
-    if (!visitor) {
-      visitor = secureToken('v').slice(0, 24);
-      localStorage.setItem('itsfootball_vid', visitor);
-    }
-  } catch {
-    visitor = 'anon';
-  }
+  const visitor = visitorId();
+  // Link tags (utm_*, fbclid) on the page a visitor lands on
+  const tags = eventType === 'page_view' ? visitTags() : {};
 
   client
     .from('platform_analytics')
@@ -71,7 +101,7 @@ function record(eventType: 'page_view' | 'tool_use', path: string, extra: Record
       page_path: path.slice(0, 255),
       visitor_hash: visitor,
       referrer: document.referrer.slice(0, 500) || null, // the database caps it at 500
-      metadata: { device, screenWidth: window.innerWidth, ...extra },
+      metadata: { device, screenWidth: window.innerWidth, ...tags, ...extra },
     })
     .then(({ error }) => {
       if (error) {

@@ -499,6 +499,11 @@ export interface ClubAnalyticsSummary {
   topSections: { name: string; views: string; count: number; color: string }[];
   deviceBreakdown: { name: string; percentage: string; color: string }[];
   recentGateScans: GateScanRecord[];
+  /** Visits by source (Facebook, Google...) and tagged links, one visit per browser per day */
+  sources: import('@/lib/visit-source').SourceSummary;
+  /** Membership applications and ticket orders by the source that first brought them */
+  memberSources: [string, number][];
+  ticketSources: [string, number][];
 }
 
 export type SponsorAnalyticsEventType = 'impression' | 'viewable_impression' | 'click';

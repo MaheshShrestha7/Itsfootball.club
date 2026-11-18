@@ -190,7 +190,7 @@ export default function EventDetailsPage({
                   <MapPin size={14} aria-hidden="true" /> Directions
                 </a>
               )}
-              {over && writeups.length === 0 && <ShareLinkButton url={`/${club.slug}/events/${event.id}`} title={event.title} />}
+              {over && writeups.length === 0 && <ShareLinkButton url={`/${club.slug}/events/${event.id}`} title={event.title} campaign={`event/${event.title}`} />}
               <button type="button" onClick={() => setContactModalOpen(true)} className="btn btn-secondary btn-sm">
                 <MessageCircle size={14} aria-hidden="true" /> Ask about this event
               </button>

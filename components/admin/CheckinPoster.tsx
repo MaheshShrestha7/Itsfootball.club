@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { countPosterPrint, useGroundSponsors } from '@/components/GroundSponsors';
 import { posterQrLink } from '@/lib/sponsors';
+import { tagLink } from '@/lib/visit-source';
 import PrintablePoster, { PrintSponsorTile } from './PrintablePoster';
 
 const ZOOM = { A5: 0.82, A4: 1.18, A3: 1.7 };
@@ -27,7 +28,8 @@ export default function CheckinPoster({ club, title, details, checkinUrl, eventI
   // With sponsors on it, the QR goes through a tracked link that counts the scan for them, then on
   // to the same check-in page
   const withSponsors = showSponsors && !!sponsors?.length;
-  const qrValue = checkinUrl && withSponsors ? posterQrLink(window.location.origin, club.id, 'checkin_posters', { eventId, checkinUrl }) : checkinUrl;
+  const qrValue = checkinUrl && withSponsors ? posterQrLink(window.location.origin, club.id, 'checkin_posters', { eventId, checkinUrl })
+    : checkinUrl && tagLink(checkinUrl, 'qr', 'poster', 'checkin-poster');
 
   return (
     <PrintablePoster accent={accent} zoom={ZOOM} onClose={onClose}

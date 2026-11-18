@@ -67,6 +67,8 @@ import { fetchPaged } from './paged';
 import { membershipTermEnd, todayIso, policyAllowsWaiver } from './finance';
 import { goalScoringSide, publicScoreHidden } from './teams';
 import { chartBuckets, summariseSponsorEvents } from '@/lib/sponsors';
+import { countBySource, summariseSources, visitTags } from '@/lib/visit-source';
+import { trackClubSignup } from '@/lib/platform-tracking';
 
 // Singleton BroadcastChannel for reliable cross-tab live synchronization without premature channel closure
 let liveBroadcastChannel: BroadcastChannel | null = null;
@@ -2375,7 +2377,8 @@ export function ClubProvider({
         page_path: path.slice(0, 255),
         visitor_hash: visitor,
         referrer: document.referrer.slice(0, 500) || null, // the database caps it at 500
-        metadata: { device, screenWidth: window.innerWidth },
+        // Link tags (utm_*, fbclid) on the page a visitor lands on: where the visit came from
+        metadata: { device, screenWidth: window.innerWidth, ...visitTags() },
       })
       .then(({ error }) => {
         if (error) console.warn('Could not record page view:', error.message);
@@ -2494,7 +2497,9 @@ export function ClubProvider({
   }, []);
 
   const getClubAnalytics = useCallback((clubId: string): ClubAnalyticsSummary => {
-    const clubViews = analyticsEvents.filter(e => e.club_id === clubId);
+    const clubRows = analyticsEvents.filter(e => e.club_id === clubId);
+    // Older rows may carry other event types: only page views are visits
+    const clubViews = clubRows.filter(e => e.event_type === 'page_view');
     const clubScans = gateScans.filter(s => s.club_id === clubId);
 
     const totalVisits = clubViews.length;
@@ -2528,7 +2533,10 @@ export function ClubProvider({
     const tabletPct = Math.round((tabletCount / totalRecorded) * 100);
 
     // Most visited pages: real counts by page, named as the dashboard names them (DASH-2: was fixed labels times 5)
-    const slug = clubs.find(c => c.id === clubId)?.slug || '';
+    const thisClub = clubs.find(c => c.id === clubId);
+    const slug = thisClub?.slug || '';
+    const own = { slug, domain: thisClub?.custom_domain };
+    const signups = clubRows.filter(e => e.event_type === 'signup');
     const sectionHits: Record<string, number> = {};
     for (const v of clubViews) {
       const name = pageName(v.page_path || '/', slug);
@@ -2557,6 +2565,9 @@ export function ClubProvider({
         { name: 'Tablets & Consoles', percentage: `${tabletPct}%`, color: '#F59E0B' },
       ],
       recentGateScans: clubScans.slice(0, 10),
+      sources: summariseSources(clubViews, own),
+      memberSources: countBySource(signups.filter(e => (e.metadata as { kind?: string } | undefined)?.kind === 'member'), own),
+      ticketSources: countBySource(signups.filter(e => (e.metadata as { kind?: string } | undefined)?.kind === 'ticket'), own),
     };
   }, [analyticsEvents, gateScans, matches, clubs]);
 
@@ -2901,6 +2912,7 @@ export function ClubProvider({
           membership_starts_at: todayIso(),
         };
         keep(approved);
+        trackClubSignup(clubId, 'member');
         void fetch('/api/members/application-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2913,6 +2925,7 @@ export function ClubProvider({
         };
       }
       keep(newMem);
+      trackClubSignup(clubId, 'member');
       // Not awaited: the application is in either way, the email is a courtesy
       void sendApplicationEmail(clubId, newMem.id, 'applied');
     } else {

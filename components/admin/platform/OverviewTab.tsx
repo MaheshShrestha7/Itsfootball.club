@@ -8,6 +8,7 @@ import { formatMoney } from '@/lib/finance';
 import type { HealthReport } from '@/lib/platform-health';
 import type { PlatformClubItem, PlatformClubMember, PlatformMetrics, PlatformOverview, OverviewClubRef } from '@/lib/supabase/types';
 import OverviewPulse from '@/components/admin/platform/OverviewPulse';
+import TrafficSources from '@/components/admin/platform/TrafficSources';
 import {
   FEATURES, GROUP_LABEL, KIND_LABEL, METHOD_LABEL, SOURCE_LABEL,
   changeLabel, pageLabel, quietClubs, ranked, setupFunnel, sparkBars, timeAgo,
@@ -397,6 +398,8 @@ export default function OverviewTab({ clubs, metrics, periodDays, periodOptions,
               <div className="mc-ov-legend">{devices.map(([k, v], i) => <span key={k}><i style={{ background: MIX_COLORS[i % MIX_COLORS.length] }} />{k}<b className="num">{Math.round((v / deviceTotal) * 100)}%</b></span>)}</div>
             ) : <p className="mc-muted">Nothing yet.</p>}
           </div>
+
+          <TrafficSources days={data.period_days} />
 
           <div className="mc-card">
             <div className="mc-card-h"><h3>By section</h3></div>
