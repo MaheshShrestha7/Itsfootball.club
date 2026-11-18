@@ -3,14 +3,17 @@
 import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft, Download, Printer } from 'lucide-react';
+import { AGM_CHART_CSS, AgmMonths, AgmRecord, AgmShare, AgmVersus, agmColours } from '@/components/admin/AgmCharts';
 import { useAuth } from '@/lib/auth-context';
+import { monthTotals, pieSlices, siteDay } from '@/lib/budget';
 import { useClub } from '@/lib/club-context';
 import { agmMoney, agmOwed, agmSponsors, closingBalance, membersByTier, seasonOptions, type AgmExpense, type AgmPayment, type MoneyLine } from '@/lib/agm-report';
 import { matchesForTeam, membersSummary, seasonRecord } from '@/lib/club-overview';
 import { isCountedMember } from '@/lib/people';
 import { clubTeamsOf, publicScoreHidden } from '@/lib/teams';
-import { formatDate } from '@/lib/dates';
+import { DATE_LOCALE, formatDate } from '@/lib/dates';
 import { formatMoney, parseMoneyToCents, paymentSeason, expenseSeason } from '@/lib/finance';
+import { siteToday } from '@/lib/member-prices';
 import { formatAbn } from '@/lib/invoice';
 import { fetchPaged } from '@/lib/paged';
 import { formatEndDate } from '@/lib/sponsors';
@@ -95,6 +98,20 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
   const openingBad = !!opening.trim() && openingCents === null;
   const closing = money ? closingBalance(openingCents, money.surplus) : null;
 
+  // The charts. Whole dollars, since the tables below carry the cents.
+  const whole = (cents: number) => { try { return new Intl.NumberFormat(DATE_LOCALE, { style: 'currency', currency, maximumFractionDigits: 0 }).format(cents / 100); } catch { return fmt(cents); } };
+  const short = (cents: number) => { if (Math.abs(cents) < 100000) return whole(cents); try { return new Intl.NumberFormat(DATE_LOCALE, { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }).format(cents / 100); } catch { return whole(cents); } };
+  const colours = agmColours(club.primary_color);
+  const slices = (rows: MoneyLine[]) => pieSlices(rows.map(l => ({ category: l.key, label: l.label, actual: l.cents })));
+  const months = useMemo(() => {
+    if (!money || !info?.start_date || !info?.end_date) return [];
+    const today = siteToday();
+    const inn = monthTotals(payments.filter(p => p.status === 'paid' && p.season === season).map(p => ({ day: siteDay(p.paid_at || p.created_at || new Date().toISOString()), cents: p.amount_cents })), info.start_date, info.end_date, today);
+    const out = monthTotals(expenses.filter(e => e.season === season).map(e => ({ day: e.spent_on || info.start_date!, cents: e.amount_cents })), info.start_date, info.end_date, today);
+    return inn.map((m, i) => ({ month: m.month, label: m.label, inCents: m.cents, outCents: out[i]?.cents ?? 0 }));
+  }, [money, info, payments, expenses, season]);
+  const showMonths = months.length > 1 && months.some(m => m.inCents > 0 || m.outCents > 0);
+
   const moneyRows = (rows: MoneyLine[]) => rows.map(l => (
     <tr key={l.key}>
       <td style={cell}>{l.label}</td>
@@ -108,7 +125,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
 
   return (
     <div>
-      <style>{PAPER_PRINT_CSS}</style>
+      <style>{PAPER_PRINT_CSS + AGM_CHART_CSS}</style>
 
       <div className="admin-head">
         <div>
@@ -171,8 +188,22 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
               </div>
             </header>
 
-            <section>
+            {/* Long enough to run onto the next page, so the first page isn't left blank */}
+            <section style={{ breakInside: 'auto' }}>
               <h3 style={heading}>Income and expenses</h3>
+              {previous && (
+                <AgmVersus season={season} previous={previous} money={whole} rows={[
+                  { label: 'Income', now: money.totalIncome, last: money.previousIncome, colour: colours.inn },
+                  { label: 'Expenses', now: money.totalExpenses, last: money.previousExpenses, colour: colours.out, spend: true },
+                  { label: 'Surplus', now: money.surplus, last: money.previousSurplus, colour: '#15803d' },
+                ]} />
+              )}
+              {(money.totalIncome > 0 || money.totalExpenses > 0) && (
+                <figure className="agm-chart" style={{ margin: '0 0 1rem' }}>
+                  {slices(money.income).length > 0 && <AgmShare title="Where the money came from" slices={slices(money.income)} base={colours.inn} money={whole} />}
+                  {slices(money.expenses).length > 0 && <AgmShare title="Where the money went" slices={slices(money.expenses)} base={colours.out} money={whole} />}
+                </figure>
+              )}
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 {columns('Income')}
                 <tbody>
@@ -195,6 +226,14 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
                 </tbody>
               </table>
             </section>
+
+            {showMonths && (
+              <section>
+                <h3 style={heading}>Money in and out, month by month</h3>
+                <AgmMonths months={months} colours={colours} money={whole} short={short} />
+                <p style={small}>Money in is counted on the day it was paid, and money out on the day it was spent. Amounts on the chart are rounded.</p>
+              </section>
+            )}
 
             {closing !== null && openingCents !== null && (
               <section>
@@ -249,6 +288,7 @@ export default function AgmReportPage({ params }: { params: Promise<{ clubSlug: 
 
             <section>
               <h3 style={heading}>The season in numbers</h3>
+              {record.played > 0 && <AgmRecord record={record} colours={colours} />}
               <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', margin: 0 }}>
                 {[
                   ['Games played', record.played],

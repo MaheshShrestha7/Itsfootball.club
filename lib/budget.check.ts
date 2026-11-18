@@ -1,6 +1,6 @@
 // Run: npx esbuild lib/budget.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
-import { budgetCsv, budgetKey, budgetLines, budgetTotals, paceSeries, parseBudgetCsv, parseCsvRows, pieSlices, siteDay, varianceWord } from './budget';
+import { budgetCsv, budgetKey, budgetLines, budgetTotals, monthTotals, paceSeries, parseBudgetCsv, parseCsvRows, pieSlices, siteDay, varianceWord } from './budget';
 
 // --- lines ---
 const budgets = { [budgetKey('expense', 'referees')]: 100000, [budgetKey('expense', 'insurance')]: 50000, [budgetKey('income', 'membership')]: 200000 };
@@ -83,3 +83,10 @@ assert.deepEqual(pieSlices(['a', 'b', 'c', 'd', 'e', 'f'].map(k => line(k, 1))).
 assert.deepEqual(pieSlices([]), []);
 
 console.log('budget: lines, CSV export and import, line chart and pie figures OK');
+
+// --- money in each month (AGM report) ---
+const months = monthTotals([{ day: '2025-12-30', cents: 100 }, { day: '2026-01-15', cents: 200 }, { day: '2026-03-02', cents: 50 }, { day: '2026-09-01', cents: 7 }], '2026-01-01', '2026-06-30', '2026-12-01');
+assert.deepEqual(months.map(m => m.cents), [300, 0, 50, 0, 0, 7], 'each month on its own, before the season in the first month and after it in the last');
+assert.equal(months.reduce((n, m) => n + m.cents, 0), 357, 'adds up to the total');
+assert.equal(monthTotals([{ day: '2026-02-10', cents: 5 }], '2026-01-01', '2026-12-31', '2026-03-15').length, 3, 'stops at this month while the season is still going');
+assert.deepEqual(monthTotals([], '2026-01-01', '2026-02-28', '2026-12-01').map(m => m.cents), [0, 0], 'empty months still show');

@@ -16,6 +16,8 @@ export interface AgmPayment {
   due_on?: string | null;
   sponsor_id?: string | null;
   payer_name?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
 }
 
 export interface AgmExpense {
