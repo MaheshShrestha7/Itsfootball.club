@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match, TournamentParticipant } from '@/lib/supabase/types';
-import { X, Trophy, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight } from 'lucide-react';
+import { X, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { useDialog } from '@/lib/use-escape-to-close';
+import PopupPanel from '@/components/PopupPanel';
+import { tournamentMatchLabel } from '@/lib/tournament-engine';
+import '@/components/tournament/hosted.css';
 
 interface TournamentScoreModalProps {
   match: Match;
@@ -65,8 +67,6 @@ export default function TournamentScoreModal({
   const logoOf = (name: string) => teams?.find(t => t.name === name)?.logo_url || (name === match.home_team_name ? match.home_team_logo : name === match.away_team_name ? match.away_team_logo : undefined) || DEFAULT_CREST;
   const [error, setError] = useState<string | null>(null);
 
-  const dialogRef = useDialog(isOpen, onClose);
-
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,324 +109,133 @@ export default function TournamentScoreModal({
     if (status === 'upcoming') setStatus('completed');
   };
 
+  const STATUS_LABEL = { upcoming: 'Upcoming', live: 'Live', completed: 'Full time' } as const;
+  const kit = (name: string) => {
+    const t = teams?.find(x => x.name === name);
+    return { '--ht-c1': t?.color || undefined, '--ht-c2': t?.secondary_color || t?.color || undefined } as React.CSSProperties;
+  };
+  const stageLine = [match.tournament_group, tournamentMatchLabel(match)].filter(Boolean).join(', ');
+
+  const side = (which: 'home' | 'away') => {
+    const name = which === 'home' ? homeName : awayName;
+    const score = which === 'home' ? homeScore : awayScore;
+    return (
+      <div className="ht-fx-side">
+        <span className="ht-crest" style={{ width: 60, height: 60, ...kit(name) }}>
+          <img decoding="async" width={52} height={52} src={logoOf(name)} alt={`${name} crest`} />
+        </span>
+        {teamChoices ? (
+          <>
+            <label htmlFor={`fixture-${which}`} className="sr-only">{which === 'home' ? 'Home team' : 'Away team'}</label>
+            <select id={`fixture-${which}`} className="form-input ht-fx-team" value={name}
+              onChange={e => { (which === 'home' ? setHomeName : setAwayName)(e.target.value); setError(null); }}>
+              {!teamChoices.some(t => t.name === name) && <option value={name}>{name}</option>}
+              {teamChoices.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+            </select>
+          </>
+        ) : <span className="ht-fx-name">{name}</span>}
+        <span className="ht-sub">{which === 'home' ? 'Home' : 'Away'}</span>
+        <input aria-label={`${name} score`} type="number" min="0" max="99" inputMode="numeric"
+          value={score} onChange={scoreTyped(which === 'home' ? setHomeScore : setAwayScore)} className="form-input ht-fx-score" />
+      </div>
+    );
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        overflowY: 'auto',
-        overscrollBehavior: 'contain',
-        backgroundColor: 'rgba(var(--dk-4-6-9), 0.85)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '1rem',
-      }}
-      onClick={onClose}
-    >
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Match score"
-        style={{
-          margin: 'auto',
-          background: 'linear-gradient(135deg, rgb(var(--dk-17-24-39)) 0%, rgb(var(--dk-15-23-42)) 100%)',
-          border: '1px solid rgba(var(--tint-rgb), 0.12)',
-          borderRadius: '16px',
-          width: '100%',
-          maxWidth: '520px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(16, 185, 129, 0.15)',
-          overflow: 'hidden',
-          color: 'var(--text-primary)',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'rgba(var(--tint-rgb), 0.02)',
-          }}
-        >
-          <div className="row row-loose">
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '8px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--c-green)',
-              }}
-            >
-              <Trophy size={18} />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{onSaveSchedule ? 'Edit Fixture' : 'Update Match Score'}</h3>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                {match.title || 'Tournament Fixture'} • {match.tournament_group || (match.tournament_stage ? match.tournament_stage.replace('_', ' ').toUpperCase() : 'Match')}
-              </p>
-            </div>
+    <div className="ht-scrim" onClick={onClose}>
+      <PopupPanel onClose={onClose} label={onSaveSchedule ? 'Edit fixture' : 'Match score'} className="ht-dialog ht-fx" onClick={e => e.stopPropagation()}>
+        <div className="ht-dialog-head">
+          <div className="min-w-0">
+            <h3>{homeName} v {awayName}</h3>
+            {stageLine && <p className="ht-sub">{stageLine}</p>}
           </div>
-          <button type="button" aria-label="Close" className="icon-close" onClick={onClose}>
-            <X size={20} aria-hidden="true" />
-          </button>
+          <button type="button" aria-label="Close" className="ht-x" onClick={onClose}><X size={18} aria-hidden="true" /></button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-          {onSaveSchedule && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              {[
-                { label: 'Date', type: 'date', value: matchDate, set: setMatchDate },
-                { label: 'Kick-off', type: 'time', value: matchTime, set: setMatchTime },
-                { label: 'Venue', type: 'text', value: venue, set: setVenue },
-                { label: 'Pitch', type: 'text', value: pitch, set: setPitch },
-              ].map(f => (
-                <div key={f.label} className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor={`score-${f.label}`} className="form-label">{f.label}{f.type === 'date' ? ' *' : ''}</label>
-                  <input id={`score-${f.label}`} className="form-input" style={{ height: 45 }} type={f.type} value={f.value} required={f.type === 'date'} onChange={e => f.set(e.target.value)} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {teamChoices && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.5rem', alignItems: 'end', marginBottom: '1.25rem' }}>
-              {(['home', 'away'] as const).map(side => {
-                const value = side === 'home' ? homeName : awayName;
-                const select = (
-                  <div key={side} className="form-group" style={{ margin: 0, minWidth: 0 }}>
-                    <label htmlFor={`fixture-${side}`} className="form-label">{side === 'home' ? 'Home team' : 'Away team'}</label>
-                    <select id={`fixture-${side}`} className="form-input" style={{ height: 45 }} value={value}
-                      onChange={e => { (side === 'home' ? setHomeName : setAwayName)(e.target.value); setError(null); }}>
-                      {!teamChoices.some(t => t.name === value) && <option value={value}>{value}</option>}
-                      {teamChoices.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
-                    </select>
-                  </div>
-                );
-                return side === 'home' ? [select, (
-                  <button key="swap" type="button" className="btn btn-secondary" style={{ height: 45, width: 45, padding: 0, display: 'grid', placeItems: 'center' }}
-                    aria-label="Swap home and away" title="Swap home and away"
-                    onClick={() => { setHomeName(awayName); setAwayName(homeName); }}>
-                    <ArrowLeftRight size={16} aria-hidden="true" />
-                  </button>
-                )] : select;
-              })}
-            </div>
-          )}
-
-          {/* Match Score Display & Inputs */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              gap: '1rem',
-              alignItems: 'center',
-              background: 'rgba(var(--shade-rgb), 0.4)',
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(var(--tint-rgb), 0.06)',
-              marginBottom: '1.25rem',
-            }}
-          >
-            {/* Home Team */}
-            <div className="text-center">
-              <img loading="lazy" decoding="async" width={44} height={44}
-                src={logoOf(homeName)}
-                alt={`${homeName} crest`}
-                style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
-              />
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {homeName}
-              </div>
-              <input aria-label={`${homeName} score`}
-                type="number"
-                min="0"
-                max="99"
-                value={homeScore}
-                onChange={scoreTyped(setHomeScore)}
-                className="form-input"
-                style={{ width: '64px', height: '52px', padding: 0, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', marginTop: '0.5rem' }}
-              />
-            </div>
-
-            {/* VS / Divider */}
-            <div className="text-center">
-              <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-secondary)' }}>VS</span>
-            </div>
-
-            {/* Away Team */}
-            <div className="text-center">
-              <img loading="lazy" decoding="async" width={44} height={44}
-                src={logoOf(awayName)}
-                alt={`${awayName} crest`}
-                style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
-              />
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {awayName}
-              </div>
-              <input aria-label={`${awayName} score`}
-                type="number"
-                min="0"
-                max="99"
-                value={awayScore}
-                onChange={scoreTyped(setAwayScore)}
-                className="form-input"
-                style={{ width: '64px', height: '52px', padding: 0, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', marginTop: '0.5rem' }}
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="ht-fx-form">
+          {/* The board is the editor: pick each side's team, swap them, type the score */}
+          <div className="ht-fx-board">
+            {side('home')}
+            {teamChoices ? (
+              <button type="button" className="ht-icon-btn ht-fx-swap" aria-label="Swap home and away" title="Swap home and away"
+                onClick={() => { setHomeName(awayName); setAwayName(homeName); }}>
+                <ArrowLeftRight size={16} aria-hidden="true" />
+              </button>
+            ) : <span className="ht-fx-v" aria-hidden="true">v</span>}
+            {side('away')}
           </div>
 
-          {/* Match Status Selection */}
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div className="form-label" style={{ marginBottom: '0.5rem' }}>Match Status</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+          <fieldset className="ht-fx-status">
+            <legend className="form-label">Match status</legend>
+            <div className="ht-fx-seg">
               {(['upcoming', 'live', 'completed'] as const).map(st => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatus(st)}
-                  style={{
-                    padding: '0.65rem 0.5rem',
-                    borderRadius: '8px',
-                    border: status === st ? '2px solid var(--c-green)' : '1px solid rgba(var(--tint-rgb), 0.1)',
-                    background: status === st ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
-                    color: status === st ? 'var(--c-green)' : 'var(--text-primary)',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {st === 'live' ? 'Live' : st === 'completed' ? 'Full time' : 'Upcoming'}
-                </button>
+                <button key={st} type="button" aria-pressed={status === st} onClick={() => setStatus(st)}>{STATUS_LABEL[st]}</button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
-          {/* Knockout Penalty Shootout Section */}
           {isKnockout && (
-            <div
-              style={{
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
-                borderRadius: '10px',
-                padding: '0.9rem',
-                marginBottom: '1.25rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isPensEnabled ? '0.75rem' : '0' }}>
-                <div className="row">
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--c-amber)' }}>
-                    Penalty Shootout (Ties)
-                  </span>
-                  {isLevelScore && (
-                    <span style={{ fontSize: '0.7rem', background: 'var(--c-amber)', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                      Scores Level
-                    </span>
-                  )}
-                </div>
+            <fieldset className="ht-fieldset">
+              <legend>Penalty shootout</legend>
+              <div className="ht-fx-pens-head">
                 <label className="form-check">
-                  <input
-                    type="checkbox"
-                    checked={isPensEnabled}
-                    onChange={e => setIsPensEnabled(e.target.checked)}
-                  />
-                  Enable Shootout
+                  <input type="checkbox" checked={isPensEnabled} onChange={e => setIsPensEnabled(e.target.checked)} />
+                  Went to penalties
                 </label>
+                {isLevelScore && <span className="ht-state" data-tone="warn">Scores level</span>}
               </div>
-
               {isPensEnabled && (
-                <div className="form-row-2" style={{ gap: '1rem', marginTop: '0.5rem' }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{match.home_team_name} Pens</span>
-                    <input aria-label={`${match.home_team_name} penalties`}
-                      type="number"
-                      min="0"
-                      value={homePens}
-                      onChange={e => setHomePens(parseInt(e.target.value, 10) || 0)}
-                      className="form-input"
-                      style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', marginTop: '0.25rem' }}
-                    />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{match.away_team_name} Pens</span>
-                    <input aria-label={`${match.away_team_name} penalties`}
-                      type="number"
-                      min="0"
-                      value={awayPens}
-                      onChange={e => setAwayPens(parseInt(e.target.value, 10) || 0)}
-                      className="form-input"
-                      style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 800, fontSize: '1.1rem', marginTop: '0.25rem' }}
-                    />
-                  </div>
+                <div className="ht-two">
+                  {(['home', 'away'] as const).map(w => (
+                    <div key={w} className="form-group" style={{ margin: 0 }}>
+                      <label htmlFor={`pens-${w}`} className="form-label">{w === 'home' ? homeName : awayName} penalties</label>
+                      <input id={`pens-${w}`} aria-label={`${w === 'home' ? homeName : awayName} penalties`} type="number" min="0" className="form-input"
+                        value={w === 'home' ? homePens : awayPens}
+                        onChange={e => (w === 'home' ? setHomePens : setAwayPens)(parseInt(e.target.value, 10) || 0)} />
+                    </div>
+                  ))}
                 </div>
               )}
-            </div>
+            </fieldset>
+          )}
+
+          {onSaveSchedule && (
+            <fieldset className="ht-fieldset">
+              <legend>When and where</legend>
+              <div className="ht-two">
+                {[
+                  { label: 'Date', type: 'date', value: matchDate, set: setMatchDate },
+                  { label: 'Kick-off', type: 'time', value: matchTime, set: setMatchTime },
+                  { label: 'Venue', type: 'text', value: venue, set: setVenue },
+                  { label: 'Pitch', type: 'text', value: pitch, set: setPitch },
+                ].map(f => (
+                  <div key={f.label} className="form-group" style={{ margin: 0 }}>
+                    <label htmlFor={`score-${f.label}`} className="form-label">{f.label}{f.type === 'date' ? ' *' : ''}</label>
+                    <input id={`score-${f.label}`} className="form-input" type={f.type} value={f.value} required={f.type === 'date'} onChange={e => f.set(e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            </fieldset>
           )}
 
           {error && (
-            <div role="alert" style={{ display: 'flex', gap: '0.4rem', color: 'var(--c-red)', fontSize: '0.8rem', fontWeight: 700 }}>
-              <AlertTriangle size={14} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
-            </div>
+            <p role="alert" className="ht-error ht-fx-error">
+              <AlertTriangle size={14} aria-hidden="true" /><span>{error}</span>
+            </p>
           )}
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-            {linkToMatch && <Link
-              href={`/${clubSlug}/admin/match-center?match=${encodeURIComponent(match.id)}`}
-              className="btn btn-secondary"
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                fontSize: '0.85rem',
-                padding: '0.75rem',
-                background: 'rgba(var(--tint-rgb), 0.05)',
-                border: '1px solid rgba(var(--tint-rgb), 0.12)',
-                color: 'var(--text-primary)',
-                borderRadius: '8px',
-                textDecoration: 'none',
-              }}
-            >
-              <Radio size={15} color="var(--c-green)" />
-              <span>Match Centre</span>
-            </Link>}
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{
-                flex: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                fontSize: '0.85rem',
-                padding: '0.75rem',
-                background: 'var(--c-green)',
-                color: '#000000',
-                fontWeight: 800,
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-              }}
-            >
-              <CheckCircle2 size={16} />
-              <span>Save & Update Bracket</span>
+          <div className="ht-fx-actions">
+            {linkToMatch && (
+              <Link href={`/${clubSlug}/admin/match-center?match=${encodeURIComponent(match.id)}`} className="btn btn-secondary">
+                <Radio size={15} aria-hidden="true" /><span>Match Centre</span>
+              </Link>
+            )}
+            <button type="submit" className="btn btn-primary">
+              <CheckCircle2 size={16} aria-hidden="true" /><span>Save and update bracket</span>
             </button>
           </div>
         </form>
-      </div>
+      </PopupPanel>
     </div>
   );
 }
