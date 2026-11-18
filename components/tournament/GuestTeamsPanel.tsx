@@ -391,7 +391,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
 // ------------------------------------------------------------------------------
 
 export type TeamFields = Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name'>;
-type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone'>;
+export type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone'>;
 
 function Shell({ label, onClose, children, wide }: { label: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
@@ -412,7 +412,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
   club: Club;
   tournament?: Tournament;
   team: Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name' | 'team_type'> | null;
-  entry?: TournamentEntry;
+  entry?: Partial<ContactFields>;
   isEvent: boolean;
   taken: string[];
   onClose: () => void;
@@ -485,7 +485,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
           </div>
         </div>
 
-        {guest && !isEvent && tournament && (
+        {guest && !isEvent && (
           <fieldset className="ht-fieldset">
             <legend>Contact at the club <small>Private: only your Tournaments staff see this</small></legend>
             <div className="ht-two">
