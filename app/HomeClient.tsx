@@ -21,6 +21,7 @@ import { HOMEPAGE_FAQS } from '@/lib/schema';
 import { matchPath, newsPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import type { HomeDemoClub, HomeResultRow, HomeUpcomingRow, LatestNewsRow, LatestPhotoRow } from '@/lib/supabase/club-lookup';
+import { Lockers, Padlock, Query } from '@lucasmarkes/hairline/react';
 import FootballBand from '@/components/FootballBand';
 import RoleCards from '@/components/RoleCards';
 
@@ -599,6 +600,8 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
                 <li key={x}><s>{x}</s><span className="sr-only"> none</span></li>
               ))}
             </ul>
+            {/* Hairline: the shackle swings open as the pointer nears, beside "Locked features" */}
+            <Padlock className="hv-hl hv-hl-lock" label="An open padlock" play intensity={0.6} />
           </div>
         </div>
       </section>
@@ -610,6 +613,9 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
             <h2 id="hm-faq-h" className="hv-h2">Questions?</h2>
             <Link href="/faq" className="hm-link">All answers</Link>
           </div>
+          <div className="hv-faq-wrap">
+          {/* Hairline: the question mark turns toward the pointer */}
+          <Query className="hv-hl hv-hl-q" label="A question mark" play intensity={0.6} />
           <div className="hm-faq-list hv-faq">
             {HOMEPAGE_FAQS.map(f => (
               <details key={f.q}>
@@ -618,6 +624,7 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
               </details>
             ))}
           </div>
+          </div>
         </div>
       </section>
 
@@ -625,7 +632,11 @@ export default function PlatformHomePage({ latestNews = [], latestPhotos = [], r
       <section className="hm-sec hm-sec-last">
         <div className="container">
           <div className="hm-block hv-close">
-            <h2 className="hm-h2 hv-h2">Your club&apos;s address is waiting.</h2>
+            <div className="hv-close-left">
+              <h2 className="hm-h2 hv-h2">Your club&apos;s address is waiting.</h2>
+              {/* Hairline: the locker under the pointer opens, one of them is yours */}
+              <Lockers className="hv-hl hv-hl-lockers" label="A row of lockers, one open" play intensity={0.6} />
+            </div>
             <div>
               <form className="hv-claim" onSubmit={claimClose}>
                 <label htmlFor="hv-club-name">itsfootball.club/</label>

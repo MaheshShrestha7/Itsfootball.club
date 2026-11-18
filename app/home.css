@@ -952,12 +952,30 @@
 .hv-claim button:active { transform: scale(0.98); }
 .hv-claim:focus-within { outline: 3px solid var(--hm-block-btn); outline-offset: 3px; }
 
+/* Hairline line figures (@lucasmarkes/hairline): one stroke in site colours, plate = the panel they sit on, club green is the only highlight */
+.hv-hl {
+  --hairline-plate: var(--bg-pitch); --hairline-hi: var(--c-green); --hairline-edge: var(--text-secondary);
+  --hairline-mid: var(--border-medium); --hairline-lo: var(--border-subtle); --hairline-stroke: 1;
+  width: 100%;
+}
+.hv-free { grid-template-columns: auto minmax(0, 1fr) 200px; }
+.hv-hl-lock { --hairline-plate: var(--bg-surface); margin: -1rem 0; }
+.hv-faq-wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 3rem; align-items: start; }
+.hv-close-left { display: grid; gap: 1rem; }
+.hv-hl-lockers {
+  max-width: 300px; --hairline-plate: var(--hm-block); --hairline-hi: var(--hm-block-ink);
+  --hairline-edge: var(--hm-block-soft); --hairline-mid: var(--hm-block-line); --hairline-lo: var(--hm-block-line);
+}
 @media (max-width: 720px) {
   .hv-h2 { font-size: 1.875rem; line-height: 2.25rem; }
   .hv-head { margin-bottom: 1.5rem; }
   .hv-free { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding: 1.5rem; border-radius: 1rem; }
   .hv-zero { font-size: 4rem; }
   .hv-faq { grid-template-columns: minmax(0, 1fr); }
+  .hv-faq-wrap { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+  .hv-hl-q { max-width: 140px; }
+  .hv-hl-lock { max-width: 160px; margin: 0; }
+  .hv-hl-lockers { max-width: 220px; }
   .hv-faq details:nth-last-child(2) { border-bottom: 0; }
   .hv-close { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding: 2rem 1.5rem; border-radius: 1rem; }
   .hv-claim { flex-direction: column; align-items: stretch; }
