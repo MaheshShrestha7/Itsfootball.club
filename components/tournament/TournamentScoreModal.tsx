@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Match } from '@/lib/supabase/types';
-import { X, Trophy, Radio, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Match, TournamentParticipant } from '@/lib/supabase/types';
+import { X, Trophy, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { useDialog } from '@/lib/use-escape-to-close';
 
@@ -20,7 +20,9 @@ interface TournamentScoreModalProps {
     awayPens?: number,
     status?: 'upcoming' | 'live' | 'completed'
   ) => void;
-  onSaveSchedule?: (matchId: string, schedule: Pick<Match, 'match_date' | 'match_time' | 'venue'>) => void;
+  onSaveSchedule?: (matchId: string, changes: Partial<Match>) => void;
+  /** The tournament's teams: lets the host change who plays in a group or league game not yet played */
+  teams?: TournamentParticipant[];
   /** False on public tournaments, whose tournament-only club has no match centre */
   linkToMatch?: boolean;
 }
@@ -32,6 +34,7 @@ export default function TournamentScoreModal({
   onClose,
   onSaveScore,
   onSaveSchedule,
+  teams,
   linkToMatch = true,
 }: TournamentScoreModalProps) {
   const isKnockout = Boolean(match.tournament_stage && match.tournament_stage !== 'group');
@@ -52,6 +55,14 @@ export default function TournamentScoreModal({
   const [matchDate, setMatchDate] = useState(match.match_date?.slice(0, 10) || '');
   const [matchTime, setMatchTime] = useState(match.match_time || '');
   const [venue, setVenue] = useState(match.venue || '');
+  const [pitch, setPitch] = useState(match.pitch_label || '');
+  const [homeName, setHomeName] = useState(match.home_team_name);
+  const [awayName, setAwayName] = useState(match.away_team_name);
+  // Knockout slots fill themselves from results, so only group and league games swap teams
+  const teamChoices = onSaveSchedule && teams && !isKnockout && match.status === 'upcoming'
+    ? teams.filter(t => !match.tournament_group || `Group ${t.group}` === match.tournament_group)
+    : null;
+  const logoOf = (name: string) => teams?.find(t => t.name === name)?.logo_url || (name === match.home_team_name ? match.home_team_logo : name === match.away_team_name ? match.away_team_logo : undefined) || DEFAULT_CREST;
   const [error, setError] = useState<string | null>(null);
 
   const dialogRef = useDialog(isOpen, onClose);
@@ -65,8 +76,16 @@ export default function TournamentScoreModal({
       setError('A knockout match needs a winner: enter a penalty shootout result.');
       return;
     }
-    if (onSaveSchedule && (matchDate !== (match.match_date?.slice(0, 10) || '') || matchTime !== (match.match_time || '') || venue !== (match.venue || ''))) {
-      onSaveSchedule(match.id, { match_date: matchDate, match_time: matchTime, venue });
+    if (homeName === awayName) {
+      setError('A team can\'t play itself: pick two different teams.');
+      return;
+    }
+    if (onSaveSchedule && (matchDate !== (match.match_date?.slice(0, 10) || '') || matchTime !== (match.match_time || '') || venue !== (match.venue || '')
+      || pitch !== (match.pitch_label || '') || homeName !== match.home_team_name || awayName !== match.away_team_name)) {
+      onSaveSchedule(match.id, {
+        match_date: matchDate, match_time: matchTime, venue, pitch_label: pitch || undefined,
+        home_team_name: homeName, away_team_name: awayName, home_team_logo: logoOf(homeName), away_team_logo: logoOf(awayName),
+      });
     }
     // Leave the result untouched when only the schedule changed
     if (status !== 'upcoming' || initialStatus !== 'upcoming') {
@@ -168,12 +187,38 @@ export default function TournamentScoreModal({
                 { label: 'Date', type: 'date', value: matchDate, set: setMatchDate },
                 { label: 'Kick-off', type: 'time', value: matchTime, set: setMatchTime },
                 { label: 'Venue', type: 'text', value: venue, set: setVenue },
+                { label: 'Pitch', type: 'text', value: pitch, set: setPitch },
               ].map(f => (
                 <div key={f.label} className="form-group" style={{ margin: 0 }}>
-                  <label htmlFor={`score-${f.type}`} className="form-label">{f.label}{f.type === 'date' ? ' *' : ''}</label>
-                  <input id={`score-${f.type}`} className="form-input" style={{ height: 45 }} type={f.type} value={f.value} required={f.type === 'date'} onChange={e => f.set(e.target.value)} />
+                  <label htmlFor={`score-${f.label}`} className="form-label">{f.label}{f.type === 'date' ? ' *' : ''}</label>
+                  <input id={`score-${f.label}`} className="form-input" style={{ height: 45 }} type={f.type} value={f.value} required={f.type === 'date'} onChange={e => f.set(e.target.value)} />
                 </div>
               ))}
+            </div>
+          )}
+
+          {teamChoices && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.5rem', alignItems: 'end', marginBottom: '1.25rem' }}>
+              {(['home', 'away'] as const).map(side => {
+                const value = side === 'home' ? homeName : awayName;
+                const select = (
+                  <div key={side} className="form-group" style={{ margin: 0, minWidth: 0 }}>
+                    <label htmlFor={`fixture-${side}`} className="form-label">{side === 'home' ? 'Home team' : 'Away team'}</label>
+                    <select id={`fixture-${side}`} className="form-input" style={{ height: 45 }} value={value}
+                      onChange={e => { (side === 'home' ? setHomeName : setAwayName)(e.target.value); setError(null); }}>
+                      {!teamChoices.some(t => t.name === value) && <option value={value}>{value}</option>}
+                      {teamChoices.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    </select>
+                  </div>
+                );
+                return side === 'home' ? [select, (
+                  <button key="swap" type="button" className="btn btn-secondary" style={{ height: 45, width: 45, padding: 0, display: 'grid', placeItems: 'center' }}
+                    aria-label="Swap home and away" title="Swap home and away"
+                    onClick={() => { setHomeName(awayName); setAwayName(homeName); }}>
+                    <ArrowLeftRight size={16} aria-hidden="true" />
+                  </button>
+                )] : select;
+              })}
             </div>
           )}
 
@@ -194,14 +239,14 @@ export default function TournamentScoreModal({
             {/* Home Team */}
             <div className="text-center">
               <img loading="lazy" decoding="async" width={44} height={44}
-                src={match.home_team_logo || DEFAULT_CREST}
-                alt={`${match.home_team_name} crest`}
+                src={logoOf(homeName)}
+                alt={`${homeName} crest`}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {match.home_team_name}
+                {homeName}
               </div>
-              <input aria-label={`${match.home_team_name} score`}
+              <input aria-label={`${homeName} score`}
                 type="number"
                 min="0"
                 max="99"
@@ -220,14 +265,14 @@ export default function TournamentScoreModal({
             {/* Away Team */}
             <div className="text-center">
               <img loading="lazy" decoding="async" width={44} height={44}
-                src={match.away_team_logo || DEFAULT_CREST}
-                alt={`${match.away_team_name} crest`}
+                src={logoOf(awayName)}
+                alt={`${awayName} crest`}
                 style={{ width: '44px', height: '44px', objectFit: 'contain', margin: '0 auto 0.5rem auto' }}
               />
               <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {match.away_team_name}
+                {awayName}
               </div>
-              <input aria-label={`${match.away_team_name} score`}
+              <input aria-label={`${awayName} score`}
                 type="number"
                 min="0"
                 max="99"
@@ -251,7 +296,7 @@ export default function TournamentScoreModal({
                   style={{
                     padding: '0.65rem 0.5rem',
                     borderRadius: '8px',
-                    border: status === st ? '2px solid #10B981' : '1px solid rgba(var(--tint-rgb), 0.1)',
+                    border: status === st ? '2px solid var(--c-green)' : '1px solid rgba(var(--tint-rgb), 0.1)',
                     background: status === st ? 'rgba(16, 185, 129, 0.15)' : 'rgba(var(--tint-rgb), 0.04)',
                     color: status === st ? 'var(--c-green)' : 'var(--text-primary)',
                     fontWeight: 700,
@@ -283,7 +328,7 @@ export default function TournamentScoreModal({
                     Penalty Shootout (Ties)
                   </span>
                   {isLevelScore && (
-                    <span style={{ fontSize: '0.7rem', background: '#F59E0B', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.7rem', background: 'var(--c-amber)', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
                       Scores Level
                     </span>
                   )}
@@ -368,7 +413,7 @@ export default function TournamentScoreModal({
                 gap: '0.4rem',
                 fontSize: '0.85rem',
                 padding: '0.75rem',
-                background: '#10B981',
+                background: 'var(--c-green)',
                 color: '#000000',
                 fontWeight: 800,
                 border: 'none',

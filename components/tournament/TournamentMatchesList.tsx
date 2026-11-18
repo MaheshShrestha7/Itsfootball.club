@@ -380,7 +380,7 @@ export default function TournamentMatchesList({
                       }}
                     >
                       <Edit3 size={12} color="var(--club-ink)" />
-                      <span>Update Score</span>
+                      <span>{match.status === 'upcoming' ? 'Edit fixture' : 'Update score'}</span>
                     </button>
                   )}
 

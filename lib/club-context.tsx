@@ -301,7 +301,7 @@ interface ClubContextType {
   /** Edit a team in a tournament: a new name or crest also shows on its fixtures */
   updateTournamentParticipant: (participantId: string, updates: Partial<TournamentParticipant>) => void;
   deleteTournamentParticipant: (participantId: string) => void;
-  generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean }) => Match[];
+  generateTournamentTiesheet: (tournamentId: string, options?: { shuffle?: boolean; keepGroups?: boolean }) => Match[];
   updateTournamentMatchScore: (matchId: string, homeScore: number, awayScore: number, homePens?: number, awayPens?: number, status?: 'upcoming' | 'live' | 'completed') => void;
   progressKnockoutStage: (tournamentId: string) => void;
   /** Upgrades a club's tournaments built by older versions (safe to call repeatedly) */
@@ -3545,7 +3545,7 @@ export function ClubProvider({
     setTournamentParticipants(prev => prev.filter(p => p.id !== participantId));
   }, [queueDelete]);
 
-  const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean }) => {
+  const generateTournamentTiesheet = useCallback((tournamentId: string, options?: { shuffle?: boolean; keepGroups?: boolean }) => {
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (!tournament) return [];
     return applyTiesheet(tournament, tournamentParticipants.filter(p => p.tournament_id === tournamentId), options);

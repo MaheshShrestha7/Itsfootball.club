@@ -14,6 +14,7 @@ import { DEFAULT_CREST, crestOnError } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import PopupPanel from '@/components/PopupPanel';
+import { GROUP_LETTERS, effectiveGroupRules } from '@/lib/tournament-engine';
 import { kitClashes, money, parseTeamList, shortCode, kickoffLabel } from '@/lib/hosted-tournaments';
 import { useTournamentEntries } from '@/lib/use-tournament-entries';
 import type { Club, Match, Tournament, TournamentEntry, TournamentParticipant } from '@/lib/supabase/types';
@@ -37,7 +38,7 @@ function Crest({ team, size = 40 }: { team: Pick<TournamentParticipant, 'logo_ur
   );
 }
 
-export default function GuestTeamsPanel({ club, tournament, participants, matches, isEvent, onFeedback }: {
+export default function GuestTeamsPanel({ club, tournament, participants, matches, isEvent, onFeedback, onRedraw }: {
   club: Club;
   tournament: Tournament;
   participants: TournamentParticipant[];
@@ -45,6 +46,8 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
   /** A free public tournament: no entry links, fees or emails, only teams, crests and colours */
   isEvent: boolean;
   onFeedback: (tone: 'success' | 'error', message: string) => void;
+  /** Redo the draw keeping the groups set here */
+  onRedraw: () => void;
 }) {
   const { addTournamentParticipant, updateTournamentParticipant, deleteTournamentParticipant, saveNow } = useClub();
   const hosted = useTournamentEntries(tournament.id, !isEvent);
@@ -61,6 +64,15 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
   const clashes = useMemo(() => kitClashes(matches, participants), [matches, participants]);
   const fee = tournament.entry_fee_cents || 0;
   const checkedIn = participants.filter(p => entryOf(p.id)?.checked_in_at).length;
+  // Groups set by hand (group stage + knockout). The draw is out of date once a team sits in a
+  // different group from its group games.
+  const grouped = tournament.format === 'group_knockout';
+  const groupLetters = grouped ? GROUP_LETTERS.slice(0, effectiveGroupRules(tournament, participants.length).groupCount) : [];
+  const groupGames = matches.filter(m => m.tournament_stage === 'group');
+  const drawStale = grouped && groupGames.length > 0 && participants.some(p =>
+    groupGames.some(m => (m.home_team_name === p.name || m.away_team_name === p.name) && m.tournament_group !== `Group ${p.group}`));
+  const groupsOk = groupLetters.every(l => participants.filter(p => p.group === l).length >= 2)
+    && participants.every(p => p.group && groupLetters.includes(p.group));
   const linkFor = (e?: TournamentEntry) => (e?.entry_key ? `${window.location.origin}/${club.slug}/tournament-entry/${e.entry_key}` : null);
 
   const run = async (label: string, fn: () => Promise<void>) => {
@@ -172,6 +184,23 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
         </div>
       )}
 
+      {drawStale && (
+        <div className="ht-warn" role="status">
+          <AlertTriangle size={16} aria-hidden="true" />
+          <div>
+            <b>The groups have changed since the draw</b>
+            <p>{groupsOk
+              ? 'Redo the draw to make the group games match. Scores already entered are cleared.'
+              : 'Every team needs a group, and every group needs at least 2 teams, before the draw can be redone.'}</p>
+            {groupsOk && (
+              <button type="button" className="btn btn-sm btn-primary" style={{ ...btn, whiteSpace: 'nowrap' }} onClick={onRedraw}>
+                <RefreshCw size={14} aria-hidden="true" /><span>Redo the draw with these groups</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {participants.length > 0 && (
         <div className="ht-board">
           <table className="ht-table ht-board-table">
@@ -179,6 +208,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
             <thead>
               <tr>
                 <th scope="col">Team</th>
+                {grouped && <th scope="col">Group</th>}
                 {!isEvent && <th scope="col">Entry</th>}
                 {!isEvent && <th scope="col">Players</th>}
                 {!isEvent && fee > 0 && <th scope="col">Entry fee</th>}
@@ -203,7 +233,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                         <div className="min-w-0">
                           <div className="ht-name">{p.name}</div>
                           <div className="ht-sub">
-                            {guest ? 'Guest club' : 'Our team'}{p.group ? `, group ${p.group}` : ''}{staff ? `. ${staff}` : ''}
+                            {guest ? 'Guest club' : 'Our team'}{staff ? `. ${staff}` : ''}
                           </div>
                           {guest && !isEvent && (e?.contact_name || e?.contact_email || e?.contact_phone) && (
                             <div className="ht-sub">Contact: {[e?.contact_name, e?.contact_email, e?.contact_phone].filter(Boolean).join(', ')}</div>
@@ -211,6 +241,15 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                         </div>
                       </div>
                     </th>
+                    {grouped && (
+                      <td data-label="Group">
+                        <select className="ht-group-select" value={p.group || ''} aria-label={`Group for ${p.name}`}
+                          onChange={ev => updateTournamentParticipant(p.id, { group: ev.target.value || undefined })}>
+                          {!p.group && <option value="">None</option>}
+                          {groupLetters.map(l => <option key={l} value={l}>Group {l}</option>)}
+                        </select>
+                      </td>
+                    )}
                     {!isEvent && <td data-label="Entry">{guest ? <span className="ht-state" data-tone={status.tone}>{status.label}</span> : <span className="ht-sub">Club squad</span>}</td>}
                     {!isEvent && (
                       <td data-label="Players">

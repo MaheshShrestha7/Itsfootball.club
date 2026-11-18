@@ -71,6 +71,8 @@ export interface TiesheetOptions {
   matchMinutes?: number;
   /** Pitches played on at once (default 1) */
   pitches?: number;
+  /** Keep the groups the host set by hand (when every team has one and each group has 2+ teams) */
+  keepGroups?: boolean;
 }
 
 /**
@@ -373,6 +375,7 @@ export function buildTiesheet(
   options?: TiesheetOptions
 ): { matches: Match[]; participants: TournamentParticipant[]; tournamentUpdates: Partial<Tournament> } {
   let participants = participantsIn.map(p => ({ ...p }));
+  const handGroups = new Map(participantsIn.map(p => [p.id, p.group]));
   if (options?.shuffle) {
     for (let i = participants.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -413,12 +416,18 @@ export function buildTiesheet(
   }
 
   // Group stage + knockout: deal seeds across groups (A, B, C, A, B, C, ...)
-  const { groupCount, advancing } = effectiveGroupRules(tournament, participants.length);
+  const rules = effectiveGroupRules(tournament, participants.length);
+  const { groupCount } = rules;
+  let { advancing } = rules;
   const letters = GROUP_LETTERS.slice(0, groupCount);
+  const kept = options?.keepGroups && participants.every(p => letters.includes(handGroups.get(p.id) || ''))
+    && letters.every(l => participants.filter(p => handGroups.get(p.id) === l).length >= 2);
   participants.forEach((p, idx) => {
-    p.group = letters[idx % groupCount];
+    p.group = kept ? handGroups.get(p.id) : letters[idx % groupCount];
   });
   const groups = letters.map(letter => participants.filter(p => p.group === letter));
+  // Hand-made groups can be uneven: nobody can go through from a group they're not in
+  if (kept) advancing = Math.max(Math.ceil(2 / groupCount), Math.min(advancing, ...groups.map(g => g.length)));
   const groupRounds = Math.max(...groups.map(g => roundRobinRounds(g.length)));
 
   // Qualifiers ordered as seeds: every group winner first, then every runner-up, ...

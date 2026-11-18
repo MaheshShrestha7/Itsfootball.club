@@ -88,7 +88,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const participants = tournamentParticipants.filter(p => p.tournament_id === tournament.id);
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
 
-  const handleGenerateTiesheet = async (shuffle = false) => {
+  const handleGenerateTiesheet = async (shuffle = false, keepGroups = false) => {
     if (participants.length < 2) {
       setFeedbackTone('error');
       setFeedback('Add at least 2 teams before generating a tiesheet.');
@@ -100,7 +100,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
         return;
       }
     }
-    const generated = generateTournamentTiesheet(tournament.id, { shuffle });
+    const generated = generateTournamentTiesheet(tournament.id, { shuffle, keepGroups });
     setFeedbackTone('success');
     setFeedback(`Tiesheet generated: ${generated.length} tournament fixtures.`);
     setTimeout(() => setFeedback(null), 3500);
@@ -369,7 +369,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
 
       {/* Tab 4: Teams & Roster */}
       {activeTab === 'teams' && hosted && (
-        <GuestTeamsPanel club={club} tournament={tournament} participants={participants} matches={tourneyMatches} isEvent={isEvent} onFeedback={showFeedback} />
+        <GuestTeamsPanel club={club} tournament={tournament} participants={participants} matches={tourneyMatches} isEvent={isEvent} onFeedback={showFeedback} onRedraw={() => handleGenerateTiesheet(false, true)} />
       )}
 
       {activeTab === 'fairplay' && hosted && (
@@ -434,7 +434,8 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           linkToMatch={!isEvent}
           isOpen={!!selectedMatch}
           onClose={() => setSelectedMatch(null)}
-          onSaveSchedule={(matchId, schedule) => updateMatch(matchId, schedule)}
+          teams={participants}
+          onSaveSchedule={(matchId, changes) => updateMatch(matchId, changes)}
           onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, status) => {
             updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, status);
             setFeedbackTone('success');
