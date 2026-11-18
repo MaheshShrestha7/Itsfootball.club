@@ -139,10 +139,10 @@ export default function SeasonReviewPage({ params }: { params: Promise<{ clubSlu
   // The story card follows the team picked below
   const cardInput = (v: string) => ({
     club, season, subtitle: v === CLUB ? 'The whole club, in numbers' : shown!.teams.find(t => t.id === v)?.name || '',
-    card: shown!.views[v].card, sponsors: shown!.sponsors?.count || 0, site: (club.custom_domain || `itsfootball.club/${club.slug}`).replace(/^https?:\/\//, ''),
+    card: shown!.views[v].card, sponsors: (shown!.sponsors?.wall || []).map(w => ({ src: w.logo || undefined, name: w.name, top: w.top })), site: (club.custom_domain || `itsfootball.club/${club.slug}`).replace(/^https?:\/\//, ''),
   });
   const [cardUrl, setCardUrl] = useState<string | null>(null);
-  const cardKey = shown && view !== null ? JSON.stringify([shown.views[view].card, view, club.primary_color, club.logo_url]) : '';
+  const cardKey = shown && view !== null ? JSON.stringify([shown.views[view].card, view, club.primary_color, club.logo_url, shown.sponsors?.wall.map(w => w.logo + w.name)]) : '';
   useEffect(() => {
     if (!shown || view === null) return;
     let live = true;

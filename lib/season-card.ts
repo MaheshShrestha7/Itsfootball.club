@@ -2,7 +2,7 @@
 
 // The Season review's "season in numbers" card (X6), drawn on a canvas in the browser like the
 // matchday graphics (lib/share-card.ts): a 9:16 story and a 4:5 post, in the club's colours.
-import { CARD_SIZES, crest, ellipsize, fit, hex, mixWhite, roundRect, spaced } from '@/lib/share-card';
+import { CARD_SIZES, crest, ellipsize, fit, hex, loadSponsors, MAX_SPONSORS, mixWhite, roundRect, spaced, sponsorBlock, sponsorRow, type CardSponsor } from '@/lib/share-card';
 import type { PitchView } from '@/lib/season-review';
 
 export type SeasonCardFormat = 'story' | 'post';
@@ -13,7 +13,8 @@ export interface SeasonCardInput {
   /** "The whole club, in numbers" or the team's name */
   subtitle: string;
   card: PitchView['card'];
-  sponsors: number;
+  /** The season's sponsors, highest tier first: logos on white tiles above the footer */
+  sponsors: CardSponsor[];
   site: string;
 }
 
@@ -70,16 +71,27 @@ export async function drawSeasonCard(i: SeasonCardInput, format: SeasonCardForma
   ctx.fillText(ellipsize(ctx, i.club.name, W - pad * 2 - cs - 30), pad + cs + 30, y + cs / 2);
   y += cs + (story ? 110 : 60);
 
-  // "Season 2026"
+  // "Season 2026": on two big lines, or one when the sponsors need the room
+  const sponsors = await loadSponsors(i.sponsors, MAX_SPONSORS);
   ctx.textBaseline = 'alphabetic';
   const big = story ? 190 : 150;
-  fit(ctx, 'SEASON', 900, big, W - pad * 2, heading, 80);
-  ctx.fillText('SEASON', pad, y + big * 0.8);
-  y += big * 0.95;
-  fit(ctx, i.season, 900, big, W - pad * 2, heading, 60);
-  ctx.fillStyle = mixWhite(primary, 0.75);
-  ctx.fillText(i.season, pad, y + big * 0.8);
-  y += big + (story ? 30 : 10);
+  if (sponsors.length) {
+    fit(ctx, `SEASON ${i.season}`, 900, story ? 150 : 120, W - pad * 2, heading, 60);
+    const size = parseFloat(ctx.font.match(/(\d+(?:\.\d+)?)px/)?.[1] || '120');
+    const sw = ctx.measureText('SEASON ').width;
+    ctx.fillText('SEASON ', pad, y + size * 0.8);
+    ctx.fillStyle = mixWhite(primary, 0.75);
+    ctx.fillText(i.season, pad + sw, y + size * 0.8);
+    y += size + (story ? 40 : 36);
+  } else {
+    fit(ctx, 'SEASON', 900, big, W - pad * 2, heading, 80);
+    ctx.fillText('SEASON', pad, y + big * 0.8);
+    y += big * 0.95;
+    fit(ctx, i.season, 900, big, W - pad * 2, heading, 60);
+    ctx.fillStyle = mixWhite(primary, 0.75);
+    ctx.fillText(i.season, pad, y + big * 0.8);
+    y += big + (story ? 30 : 10);
+  }
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   fit(ctx, i.subtitle, 600, 40, W - pad * 2, body, 26);
   ctx.fillText(ellipsize(ctx, i.subtitle, W - pad * 2), pad, y);
@@ -140,6 +152,7 @@ export async function drawSeasonCard(i: SeasonCardInput, format: SeasonCardForma
       ctx.font = `600 ${story ? 34 : 30}px ${body}`;
       ctx.fillText(ellipsize(ctx, i.card.awardSub, W - pad * 2), pad, y + 100);
     }
+    y += i.card.awardSub ? 130 : 80;
   }
 
   // Footer: a thank-you to the sponsors and the site
@@ -147,12 +160,23 @@ export async function drawSeasonCard(i: SeasonCardInput, format: SeasonCardForma
   ctx.strokeStyle = 'rgba(255,255,255,.3)';
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(pad, fy - 50); ctx.lineTo(W - pad, fy - 50); ctx.stroke();
+
+  // The sponsors' logos in the room left above the footer, sat on the line. When there's too little
+  // room for a readable tile, a thank-you line in the footer instead
+  const labelH = 44;
+  const room = fy - 50 - 24 - (y + 16);
+  const block = sponsors.length ? sponsorBlock(sponsors, labelH, story ? 150 : 120, room) : null;
+  const drawn = !!block && block.tileH >= 56;
+  if (block && drawn) {
+    sponsorRow(ctx, block, fy - 50 - 24 - block.height, labelH, 'THANK YOU TO OUR SPONSORS', W, pad, story ? 300 : 280, body, heading);
+    ctx.textAlign = 'left';
+  }
   ctx.fillStyle = 'rgba(255,255,255,.9)';
   ctx.font = `600 30px ${body}`;
   spaced(ctx, 1);
-  if (i.sponsors > 0) ctx.fillText(`Thanks to our ${i.sponsors} sponsor${i.sponsors === 1 ? '' : 's'}`, pad, fy);
-  ctx.textAlign = 'right';
-  ctx.fillText(i.site, W - pad, fy);
+  if (i.sponsors.length && !drawn) ctx.fillText(`Thanks to our ${i.sponsors.length} sponsor${i.sponsors.length === 1 ? '' : 's'}`, pad, fy);
+  ctx.textAlign = drawn ? 'center' : 'right';
+  ctx.fillText(i.site, drawn ? W / 2 : W - pad, fy);
   spaced(ctx, 0);
 
   return new Promise((resolve, reject) => canvas.toBlob(b => (b ? resolve(b) : reject(new Error('The card could not be made.'))), 'image/png'));
