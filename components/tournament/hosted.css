@@ -1,0 +1,227 @@
+/* Hallmark · shape: app screen · genre: editorial (inferred) · theme: brand · redesign: full
+ * paper: the site's --dk-9-13-22 / light --bg · accent: the club's --club-primary · display: Outfit (--font-heading) · body: Plus Jakarta Sans (--font-body)
+ * nav: kept (club site and admin shells) · signature: the team's own two kit colours as the crest ring and the band under each team's header; players as a team sheet · states: loading, error, empty, full, closed, saving
+ * axes: brand/brand/club · posture: app · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V4 · weakest: E, the entry page is long on a phone; the team sheet now leads and the deadline, games and fee sit beside it on desktop */
+/* Hosted tournaments (migration 20261180): guest teams in admin (ht-*), the public team page and the
+   guest club's entry page (te-*). Brand tokens only: club colours from --club-*, kit colours from
+   --ht-c1/--ht-c2 and --te-c1/--te-c2, set inline from each team's saved colours. */
+
+/* ---- Shared ------------------------------------------------------------------------------------ */
+.ht-lede { margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; }
+.ht-hint { margin: 0.35rem 0 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.45; display: flex; gap: 0.35rem; align-items: flex-start; }
+.ht-ok { margin: 0.4rem 0 0; color: var(--c-green); font-size: 0.84rem; font-weight: 600; }
+.ht-error { margin: 0.4rem 0 0; color: var(--c-red); font-size: 0.84rem; font-weight: 600; }
+.ht-empty { padding: 2rem 1rem; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-medium); border-radius: 12px; }
+.ht-sub { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 500; line-height: 1.4; }
+.ht-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.ht-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+@media (max-width: 560px) { .ht-two, .ht-three { grid-template-columns: 1fr; } }
+.ht-form-block { display: grid; gap: 0.9rem; padding: 1rem; margin: 0.5rem 0 1rem; border-radius: 12px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.03); }
+
+/* State words: a tinted word, never a dot */
+.ht-state, .te-state { display: inline-flex; align-items: center; padding: 0 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; line-height: 24px; white-space: nowrap; color: var(--text-secondary); background: rgba(var(--tint-rgb), 0.07); }
+:is(.ht-state, .te-state)[data-tone='ok'] { color: var(--c-green); background: color-mix(in oklab, var(--c-green) 14%, transparent); }
+:is(.ht-state, .te-state)[data-tone='warn'] { color: var(--c-amber); background: color-mix(in oklab, var(--c-amber) 14%, transparent); }
+:is(.ht-state, .te-state)[data-tone='due'] { color: var(--c-red); background: color-mix(in oklab, var(--c-red) 12%, transparent); }
+
+/* Crest in a ring of the team's two kit colours */
+.ht-crest { flex: none; display: grid; place-items: center; border-radius: 50%; padding: 4px; background: conic-gradient(var(--ht-c1, var(--border-medium)) 0 50%, var(--ht-c2, var(--ht-c1, var(--border-medium))) 50% 100%); }
+.ht-crest img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: var(--bg-surface-elevated); padding: 4px; }
+.ht-crest-lg { width: 80px; height: 80px; }
+
+/* Controls: hover, focus, active and disabled on every one */
+.ht-icon-btn, .ht-x, .te-remove { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); display: inline-grid; place-items: center; cursor: pointer; transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
+.ht-icon-btn:hover, .ht-x:hover, .te-remove:hover { background: rgba(var(--tint-rgb), 0.09); color: var(--text-primary); }
+.ht-icon-btn.is-danger:hover, .te-remove:hover { color: var(--c-red); border-color: color-mix(in oklab, var(--c-red) 45%, transparent); }
+.ht-link-btn { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 32px; padding: 0 0.15rem; border: 0; background: none; color: var(--club-ink); font: 700 0.84rem var(--font-body); white-space: nowrap; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.2em; text-decoration-color: transparent; transition: text-decoration-color 0.15s; }
+.ht-link-btn:hover { text-decoration-color: currentColor; }
+:is(.ht-icon-btn, .ht-x, .te-remove, .ht-link-btn, .ht-age, .ht-team-card):active { transform: translateY(1px); }
+:is(.ht-icon-btn, .ht-x, .te-remove, .ht-link-btn):disabled { cursor: not-allowed; color: var(--text-muted); background: none; text-decoration: none; transform: none; }
+:is(.ht-icon-btn, .ht-x, .te-remove, .ht-link-btn, .ht-age, .ht-team-card, .ht-check, .te-tick input, .ht-colour input):focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; transition: none; }
+.ht-check, .te-tick input { width: 18px; height: 18px; accent-color: var(--club-primary); cursor: pointer; }
+
+/* Tables: the house list for teams, players, games and cards */
+.ht-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.ht-table thead th { text-align: left; padding: 0.55rem 0.75rem; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; background: rgba(var(--tint-rgb), 0.035); white-space: nowrap; }
+.ht-table td, .ht-table tbody th { padding: 0.6rem 0.75rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); text-align: left; vertical-align: middle; }
+.ht-table tbody th { color: var(--text-primary); font-weight: 700; }
+.ht-num-col { width: 3.25rem; color: var(--club-ink) !important; font-weight: 800; }
+.ht-score { text-align: right !important; font-weight: 800; color: var(--text-primary) !important; white-space: nowrap; }
+.ht-when { display: block; color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+
+/* ---- Admin: the Teams tab ---------------------------------------------------------------------- */
+.ht-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.ht-toolbar .ht-lede { flex: 1 1 260px; max-width: 60ch; }
+.ht-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ht-desk-strip { margin: 0 0 1rem; padding: 0.7rem 0.9rem; border-radius: 10px; background: rgba(var(--club-primary-rgb), 0.1); border: 1px solid rgba(var(--club-primary-rgb), 0.35); color: var(--club-ink); font-size: 0.9rem; display: flex; gap: 0.5rem; align-items: center; }
+.ht-warn { margin: 0 0 1rem; padding: 0.75rem 0.9rem; border-radius: 10px; background: color-mix(in oklab, var(--c-amber) 10%, transparent); border: 1px solid color-mix(in oklab, var(--c-amber) 40%, transparent); color: var(--text-primary); font-size: 0.88rem; display: flex; gap: 0.6rem; }
+.ht-warn ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+
+.ht-board { border: 1px solid var(--border-subtle); border-radius: 12px; overflow-x: auto; background: var(--bg-card); }
+.ht-board-table tbody tr { transition: background-color 0.15s; }
+.ht-board-table tbody tr:hover { background: rgba(var(--tint-rgb), 0.025); }
+.ht-board-table tbody tr[data-here='true'] { background: color-mix(in oklab, var(--c-green) 7%, transparent); }
+.ht-board-table tbody th { font-weight: 400; min-width: 16rem; }
+.ht-team-cell { display: flex; gap: 0.75rem; align-items: center; }
+.ht-name { font-weight: 800; color: var(--text-primary); overflow-wrap: anywhere; }
+.ht-fee { display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; align-items: center; }
+.ht-row-actions { white-space: nowrap; text-align: right !important; }
+.ht-row-actions > * { vertical-align: middle; }
+.ht-row-actions > * + * { margin-left: 0.35rem; }
+.ht-row-actions .btn { min-height: 36px; }
+/* Phones: each team becomes a block, its cells labelled from the column heads */
+@media (max-width: 760px) {
+  .ht-board { overflow: visible; border: 0; background: none; }
+  .ht-board-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .ht-board-table, .ht-board-table tbody { display: block; }
+  .ht-board-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.5rem 0.75rem; padding: 0.9rem; margin-bottom: 0.6rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-card); }
+  .ht-board-table tbody :is(td, th) { display: block; padding: 0; border: 0; min-width: 0; }
+  .ht-board-table tbody th, .ht-row-actions { grid-column: 1 / -1; }
+  .ht-board-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 0.15rem; color: var(--text-muted); font-size: 0.78rem; }
+  .ht-board-table tbody td.ht-row-actions { text-align: left !important; display: flex; flex-wrap: wrap; gap: 0.4rem; padding-top: 0.5rem !important; border-top: 1px solid var(--border-subtle) !important; }
+  .ht-row-actions > * + * { margin-left: 0; }
+}
+
+/* Popups */
+.ht-scrim { position: fixed; inset: 0; z-index: 999; overflow-y: auto; overscroll-behavior: contain; background: var(--color-scrim); backdrop-filter: blur(12px); display: flex; padding: 1rem; }
+.ht-dialog { margin: auto; width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-xl); padding: 1.4rem; }
+.ht-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.ht-dialog-head h3 { margin: 0; font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+.ht-form { display: grid; gap: 0.9rem; }
+.ht-fieldset { margin: 0; padding: 0.9rem; border: 1px solid var(--border-subtle); border-radius: 12px; display: grid; gap: 0.75rem; }
+.ht-fieldset legend { padding: 0 0.35rem; font-weight: 700; font-size: 0.88rem; color: var(--text-secondary); }
+.ht-foot { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.ht-colour { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.3rem 0.6rem 0.3rem 0.3rem; border-radius: 10px; border: 1px solid var(--border-medium); background: rgba(var(--tint-rgb), 0.04); font: 600 0.86rem var(--font-body); color: var(--text-secondary); }
+.ht-colour input[type='color'] { width: 36px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.ht-squad-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+.ht-staff { margin: 0 0 0.75rem; display: grid; grid-template-columns: auto 1fr; gap: 0.2rem 0.75rem; font-size: 0.86rem; }
+.ht-staff dt { color: var(--text-muted); }
+.ht-staff dd { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+/* Age group switch: admin, the public page and the event page's draw */
+.ht-ages { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1.25rem; }
+.ht-age { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 40px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--border-medium); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); font: 700 0.88rem var(--font-body); text-decoration: none; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+.ht-age:hover { color: var(--text-primary); border-color: var(--border-strong, var(--border-medium)); background: rgba(var(--tint-rgb), 0.08); }
+.ht-age[aria-current='page'] { background: rgba(var(--club-primary-rgb), 0.14); border-color: rgba(var(--club-primary-rgb), 0.55); color: var(--club-ink); }
+.ht-age-add { border-style: dashed; background: none; }
+.evp-box .ht-ages { margin: 0; }
+
+/* Fair play */
+.ht-fair { display: grid; gap: 1rem; }
+.ht-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-subtle); }
+.ht-table-wrap .ht-table td:first-child { width: 3rem; color: var(--text-muted); }
+.ht-card-chip { display: inline-block; width: 10px; height: 14px; border-radius: 2px; margin-right: 0.45rem; vertical-align: -2px; }
+.ht-card-chip.is-yellow { background: var(--c-amber); }
+.ht-card-chip.is-red { background: var(--c-red); }
+
+/* ---- Public team page -------------------------------------------------------------------------- */
+.ht-team { position: relative; padding: 0 0 1.25rem; margin-bottom: 1.5rem; border-radius: var(--radius-xl); overflow: hidden; display: grid; gap: 1.25rem; }
+.ht-team-head { display: flex; gap: 1rem; align-items: center; padding: 1.4rem 1.25rem 1.25rem; border-bottom: 6px solid; border-image: linear-gradient(90deg, var(--ht-c1, var(--club-primary)) 0 62%, var(--ht-c2, var(--ht-c1, var(--club-primary))) 62% 100%) 1; }
+.ht-team-head .min-w-0 { flex: 1; }
+.ht-team-head h2 { margin: 0; font-family: var(--font-heading); font-size: clamp(1.5rem, 4vw, 2.1rem); font-weight: 900; line-height: 1.1; color: var(--text-primary); overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+.ht-team-meta { margin: 0.35rem 0 0; color: var(--text-secondary); font-size: 0.92rem; }
+.ht-team > :not(.ht-team-head) { margin-inline: 1.25rem; }
+.ht-results { border-collapse: collapse; font-variant-numeric: tabular-nums; width: max-content; max-width: 100%; }
+.ht-results th { padding: 0 1.1rem 0.15rem 0; text-align: left; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; }
+.ht-results td { padding: 0 1.1rem 0 0; font: 900 clamp(1.6rem, 4vw, 2.2rem)/1.1 var(--font-heading); color: var(--text-primary); }
+.ht-results abbr { text-decoration: none; }
+.ht-team-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; align-items: start; }
+@media (max-width: 760px) { .ht-team-cols { grid-template-columns: minmax(0, 1fr); } }
+.ht-team-cols h3 { margin: 0 0 0.4rem; font: 700 0.95rem var(--font-body); color: var(--text-primary); }
+.ht-team-cols h3:not(:first-child) { margin-top: 1.25rem; }
+.ht-team-cols .ht-table tbody tr:first-child :is(td, th) { border-top: 0; }
+.ht-team-cols .ht-table thead + tbody tr:first-child :is(td, th) { border-top: 1px solid var(--border-subtle); }
+.ht-share { justify-self: start; display: inline-flex; gap: 0.4rem; align-items: center; }
+.ht-team-card[aria-pressed='true'] { border-color: var(--ht-c1) !important; box-shadow: 0 0 0 1px var(--ht-c1); }
+
+/* ---- Guest club's entry page ------------------------------------------------------------------- */
+.te-page { padding: 2.5rem 0 5rem; }
+.te-wrap { max-width: 1120px; display: grid; gap: 1.25rem; }
+.te-wrap > .frp-back { margin-bottom: 0; }
+.te-head { display: flex; gap: 1.1rem; align-items: center; padding-bottom: 1.25rem; border-bottom: 6px solid; border-image: linear-gradient(90deg, var(--te-c1) 0 62%, var(--te-c2) 62% 100%) 1; }
+.te-head > .min-w-0 { flex: 1; }
+.te-head h1 { margin: 0; font-family: var(--font-heading); font-size: clamp(1.75rem, 5vw, 2.6rem); font-weight: 900; color: var(--text-primary); line-height: 1.05; overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+.te-meta { margin: 0.4rem 0 0; color: var(--text-secondary); font-size: 0.95rem; max-width: 60ch; }
+.te-crest { flex: none; width: 76px; height: 76px; border-radius: 50%; padding: 4px; background: conic-gradient(var(--te-c1) 0 50%, var(--te-c2) 50% 100%); display: grid; place-items: center; }
+.te-crest img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: var(--bg-surface-elevated); padding: 4px; }
+.te-crest.is-big { width: 96px; height: 96px; }
+@media (max-width: 640px) {
+  .te-head { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 0.4rem 0.9rem; align-items: start; }
+  .te-head .te-crest { width: 64px; height: 64px; }
+  .te-head > .te-state { grid-column: 2; justify-self: start; }
+}
+
+.te-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 21rem); gap: 1.25rem; align-items: start; }
+.te-side { display: grid; gap: 1rem; position: sticky; top: 5.5rem; }
+@media (max-width: 900px) {
+  .te-layout { grid-template-columns: minmax(0, 1fr); }
+  .te-side { position: static; }
+}
+.te-card { margin: 0; padding: 1.15rem 1.25rem; border-radius: var(--radius-xl); display: grid; gap: 0.75rem; min-width: 0; }
+.te-card h2, .te-card legend { margin: 0; padding: 0; width: 100%; display: flex; align-items: center; gap: 0.45rem; font: 800 1rem var(--font-body); color: var(--text-primary); }
+/* A floated legend sits inside the card like a heading, not on its border */
+.te-card legend { float: left; }
+fieldset.te-card { border: 1px solid var(--border-subtle); }
+fieldset.te-card:disabled { cursor: not-allowed; }
+fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--text-muted); background-color: rgba(var(--tint-rgb), 0.03); cursor: not-allowed; }
+.te-hint { margin: 0; color: var(--text-muted); font-size: 0.84rem; line-height: 1.45; }
+.te-note { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
+.te-info { margin: 0; white-space: pre-line; color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; }
+.te-link { color: var(--club-ink); font-weight: 700; font-size: 0.9rem; justify-self: start; }
+.te-link:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.te-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+.te-two .form-group { margin: 0; }
+@media (max-width: 560px) { .te-two { grid-template-columns: minmax(0, 1fr); } }
+.te-crest-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.te-crest-row > div { flex: 1 1 220px; display: grid; gap: 0.4rem; justify-items: start; }
+.te-count { margin-left: auto; font-size: 0.84rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* The team sheet */
+.te-sheet { display: grid; gap: 0.35rem; }
+.te-sheet-head, .te-players li { display: grid; grid-template-columns: 3.4rem minmax(0, 1fr) 7rem 9.5rem 36px; gap: 0.5rem; align-items: center; }
+.te-sheet-head { padding: 0 0.1rem; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; }
+.te-players { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.te-num { text-align: center; padding-left: 0.3rem !important; padding-right: 0.3rem !important; font-weight: 800; color: var(--club-ink); font-variant-numeric: tabular-nums; }
+.te-ticks { display: flex; gap: 0.75rem; }
+.te-tick { display: inline-flex; gap: 0.35rem; align-items: center; min-height: 36px; font-size: 0.84rem; color: var(--text-secondary); white-space: nowrap; cursor: pointer; }
+@media (max-width: 640px) {
+  .te-sheet-head { display: none; }
+  .te-players li { display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; padding: 0.5rem; border-radius: 10px; background: rgba(var(--tint-rgb), 0.04); }
+  .te-players li .te-num { flex: 0 0 3.2rem; }
+  .te-players li .te-pname { flex: 1 1 calc(100% - 3.2rem - 36px - 1.2rem); min-width: 0; }
+  .te-players li .te-remove { order: 1; }
+  .te-players li .te-pos { order: 2; flex: 0 0 7.5rem; }
+  .te-players li .te-ticks { order: 3; }
+}
+.te-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.te-paste { display: grid; gap: 0.5rem; }
+
+/* The side column */
+.te-deadline { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 0.6rem; font-size: 0.92rem; color: var(--text-primary); }
+.te-deadline > svg { margin-top: 0.15rem; }
+.te-deadline[data-tone='ok'] { border-color: color-mix(in oklab, var(--c-green) 40%, transparent) !important; }
+.te-deadline[data-tone='ok'] > svg { color: var(--c-green); }
+.te-deadline[data-tone='warn'] { border-color: color-mix(in oklab, var(--c-amber) 45%, transparent) !important; }
+.te-deadline[data-tone='warn'] > svg { color: var(--c-amber); }
+.te-results { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.te-results th { padding: 0 0.9rem 0.1rem 0; text-align: left; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; }
+.te-results td { padding: 0 0.9rem 0 0; font: 900 1.6rem/1.1 var(--font-heading); color: var(--text-primary); }
+.te-results abbr { text-decoration: none; }
+.te-games { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.te-games :is(td, th) { padding: 0.5rem 0.4rem 0.5rem 0; border-top: 1px solid var(--border-subtle); text-align: left; vertical-align: top; }
+.te-games tr:first-child :is(td, th) { border-top: 0; }
+.te-games th { color: var(--text-primary); font-weight: 700; }
+.te-games tr[data-done='true'] :is(td, th) { color: var(--text-muted); }
+.te-when { display: block; color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+.te-sub { display: block; color: var(--text-muted); font-size: 0.8rem; }
+.te-score { text-align: right !important; font-weight: 800; padding-right: 0 !important; white-space: nowrap; }
+.te-fee-row { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; font: 900 1.4rem var(--font-heading); color: var(--text-primary); }
+
+.te-form { display: grid; gap: 1rem; min-width: 0; }
+.te-saved { margin: 0; display: flex; gap: 0.4rem; align-items: center; color: var(--c-green); font-weight: 700; font-size: 0.92rem; }
+.te-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; position: sticky; bottom: 0; padding: 0.75rem 0; background: linear-gradient(transparent, rgb(var(--dk-9-13-22)) 35%); }
+/* The club's phone menu bar sits at the bottom, so the buttons stay in the page there */
+@media (max-width: 640px) { .te-actions { position: static; background: none; } }
+.te-foot { margin: 0; color: var(--text-muted); font-size: 0.82rem; }
+.te-saved svg { flex: none; }

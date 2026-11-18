@@ -14,6 +14,7 @@ import { packKickoffs, shortCode } from '@/lib/hosted-tournaments';
 import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PopupPanel from '@/components/PopupPanel';
+import '@/components/tournament/hosted.css';
 
 // A team that was already in the tournament keeps its id (and with it its crest, entry link and squad)
 type ParticipantInput = Omit<TournamentParticipant, 'id' | 'tournament_id'> & { id?: string };

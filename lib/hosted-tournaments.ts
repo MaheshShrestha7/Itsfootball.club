@@ -2,7 +2,7 @@
 // clashes, each team's summary and the fair play table. Pure functions, checked in
 // hosted-tournaments.check.ts.
 
-import { compareTournamentMatches, STAGE_TITLES } from './tournament-engine';
+import { compareTournamentMatches, fixtureWhenLabel, STAGE_TITLES } from './tournament-engine';
 import { goalScoringSide } from './teams';
 import type { Match, MatchEvent, Tournament, TournamentParticipant } from './supabase/types';
 
@@ -127,6 +127,9 @@ export function ageGroupFamily(tournaments: Tournament[], t: Tournament): Tourna
     .sort((a, b) => (a.age_group || a.name).localeCompare(b.age_group || b.name, undefined, { numeric: true }));
   return root ? [root, ...kids] : kids;
 }
+
+/** "Sat, 5 Dec, 9:00 am": the fixture's day and kick-off as a plain phrase */
+export const kickoffLabel = (m: Match) => fixtureWhenLabel(m).replace(' · ', ', ');
 
 /** What a team is called in the age group switch ("Under 11s", or the tournament name) */
 export const ageGroupLabel = (t: Tournament) => t.age_group?.trim() || t.name;

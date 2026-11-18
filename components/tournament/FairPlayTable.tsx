@@ -3,9 +3,9 @@
 // Cards across a tournament (TX-8): the fair play table, fairest first, and who sits out their
 // team's next game after a red card. Made from the cards Match Centre logged.
 import React from 'react';
-import { fairPlay } from '@/lib/hosted-tournaments';
-import { fixtureWhenLabel } from '@/lib/tournament-engine';
+import { fairPlay, kickoffLabel } from '@/lib/hosted-tournaments';
 import type { Match, MatchEvent, TournamentParticipant } from '@/lib/supabase/types';
+import '@/components/tournament/hosted.css';
 
 export default function FairPlayTable({ matches, events, participants, showName = n => n }: {
   matches: Match[];
@@ -26,7 +26,7 @@ export default function FairPlayTable({ matches, events, participants, showName 
             <b>Sitting out their next game</b>
             <ul>
               {suspended.map(s => (
-                <li key={`${s.team}-${s.player}-${s.match.id}`}>{showName(s.player)} ({s.team}): red card, misses {fixtureWhenLabel(s.match)} v {s.match.home_team_name === s.team ? s.match.away_team_name : s.match.home_team_name}</li>
+                <li key={`${s.team}-${s.player}-${s.match.id}`}>{showName(s.player)} ({s.team}): red card, misses {kickoffLabel(s.match)} v {s.match.home_team_name === s.team ? s.match.away_team_name : s.match.home_team_name}</li>
               ))}
             </ul>
           </div>

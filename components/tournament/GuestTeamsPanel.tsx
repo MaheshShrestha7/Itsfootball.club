@@ -14,29 +14,24 @@ import { DEFAULT_CREST, crestOnError } from '@/lib/crest';
 import { confirmAction } from '@/components/ConfirmDialog';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import PopupPanel from '@/components/PopupPanel';
-import { fixtureWhenLabel } from '@/lib/tournament-engine';
-import { kitClashes, money, parseTeamList, shortCode } from '@/lib/hosted-tournaments';
+import { kitClashes, money, parseTeamList, shortCode, kickoffLabel } from '@/lib/hosted-tournaments';
 import { useTournamentEntries } from '@/lib/use-tournament-entries';
 import type { Club, Match, Tournament, TournamentEntry, TournamentParticipant } from '@/lib/supabase/types';
+import '@/components/tournament/hosted.css';
 
-const panel: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '10px' };
-const pill = (tone: string): React.CSSProperties => ({
-  display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0 0.5rem', borderRadius: 999, fontSize: '0.75rem', fontWeight: 600, lineHeight: '20px',
-  whiteSpace: 'nowrap', background: `color-mix(in oklab, ${tone} 15%, transparent)`, color: tone,
-});
 const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '0.35rem' };
 
 const ENTRY_STATUS: Record<TournamentEntry['status'], { label: string; tone: string }> = {
-  not_started: { label: 'Not started', tone: 'var(--text-secondary)' },
-  in_progress: { label: 'In progress', tone: 'var(--c-amber)' },
-  submitted: { label: 'Entry sent', tone: 'var(--c-green)' },
+  not_started: { label: 'Not started', tone: 'muted' },
+  in_progress: { label: 'In progress', tone: 'warn' },
+  submitted: { label: 'Entry sent', tone: 'ok' },
 };
 
 const hexOr = (c: string | null | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
 
 function Crest({ team, size = 40 }: { team: Pick<TournamentParticipant, 'logo_url' | 'color' | 'secondary_color'>; size?: number }) {
   return (
-    <span className="ht-crest" style={{ width: size, height: size, '--ht-c1': hexOr(team.color, '#64748B'), '--ht-c2': hexOr(team.secondary_color, hexOr(team.color, '#64748B')) } as React.CSSProperties}>
+    <span className="ht-crest" style={{ width: size, height: size, '--ht-c1': hexOr(team.color, '') || undefined, '--ht-c2': hexOr(team.secondary_color, hexOr(team.color, '')) || undefined } as React.CSSProperties}>
       <img loading="lazy" decoding="async" src={team.logo_url || DEFAULT_CREST} onError={crestOnError} alt="" />
     </span>
   );
@@ -170,103 +165,121 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
             <b>Kit clash{clashes.length === 1 ? '' : 'es'}: same main colour</b>
             <ul>
               {clashes.slice(0, 6).map(c => (
-                <li key={c.match.id}>{fixtureWhenLabel(c.match)}{c.match.pitch_label ? `, ${c.match.pitch_label}` : ''}: {c.home.name} v {c.away.name}. One team needs bibs or a change kit.</li>
+                <li key={c.match.id}>{kickoffLabel(c.match)}{c.match.pitch_label ? `, ${c.match.pitch_label}` : ''}: {c.home.name} v {c.away.name}. One team needs bibs or a change kit.</li>
               ))}
             </ul>
           </div>
         </div>
       )}
 
-      <ul className="ht-grid">
-        {participants.map(p => {
-          const e = entryOf(p.id);
-          const players = playersOf(p.id);
-          const status = e ? ENTRY_STATUS[e.status] : ENTRY_STATUS.not_started;
-          const billInfo = e?.payment_id ? hosted.bills[e.payment_id] : undefined;
-          const guest = p.team_type === 'external';
-          const here = !!e?.checked_in_at;
-          return (
-            <li key={p.id} className="ht-card" style={panel} data-here={desk && here ? 'true' : undefined}>
-              <div className="ht-card-top">
-                <Crest team={p} />
-                <div className="min-w-0" style={{ flex: 1 }}>
-                  <div className="ht-name">{p.name}</div>
-                  <div className="ht-pills">
-                    <span style={pill(guest ? 'var(--c-sky)' : 'var(--c-green)')}>{guest ? 'Guest club' : 'Our team'}</span>
-                    {p.group && <span className="text-meta">Group {p.group}</span>}
-                    {guest && !isEvent && <span style={pill(status.tone)}>{status.label}</span>}
-                    {guest && !isEvent && fee > 0 && (
-                      e?.payment_id
-                        ? <span style={pill(billInfo?.status === 'paid' ? 'var(--c-green)' : billInfo?.status === 'awaiting_review' ? 'var(--c-amber)' : 'var(--c-red)')}>
-                            {billInfo?.status === 'paid' ? 'Fee paid' : billInfo?.status === 'awaiting_review' ? 'Receipt to check' : billInfo ? `Owes ${money(billInfo.amount_cents, billInfo.currency)}` : 'Fee billed'}
-                          </span>
-                        : <span style={pill('var(--text-secondary)')}>No fee yet</span>
-                    )}
-                    {desk && here && <span style={pill('var(--c-green)')}><Check size={12} aria-hidden="true" /> Here</span>}
-                  </div>
-                </div>
-              </div>
-
-              {(p.manager_name || p.coach_name || e?.contact_name || e?.contact_email) && (
-                <dl className="ht-staff">
-                  {p.manager_name && <><dt>Manager</dt><dd>{p.manager_name}</dd></>}
-                  {p.coach_name && <><dt>Coach</dt><dd>{p.coach_name}</dd></>}
-                  {guest && (e?.contact_name || e?.contact_email) && <><dt>Contact</dt><dd>{[e?.contact_name, e?.contact_email, e?.contact_phone].filter(Boolean).join(' · ')}</dd></>}
-                </dl>
-              )}
-
-              <div className="ht-card-actions">
-                {desk && !isEvent ? (
-                  <>
-                    <button type="button" className={`btn btn-sm ${here ? 'btn-secondary' : 'btn-primary'}`} style={btn} data-view-ok
-                      onClick={async () => { const err = await hosted.setCheckedIn(p.id, !here); if (err) onFeedback('error', err); }}>
-                      <Check size={14} aria-hidden="true" /><span>{here ? 'Undo check-in' : 'Checked in'}</span>
-                    </button>
-                    {guest && (
-                      <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setSquadOf(p)} data-view-ok>
-                        <Users size={14} aria-hidden="true" /><span>Players ({players.filter(x => x.present).length}/{players.length})</span>
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setEditing(p)}>
-                      <Pencil size={14} aria-hidden="true" /><span>Edit</span>
-                    </button>
-                    {guest && !isEvent && (
-                      <>
-                        <button type="button" className="btn btn-sm btn-secondary" style={btn} disabled={busy === `copy-${p.id}`} onClick={() => copyLink(p)}>
-                          {copied === p.id ? <Check size={14} aria-hidden="true" /> : <Link2 size={14} aria-hidden="true" />}
-                          <span>{copied === p.id ? 'Copied' : e?.entry_key ? 'Copy link' : 'Make link'}</span>
-                        </button>
-                        <button type="button" className="btn btn-sm btn-secondary" style={btn} disabled={!!busy} onClick={() => email('invite', [p.id])} title={e?.contact_email ? `Email the link to ${e.contact_email}` : 'Add their contact email first'}>
-                          <Mail size={14} aria-hidden="true" /><span>Email link</span>
-                        </button>
-                        <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setSquadOf(p)}>
-                          <Users size={14} aria-hidden="true" /><span>Players ({players.length})</span>
-                        </button>
-                        {billInfo && billInfo.status !== 'paid' && e?.payment_id && (
-                          <button type="button" className="btn btn-sm btn-secondary" style={btn} disabled={!!busy}
-                            onClick={() => run(`paid-${p.id}`, async () => {
-                              if (!(await confirmAction({ title: `Mark ${p.name}'s entry fee paid?`, message: 'Do this once their bank transfer is in the club\'s account.', confirmLabel: 'Mark paid' }))) return;
-                              const err = await hosted.markPaid(club.id, e.payment_id!);
-                              onFeedback(err ? 'error' : 'success', err || `${p.name}'s entry fee is marked paid.`);
-                            })}>
-                            <CreditCard size={14} aria-hidden="true" /><span>Mark paid</span>
+      {participants.length > 0 && (
+        <div className="ht-board">
+          <table className="ht-table ht-board-table">
+            <caption className="sr-only">Teams in {tournament.name}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Team</th>
+                {!isEvent && <th scope="col">Entry</th>}
+                {!isEvent && <th scope="col">Players</th>}
+                {!isEvent && fee > 0 && <th scope="col">Entry fee</th>}
+                {desk && !isEvent && <th scope="col">Arrived</th>}
+                <th scope="col"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {participants.map(p => {
+                const e = entryOf(p.id);
+                const players = playersOf(p.id);
+                const status = e ? ENTRY_STATUS[e.status] : ENTRY_STATUS.not_started;
+                const billInfo = e?.payment_id ? hosted.bills[e.payment_id] : undefined;
+                const guest = p.team_type === 'external';
+                const here = !!e?.checked_in_at;
+                const staff = [p.manager_name && `Manager ${p.manager_name}`, p.coach_name && `coach ${p.coach_name}`].filter(Boolean).join(', ');
+                return (
+                  <tr key={p.id} data-here={desk && here ? 'true' : undefined}>
+                    <th scope="row">
+                      <div className="ht-team-cell">
+                        <Crest team={p} size={36} />
+                        <div className="min-w-0">
+                          <div className="ht-name">{p.name}</div>
+                          <div className="ht-sub">
+                            {guest ? 'Guest club' : 'Our team'}{p.group ? `, group ${p.group}` : ''}{staff ? `. ${staff}` : ''}
+                          </div>
+                          {guest && !isEvent && (e?.contact_name || e?.contact_email || e?.contact_phone) && (
+                            <div className="ht-sub">Contact: {[e?.contact_name, e?.contact_email, e?.contact_phone].filter(Boolean).join(', ')}</div>
+                          )}
+                        </div>
+                      </div>
+                    </th>
+                    {!isEvent && <td data-label="Entry">{guest ? <span className="ht-state" data-tone={status.tone}>{status.label}</span> : <span className="ht-sub">Club squad</span>}</td>}
+                    {!isEvent && (
+                      <td data-label="Players">
+                        {guest ? (
+                          <button type="button" className="ht-link-btn" onClick={() => setSquadOf(p)} data-view-ok>
+                            <Users size={14} aria-hidden="true" />
+                            {desk ? `${players.filter(x => x.present).length} of ${players.length} here` : `${players.length} player${players.length === 1 ? '' : 's'}`}
                           </button>
-                        )}
-                      </>
+                        ) : <span className="ht-sub">From Club teams</span>}
+                      </td>
                     )}
-                    <button type="button" className="btn btn-sm btn-secondary" style={{ ...btn, color: 'var(--c-red)' }} onClick={() => remove(p)} aria-label={`Remove ${p.name}`}>
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                    {!isEvent && fee > 0 && (
+                      <td data-label="Entry fee">
+                        {!guest ? <span className="ht-sub">No fee</span>
+                          : !e?.payment_id ? <span className="ht-state" data-tone="muted">Not added</span>
+                          : (
+                            <span className="ht-fee">
+                              <span className="ht-state" data-tone={billInfo?.status === 'paid' ? 'ok' : billInfo?.status === 'awaiting_review' ? 'warn' : billInfo ? 'due' : 'muted'}>
+                                {billInfo?.status === 'paid' ? 'Paid' : billInfo?.status === 'awaiting_review' ? 'Receipt to check' : billInfo ? `Owes ${money(billInfo.amount_cents, billInfo.currency)}` : 'Billed'}
+                              </span>
+                              {billInfo && billInfo.status !== 'paid' && (
+                                <button type="button" className="ht-link-btn" disabled={!!busy}
+                                  onClick={() => run(`paid-${p.id}`, async () => {
+                                    if (!(await confirmAction({ title: `Mark ${p.name}'s entry fee paid?`, message: 'Do this once their bank transfer is in the club\'s account.', confirmLabel: 'Mark paid' }))) return;
+                                    const err = await hosted.markPaid(club.id, e.payment_id!);
+                                    onFeedback(err ? 'error' : 'success', err || `${p.name}'s entry fee is marked paid.`);
+                                  })}>
+                                  Mark paid
+                                </button>
+                              )}
+                            </span>
+                          )}
+                      </td>
+                    )}
+                    {desk && !isEvent && (
+                      <td data-label="Arrived">
+                        <button type="button" className={`btn btn-sm ${here ? 'btn-secondary' : 'btn-primary'}`} style={btn} aria-pressed={here} data-view-ok
+                          onClick={async () => { const err = await hosted.setCheckedIn(p.id, !here); if (err) onFeedback('error', err); }}>
+                          <Check size={14} aria-hidden="true" /><span>{here ? 'Here' : 'Check in'}</span>
+                        </button>
+                      </td>
+                    )}
+                    <td className="ht-row-actions">
+                      {guest && !isEvent && (
+                        <>
+                          <button type="button" className="btn btn-sm btn-secondary" style={btn} disabled={busy === `copy-${p.id}`} onClick={() => copyLink(p)}>
+                            {copied === p.id ? <Check size={14} aria-hidden="true" /> : <Link2 size={14} aria-hidden="true" />}
+                            <span>{copied === p.id ? 'Copied' : e?.entry_key ? 'Copy link' : 'Make link'}</span>
+                          </button>
+                          <button type="button" className="ht-icon-btn" disabled={!!busy} onClick={() => email('invite', [p.id])}
+                            aria-label={`Email the link to ${p.name}`} title={e?.contact_email ? `Email the link to ${e.contact_email}` : 'Add their contact email first'}>
+                            <Mail size={16} aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
+                      <button type="button" className="ht-icon-btn" onClick={() => setEditing(p)} aria-label={`Edit ${p.name}`} title="Edit">
+                        <Pencil size={16} aria-hidden="true" />
+                      </button>
+                      <button type="button" className="ht-icon-btn is-danger" onClick={() => remove(p)} aria-label={`Remove ${p.name}`} title="Remove">
+                        <Trash2 size={16} aria-hidden="true" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       {!participants.length && <p className="ht-empty">No teams yet. Add the clubs coming to your tournament, then generate the tiesheet.</p>}
 
       {editing && (
@@ -505,20 +518,29 @@ function SquadPopup({ team, players, entry, desk, juniorTournament, onPresent, o
         </dl>
       )}
       {players.length > 0 && (
-        <ul className="ht-squad">
-          {players.map(p => (
-            <li key={p.id}>
-              {desk
-                ? <label className="ht-tick"><input type="checkbox" checked={!!p.present} onChange={e => onPresent(p.id, e.target.checked)} /> <b>{p.shirt_number ?? '–'}</b> {p.name}</label>
-                : <span><b>{p.shirt_number ?? '–'}</b> {p.name}</span>}
-              <span className="ht-squad-meta">
-                {p.position && <span>{p.position}</span>}
-                {(p.is_junior || juniorTournament) && <span title="Shown as first name and last initial on public pages">Junior</span>}
-                {p.hide_public && <span>Hidden from public</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <table className="ht-table ht-sheet">
+          <caption className="sr-only">{team.name} players</caption>
+          <thead>
+            <tr>
+              {desk && <th scope="col">Here</th>}
+              <th scope="col" className="ht-num-col">No.</th>
+              <th scope="col">Name</th>
+              <th scope="col">Position</th>
+              <th scope="col">Public page</th>
+            </tr>
+          </thead>
+          <tbody>
+            {players.map(p => (
+              <tr key={p.id}>
+                {desk && <td><input type="checkbox" className="ht-check" checked={!!p.present} onChange={e => onPresent(p.id, e.target.checked)} aria-label={`${p.name} is here`} /></td>}
+                <td className="ht-num-col">{p.shirt_number ?? ''}</td>
+                <th scope="row">{p.name}</th>
+                <td>{p.position || ''}</td>
+                <td className="ht-sub">{p.hide_public ? 'Hidden' : (p.is_junior || juniorTournament) ? 'First name and initial' : 'Full name'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
       {!players.length && link && (
         <p className="ht-hint">They add players from their entry link. <Link href={link} target="_blank">Open it</Link> to see what they see.</p>

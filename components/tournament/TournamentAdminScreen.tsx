@@ -21,6 +21,7 @@ import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
 import { ageGroupFamily, ageGroupLabel } from '@/lib/hosted-tournaments';
 import GuestTeamsPanel from '@/components/tournament/GuestTeamsPanel';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
+import '@/components/tournament/hosted.css';
 
 // Inline and on the app's own tokens, not the admin's classes: this screen also shows on
 // /tournaments/{slug}/manage, outside the admin shell (inside it, the shell re-points these tokens)

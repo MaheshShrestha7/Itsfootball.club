@@ -25,6 +25,7 @@ import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
 import { PageSkeleton } from '@/components/Skeleton';
+import '@/components/tournament/hosted.css';
 
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;

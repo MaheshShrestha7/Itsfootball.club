@@ -1,7 +1,7 @@
 // Server side of the team entry link (hosted tournaments, migration 20261180). Service role only:
 // the key is the guest's only credential, so every read is narrowed to that one team.
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ENTRY_KEY_RE, entryOpen, teamSummary, type TeamSummary } from './hosted-tournaments';
+import { ENTRY_KEY_RE, entryOpen, kickoffLabel, teamSummary, type TeamSummary } from './hosted-tournaments';
 import { CLUB_BRAND_COLUMNS, clubBaseUrl, type ClubBrandRow } from './email/club-brand';
 import { fixtureWhenLabel, compareTournamentMatches, parseTournamentDate } from './tournament-engine';
 import type { Match, MatchEvent, Tournament, TournamentEntry, TournamentParticipant, TournamentSquadPlayer } from './supabase/types';
@@ -63,7 +63,7 @@ export interface EntryView {
   entry: { contact_name: string | null; contact_email: string | null; contact_phone: string | null; assistant_name: string | null; first_aid_name: string | null; status: string; submitted_at: string | null };
   players: Pick<TournamentSquadPlayer, 'name' | 'shirt_number' | 'position' | 'is_junior' | 'hide_public'>[];
   fee: { amount_cents: number; currency: string; status: string; payPath: string | null } | null;
-  games: { line: string; status: string }[];
+  games: { when: string; pitch: string | null; opponent: string; score: string | null; status: string }[];
   /** Once their last game is done (TX-11) */
   report: TeamSummary | null;
 }
@@ -104,7 +104,13 @@ export async function loadEntryView(db: SupabaseClient, f: FoundEntry): Promise<
       amount_cents: payment.amount_cents, currency: payment.currency, status: payment.status,
       payPath: payment.status === 'pending' || payment.status === 'awaiting_review' ? `/${club.slug}/pay/${payment.id}` : null,
     } : null,
-    games: games.map(g => ({ line: gameLine(g, team.name), status: g.status })),
+    games: games.map(g => {
+      const home = g.home_team_name === team.name;
+      return {
+        when: kickoffLabel(g), pitch: g.pitch_label ?? null, opponent: home ? g.away_team_name : g.home_team_name,
+        score: g.status === 'completed' ? (home ? `${g.home_score}-${g.away_score}` : `${g.away_score}-${g.home_score}`) : null, status: g.status,
+      };
+    }),
     report,
   };
 }

@@ -7,10 +7,10 @@ import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Share2, X } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { ageGroupFamily, ageGroupLabel, teamSummary } from '@/lib/hosted-tournaments';
-import { fixtureWhenLabel } from '@/lib/tournament-engine';
+import { ageGroupFamily, ageGroupLabel, teamSummary, kickoffLabel } from '@/lib/hosted-tournaments';
 import { drawTeamCard } from '@/lib/team-card';
 import type { Match, MatchEvent, Tournament, TournamentParticipant, TournamentSquadPlayer } from '@/lib/supabase/types';
+import '@/components/tournament/hosted.css';
 
 export function AgeGroupTabs({ tournaments, tournament, href }: { tournaments: Tournament[]; tournament: Tournament; href: (t: Tournament) => string }) {
   const family = ageGroupFamily(tournaments, tournament);
@@ -62,69 +62,79 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
     } finally { setBusy(false); }
   };
 
+  const staff = [team.manager_name && `Manager ${team.manager_name}`, team.coach_name && `coach ${team.coach_name}`].filter(Boolean).join(', ');
+
   return (
-    <section className="ht-team glass-panel" aria-label={team.name}
-      style={{ '--ht-c1': team.color || 'var(--club-primary)', '--ht-c2': team.secondary_color || 'rgba(var(--tint-rgb),0.2)' } as React.CSSProperties}>
+    <section className="ht-team glass-panel" aria-labelledby="ht-team-name"
+      style={{ '--ht-c1': team.color || undefined, '--ht-c2': team.secondary_color || team.color || undefined } as React.CSSProperties}>
+      {/* The team's two kit colours run along the top: the one thing every club recognises as its own */}
       <header className="ht-team-head">
         <span className="ht-crest ht-crest-lg"><img src={team.logo_url || DEFAULT_CREST} alt="" width={72} height={72} /></span>
         <div className="min-w-0">
-          <h2>{team.name}</h2>
-          <div className="ht-team-meta">
-            {team.manager_name && <span>Manager: {team.manager_name}</span>}
-            {team.coach_name && <span>Coach: {team.coach_name}</span>}
-            {s.finish && <span className="ht-pill ok">{s.finish}</span>}
-          </div>
+          <h2 id="ht-team-name">{team.name}</h2>
+          {(staff || s.finish) && <p className="ht-team-meta">{[s.finish, staff].filter(Boolean).join('. ')}</p>}
         </div>
         <button type="button" className="ht-icon-btn" onClick={onClose} aria-label="Close team"><X size={18} /></button>
       </header>
 
       {s.played > 0 && (
-        <div className="ht-stats" aria-label="Results">
-          {([['Played', s.played], ['Won', s.won], ['Drawn', s.drawn], ['Lost', s.lost], ['Goals', `${s.goalsFor}-${s.goalsAgainst}`]] as const).map(([k, v]) => (
-            <div key={k}><b>{v}</b><span>{k}</span></div>
-          ))}
-        </div>
+        <table className="ht-results">
+          <caption className="sr-only">{team.name} results</caption>
+          <thead><tr><th scope="col"><abbr title="Played">P</abbr></th><th scope="col"><abbr title="Won">W</abbr></th><th scope="col"><abbr title="Drawn">D</abbr></th><th scope="col"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goals for">GF</abbr></th><th scope="col"><abbr title="Goals against">GA</abbr></th></tr></thead>
+          <tbody><tr><td>{s.played}</td><td>{s.won}</td><td>{s.drawn}</td><td>{s.lost}</td><td>{s.goalsFor}</td><td>{s.goalsAgainst}</td></tr></tbody>
+        </table>
       )}
 
       <div className="ht-team-cols">
         <div>
           <h3>Games</h3>
           {s.games.length ? (
-            <ul className="ht-list">
-              {s.games.map(m => {
-                const home = m.home_team_name === team.name;
-                const opp = home ? m.away_team_name : m.home_team_name;
-                return (
-                  <li key={m.id}>
-                    <span>{fixtureWhenLabel(m)}{m.pitch_label ? ` · ${m.pitch_label}` : ''}</span>
-                    <b>v {opp}{m.status === 'completed' ? ` ${home ? m.home_score : m.away_score}-${home ? m.away_score : m.home_score}` : ''}</b>
-                  </li>
-                );
-              })}
-            </ul>
+            <table className="ht-table ht-fixtures">
+              <caption className="sr-only">{team.name} games</caption>
+              <tbody>
+                {s.games.map(m => {
+                  const home = m.home_team_name === team.name;
+                  const opp = home ? m.away_team_name : m.home_team_name;
+                  return (
+                    <tr key={m.id}>
+                      <td><span className="ht-when">{kickoffLabel(m)}</span>{m.pitch_label && <span className="ht-sub">{m.pitch_label}</span>}</td>
+                      <th scope="row">v {opp}</th>
+                      <td className="ht-score">{m.status === 'completed' ? `${home ? m.home_score : m.away_score}-${home ? m.away_score : m.home_score}` : ''}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           ) : <p className="ht-hint">The draw isn&apos;t out yet.</p>}
           {s.scorers.length > 0 && (
             <>
               <h3>Goals</h3>
-              <ul className="ht-list">{s.scorers.map(p => <li key={p.name}><span>{showName(p.name)}</span><b>{p.goals}</b></li>)}</ul>
+              <table className="ht-table">
+                <caption className="sr-only">{team.name} scorers</caption>
+                <tbody>{s.scorers.map(p => <tr key={p.name}><th scope="row">{showName(p.name)}</th><td className="ht-score">{p.goals}</td></tr>)}</tbody>
+              </table>
             </>
           )}
         </div>
         <div>
-          <h3>Squad</h3>
+          <h3>Team sheet</h3>
           {players.length ? (
-            <ul className="ht-list">
-              {players.map(p => (
-                <li key={p.id}><span>{p.shirt_number != null ? <b className="ht-num">{p.shirt_number}</b> : null}{p.name}</span>{p.position && <span className="ht-hint">{p.position}</span>}</li>
-              ))}
-            </ul>
+            <table className="ht-table ht-sheet">
+              <caption className="sr-only">{team.name} players</caption>
+              <thead><tr><th scope="col" className="ht-num-col">No.</th><th scope="col">Name</th><th scope="col">Position</th></tr></thead>
+              <tbody>
+                {players.map(p => (
+                  <tr key={p.id}><td className="ht-num-col">{p.shirt_number ?? ''}</td><th scope="row">{p.name}</th><td>{p.position || ''}</td></tr>
+                ))}
+              </tbody>
+            </table>
           ) : <p className="ht-hint">The squad hasn&apos;t been sent yet.</p>}
         </div>
       </div>
 
       {done && (
-        <button type="button" className="btn btn-primary" onClick={share} disabled={busy}>
-          <Share2 size={16} /> {busy ? 'Making the graphic…' : 'Share how we did'}
+        <button type="button" className="btn btn-primary ht-share" onClick={share} disabled={busy}>
+          <Share2 size={16} aria-hidden="true" /> {busy ? 'Making the graphic…' : 'Share how we did'}
         </button>
       )}
     </section>
