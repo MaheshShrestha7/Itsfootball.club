@@ -28,8 +28,11 @@ export function useDialog<T extends HTMLElement = HTMLDivElement>(open: boolean,
     if (!open) return;
     const before = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      // A confirm dialog opened on top (native <dialog>) handles its own Escape
-      if (e.key === 'Escape' && !document.querySelector('dialog[open]')) close.current();
+      // A confirm dialog opened on top (native <dialog>) handles its own Escape, and a popup opened
+      // from inside this one closes alone
+      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+      if (ref.current?.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      close.current();
     };
     window.addEventListener('keydown', onKey);
     const focusIn = requestAnimationFrame(() => {

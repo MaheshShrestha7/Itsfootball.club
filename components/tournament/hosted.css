@@ -117,6 +117,24 @@
 .ht-card-chip.is-yellow { background: var(--c-amber); }
 .ht-card-chip.is-red { background: var(--c-red); }
 
+/* ---- Admin: tournament setup form, teams ------------------------------------------------------- */
+.ht-setup-teams { margin-bottom: 1rem; }
+.ht-setup-quick { display: grid; grid-template-columns: minmax(0, 1fr) 76px auto; gap: 0.5rem; }
+.ht-setup-code { text-align: center; }
+.ht-setup-teams .ht-hint { display: block; }
+.ht-setup-teams .ht-link-btn { display: inline-flex; vertical-align: baseline; }
+.ht-setup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.ht-setup-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.5rem; border-radius: 12px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.03); }
+.ht-setup-name { flex: 1; min-width: 0; display: grid; text-align: left; padding: 0.2rem 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.ht-setup-name:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 6px; transition: none; }
+.ht-setup-own { margin-bottom: 1.25rem; display: grid; gap: 0.6rem; }
+.ht-setup-own-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 0.4rem; }
+.ht-setup-own-item { display: flex; align-items: center; gap: 0.5rem; min-height: 40px; padding: 0.4rem 0.65rem; border-radius: 10px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.03); cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.ht-setup-own-item:has(input:checked) { border-color: color-mix(in oklab, var(--club-primary) 55%, transparent); background: color-mix(in oklab, var(--club-primary) 10%, transparent); }
+.ht-setup-own-item input { accent-color: var(--club-primary); }
+.ht-setup-own-item img { width: 20px; height: 20px; object-fit: contain; }
+.ht-setup-own-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---- Admin: fixture popup (score, teams, when and where) ----------------------------------------- */
 .ht-fx { max-width: 540px; }
 .ht-fx .ht-dialog-head { align-items: flex-start; }

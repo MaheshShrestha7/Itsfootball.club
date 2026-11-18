@@ -390,8 +390,8 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
 
 // ------------------------------------------------------------------------------
 
-type TeamFields = Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name'>;
-type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone'>;
+export type TeamFields = Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name'>;
+export type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone'>;
 
 function Shell({ label, onClose, children, wide }: { label: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
@@ -407,11 +407,12 @@ function Shell({ label, onClose, children, wide }: { label: string; onClose: () 
   );
 }
 
-function TeamEditor({ club, tournament, team, entry, isEvent, taken, onClose, onSave }: {
+/** Add or edit one team. Also used by the tournament setup form, before the tournament exists (no tournament: no contact box) */
+export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onClose, onSave }: {
   club: Club;
-  tournament: Tournament;
-  team: TournamentParticipant | null;
-  entry?: TournamentEntry;
+  tournament?: Tournament;
+  team: Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name' | 'team_type'> | null;
+  entry?: Partial<ContactFields>;
   isEvent: boolean;
   taken: string[];
   onClose: () => void;
@@ -503,7 +504,7 @@ function TeamEditor({ club, tournament, team, entry, isEvent, taken, onClose, on
             </div>
           </fieldset>
         )}
-        {!team && tournament.status !== 'draft' && <p className="ht-hint"><RefreshCw size={14} aria-hidden="true" /> Generate the tiesheet again afterwards to put them in the draw.</p>}
+        {!team && tournament && tournament.status !== 'draft' && <p className="ht-hint"><RefreshCw size={14} aria-hidden="true" /> Generate the tiesheet again afterwards to put them in the draw.</p>}
         {error && <p role="alert" className="ht-error">{error}</p>}
         <div className="ht-foot">
           <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>
