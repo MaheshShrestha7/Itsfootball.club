@@ -12,6 +12,7 @@ import CoverImage from '@/components/CoverImage';
 import { decodeSlugParam, newsPath } from '@/lib/slugs';
 import { newestFirst } from '@/lib/news';
 import ShareLinkButton from '@/components/ShareLinkButton';
+import { PageSkeleton } from '@/components/Skeleton';
 
 /** A club news article on its own page (replaces the old pop-up on the club home page), so it can be shared, indexed and cited */
 export default function NewsArticlePage({
@@ -20,7 +21,7 @@ export default function NewsArticlePage({
   params: Promise<{ clubSlug: string; newsSlug: string }>;
 }) {
   const { clubSlug, newsSlug } = use(params);
-  const { selectClubBySlug, news } = useClub();
+  const { selectClubBySlug, news, isHydrated, syncStatus } = useClub();
   const club = selectClubBySlug(clubSlug);
   if (!club) return null;
 
@@ -35,6 +36,8 @@ export default function NewsArticlePage({
   );
 
   if (!article) {
+    // A saved copy from an earlier visit shows first: wait for the fresh load before calling a new article missing
+    if (!isHydrated || syncStatus.phase === 'loading') return <PageSkeleton label="Loading the article" />;
     return (
       <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem', textAlign: 'center' }}>
         <Newspaper size={48} style={{ opacity: 0.3, marginBottom: '1.25rem' }} />
@@ -54,14 +57,16 @@ export default function NewsArticlePage({
       {backLink}
 
       <article>
-        {/* No cover: the club's banner, else a panel in the club colours with its crest (not the platform logo) */}
-        <CoverImage
-          loading="eager"
-          src={article.cover_image_url || club.banner_url || undefined}
-          alt={article.title}
-          crestUrl={club.logo_url || undefined}
-          style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-xl)', marginBottom: '1.5rem' }}
-        />
+        {/* No cover: the club's banner, else no picture at all (an empty club-colour block only pushed the story down) */}
+        {(article.cover_image_url || club.banner_url) && (
+          <CoverImage
+            loading="eager"
+            src={article.cover_image_url || club.banner_url}
+            alt={article.title}
+            crestUrl={club.logo_url || undefined}
+            style={{ width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--radius-xl)', marginBottom: '1.5rem' }}
+          />
+        )}
         {!!article.tags?.length && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {article.tags.map(tag => (

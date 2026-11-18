@@ -24,6 +24,7 @@ import CountUp from '@/components/CountUp';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { Shield, MapPin, Users, ArrowLeft, CalendarPlus, MessageCircle, Ticket } from 'lucide-react';
 import { salesOpen } from '@/lib/tickets';
+import { PageSkeleton } from '@/components/Skeleton';
 
 // How long an event with no end time is treated as running
 const DEFAULT_LENGTH = 3 * 3600000;
@@ -34,7 +35,7 @@ export default function EventDetailsPage({
   params: Promise<{ clubSlug: string; eventId: string }>;
 }) {
   const resolvedParams = use(params);
-  const { clubs, selectClubBySlug, events, sponsors, matches, matchEvents, clubTeams, gallery } = useClub();
+  const { clubs, selectClubBySlug, events, sponsors, matches, matchEvents, clubTeams, gallery, isHydrated, syncStatus } = useClub();
   const router = useRouter();
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const event = events.find(e => e.id === resolvedParams.eventId && e.club_id === club?.id);
@@ -46,10 +47,13 @@ export default function EventDetailsPage({
   if (!club) return null;
 
   if (!event) {
+    // A saved copy from an earlier visit (or members-only events, which load in the browser) shows first:
+    // wait for the fresh load before calling the event missing
+    if (!isHydrated || syncStatus.phase === 'loading') return <PageSkeleton label="Loading the event" />;
     return (
       <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 1.5rem', textAlign: 'center' }}>
         <Shield size={48} style={{ opacity: 0.3, marginBottom: '1.25rem' }} />
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Event Not Found</h2>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Event not found</h1>
         <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem auto', fontSize: '0.9rem' }}>
           This event does not exist or may have been removed from the calendar.
         </p>

@@ -178,9 +178,10 @@ export default function SponsorSignupPage({ params }: { params: Promise<{ clubSl
           <>
             <h2 id="sponsors-join" className="club-sub-h2">Become a sponsor</h2>
             <p className="text-body" style={{ margin: '-0.5rem 0 1.5rem', maxWidth: '62ch' }}>
-              {current.length > 0
-                ? 'Put your business in front of our players, families and matchday crowd. Pick a package below.'
-                : `Be one of the first businesses to back ${club.name}. Put your business in front of our players, families and matchday crowd.`}
+              {current.length > 0 ? '' : `Be one of the first businesses to back ${club.name}. `}
+              Put your business in front of our players, families and matchday crowd.
+              {/* Only when there are packages: otherwise the line below says none are published yet */}
+              {packages && packages.length > 0 && ' Pick a package below.'}
             </p>
           </>
         )}
