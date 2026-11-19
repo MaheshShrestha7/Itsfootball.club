@@ -53,6 +53,14 @@ export function compareTournamentMatches(a: Match, b: Match): number {
   );
 }
 
+/** Run sheet drag: move the item at `from` to `to`; the ones in between shift by one place */
+export function runSheetMove<T>(list: T[], from: number, to: number): T[] {
+  if (from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+  const next = [...list];
+  next.splice(to, 0, ...next.splice(from, 1));
+  return next;
+}
+
 /** The game after this one on the same pitch (or simply the tournament's next game when pitches
  *  aren't labelled), for the "Next on Pitch 2" shortcut on tournament day */
 export function nextOnPitch(match: Match, matches: Match[]): Match | undefined {

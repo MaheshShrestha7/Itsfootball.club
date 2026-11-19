@@ -279,3 +279,58 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
 @media (max-width: 640px) { .te-actions { position: static; background: none; } }
 .te-foot { margin: 0; color: var(--text-muted); font-size: 0.82rem; }
 .te-saved svg { flex: none; }
+
+/* ---- Admin: run sheet (Fixtures tab) ------------------------------------------------------------
+ * signature: times fixed down the left, upcoming games dragged between them; played games locked */
+.ht-rs-view { display: inline-grid; grid-template-columns: repeat(2, minmax(0, auto)); margin-bottom: 0.9rem; }
+.ht-rs-view button { padding: 0 0.9rem; }
+.ht-rs-bar { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
+.ht-rs-bar .ht-hint { margin: 0; max-width: 60ch; }
+.ht-rs-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.ht-rs-btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ht-rs-select { min-height: 36px; max-width: 100%; padding: 0 0.7rem; border-radius: 10px; border: 1px solid var(--border-medium); background: rgba(var(--tint-rgb), 0.04); color: var(--text-primary); font: 600 0.85rem var(--font-body); }
+.ht-rs-select:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.ht-rs-sheet { border: 1px solid var(--border-subtle); border-radius: 14px; background: rgba(var(--tint-rgb), 0.03); overflow: hidden; }
+.ht-rs-row { display: grid; grid-template-columns: 26px 74px 74px 64px minmax(0, 1fr) 36px 22px 36px minmax(0, 1fr) 108px 76px; align-items: center; gap: 0.4rem; padding: 0.3rem 0.6rem; border-top: 1px solid var(--border-subtle); min-height: 48px; transition: background-color 0.15s, box-shadow 0.15s; }
+.ht-rs-row.is-head { border-top: 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; background: rgba(var(--tint-rgb), 0.03); min-height: 38px; }
+.ht-rs-row.is-day { display: block; min-height: 0; padding: 0.45rem 0.9rem; font: 700 0.85rem var(--font-heading); color: var(--text-secondary); background: rgba(var(--tint-rgb), 0.03); }
+.ht-rs-row[draggable='true'] { cursor: grab; }
+.ht-rs-row[draggable='true']:hover { background: rgba(var(--tint-rgb), 0.04); }
+.ht-rs-row.is-locked { color: var(--text-secondary); }
+.ht-rs-row.is-hi { background: color-mix(in oklab, var(--club-primary) 13%, transparent); box-shadow: inset 3px 0 0 var(--club-primary); }
+.ht-rs-row.is-dragging { opacity: 0.45; }
+.ht-rs-row.is-over { box-shadow: inset 0 2px 0 var(--club-ink); }
+.ht-rs-handle { display: grid; place-items: center; color: var(--text-muted); }
+.ht-rs-time { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ht-rs-sub { display: none; }
+.ht-rs-end, .ht-rs-pitch { color: var(--text-muted); font-size: 0.88rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ht-rs-match { display: contents; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
+.ht-rs-team { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.ht-rs-home { text-align: right; }
+.ht-rs-goal { width: 36px; height: 30px; display: grid; place-items: center; border-radius: 7px; background: rgba(var(--tint-rgb), 0.06); font-weight: 800; font-variant-numeric: tabular-nums; }
+.ht-rs-v { text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+.ht-rs-match:hover .ht-rs-team { color: var(--club-ink); }
+.ht-rs-match:focus-visible .ht-rs-team { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.ht-rs-moves { display: flex; gap: 0.25rem; justify-content: flex-end; }
+.ht-rs-mv { width: 32px; height: 32px; }
+.ht-rs-save { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-top: 0.9rem; padding: 0.75rem 0.9rem; border-radius: 12px; border: 1px solid var(--border-medium); background: var(--bg-surface-elevated); }
+.ht-rs-save p { margin: 0; font-size: 0.9rem; }
+.ht-rs-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; color: var(--text-muted); font-size: 0.82rem; }
+@media (max-width: 760px) {
+  .ht-rs-row.is-head { display: none; }
+  .ht-rs-row { grid-template-columns: 18px 68px minmax(0, 1fr) 34px; grid-template-areas: 'h t m mv' 'h t f mv'; column-gap: 0.45rem; row-gap: 0.25rem; padding: 0.6rem 0.5rem; }
+  .ht-rs-handle { grid-area: h; }
+  .ht-rs-time { grid-area: t; align-self: start; font-size: 0.92rem; }
+  .ht-rs-sub { display: block; font-weight: 500; color: var(--text-muted); font-size: 0.78rem; }
+  .ht-rs-end, .ht-rs-pitch, .ht-rs-goal, .ht-rs-v { display: none; }
+  .ht-rs-match { grid-area: m; display: grid; gap: 0.1rem; min-width: 0; padding: 0; border: 0; background: none; }
+  .ht-rs-team, .ht-rs-home { text-align: left; white-space: normal; overflow: visible; font-size: 0.9rem; line-height: 1.3; }
+  .ht-rs-flag-cell { grid-area: f; }
+  .ht-rs-moves { grid-area: mv; flex-direction: column; }
+}
+@media print {
+  body * { visibility: hidden; }
+  .ht-rs-sheet, .ht-rs-sheet * { visibility: visible; }
+  .ht-rs-sheet { position: absolute; inset: 0 0 auto; border: 0; }
+  .ht-rs-moves, .ht-rs-handle { visibility: hidden !important; }
+}

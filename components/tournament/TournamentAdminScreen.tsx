@@ -8,6 +8,7 @@ import TournamentBracketView from '@/components/tournament/TournamentBracketView
 import TournamentStandingsTable from '@/components/tournament/TournamentStandingsTable';
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
 import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
+import RunSheet from '@/components/tournament/RunSheet';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
 import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck } from 'lucide-react';
@@ -61,6 +62,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   // A league has no bracket tab, so it opens on its standings
   const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>(() => (tournament?.format === 'league' ? 'standings' : 'bracket'));
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [runSheet, setRunSheet] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<'success' | 'error'>('success');
   const [addTeamModalOpen, setAddTeamModalOpen] = useState(false);
@@ -358,13 +360,33 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
 
       {/* Tab 3: Fixtures & Results List */}
       {activeTab === 'fixtures' && (
-        <TournamentMatchesList
-          matches={tourneyMatches}
-          clubSlug={club.slug}
-          linkToMatch={!isEvent}
-          onSelectMatch={m => setSelectedMatch(m)}
-          isAdmin={true}
-        />
+        <>
+          {tourneyMatches.length > 0 && (
+            <div className="ht-fx-seg ht-rs-view" role="group" aria-label="View">
+              <button type="button" aria-pressed={!runSheet} onClick={() => setRunSheet(false)}>Cards</button>
+              <button type="button" aria-pressed={runSheet} onClick={() => setRunSheet(true)}>Run sheet</button>
+            </div>
+          )}
+          {runSheet && tourneyMatches.length > 0 ? (
+            <RunSheet
+              matches={tourneyMatches}
+              matchMinutes={tournament.match_minutes}
+              onSelectMatch={m => setSelectedMatch(m)}
+              onSave={changes => {
+                changes.forEach(({ id, ...slot }) => updateMatch(id, slot));
+                showFeedback('success', `New times saved for ${changes.length} ${changes.length === 1 ? 'game' : 'games'}.`);
+              }}
+            />
+          ) : (
+            <TournamentMatchesList
+              matches={tourneyMatches}
+              clubSlug={club.slug}
+              linkToMatch={!isEvent}
+              onSelectMatch={m => setSelectedMatch(m)}
+              isAdmin={true}
+            />
+          )}
+        </>
       )}
 
       {/* Tab 4: Teams & Roster */}
