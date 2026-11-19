@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -225,3 +225,24 @@ console.log('tournament engine: all formats OK');
 assert.deepEqual(runSheetMove(['a', 'b', 'c', 'd'], 0, 2), ['b', 'c', 'a', 'd']);
 assert.deepEqual(runSheetMove(['a', 'b', 'c', 'd'], 3, 1), ['a', 'd', 'b', 'c']);
 assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unchanged');
+
+{
+  // Tie-breakers: A, M and S beat each other in a circle and all beat X, so all three have 6 points
+  const T = ['A', 'M', 'S', 'X'];
+  const parts = T.map((name, i) => ({ id: `t${i}`, tournament_id: 'tb', team_type: 'external', name, short_name: name })) as TournamentParticipant[];
+  const ms = ([[0, 1, 1, 0], [1, 2, 2, 1], [2, 0, 1, 0], [0, 3, 4, 0], [1, 3, 5, 1], [2, 3, 3, 2]] as const).map(([h, a, hs, as], i) => ({
+    id: `m${i}`, tournament_id: 'tb', tournament_stage: 'group', status: 'completed', match_date: '2026-12-05',
+    home_team_name: T[h], away_team_name: T[a], home_score: hs, away_score: as,
+  })) as Match[];
+  const order = (tb?: Parameters<typeof computeStandings>[2]) => computeStandings(ms, parts, tb).map(s => s.name).join('');
+  // A and M: +4 each; M scored 7, A 5; S +1
+  assert.equal(order(), 'MASX', 'standard: goal difference, then goals scored');
+  assert.equal(order({ tieBreakers: ['gd', 'h2h'] }), 'AMSX', 'head-to-head only between the teams still level (A beat M)');
+  assert.equal(order({ tieBreakers: ['h2h', 'gd', 'gf'] }), 'MASX', 'a circle of results leaves head-to-head level');
+  assert.equal(order({ tieBreakers: [] }), 'AMSX', 'points only: level teams A to Z');
+  const cards = new Map([['A', 1], ['M', 4], ['S', 0]]);
+  assert.equal(order({ tieBreakers: ['fair_play'], cardPoints: cards }), 'SAMX', 'fewest card points first');
+  assert.equal(order({ tieBreakers: ['lots'], lotSeed: 'cup' }), order({ tieBreakers: ['lots'], lotSeed: 'cup' }), 'lots stay the same');
+  assert.equal(tieBreakerLine(null), 'Level on points? Decided by goal difference, then goals scored, then head-to-head.');
+  assert.equal(tieBreakerLine([]), 'Teams level on points share the place.');
+}

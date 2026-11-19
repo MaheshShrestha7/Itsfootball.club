@@ -367,7 +367,7 @@ export default function PublicTournamentDetailPage({
                 const groupStandings = getTournamentStandings(tournament.id, groupLetter);
                 return (
                   <div key={groupLetter}>
-                    <TournamentStandingsTable
+                    <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null}
                       standings={groupStandings}
                       groupTitle={tournament.group_count === 1 ? 'Group Stage Standings' : `Group ${groupLetter} Standings`}
                       advancingCount={tournament.teams_advancing_per_group ?? 2}
@@ -376,7 +376,7 @@ export default function PublicTournamentDetailPage({
                 );
               })
             ) : (
-              <TournamentStandingsTable
+              <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null}
                 standings={getTournamentStandings(tournament.id)}
                 groupTitle={`${tournament.name} Standings`}
                 advancingCount={0}

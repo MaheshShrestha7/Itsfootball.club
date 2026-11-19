@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { TournamentStanding } from '@/lib/supabase/types';
+import { TieBreaker, TournamentStanding } from '@/lib/supabase/types';
+import { tieBreakerLine } from '@/lib/tournament-engine';
 import { Trophy } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 
@@ -10,6 +11,8 @@ interface TournamentStandingsTableProps {
   groupTitle?: string;
   advancingCount?: number;
   showForm?: boolean;
+  /** Shows "Level on points? Decided by …" under the table. Left out: no line (free tools) */
+  tieBreakers?: TieBreaker[] | null;
 }
 
 export default function TournamentStandingsTable({
@@ -17,6 +20,7 @@ export default function TournamentStandingsTable({
   groupTitle,
   advancingCount = 2,
   showForm = true,
+  tieBreakers,
 }: TournamentStandingsTableProps) {
   if (!standings || standings.length === 0) {
     return (
@@ -230,6 +234,11 @@ export default function TournamentStandingsTable({
           <span aria-hidden="true" style={{ width: '3px', height: '14px', borderRadius: '2px', background: 'var(--club-primary)' }} />
           Top {advancingCount} go through to the knockouts
         </div>
+      )}
+      {tieBreakers !== undefined && (
+        <p style={{ margin: 0, padding: '0.6rem 1.25rem 0.75rem', borderTop: '1px solid var(--border-subtle)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          {tieBreakerLine(tieBreakers)}
+        </p>
       )}
     </div>
   );
