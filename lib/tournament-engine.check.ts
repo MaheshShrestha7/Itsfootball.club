@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -220,3 +220,8 @@ console.log('tournament engine: all formats OK');
   const lone = parts.map((p, i) => ({ ...p, group: i < 5 ? 'A' : 'B' }));
   assert.deepEqual(buildTiesheet(t, lone, { keepGroups: true }).participants.map(p => p.group), ['A', 'B', 'A', 'B', 'A', 'B']);
 }
+
+// Run sheet: a dragged game takes the target's place and the ones between shift by one
+assert.deepEqual(runSheetMove(['a', 'b', 'c', 'd'], 0, 2), ['b', 'c', 'a', 'd']);
+assert.deepEqual(runSheetMove(['a', 'b', 'c', 'd'], 3, 1), ['a', 'd', 'b', 'c']);
+assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unchanged');
