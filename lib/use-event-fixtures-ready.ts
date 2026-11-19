@@ -25,3 +25,6 @@ export const useEventGalleryReady = () => useColumnReady('media_gallery', 'event
 /** True once hosted tournaments are switched on (migration 20261180): age groups, timing, guest team
  *  details, entry links and squads. Until then those controls stay hidden and the new columns are never sent. */
 export const useHostedTournamentsReady = () => useColumnReady('tournaments', 'match_minutes');
+
+/** True once tournaments can keep their own tie-breakers (tournaments.tie_breakers, migration 20261181) */
+export const useTieBreakersReady = () => useColumnReady('tournaments', 'tie_breakers');

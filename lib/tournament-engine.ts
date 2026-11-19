@@ -7,8 +7,10 @@ import {
   TournamentParticipant,
   TournamentStanding,
   Match,
+  MatchEvent,
   ClubMember,
-  InternalTeam
+  InternalTeam,
+  TieBreaker
 } from './supabase/types';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
@@ -459,13 +461,54 @@ export function buildTiesheet(
   return { matches: timed(matches), participants, tournamentUpdates };
 }
 
+export const TIE_BREAKERS: Record<TieBreaker, { name: string; note: string }> = {
+  gd: { name: 'Goal difference', note: 'Goals scored minus goals let in, all games' },
+  gf: { name: 'Goals scored', note: 'Most goals in all games' },
+  h2h: { name: 'Head-to-head', note: 'Points in the games between the tied teams only' },
+  wins: { name: 'Most wins', note: 'Number of games won' },
+  fair_play: { name: 'Fair play', note: 'Fewest card points: yellow 1, red 3' },
+  lots: { name: 'Drawing lots', note: 'The app draws once for this tournament and keeps it' },
+};
+export const STANDARD_TIE_BREAKERS: TieBreaker[] = ['gd', 'gf', 'h2h'];
+
+/** The saved order, or the standard one; unknown or repeated rules are dropped */
+export function tieBreakerOrder(saved?: TieBreaker[] | null): TieBreaker[] {
+  if (!saved) return STANDARD_TIE_BREAKERS;
+  return saved.filter((r, i) => r in TIE_BREAKERS && saved.indexOf(r) === i);
+}
+
+/** "Level on points? Decided by goal difference, then goals scored." for the public table */
+export function tieBreakerLine(saved?: TieBreaker[] | null): string {
+  const order = tieBreakerOrder(saved);
+  return order.length
+    ? `Level on points? Decided by ${order.map(r => TIE_BREAKERS[r].name.toLowerCase()).join(', then ')}.`
+    : 'Teams level on points share the place.';
+}
+
+/** Card points per team name (yellow 1, red 3), as on the fair play table */
+export function cardPointsByTeam(matches: Match[], events: MatchEvent[]): Map<string, number> {
+  const byId = new Map(matches.map(m => [m.id, m]));
+  const out = new Map<string, number>();
+  for (const e of events) {
+    const m = byId.get(e.match_id);
+    if (!m || (e.event_type !== 'yellow_card' && e.event_type !== 'red_card')) continue;
+    const team = e.team_side === 'home' ? m.home_team_name : m.away_team_name;
+    out.set(team, (out.get(team) || 0) + (e.event_type === 'red_card' ? 3 : 1));
+  }
+  return out;
+}
+
+/** A fixed pseudo-random number per team and tournament: the "lots" drawn once and kept */
+function lot(seed: string, name: string): number {
+  let h = 2166136261;
+  for (const c of `${seed}|${name}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+
 /**
  * Computes Standings / Points Table from completed or ongoing matches.
- * Standard FIFA sorting:
- * 1. Points (PTS) descending
- * 2. Goal Difference (GD) descending
- * 3. Goals For (GF) descending
- * 4. Alphabetical by team name
+ * Points first, then the tournament's tie-breakers in order (standard: goal difference, goals
+ * scored, head-to-head). Teams still level after every rule share the place, listed A to Z.
  */
 export function computeStandings(
   matches: Match[],
@@ -475,6 +518,12 @@ export function computeStandings(
     pointsWin?: number;
     pointsDraw?: number;
     pointsLoss?: number;
+    /** Null or left out: the standard order */
+    tieBreakers?: TieBreaker[] | null;
+    /** Card points per team, for the fair play rule */
+    cardPoints?: Map<string, number>;
+    /** The tournament id, for drawing lots */
+    lotSeed?: string;
   }
 ): TournamentStanding[] {
   const ptsWin = options?.pointsWin ?? 3;
@@ -577,15 +626,39 @@ export function computeStandings(
     form: s.form.slice(-5),
   }));
 
-  // Standard FIFA Sorting: PTS -> GD -> GF -> Alphabetical
-  standings.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goal_difference !== a.goal_difference) return b.goal_difference - a.goal_difference;
-    if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
-    return a.name.localeCompare(b.name);
-  });
+  // Head-to-head: points from the games between the teams in `tied` only
+  const h2hPoints = (tied: TournamentStanding[]) => {
+    const names = new Set(tied.map(t => t.name));
+    const pts = new Map(tied.map(t => [t.name, 0]));
+    for (const m of groupMatches) {
+      if (!names.has(m.home_team_name) || !names.has(m.away_team_name)) continue;
+      const [h, a] = m.home_score > m.away_score ? [ptsWin, ptsLoss] : m.home_score < m.away_score ? [ptsLoss, ptsWin] : [ptsDraw, ptsDraw];
+      pts.set(m.home_team_name, pts.get(m.home_team_name)! + h);
+      pts.set(m.away_team_name, pts.get(m.away_team_name)! + a);
+    }
+    return pts;
+  };
+  const value = (rule: TieBreaker | 'points', tied: TournamentStanding[]): ((t: TournamentStanding) => number) => {
+    switch (rule) {
+      case 'points': return t => t.points;
+      case 'gd': return t => t.goal_difference;
+      case 'gf': return t => t.goals_for;
+      case 'wins': return t => t.won;
+      case 'fair_play': return t => -(options?.cardPoints?.get(t.name) || 0);
+      case 'lots': return t => lot(options?.lotSeed || '', t.name);
+      case 'h2h': { const pts = h2hPoints(tied); return t => pts.get(t.name) || 0; }
+    }
+  };
+  // Each rule only splits the teams still level after the rules before it (so head-to-head is
+  // worked out between exactly those teams)
+  const rank = (tied: TournamentStanding[], rules: (TieBreaker | 'points')[]): TournamentStanding[] => {
+    if (tied.length < 2 || !rules.length) return [...tied].sort((a, b) => a.name.localeCompare(b.name));
+    const v = value(rules[0], tied);
+    const levels = [...new Set(tied.map(v))].sort((a, b) => b - a);
+    return levels.flatMap(level => rank(tied.filter(t => v(t) === level), rules.slice(1)));
+  };
 
-  return standings;
+  return rank(standings, ['points', ...tieBreakerOrder(options?.tieBreakers)]);
 }
 
 /**
@@ -669,7 +742,9 @@ export function seedKnockoutFromGroups(
 export function resolveTournament(
   allMatches: Match[],
   tournament: Tournament,
-  participants: TournamentParticipant[]
+  participants: TournamentParticipant[],
+  /** Cards, for the fair play tie-breaker */
+  events: MatchEvent[] = []
 ): Match[] {
   const own = (list: Match[]) => list.filter(m => m.tournament_id === tournament.id);
 
@@ -698,6 +773,9 @@ export function resolveTournament(
         pointsWin: tournament.points_win,
         pointsDraw: tournament.points_draw,
         pointsLoss: tournament.points_loss,
+        tieBreakers: tournament.tie_breakers,
+        cardPoints: cardPointsByTeam(groupMatches, events),
+        lotSeed: tournament.id,
       });
     }
     const seeded = seedKnockoutFromGroups(own(result), standingsByGroup);

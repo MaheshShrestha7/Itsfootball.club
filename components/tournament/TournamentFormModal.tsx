@@ -2,16 +2,17 @@
 
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
-import { Club, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
+import { Club, TieBreaker, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
 import { Trophy, X, Save, AlertTriangle, Pencil, Plus, Send } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { COVER_PRESETS } from '@/lib/cover-presets';
 import { defaultSeasonLabel } from '@/lib/season';
-import { STAGE_TITLES, buildTiesheet, effectiveGroupRules, knockoutStageFor, parseTournamentDate, toDateTimeLocal } from '@/lib/tournament-engine';
+import { STAGE_TITLES, buildTiesheet, effectiveGroupRules, knockoutStageFor, parseTournamentDate, tieBreakerOrder, toDateTimeLocal } from '@/lib/tournament-engine';
 import { packKickoffs, shortCode } from '@/lib/hosted-tournaments';
-import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
+import { useHostedTournamentsReady, useTieBreakersReady } from '@/lib/use-event-fixtures-ready';
+import TieBreakersEditor from '@/components/tournament/TieBreakersEditor';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PopupPanel from '@/components/PopupPanel';
 import { TeamEditor, type ContactFields } from '@/components/tournament/GuestTeamsPanel';
@@ -39,6 +40,7 @@ export default function TournamentFormModal({
 }) {
   const { internalTeams, tournamentParticipants, matches, events, createTournament, saveTournament, getActiveSeason, saveNow } = useClub();
   const hosted = useHostedTournamentsReady();
+  const tieReady = useTieBreakersReady();
   // A new age group copies the event's settings; its teams start empty
   const base = tournament ?? ageGroupOf;
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
@@ -60,6 +62,7 @@ export default function TournamentFormModal({
   const [groupCount, setGroupCount] = useState(base?.group_count ?? 2);
   const [teamsAdvancing, setTeamsAdvancing] = useState(base?.teams_advancing_per_group ?? 2);
   const [hasThirdPlace, setHasThirdPlace] = useState(base?.has_third_place_match ?? true);
+  const [tieBreakers, setTieBreakers] = useState<TieBreaker[]>(tieBreakerOrder(base?.tie_breakers));
   // Hosted tournament settings (migration 20261180)
   const [ageGroup, setAgeGroup] = useState(tournament?.age_group ?? '');
   const [isJunior, setIsJunior] = useState(base?.is_junior ?? false);
@@ -221,6 +224,8 @@ export default function TournamentFormModal({
       banner_url: bannerUrl.trim() || COVER_PRESETS[0].url,
       // Only once the database has these columns: sending them before would fail the whole save
       ...(hosted ? hostedFields() : {}),
+      // Migration 20261181; a knockout has no table to split
+      ...(tieReady && format !== 'knockout' ? { tie_breakers: tieBreakers } : {}),
     };
 
     if (!isEdit) {
@@ -533,6 +538,8 @@ export default function TournamentFormModal({
               )}
             </div>
           )}
+
+          {tieReady && format !== 'knockout' && <TieBreakersEditor value={tieBreakers} onChange={setTieBreakers} />}
 
           {/* Guest clubs: the heart of a hosted tournament */}
           <fieldset className="ht-fieldset ht-setup-teams">

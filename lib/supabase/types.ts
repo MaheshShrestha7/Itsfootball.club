@@ -878,6 +878,8 @@ export interface Tournament {
   /** Parking, canteen, rules: sent to every team and shown on their entry page */
   team_info?: string | null;
   event_id?: string | null;
+  /** Migration 20261181: how teams level on points are split, in order. Null = the standard order */
+  tie_breakers?: TieBreaker[] | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -931,6 +933,9 @@ export interface TournamentSquadPlayer {
   present?: boolean;
   sort_order: number;
 }
+
+/** A tournament tie-breaker, applied after points */
+export type TieBreaker = 'gd' | 'gf' | 'h2h' | 'wins' | 'fair_play' | 'lots';
 
 export interface TournamentStanding {
   team_id: string;

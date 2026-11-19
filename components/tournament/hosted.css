@@ -334,3 +334,43 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
   .ht-rs-sheet { position: absolute; inset: 0 0 auto; border: 0; }
   .ht-rs-moves, .ht-rs-handle { visibility: hidden !important; }
 }
+
+/* ---- Admin: tie-breakers (tournament form) ------------------------------------------------------
+ * signature: the rules as a numbered ladder under Points, with a worked example table that re-sorts */
+.ht-tb { margin: 0 0 1.25rem; border-color: color-mix(in oklab, var(--club-primary) 55%, var(--border-subtle)); background: color-mix(in oklab, var(--club-primary) 4%, transparent); }
+.ht-tb legend { color: var(--text-primary); font-size: 0.95rem; }
+.ht-tb .ht-lede { max-width: 62ch; }
+.ht-tb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.ht-tb-rule { display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) auto; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem; border: 1px solid var(--border-medium); border-radius: 12px; background: rgba(var(--tint-rgb), 0.03); transition: opacity 0.15s, box-shadow 0.15s; }
+.ht-tb-rule[draggable='true'] { cursor: grab; }
+.ht-tb-rule.is-fixed { border-style: dashed; color: var(--text-secondary); }
+.ht-tb-rule.is-dragging { opacity: 0.45; }
+.ht-tb-rule.is-over { box-shadow: inset 0 2px 0 var(--club-ink); }
+.ht-tb-grip { display: grid; place-items: center; color: var(--text-muted); }
+.ht-tb-num { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in oklab, var(--club-primary) 18%, transparent); color: var(--club-ink); font: 800 0.88rem var(--font-heading); font-variant-numeric: tabular-nums; }
+.is-fixed .ht-tb-num { background: rgba(var(--tint-rgb), 0.07); color: var(--text-secondary); }
+.ht-tb-name { min-width: 0; font-weight: 700; font-size: 0.92rem; }
+.ht-tb-name small { display: block; font-weight: 500; color: var(--text-muted); font-size: 0.8rem; line-height: 1.35; }
+.ht-tb-acts { display: flex; gap: 0.25rem; }
+.ht-tb-acts .ht-icon-btn { width: 34px; height: 34px; }
+.ht-tb-add { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.ht-tb-select { width: auto; max-width: 100%; }
+.ht-tb .ht-hint { margin: 0; }
+.ht-tb-example { display: grid; gap: 0.5rem; padding: 0.8rem; border-radius: 12px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.02); }
+.ht-tb-example h3 { margin: 0; font: 700 0.92rem var(--font-heading); }
+.ht-tb-example > p { margin: 0; color: var(--text-muted); font-size: 0.82rem; }
+.ht-tb-example .ht-table { font-size: 0.84rem; }
+.ht-tb-example .ht-table :is(th, td) { padding: 0.4rem 0.5rem; }
+.ht-tb-example .ht-table td:first-child { width: 2rem; }
+.ht-tb-example .ht-tb-public { color: var(--text-secondary); }
+.ht-tb-example .ht-tb-public b { color: var(--text-primary); }
+@media (max-width: 560px) {
+  .ht-tb { padding: 0.8rem 0.6rem; }
+  .ht-tb-rule { grid-template-columns: 26px minmax(0, 1fr) auto; }
+  .ht-tb-grip { display: none; }
+  .ht-tb-acts .ht-icon-btn { width: 32px; height: 32px; }
+  .ht-tb-example { padding: 0.6rem 0.5rem; }
+  .ht-tb-example .ht-table { font-size: 0.8rem; }
+  .ht-tb-example .ht-table :is(th, td) { padding: 0.4rem 0.3rem; }
+  .ht-tb-example .ht-table tr > :first-child { display: none; }
+}

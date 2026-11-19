@@ -101,7 +101,7 @@ function TournamentTabs({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {tournament.format === 'group_knockout' ? (
             GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(letter => (
-              <TournamentStandingsTable
+              <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null}
                 key={letter}
                 standings={getTournamentStandings(tournament.id, letter)}
                 groupTitle={tournament.group_count === 1 ? 'Group Stage' : `Group ${letter}`}
@@ -109,7 +109,7 @@ function TournamentTabs({
               />
             ))
           ) : (
-            <TournamentStandingsTable standings={getTournamentStandings(tournament.id)} groupTitle={`${tournament.name} Table`} advancingCount={0} />
+            <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null} standings={getTournamentStandings(tournament.id)} groupTitle={`${tournament.name} Table`} advancingCount={0} />
           )}
         </div>
       )}

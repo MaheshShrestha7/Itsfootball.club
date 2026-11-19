@@ -339,7 +339,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
               const groupStandings = getTournamentStandings(tournament.id, groupLetter);
               return (
                 <div key={groupLetter}>
-                  <TournamentStandingsTable
+                  <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null}
                     standings={groupStandings}
                     groupTitle={tournament.group_count === 1 ? 'Group stage standings' : `Group ${groupLetter} standings`}
                     advancingCount={tournament.teams_advancing_per_group ?? 2}
@@ -349,7 +349,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             })
           ) : (
             // League standings
-            <TournamentStandingsTable
+            <TournamentStandingsTable tieBreakers={tournament.tie_breakers ?? null}
               standings={getTournamentStandings(tournament.id)}
               groupTitle="Standings"
               advancingCount={0}

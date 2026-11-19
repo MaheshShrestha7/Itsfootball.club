@@ -53,6 +53,7 @@ import {
   buildTiesheet,
   clubLineupSide,
   computeStandings,
+  cardPointsByTeam,
   resolveTournament,
   upgradeLegacyMatches, type TiesheetOptions } from './tournament-engine';
 
@@ -3583,7 +3584,7 @@ export function ClubProvider({
       const next = prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m);
       const tourney = tournaments.find(t => t.id === target.tournament_id);
       if (!tourney) return next;
-      return resolveTournament(next, tourney, tournamentParticipants.filter(p => p.tournament_id === tourney.id));
+      return resolveTournament(next, tourney, tournamentParticipants.filter(p => p.tournament_id === tourney.id), matchEvents);
     });
 
     // Finished once every fixture has a result; back to ongoing if one is reopened
@@ -3601,7 +3602,7 @@ export function ClubProvider({
       updates,
       timestamp: Date.now(),
     });
-  }, [matches, tournaments, tournamentParticipants, updateTournament]);
+  }, [matches, tournaments, tournamentParticipants, updateTournament, matchEvents]);
 
   /**
    * Brings a club's tournaments up to date with the current engine, keeping results:
@@ -3620,19 +3621,19 @@ export function ClubProvider({
         if (parts.length >= 2 && t.status !== 'draft') applyTiesheet(t, parts);
         continue;
       }
-      const repaired = resolveTournament(upgradeLegacyMatches(own), t, parts);
+      const repaired = resolveTournament(upgradeLegacyMatches(own), t, parts, matchEvents);
       repaired.forEach((m, i) => {
         if (JSON.stringify(m) !== JSON.stringify(own[i])) fixes.set(m.id, m);
       });
     }
     if (fixes.size > 0) setMatches(prev => prev.map(m => fixes.get(m.id) || m));
-  }, [isHydrated, syncStatus.phase, tournaments, tournamentParticipants, matches, applyTiesheet]);
+  }, [isHydrated, syncStatus.phase, tournaments, tournamentParticipants, matches, applyTiesheet, matchEvents]);
 
   const progressKnockoutStage = useCallback((tournamentId: string) => {
     const tourney = tournaments.find(t => t.id === tournamentId);
     if (!tourney) return;
-    setMatches(prev => resolveTournament(prev, tourney, tournamentParticipants.filter(p => p.tournament_id === tournamentId)));
-  }, [tournaments, tournamentParticipants]);
+    setMatches(prev => resolveTournament(prev, tourney, tournamentParticipants.filter(p => p.tournament_id === tournamentId), matchEvents));
+  }, [tournaments, tournamentParticipants, matchEvents]);
 
   const getTournamentStandings = useCallback((tournamentId: string, group?: string) => {
     const tourney = tournaments.find(t => t.id === tournamentId);
@@ -3643,8 +3644,11 @@ export function ClubProvider({
       pointsWin: tourney?.points_win ?? 3,
       pointsDraw: tourney?.points_draw ?? 1,
       pointsLoss: tourney?.points_loss ?? 0,
+      tieBreakers: tourney?.tie_breakers,
+      cardPoints: cardPointsByTeam(tourneyMatches, matchEvents),
+      lotSeed: tournamentId,
     });
-  }, [tournaments, matches, tournamentParticipants]);
+  }, [tournaments, matches, tournamentParticipants, matchEvents]);
 
   const getTournamentMatches = useCallback((tournamentId: string) => {
     return matches.filter(m => m.tournament_id === tournamentId);
