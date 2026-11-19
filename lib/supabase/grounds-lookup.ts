@@ -7,6 +7,7 @@ import {
   type GroundClub, type GroundFixture, type GroundRow,
 } from '../grounds';
 import { CURATED_GROUNDS } from '../curated-grounds';
+import { isListedClub } from '../public-tournaments';
 
 async function rows<T>(query: string): Promise<T[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -55,7 +56,7 @@ export async function clubsWithHomeGrounds(): Promise<ClubUse[]> {
     'clubs?select=id,slug,name,short_name,logo_url,primary_color,home_ground_id,grounds_directory_listed,config&is_active=eq.true&home_ground_id=not.is.null&limit=5000'
   );
   // Only real clubs: a ground counts as "used" (and can be indexed) once a club on itsfootball.club plays there
-  return list.filter(c => c.config?.kind !== 'event');
+  return list.filter(isListedClub);
 }
 
 /** How many clubs use each ground (named or not), and the opted-in ones to show by name */
@@ -154,7 +155,7 @@ async function linkedFixtures(ground: GroundRow): Promise<GroundFixture[]> {
   if (!matches.length) return [];
   const clubs = (await rows<GroundClub & { config: { kind?: string } | null }>(
     `clubs?select=id,slug,name,short_name,logo_url,primary_color,config&id=${uuidList(matches.map(m => m.club_id))}&is_active=eq.true&grounds_directory_listed=eq.true&limit=1000`
-  )).filter(c => c.config?.kind !== 'event');
+  )).filter(isListedClub);
   return publicFixtures(matches, clubs);
 }
 

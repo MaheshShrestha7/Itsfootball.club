@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { findClubBySlug, type ClubMetadataRow } from './supabase/club-lookup';
 import { SITE_URL } from './slugs';
+import { isHiddenClub } from './public-tournaments';
 
 export { SITE_URL };
 export const SITE_NAME = 'itsfootball.club';
@@ -134,7 +135,9 @@ export async function clubPageMetadata(
 ): Promise<Metadata> {
   const club = await findClubBySlug(clubSlug);
   if (!club) return { title: { absolute: fitTitle('Club not found', SITE_NAME) }, robots: { index: false, follow: false } };
-  return build(club);
+  const meta = await build(club);
+  // A hidden test club opens by direct link, but search engines are asked to leave it out
+  return isHiddenClub(club) ? { ...meta, robots: { index: false, follow: false } } : meta;
 }
 
 /** Admin screens: unique tab titles, never indexed. `task` completes "... for <club>", e.g. "Manage the squad". */
