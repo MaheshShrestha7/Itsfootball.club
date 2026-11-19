@@ -10,7 +10,8 @@ import type { EmailDraft } from '@/components/admin/platform/EmailComposer';
 import PopupPanel from '@/components/PopupPanel';
 import { Crest } from '@/components/admin/platform/McArt';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { useCanChange } from '@/components/admin/platform/api';
+import { platformApi, useCanChange } from '@/components/admin/platform/api';
+import { isHiddenClub } from '@/lib/public-tournaments';
 import { notify } from '@/components/ConfirmDialog';
 import { X, Mail, Users, ExternalLink, Shield, Link2, Check } from 'lucide-react';
 
@@ -52,6 +53,16 @@ export default function ClubDetailDrawer({
     client.from('platform_home_demo').select('club_id').maybeSingle()
       .then(({ data, error }) => setDemoId(error ? 'missing' : (data?.club_id as string | null) ?? null));
   }, [club]);
+  // The "Test club" switch: clubs.config.hidden (undefined while loading)
+  const [hiddenFor, setHiddenFor] = React.useState<{ id: string; hidden: boolean } | null>(null);
+  const [hiddenSaving, setHiddenSaving] = React.useState(false);
+  React.useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client || !club) return;
+    client.from('clubs').select('config').eq('id', club.id).maybeSingle()
+      .then(({ data }) => setHiddenFor({ id: club.id, hidden: isHiddenClub(data) }));
+  }, [club]);
+  const hidden = club && hiddenFor?.id === club.id ? hiddenFor.hidden : undefined;
 
   if (!club) return null;
 
@@ -73,6 +84,17 @@ export default function ClubDetailDrawer({
     showToast(on ? `${club.name} is now the home page demo. The home page shows it within 5 minutes.` : 'The home page demo is cleared.');
   };
 
+  const toggleHidden = async () => {
+    setHiddenSaving(true);
+    const res = await platformApi<{ hidden?: boolean }>('clubs', { action: 'hidden', clubId: club.id, hidden: !hidden });
+    setHiddenSaving(false);
+    if (res.error) return showToast(res.error);
+    setHiddenFor({ id: club.id, hidden: !!res.hidden });
+    showToast(res.hidden
+      ? `${club.name} is now a hidden test club. Lists and search drop it within a few minutes; direct links still work.`
+      : `${club.name} is public again. It shows in club lists and search within a few minutes.`);
+  };
+
   // The web address already names this club (?tab=…&club=<id>), so the link opens it again
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href).catch(() => null);
@@ -89,7 +111,7 @@ export default function ClubDetailDrawer({
           <div className="mc-cp-top">
             <Crest logoUrl={club.logo_url} label={club.short_name} color={club.primary_color} />
             <div className="who">
-              <h2>{club.name} <span className={`mc-flag ${status.tone}`}>{status.label}</span></h2>
+              <h2>{club.name} <span className={`mc-flag ${status.tone}`}>{status.label}</span>{hidden && <span className="mc-flag">Test club</span>}</h2>
               <small title={`itsfootball.club/${club.slug}`}>itsfootball.club/{club.slug}</small>
             </div>
             <button type="button" className="mc-icon-btn" onClick={copyLink} aria-label="Copy a link to this panel" title="Copy a link to this panel">
@@ -142,7 +164,21 @@ export default function ClubDetailDrawer({
               </section>
             </>
           }
-          beforeClosing={demoId !== undefined && (
+          beforeClosing={<>
+            {hidden !== undefined && (
+              <section className="mc-cp-sec" aria-labelledby="mc-cp-test">
+                <h3 id="mc-cp-test">Test club</h3>
+                <p className="mc-muted" style={{ marginBottom: 10 }}>
+                  {hidden
+                    ? 'Hidden. Its pages open by direct link, but it is left out of the home page, the club list and menu, the sitemap, Google and the grounds pages.'
+                    : 'Make this a hidden test club to try new features on it. Its pages still open by direct link, but nobody finds it on the site or in Google.'}
+                </p>
+                <button type="button" className="mc-pill-btn ghost" disabled={hiddenSaving} onClick={toggleHidden}>
+                  {hiddenSaving ? 'Saving…' : hidden ? 'Make it public' : 'Hide as a test club'}
+                </button>
+              </section>
+            )}
+            {demoId !== undefined && (
             <section className="mc-cp-sec" aria-labelledby="mc-cp-demo">
               <h3 id="mc-cp-demo">Home page demo</h3>
               {demoId === 'missing' ? (
@@ -162,7 +198,8 @@ export default function ClubDetailDrawer({
                 </>
               )}
             </section>
-          )}
+            )}
+          </>}
           statusControl={
             <div className="mc-cp-status">
               <p className="mc-muted">

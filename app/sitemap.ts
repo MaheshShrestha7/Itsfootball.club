@@ -5,7 +5,7 @@ import { FORMAT_PAGES } from '@/lib/tool-pages';
 import { GUIDES, GUIDES_LAST_UPDATED, guideUpdated } from '@/lib/guides';
 import { matchPath, newsPath } from '@/lib/slugs';
 import { CHECKED_COMPETITORS } from '@/lib/competitors';
-import { MIN_INDEXABLE_TEAMS, isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
+import { MIN_INDEXABLE_TEAMS, isEventClub, isListedClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { groundSitemapEntries } from '@/lib/grounds';
 import { clubsWithHomeGrounds, groundUse, listGrounds } from '@/lib/supabase/grounds-lookup';
 
@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { matches, events, news, teams, shopClubIds, galleryClubIds, sponsorClubIds, teamCounts } = data;
   // Tournament-only clubs have no club pages, only their public tournament page (added below)
   const eventSlugById = new Map(data.clubs.filter(isEventClub).map(c => [c.id, c.slug]));
-  const clubs = data.clubs.filter(c => !isEventClub(c));
+  const clubs = data.clubs.filter(isListedClub);
   const tournaments = data.tournaments.filter(t => !eventSlugById.has(t.club_id));
   const slugById = new Map(clubs.map(c => [c.id, c.slug]));
   const tournamentClubIds = new Set(tournaments.map(t => t.club_id));

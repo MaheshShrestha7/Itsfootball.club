@@ -22,8 +22,15 @@ export function isEventClub(club: WithConfig): boolean {
   return !!config && typeof config === 'object' && (config as { kind?: unknown }).kind === 'event';
 }
 
+/** A hidden test club (config.hidden, Mission Control's "Test club" switch): its pages work by direct link
+ *  but it stays out of club lists, the sitemap, search engines and the grounds directory */
+export function isHiddenClub(club: WithConfig): boolean {
+  const config = club?.config;
+  return !!config && typeof config === 'object' && (config as { hidden?: unknown }).hidden === true;
+}
+
 /** Clubs shown in directories, menus and the sitemap */
-export const isListedClub = (club: WithConfig) => !isEventClub(club);
+export const isListedClub = (club: WithConfig) => !isEventClub(club) && !isHiddenClub(club);
 
 export const tournamentPagePath = (slug: string) => `${TOURNAMENTS_PATH}/${slug}`;
 export const tournamentManagePath = (slug: string) => `${TOURNAMENTS_PATH}/${slug}/manage`;

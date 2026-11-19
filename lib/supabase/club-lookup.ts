@@ -19,8 +19,8 @@ export interface ClubMetadataRow {
   stadium_name: string | null;
   stadium_address: string | null;
   founded_year: number | null;
-  /** config.kind 'event': a tournament-only club (lib/public-tournaments.ts) */
-  config: { kind?: string; organiser?: string; team_size?: string; time_zone?: string } | null;
+  /** config.kind 'event': a tournament-only club; config.hidden: a hidden test club (lib/public-tournaments.ts) */
+  config: { kind?: string; hidden?: boolean; organiser?: string; team_size?: string; time_zone?: string } | null;
 }
 
 async function fetchActiveClubs(): Promise<ClubMetadataRow[] | null> {
