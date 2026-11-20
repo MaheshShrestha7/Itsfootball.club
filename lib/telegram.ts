@@ -17,7 +17,7 @@ async function call(method: string, body: Record<string, unknown>): Promise<{ ok
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(20000), // Telegram can be slow to answer from some Cloudflare locations
     });
     return await res.json();
   } catch (e) {
