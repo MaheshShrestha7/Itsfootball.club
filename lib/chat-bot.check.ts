@@ -1,7 +1,7 @@
 // Score by chat: a whole game through the bot, with an in-memory database and a stand-in AI. The SQL functions
 // themselves were checked on Postgres; this mirrors them. CHAT_BOT_VERBOSE=1 prints the conversation.
 import assert from 'node:assert/strict';
-import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay } from './chat-bot-server';
+import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay, potmName } from './chat-bot-server';
 
 type Row = Record<string, any>;
 const T: Record<string, Row[]> = {};
@@ -25,6 +25,7 @@ class Q {
   limit(n: number) { this.lim = n; return this; }
   maybeSingle() { this.one = true; return this; }
   update(p: any) { this.op = 'update'; this.patch = p; return this; }
+  delete() { this.op = 'delete'; return this; }
   insert(p: any) { this.op = 'insert'; this.patch = p; return this; }
   upsert(p: any, o: { onConflict: string }) { this.op = 'upsert'; this.patch = p; this.conflict = o.onConflict.split(','); return this; }
   then(res: (v: any) => void, rej: (e: any) => void) { try { res(this.run()); } catch (e) { rej(e); } }
@@ -37,6 +38,7 @@ class Q {
       return { data: null, error: null };
     }
     let hits = rows.filter(r => this.f.every(f => f(r)));
+    if (this.op === 'delete') { T[this.table] = rows.filter(r => !hits.includes(r)); return { data: null, error: null }; }
     if (this.op === 'update') { hits.forEach(r => Object.assign(r, structuredClone(this.patch))); return { data: this.wantRows ? hits.map(r => ({ ...r })) : null, error: null }; }
     if (this.ord) { const [c, asc] = this.ord; hits = [...hits].sort((a, b) => (a[c] < b[c] ? -1 : a[c] > b[c] ? 1 : 0) * (asc ? 1 : -1)); }
     if (this.lim !== undefined) hits = hits.slice(0, this.lim);
@@ -130,6 +132,11 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.equal(matchDay('2026-11-21T00:00:00+00:00', 'Australia/Sydney'), '2026-11-21', 'date-only fixture');
   assert.equal(matchDay('2026-11-20T22:30:00+00:00', 'Australia/Sydney'), '2026-11-21', '9:30am Sydney saved as a moment');
   assert.equal(matchDay('2026-11-21', 'Australia/Sydney'), '2026-11-21');
+  assert.equal(potmName('Man of the Match Mahesh'), 'Mahesh');
+  assert.equal(potmName('potm: sam lee'), 'sam lee');
+  assert.equal(potmName('Man of the match is Jack.'), 'Jack');
+  assert.equal(potmName('Arjun is the man of the match'), 'Arjun');
+  assert.equal(potmName('motm'), '');
   assert.equal(dayStartIso('Australia/Sydney', now0), '2026-11-20T13:00:00.000Z', 'midnight Sydney in daylight saving');
   assert.equal(dayStartIso('Australia/Sydney', new Date('2026-07-01T05:00:00Z')), '2026-06-30T14:00:00.000Z', 'midnight Sydney in winter');
   const S = { ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 30 };
@@ -235,12 +242,27 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('Not yet'), /still playing/);
   assert.equal(m1().status, 'live');
   assert.match(await say('ft'), /End the match/);
-  // A message in between doesn't lose the question, and Player of the Match gets a straight answer
-  assert.match(await say('Man of the Match Mahesh'), /Player of the Match isn't in chat yet/);
-  assert.equal(T.chat_links[0].pending?.type, 'fulltime');
-  assert.match(await say('Yes, end it'), /Full time: Austral 4-1 Liverpool Rangers/);
+  // A message in between doesn't lose the question; Player of the Match while live saves with an Undo
+  const potms = () => T.match_events.filter(e => e.event_type === 'commentary' && e.detail_text?.startsWith('Player of the Match: '));
+  assert.match(await say('Man of the Match Mahesh'), /No one called "Mahesh"/);
+  assert.match(await say('Jack is man of the match'), /Player of the Match: Jack Tan\. It goes on the match page.*\[Undo\]/);
+  assert.equal(potms().length, 1); assert.equal(potms()[0].team_side, 'home'); assert.equal(potms()[0].player_name, 'Austral');
+  assert.match(await say('undo'), /Undo|removed|Undone/i);
+  assert.equal(potms().length, 0, 'undo takes the pick off');
+  assert.match(await say('ft'), /End the match/);
+  assert.match(await say('motm arjun'), /Player of the Match: Arjun Rai/);
+  assert.match(await say('Yes, end it'), /Full time: Austral 4-1 Liverpool Rangers\. Thanks for scoring! Send potm/);
   assert.equal(m1().status, 'completed'); assert.equal(m1().period, 'full_time'); assert.equal(m1().current_minute, 90);
   assert.match(await say('g sam 90'), /No game for you to score today.*\nToday's games I can't score:\nAustral vs Liverpool Rangers: it is completed/s);
+  // After full time: Player of the Match only, asked by name, two Sams need a tap, and a new pick replaces the old
+  assert.match(await say('potm'), /Who's Player of the Match\? Send the name\. \[Cancel\]/);
+  assert.match(await say('sam'), /Two players called "Sam"\. Which one\? \[Sam Lee \| Sam Gurung\]/);
+  assert.match(await say('Sam Gurung'), /Player of the Match: Sam Gurung\..*Send potm again to change it\.$/);
+  assert.equal(potms().length, 1); assert.equal(potms()[0].detail_text, 'Player of the Match: Sam Gurung'); assert.equal(potms()[0].minute, 90);
+  assert.match(await say('potm'), /Who's Player/);
+  assert.match(await say('Cancel'), /OK, no Player of the Match saved/);
+  assert.equal(potms().length, 1, 'cancel keeps the earlier pick');
+  assert.deepEqual([m1().home_score, m1().away_score], [4, 1], 'Player of the Match never touches the score');
 
   // Every event saved by chat is tagged
   assert.ok(T.match_events.every(e => e.logged_via === 'chat:Raj Thapa'));

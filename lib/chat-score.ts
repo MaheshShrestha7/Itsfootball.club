@@ -140,3 +140,6 @@ export function parseAiReply(raw: string): ChatCommand | null {
 export function scoringSide(c: { side: Side; type: 'goal' | 'penalty' | 'own_goal' }): Side {
   return c.type === 'own_goal' ? (c.side === 'us' ? 'them' : 'us') : c.side;
 }
+
+// How chat saves Player of the Match: a commentary line Match Centre reads back when the player stats are saved
+export const POTM_NOTE = 'Player of the Match: ';
