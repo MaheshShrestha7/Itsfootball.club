@@ -253,6 +253,12 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.equal(aiCalls.length, callsBefore, 'junior games never reach the AI');
   assert.match(await say('g kid 3'), /Goal Kid One \(3'\)/);
 
+  // A game still live after midnight is still there; yesterday's game that never kicked off isn't
+  T.matches = [{ id: 'm9', ...baseMatch, team_id: 't1', match_date: dayIn('Australia/Sydney', new Date(t - 86_400_000)), status: 'live', period: 'second_half', current_minute: 60, period_started_at: new Date(t).toISOString(), home_team_name: 'Austral', away_team_name: 'Night Owls', match_time: '21:30:00' },
+    { id: 'm8', ...baseMatch, team_id: 't1', match_date: dayIn('Australia/Sydney', new Date(t - 86_400_000)), home_team_name: 'Austral', away_team_name: 'Never Played', match_time: '20:00:00' }];
+  T.chat_links[0].active_match_id = null; T.chat_links[0].pending = null;
+  assert.match(await say('score'), /Austral 0-0 Night Owls, 60'/);
+
   // Club turns score by chat off / member loses access
   T.club_chat_settings[0].scoring_enabled = false;
   assert.match(await say('score'), /turned off for you/);
