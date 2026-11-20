@@ -1,0 +1,30 @@
+// The live minute, from plain match data (no React), so server code such as score by chat can use it too.
+import type { Match } from './supabase/types';
+import { clockLabel, maxMinute } from './match-length';
+
+// A live match stores the minute it was at (`current_minute`) and when that period (re)started
+// (`period_started_at`). Every screen derives the same minute from those two values, so nobody's
+// browser timer can drift from the referee's clock.
+export const RUNNING_PERIODS = new Set(['first_half', 'second_half', 'extra_time']);
+
+export function getLiveMinute(match: Match | null | undefined, now: number = Date.now()): number {
+  if (!match) return 0;
+  if (
+    match.status !== 'live' ||
+    match.is_paused ||
+    !RUNNING_PERIODS.has(match.period) ||
+    !match.period_started_at
+  ) {
+    return match.current_minute;
+  }
+  const started = Date.parse(match.period_started_at);
+  if (Number.isNaN(started)) return match.current_minute;
+  const elapsedMinutes = Math.max(0, Math.floor((now - started) / 60000));
+  return Math.min(match.current_minute + elapsedMinutes, Math.max(maxMinute(match), match.current_minute));
+}
+
+/** The live minute as shown on screen: "12+2" once a half's time is up, else "9" */
+export function getLiveMinuteLabel(match: Match | null | undefined, now: number = Date.now()): string {
+  if (!match) return '0';
+  return clockLabel(match, match.period, getLiveMinute(match, now));
+}

@@ -26,6 +26,7 @@ import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal
 import TodayTab from '@/components/admin/platform/TodayTab';
 import LogTab from '@/components/admin/platform/LogTab';
 import EmailLogTab from '@/components/admin/platform/EmailLogTab';
+import ChatAiTab from '@/components/admin/platform/ChatAiTab';
 import SupportTab from '@/components/admin/platform/SupportTab';
 import CommandPalette from '@/components/admin/platform/CommandPalette';
 import EmailComposer, { type EmailDraft } from '@/components/admin/platform/EmailComposer';
@@ -48,6 +49,7 @@ import {
   MoreHorizontal,
   Trophy,
   Mail,
+  MessageCircle,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import NewClubForm from '@/components/admin/platform/NewClubForm';
@@ -427,6 +429,7 @@ export default function PlatformOwnerDashboard() {
       { id: 'matchday', label: 'Matchday', icon: Trophy },
       { id: 'grounds', label: 'Grounds', icon: MapPin },
       { id: 'health', label: 'System health', icon: Activity },
+      { id: 'ai', label: 'AI and chat', icon: MessageCircle },
     ] },
     { label: 'Tell and record', items: [
       { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
@@ -584,6 +587,7 @@ export default function PlatformOwnerDashboard() {
 
         {activeTab === 'log' && <LogTab clubs={clubs} admins={adminsList} />}
         {activeTab === 'emails' && <EmailLogTab clubs={clubs} />}
+        {activeTab === 'ai' && <ChatAiTab clubs={clubs} />}
 
         {activeTab === 'overview' && (
           <OverviewTab

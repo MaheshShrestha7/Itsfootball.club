@@ -289,6 +289,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Score by chat keeps what each chat sent for 30 days (Undo, disputes, the AI counts), then forgets it
+  const { error: chatPurge } = await db.from('chat_messages').delete().lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+  if (chatPurge && !/chat_messages/.test(chatPurge.message)) console.error('[reminders] chat_messages purge failed:', chatPurge.message);
+
   const report = await sendClubEmails(db, await materialize(due.slice(0, MAX_SENDS)));
   const instalments = await instalmentEmails(db, false);
   const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS), instalments: { sent: instalments.sent, failed: instalments.failed } };

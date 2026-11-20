@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
-import { durableRateLimit } from '@/lib/rate-limit';
-import { pushConfigured, pushToClub } from '@/lib/push';
-import { matchAlert, type AlertKind } from '@/lib/match-alerts';
-import { isJuniorFixture, publicScoreHidden } from '@/lib/teams';
-import { matchPath } from '@/lib/slugs';
+import { pushConfigured } from '@/lib/push';
+import { type AlertKind } from '@/lib/match-alerts';
+import { sendMatchAlert } from '@/lib/match-push-server';
 import { isUuid } from '@/lib/ids';
 import type { ClubTeam, Match } from '@/lib/supabase/types';
 
@@ -35,22 +33,7 @@ export async function POST(req: NextRequest) {
     db.from('club_teams').select('*').eq('club_id', body.clubId),
   ]);
   if (!match || !club) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
-  // An admin turned follower alerts off for this match (e.g. correcting it after full time)
-  if (match.alerts_muted) return NextResponse.json({ pushed: 0, skipped: 'alerts muted' });
-  // The line-up alert carries no score, so it still goes for a team that hides its scores
-  if (body.kind !== 'lineup' && publicScoreHidden(match as Match, (teams || []) as ClubTeam[])) return NextResponse.json({ pushed: 0, skipped: 'scores hidden' });
-
-  const key = `match-push:${match.id}:${body.kind}${body.kind === 'goal' ? `:${home}-${away}` : ''}`;
-  if (!(await durableRateLimit(key, 1, 24 * 60 * 60 * 1000))) return NextResponse.json({ pushed: 0, alreadySent: true });
-  const minute = Number.isInteger(body.minute) ? body.minute : undefined;
-  // The scorer's name, for a goal. Never for a junior team's game, where names are shortened in public.
-  const scorer = body.kind === 'goal' && typeof body.scorer === 'string' && !isJuniorFixture(match as Match, (teams || []) as ClubTeam[])
-    ? body.scorer.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60) || undefined
-    : undefined;
-  const pushed = await pushToClub(db, body.clubId, {
-    ...matchAlert(body.kind, match, home, away, minute, scorer),
-    url: matchPath(club.slug, match),
-    tag: `match-${match.id}`, // one notification per match on the lock screen, updated as it goes
-  });
-  return NextResponse.json({ pushed });
+  const result = await sendMatchAlert(db, club.slug, match as Match, (teams || []) as ClubTeam[], body.kind, home, away,
+    Number.isInteger(body.minute) ? body.minute : undefined, typeof body.scorer === 'string' ? body.scorer : undefined);
+  return NextResponse.json(result);
 }

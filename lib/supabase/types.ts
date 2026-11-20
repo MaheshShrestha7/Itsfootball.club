@@ -329,6 +329,8 @@ export interface MatchEvent {
   player_name: string;
   assist_player_name?: string;
   detail_text?: string;
+  /** "chat:Raj Thapa" when sent with Itsfootball.club Bot (migration 20261183) */
+  logged_via?: string | null;
   created_at?: string;
 }
 
