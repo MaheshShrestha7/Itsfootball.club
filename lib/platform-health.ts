@@ -70,17 +70,20 @@ const DB_SAMPLES = 3;
  * How fast the database answers a tiny query, as the best of a few tries one after another.
  * The first try in a freshly started worker also pays for opening the connection (DNS and TLS
  * to Supabase), which alone can take a second; one slow try is noise, all of them slow is real.
- * Any error means the database didn't answer, which is reported as such and never as "fast".
+ * If every try errors, the database didn't answer, which is reported as such and never as "fast".
  */
 export async function timeDatabase(db: SupabaseClient, samples = DB_SAMPLES): Promise<{ ms: number; error: string | null }> {
   let best = Infinity;
+  let lastError: { ms: number; error: string } | null = null;
   for (let n = 0; n < samples; n++) {
     const t0 = Date.now();
     const { error } = await db.from('platform_events').select('id').limit(1);
-    if (error) return { ms: Date.now() - t0, error: error.message || 'Unknown error' };
+    // One refused try is a hiccup (e.g. Supabase's "JWT issued at future" when its clocks drift by
+    // a second); only every try failing means the database is really down
+    if (error) { lastError = { ms: Date.now() - t0, error: error.message || 'Unknown error' }; continue; }
     best = Math.min(best, Date.now() - t0);
   }
-  return { ms: best, error: null };
+  return best === Infinity && lastError ? lastError : { ms: best, error: null };
 }
 
 /** One table or column each migration adds, newest last. Only migrations that add one are listed. */
