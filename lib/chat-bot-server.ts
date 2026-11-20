@@ -152,15 +152,22 @@ class Bot {
     ]);
     // Today's games at each club, in that club's own time zone
     const games: { link: Link; match: Match }[] = [];
+    const skipped: string[] = [];
     for (const l of this.links) {
       const club = (clubs || []).find(c => c.id === l.club_id);
       if (!club) continue;
-      // Today's games, plus a game still live from yesterday (an evening kick-off that runs past midnight)
+      // Today's games, plus any game that is live now whatever its date (an evening kick-off past midnight)
       const zone = clubTimeZone(club);
       const today = dayIn(zone, this.now);
-      const { data: rows } = await this.db.from('matches').select('*').eq('club_id', l.club_id)
-        .in('match_date', [dayIn(zone, new Date(this.now.getTime() - 86_400_000)), today]).in('status', OPEN);
-      let mine = ((rows || []) as Match[]).filter(m => isTeamFixture(m) && (m.match_date === today || m.status !== 'upcoming'));
+      const [{ data: todays }, { data: live }] = await Promise.all([
+        this.db.from('matches').select('*').eq('club_id', l.club_id).eq('match_date', today),
+        this.db.from('matches').select('*').eq('club_id', l.club_id).in('status', ['live', 'halftime']),
+      ]);
+      const rows = [...(todays || []), ...(live || []).filter(m => m.match_date !== today)] as Match[];
+      // Why a game the scorer can see isn't offered, so "No game" is never a mystery
+      const why = (m: Match) => !OPEN.includes(m.status) ? `it is ${m.status}` : m.tournament_id ? "it's a tournament game (not covered yet)" : !isTeamFixture(m) ? "it's an in-house game (not covered yet)" : '';
+      rows.forEach(m => { const w = why(m); if (w) skipped.push(`${m.home_team_name} vs ${m.away_team_name}: ${w}`); });
+      let mine = rows.filter(m => !why(m));
       // A member who belongs to teams sees their own teams' games first
       const myTeams = new Set((memberTeams || []).filter(r => r.member_id === l.member_id && r.is_active !== false).map(r => r.team_id));
       const clubTeams = ((teams || []) as ClubTeam[]).filter(t => t.club_id === l.club_id);
@@ -178,7 +185,10 @@ class Bot {
       this.member = (members || []).find(m => m.id === g.link.member_id) || { id: g.link.member_id, full_name: 'a scorer' };
     };
 
-    if (!games.length) return { reply: { text: `No game for you to score today. Games show here on match day until full time.\n${SHORT_FORMAT_HELP}` } };
+    if (!games.length) {
+      const seen = skipped.length ? `\nToday's games I can't score:\n${skipped.slice(0, 4).join('\n')}` : "\nThere's no game dated today in your club's time zone.";
+      return { reply: { text: `No game for you to score today. Games show here on match day until full time.${seen}\n${SHORT_FORMAT_HELP}` } };
+    }
 
     // An answer to "Which game?"
     const asked = this.links.find(l => l.pending?.type === 'game');

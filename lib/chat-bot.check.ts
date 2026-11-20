@@ -232,7 +232,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('ft'), /End the match/);
   assert.match(await say('Yes, end it'), /Full time: Austral 4-1 Liverpool Rangers/);
   assert.equal(m1().status, 'completed'); assert.equal(m1().period, 'full_time'); assert.equal(m1().current_minute, 90);
-  assert.match(await say('g sam 90'), /No game for you to score today/);
+  assert.match(await say('g sam 90'), /No game for you to score today.*\nToday's games I can't score:\nAustral vs Liverpool Rangers: it is completed/s);
 
   // Every event saved by chat is tagged
   assert.ok(T.match_events.every(e => e.logged_via === 'chat:Raj Thapa'));
@@ -258,6 +258,13 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
     { id: 'm8', ...baseMatch, team_id: 't1', match_date: dayIn('Australia/Sydney', new Date(t - 86_400_000)), home_team_name: 'Austral', away_team_name: 'Never Played', match_time: '20:00:00' }];
   T.chat_links[0].active_match_id = null; T.chat_links[0].pending = null;
   assert.match(await say('score'), /Austral 0-0 Night Owls, 60'/);
+  // Live two days on (date typed wrong) still counts; an in-house game today is named
+  T.matches[0].match_date = '2026-11-19';
+  T.matches.push({ id: 'm7', ...baseMatch, team_id: null, match_type: 'internal', home_team_name: 'Reds', away_team_name: 'Blues', match_time: '10:00:00' });
+  assert.match(await say('score'), /Night Owls/);
+  T.matches[0].status = 'completed';
+  assert.match(await say('score'), /No game.*Reds vs Blues: it's an in-house game/s);
+  T.matches[0].status = 'live';
 
   // Club turns score by chat off / member loses access
   T.club_chat_settings[0].scoring_enabled = false;
