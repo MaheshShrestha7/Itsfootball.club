@@ -615,7 +615,7 @@ function PersonPanel({
                 <div className="ppl-card-check is-clear"><CheckCircle2 size={13} aria-hidden="true" /> Nothing to check</div>
               )}
             </div>
-            {!isApplication && <ChatLinkCard clubId={club.id} memberId={m.id} name={m.full_name} />}
+            {!isApplication && <ChatLinkCard clubId={club.id} memberId={m.id} name={m.full_name} matchCentreHref={`/${clubSlug}/admin/match-center`} />}
           </>
         )}
 
