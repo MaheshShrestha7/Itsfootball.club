@@ -155,8 +155,12 @@ class Bot {
     for (const l of this.links) {
       const club = (clubs || []).find(c => c.id === l.club_id);
       if (!club) continue;
-      const { data: rows } = await this.db.from('matches').select('*').eq('club_id', l.club_id).eq('match_date', dayIn(clubTimeZone(club), this.now)).in('status', OPEN);
-      let mine = ((rows || []) as Match[]).filter(m => isTeamFixture(m));
+      // Today's games, plus a game still live from yesterday (an evening kick-off that runs past midnight)
+      const zone = clubTimeZone(club);
+      const today = dayIn(zone, this.now);
+      const { data: rows } = await this.db.from('matches').select('*').eq('club_id', l.club_id)
+        .in('match_date', [dayIn(zone, new Date(this.now.getTime() - 86_400_000)), today]).in('status', OPEN);
+      let mine = ((rows || []) as Match[]).filter(m => isTeamFixture(m) && (m.match_date === today || m.status !== 'upcoming'));
       // A member who belongs to teams sees their own teams' games first
       const myTeams = new Set((memberTeams || []).filter(r => r.member_id === l.member_id && r.is_active !== false).map(r => r.team_id));
       const clubTeams = ((teams || []) as ClubTeam[]).filter(t => t.club_id === l.club_id);
