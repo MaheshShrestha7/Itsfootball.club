@@ -922,3 +922,30 @@ export function tournamentTeamEmail(p: {
     note: 'Keep this link to your team. Anyone with it can change your entry until entries close.',
   });
 }
+
+/** A committee meeting's agenda before it, or its minutes after (migration 20261182). To the club's committee. */
+export function committeeMeetingEmail(p: {
+  brand: EmailBrand;
+  kind: 'agenda' | 'minutes';
+  title: string;
+  when: string;
+  where: string;
+  rows: [label: string, value: string][];
+  link?: string | null;
+}): RenderedEmail {
+  const agenda = p.kind === 'agenda';
+  return renderEmail({
+    brand: p.brand,
+    subject: agenda ? `Agenda: ${p.title}, ${p.when}` : `Minutes: ${p.title}, ${p.when}`,
+    preheader: agenda ? `${p.when}${p.where ? ` at ${p.where}` : ''}. ${p.rows.length} items.` : 'The decisions and actions from the meeting.',
+    heading: `${agenda ? 'Agenda' : 'Minutes'}: ${p.title}`,
+    paragraphs: [
+      agenda
+        ? `Here's the agenda for ${p.when}${p.where ? ` at ${p.where}` : ''}. If you can't make it, let the secretary know so your apology goes in the minutes.`
+        : `Here are the decisions and actions from ${p.when}.${p.link ? ' The full minutes, with notes for each item, are at the link below.' : ''}`,
+    ],
+    details: p.rows.length ? p.rows : [[agenda ? 'Agenda' : 'Minutes', agenda ? 'No items yet' : 'No decisions or actions were recorded']],
+    ...(p.link ? { cta: { label: 'Read the minutes', url: p.link } } : {}),
+    reason: `You're receiving this because you're on the committee of ${p.brand.name}.`,
+  });
+}
