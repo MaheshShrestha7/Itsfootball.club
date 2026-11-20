@@ -8,6 +8,7 @@ import PlayerSearchSelect from '@/components/PlayerSearchSelect';
 import { Award, Plus, CheckCircle2, CalendarDays, X, Trophy } from 'lucide-react';
 import { useEscapeToClose } from '@/lib/use-escape-to-close';
 import { defaultSeasonLabel } from '@/lib/season';
+import CommitteeTabs from '@/components/admin/CommitteeTabs';
 
 export default function AdminCommitteePage({
   params,
@@ -80,6 +81,8 @@ export default function AdminCommitteePage({
           </button>
         </div>
       </div>
+
+      <CommitteeTabs slug={club.slug} current="committee" />
 
       {feedback && (
         <div role="status" className="admin-flash">
