@@ -38,6 +38,16 @@ const OPEN = ['upcoming', 'live', 'halftime'];
 /** The day (YYYY-MM-DD) in a time zone */
 export const dayIn = (zone: string, now: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
 
+/**
+ * The club's day a match is on. match_date is a timestamp: a date-only fixture is saved as midnight UTC
+ * (read as that date, as matchStart in admin-calendar does); anything else is a real moment, read in the zone.
+ */
+export function matchDay(matchDate: string, zone: string): string {
+  const d = new Date(matchDate);
+  if (isNaN(d.getTime())) return matchDate.slice(0, 10);
+  return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 ? d.toISOString().slice(0, 10) : dayIn(zone, d);
+}
+
 /** When today began in a time zone, as an ISO instant (AI limits reset at midnight Sydney time) */
 export function dayStartIso(zone: string, now: Date): string {
   const day = dayIn(zone, now);
@@ -159,11 +169,13 @@ class Bot {
       // Today's games, plus any game that is live now whatever its date (an evening kick-off past midnight)
       const zone = clubTimeZone(club);
       const today = dayIn(zone, this.now);
-      const [{ data: todays }, { data: live }] = await Promise.all([
-        this.db.from('matches').select('*').eq('club_id', l.club_id).eq('match_date', today),
+      const dayAround = (days: number) => dayIn('UTC', new Date(Date.parse(`${today}T12:00:00Z`) + days * 86_400_000));
+      const [{ data: near }, { data: live }] = await Promise.all([
+        this.db.from('matches').select('*').eq('club_id', l.club_id).gte('match_date', dayAround(-1)).lt('match_date', dayAround(2)),
         this.db.from('matches').select('*').eq('club_id', l.club_id).in('status', ['live', 'halftime']),
       ]);
-      const rows = [...(todays || []), ...(live || []).filter(m => m.match_date !== today)] as Match[];
+      const todays = ((near || []) as Match[]).filter(m => matchDay(m.match_date, zone) === today);
+      const rows = [...todays, ...((live || []) as Match[]).filter(m => !todays.some(t => t.id === m.id))];
       // Why a game the scorer can see isn't offered, so "No game" is never a mystery
       const why = (m: Match) => !OPEN.includes(m.status) ? `it is ${m.status}` : m.tournament_id ? "it's a tournament game (not covered yet)" : !isTeamFixture(m) ? "it's an in-house game (not covered yet)" : '';
       rows.forEach(m => { const w = why(m); if (w) skipped.push(`${m.home_team_name} vs ${m.away_team_name}: ${w}`); });

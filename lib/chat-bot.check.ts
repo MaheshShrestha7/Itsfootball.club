@@ -1,7 +1,7 @@
 // Score by chat: a whole game through the bot, with an in-memory database and a stand-in AI. The SQL functions
 // themselves were checked on Postgres; this mirrors them. CHAT_BOT_VERBOSE=1 prints the conversation.
 import assert from 'node:assert/strict';
-import { handleChatMessage, dayIn, dayStartIso, allowedReaders } from './chat-bot-server';
+import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay } from './chat-bot-server';
 
 type Row = Record<string, any>;
 const T: Record<string, Row[]> = {};
@@ -19,6 +19,7 @@ class Q {
   in(c: string, v: any[]) { this.f.push(r => v.includes(r[c])); return this; }
   is(c: string, v: any) { this.f.push(r => (r[c] ?? null) === v); return this; }
   gte(c: string, v: any) { this.f.push(r => r[c] >= v); return this; }
+  lt(c: string, v: any) { this.f.push(r => r[c] < v); return this; }
   not(c: string, op: string, v: any) { assert.equal(op, 'is'); this.f.push(r => (r[c] ?? null) !== v); return this; }
   order(c: string, o: { ascending: boolean }) { this.ord = [c, o.ascending]; return this; }
   limit(n: number) { this.lim = n; return this; }
@@ -106,7 +107,8 @@ T.club_members = [
   { id: 'viewer', club_id: club, full_name: 'Vic View', role: 'Player', status: 'active', membership_status: 'approved' },
 ];
 T.club_team_members = [...['p1', 'p2', 'p3', 'p4'].map(m => ({ team_id: 't1', member_id: m, team_role: 'player', is_active: true })), { team_id: 'tj', member_id: 'p5', team_role: 'player', is_active: true }];
-const baseMatch = { club_id: club, match_date: today, status: 'upcoming', home_score: 0, away_score: 0, current_minute: 0, period: 'not_started', period_started_at: null, half_length: 45, is_club_home: true, match_type: 'league', tournament_id: null };
+// match_date is a timestamp in the database: a date-only fixture comes back as midnight UTC
+const baseMatch = { club_id: club, match_date: `${today}T00:00:00+00:00`, status: 'upcoming', home_score: 0, away_score: 0, current_minute: 0, period: 'not_started', period_started_at: null, half_length: 45, is_club_home: true, match_type: 'league', tournament_id: null };
 T.matches = [{ id: 'm1', ...baseMatch, team_id: 't1', home_team_name: 'Austral', away_team_name: 'Liverpool Rangers', match_time: '15:00:00' }];
 T.club_chat_settings = [{ club_id: club, scoring_enabled: true, ai_allowed: true }];
 T.platform_chat_settings = [{ id: 1, ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 1000 }];
@@ -125,6 +127,9 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
 
 (async () => {
   // Helpers
+  assert.equal(matchDay('2026-11-21T00:00:00+00:00', 'Australia/Sydney'), '2026-11-21', 'date-only fixture');
+  assert.equal(matchDay('2026-11-20T22:30:00+00:00', 'Australia/Sydney'), '2026-11-21', '9:30am Sydney saved as a moment');
+  assert.equal(matchDay('2026-11-21', 'Australia/Sydney'), '2026-11-21');
   assert.equal(dayStartIso('Australia/Sydney', now0), '2026-11-20T13:00:00.000Z', 'midnight Sydney in daylight saving');
   assert.equal(dayStartIso('Australia/Sydney', new Date('2026-07-01T05:00:00Z')), '2026-06-30T14:00:00.000Z', 'midnight Sydney in winter');
   const S = { ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 30 };
@@ -254,12 +259,12 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('g kid 3'), /Goal Kid One \(3'\)/);
 
   // A game still live after midnight is still there; yesterday's game that never kicked off isn't
-  T.matches = [{ id: 'm9', ...baseMatch, team_id: 't1', match_date: dayIn('Australia/Sydney', new Date(t - 86_400_000)), status: 'live', period: 'second_half', current_minute: 60, period_started_at: new Date(t).toISOString(), home_team_name: 'Austral', away_team_name: 'Night Owls', match_time: '21:30:00' },
-    { id: 'm8', ...baseMatch, team_id: 't1', match_date: dayIn('Australia/Sydney', new Date(t - 86_400_000)), home_team_name: 'Austral', away_team_name: 'Never Played', match_time: '20:00:00' }];
+  T.matches = [{ id: 'm9', ...baseMatch, team_id: 't1', match_date: `${dayIn('Australia/Sydney', new Date(t - 86_400_000))}T00:00:00+00:00`, status: 'live', period: 'second_half', current_minute: 60, period_started_at: new Date(t).toISOString(), home_team_name: 'Austral', away_team_name: 'Night Owls', match_time: '21:30:00' },
+    { id: 'm8', ...baseMatch, team_id: 't1', match_date: `${dayIn('Australia/Sydney', new Date(t - 86_400_000))}T00:00:00+00:00`, home_team_name: 'Austral', away_team_name: 'Never Played', match_time: '20:00:00' }];
   T.chat_links[0].active_match_id = null; T.chat_links[0].pending = null;
   assert.match(await say('score'), /Austral 0-0 Night Owls, 60'/);
   // Live two days on (date typed wrong) still counts; an in-house game today is named
-  T.matches[0].match_date = '2026-11-19';
+  T.matches[0].match_date = '2026-11-19T00:00:00+00:00';
   T.matches.push({ id: 'm7', ...baseMatch, team_id: null, match_type: 'internal', home_team_name: 'Reds', away_team_name: 'Blues', match_time: '10:00:00' });
   assert.match(await say('score'), /Night Owls/);
   T.matches[0].status = 'completed';
