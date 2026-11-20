@@ -11,7 +11,7 @@ export const SOCIAL_PROFILES = [
   { name: 'Facebook', url: 'https://www.facebook.com/ItsFootball.Club' },
   { name: 'TikTok', url: 'https://www.tiktok.com/@itsfootball.club' },
   { name: 'Instagram', url: 'https://www.instagram.com/itsfootball.club' },
-  { name: 'YouTube', url: 'https://www.youtube.com/@itsfootballclub' },
+  { name: 'YouTube', url: 'https://www.youtube.com/@itsfootball-club' },
   { name: 'LinkedIn', url: 'https://www.linkedin.com/company/itsfootball-club' },
   { name: 'Crunchbase', url: 'https://www.crunchbase.com/organization/itsfootball-club' },
 ];
