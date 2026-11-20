@@ -29,7 +29,7 @@ export async function emailTickets(db: SupabaseClient, pay: Payment): Promise<bo
     link: `${clubBaseUrl(club as ClubBrandRow)}/tickets/${pay.id}`,
     sponsors: sponsors.map(sp => ({ name: sp.name, logoUrl: sp.logo_url, url: sp.website_url })),
   });
-  const sent = await sendEmail({ ...email, to: pay.payer_email, fromName: (club as ClubBrandRow).name, idempotencyKey: `tickets-${pay.id}` });
+  const sent = await sendEmail({ ...email, to: pay.payer_email, fromName: (club as ClubBrandRow).name, idempotencyKey: `tickets-${pay.id}`, log: { kind: 'tickets', clubId: pay.club_id, refId: pay.id } });
   if (!sent.ok) console.error('Tickets email failed:', pay.id, sent.error);
   return sent.ok;
 }

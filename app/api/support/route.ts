@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     text: lines.join('\n'),
     html: `<pre style="font-family:inherit;white-space:pre-wrap">${esc(lines.join('\n'))}</pre>`,
     ...(email ? { replyTo: email } : {}),
+    log: { kind: 'support_request', clubId },
   });
   if (!result.ok) return NextResponse.json({ error: 'Your message could not be sent. Please try again in a moment.' }, { status: 502 });
   return NextResponse.json({ ok: true });

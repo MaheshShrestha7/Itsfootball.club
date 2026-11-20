@@ -4,7 +4,8 @@ import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { getAccessToken } from '@/lib/supabase/client';
 import { REMINDER_SETTINGS, type EmailSettings, type ReminderSetting } from '@/lib/email/settings';
-import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw } from 'lucide-react';
+import { emailKindLabel } from '@/lib/email/kinds';
+import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw, ChevronRight, Search } from 'lucide-react';
 
 type NoticeKind = 'renewal' | 'match' | 'event' | 'news';
 
@@ -12,8 +13,10 @@ interface Overview {
   settings: EmailSettings;
   ready: { resend: boolean; unsubscribe: boolean; database: boolean };
   optOuts: number;
-  history: { kind: string; subject: string; sentAt: string; recipients: number }[];
+  history: HistoryLine[];
 }
+
+interface HistoryLine { kind: string; subject: string; sentAt: string; recipients: number; to?: { email: string; subject: string; at: string }[] }
 
 interface Preview {
   label: string;
@@ -43,6 +46,7 @@ const HISTORY_LABELS: Record<string, string> = {
   notice_news: 'News notice',
 };
 
+const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 async function api(method: 'GET' | 'PATCH' | 'POST', body?: object, query = '') {
@@ -96,7 +100,7 @@ function Switch({ checked, onChange, label, disabled }: { checked: boolean; onCh
 
 export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, news } = useClub();
+  const { clubs, selectClubBySlug, matches, events, news, members } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
 
   const [overview, setOverview] = useState<Overview | null>(null);
@@ -361,29 +365,111 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
           <History size={18} /> Recently sent
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          {overview ? `${overview.optOuts} ${overview.optOuts === 1 ? 'person has' : 'people have'} unsubscribed from ${club.name} emails.` : ' '}
+          {overview ? `${overview.optOuts} ${overview.optOuts === 1 ? 'person has' : 'people have'} unsubscribed from ${club.name} emails. Tap an email to see who got it.` : ' '}
         </p>
         {!overview?.history.length ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Mail size={16} /> No emails sent yet.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {overview.history.map((h, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.7rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none', flexWrap: 'wrap' }}>
-                <div className="min-w-0">
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{HISTORY_LABELS[h.kind] || 'Email'}</div>
-                  {h.subject && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.subject}</div>}
-                </div>
-                <div style={{ textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <div>{h.recipients} {h.recipients === 1 ? 'recipient' : 'recipients'}</div>
-                  <div className="text-muted">{fmtDate(h.sentAt)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <EmailHistory history={overview.history} members={members} />
         )}
       </section>
     </div>
+  );
+}
+
+/** Recently sent: tap a line to see who got it, or search a person to see every email they got */
+function EmailHistory({ history, members }: { history: HistoryLine[]; members: { full_name: string; email?: string | null; guardian_email?: string | null }[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [q, setQ] = useState('');
+  const names = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of members) {
+      if (p.email) m.set(p.email.toLowerCase(), p.full_name);
+      if (p.guardian_email && !m.has(p.guardian_email.toLowerCase())) m.set(p.guardian_email.toLowerCase(), `${p.full_name}'s guardian`);
+    }
+    return m;
+  }, [members]);
+  const nameOf = (email: string) => names.get(email.toLowerCase());
+
+  const term = q.trim().toLowerCase();
+  // shortcut: searches the emails behind the lines shown (latest 2,000 sends), page the API if clubs outgrow it
+  const found = term ? history.flatMap(h => (h.to || [])
+    .filter(t => t.email.toLowerCase().includes(term) || (nameOf(t.email) || '').toLowerCase().includes(term))
+    .map(t => ({ ...t, kind: h.kind }))) : [];
+
+  const row: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '0.1rem 1rem', padding: '0.5rem 0', borderTop: '1px solid var(--border-subtle)', fontSize: '0.85rem' };
+  const list: React.CSSProperties = { listStyle: 'none', margin: '0 0 0.6rem', padding: '0.25rem 0 0.25rem 1rem', borderLeft: '2px solid var(--club-primary)' };
+
+  return (
+    <>
+      <label style={{ position: 'relative', display: 'block', marginBottom: '0.75rem' }}>
+        <Search size={16} aria-hidden="true" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <input className="form-input" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Did someone get an email? Search a name or email"
+          aria-label="Search who got emails" style={{ paddingLeft: '2.3rem', width: '100%' }} />
+      </label>
+
+      {term ? (
+        found.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No emails to anyone matching &ldquo;{q.trim()}&rdquo; in this list.</p>
+        ) : (
+          <ul style={list} aria-label="Emails that match">
+            {found.map((t, i) => (
+              <li key={i} style={{ ...row, borderTop: i ? row.borderTop : 'none' }}>
+                <b style={{ color: 'var(--text-primary)' }}>{nameOf(t.email) || t.email}</b>
+                <time dateTime={t.at} style={{ gridRow: '1 / span 2', gridColumn: 2, alignSelf: 'center', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDate(t.at)}</time>
+                <span style={{ color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{emailKindLabel(t.kind)}{t.subject ? `: ${t.subject}` : ''}{nameOf(t.email) ? ` (${t.email})` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {history.map((h, i) => {
+            const isOpen = open === i;
+            const to = h.to || [];
+            return (
+              <React.Fragment key={i}>
+                <button type="button" aria-expanded={isOpen} onClick={() => { setOpen(isOpen ? null : i); setShowAll(false); }}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.7rem 0', border: 0, borderTop: i ? '1px solid var(--border-subtle)' : 'none', background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer', width: '100%' }}>
+                  <div className="min-w-0">
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{HISTORY_LABELS[h.kind] || emailKindLabel(h.kind)}</div>
+                    {h.subject && <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.subject}</div>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textAlign: 'right', fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    <div>
+                      <div>{h.recipients} {h.recipients === 1 ? 'recipient' : 'recipients'}</div>
+                      <div className="text-muted">{fmtDate(h.sentAt)}</div>
+                    </div>
+                    <ChevronRight size={16} aria-hidden="true" style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </div>
+                </button>
+                {isOpen && (
+                  <ul style={list} aria-label={`Who got ${HISTORY_LABELS[h.kind] || emailKindLabel(h.kind)}`}>
+                    {(showAll ? to : to.slice(0, 8)).map((t, j) => (
+                      <li key={j} style={{ ...row, borderTop: j ? row.borderTop : 'none' }}>
+                        <b style={{ color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>{nameOf(t.email) || t.email}</b>
+                        <time dateTime={t.at} style={{ gridRow: '1 / span 2', gridColumn: 2, alignSelf: 'center', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtTime(t.at)}</time>
+                        <span style={{ color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{nameOf(t.email) ? t.email : 'Not on the members list'}</span>
+                      </li>
+                    ))}
+                    {!showAll && to.length > 8 && (
+                      <li style={{ paddingTop: '0.5rem' }}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAll(true)}>Show all {to.length}</button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.75rem 0 0' }}>
+        This shows that an email went out. Whether it reached the inbox or bounced is in the platform&apos;s Resend account.
+      </p>
+    </>
   );
 }

@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     text,
     html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(text)}</div>`,
     ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}),
+    log: { kind: 'platform_admin' },
   });
   if (!sent.ok) {
     console.error('[platform/admins] invite send failed:', sent.error);

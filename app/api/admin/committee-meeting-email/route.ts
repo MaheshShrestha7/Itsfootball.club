@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const message = committeeMeetingEmail({ brand: clubBrand(club as ClubBrandRow), kind, title, when, where: meeting.location, rows, link });
-  const sent = await sendBatch(to.slice(0, 100).map(addr => ({ to: addr, ...message, fromName: club.name })));
+  const sent = await sendBatch(to.slice(0, 100).map(addr => ({ to: addr, ...message, fromName: club.name, log: { kind: `committee_${kind}`, clubId: club.id, refId: meeting.id } })));
   if (!sent.ok) {
     console.error('[admin/committee-meeting-email] send failed:', sent.error);
     return NextResponse.json({ error: 'The email could not be sent. Please try again in a moment.' }, { status: 502 });

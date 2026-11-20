@@ -7,6 +7,7 @@ import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
 import { formatMatchWhen, formatWhen } from './format';
 import { authSignInLink } from './auth-link';
+import { EMAIL_KIND_GROUPS, EMAIL_KIND_LABELS, emailKindLabel } from './kinds';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -182,6 +183,12 @@ async function main() {
     const platform = authSignInLink({ supabaseUrl: SUPA, redirectTo: 'https://itsfootball.club/my-clubs', tokenHash: 'TH', type: 'magiclink' });
     assert.equal(platform, `${SUPA}/auth/v1/verify?token=TH&type=magiclink&redirect_to=${encodeURIComponent('https://itsfootball.club/my-clubs')}`);
   }
+
+// Email log: every filter kind has a name, and no kind sits in two filters
+const grouped = EMAIL_KIND_GROUPS.flatMap(g => g.kinds);
+assert.equal(new Set(grouped).size, grouped.length);
+for (const k of grouped) assert.ok(EMAIL_KIND_LABELS[k], `no label for ${k}`);
+assert.equal(emailKindLabel(null), 'Other emails');
 
 console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');
 }

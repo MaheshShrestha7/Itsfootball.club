@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
         subject: `[itsfootball.club] ${fresh.length === 1 ? fresh[0].label : `${fresh.length} problems`} need a look`,
         text,
         html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${text.replace(/[&<>]/g, c => `&#${c.charCodeAt(0)};`)}</div>`,
+        log: { kind: 'health_alert' },
       });
       if (sent.ok) emailed++;
     }

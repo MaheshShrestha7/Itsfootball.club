@@ -10,7 +10,7 @@ import { pushConfigured, pushToClub } from '@/lib/push';
 import { isUuid } from '@/lib/ids';
 
 // Admin -> Email Notifications. Club admins only (checked with their own session token).
-//   GET    ?clubId=           switches, setup status, opt-out count, recent sends
+//   GET    ?clubId=           switches, setup status, opt-out count, recent sends and who got each
 //   PATCH  { clubId, settings }   save the automatic-reminder switches
 //   POST   { clubId, kind, refId?, audience?, message?, memberId?, send? }
 //          (memberId / memberIds: a renewal email to that member / those ticked members, from Member passes)
@@ -38,17 +38,21 @@ export async function GET(req: NextRequest) {
 
   const [{ count: optOuts }, { data: log, error: logError }] = await Promise.all([
     db.from('email_opt_outs').select('email', { count: 'exact', head: true }).eq('club_id', club.id),
-    db.from('email_log').select('kind, ref_id, subject, sent_at').eq('club_id', club.id).order('sent_at', { ascending: false }).limit(2000),
+    // Mission Control's own emails about this club (support, broadcasts) stay out of the club's history
+    db.from('email_log').select('kind, ref_id, subject, sent_at, recipient').eq('club_id', club.id)
+      .not('kind', 'in', '(support_request,support_reply,support_access,feature_built,platform_email)')
+      .order('sent_at', { ascending: false }).limit(2000),
   ]);
 
-  // One history line per notice (all its recipients), and per reminder type per day
-  const groups = new Map<string, { kind: string; subject: string; sentAt: string; recipients: number }>();
+  // One history line per notice (all its recipients), and per other kind per day, each with who got it
+  const groups = new Map<string, { kind: string; subject: string; sentAt: string; recipients: number; to: { email: string; subject: string; at: string }[] }>();
   for (const row of log || []) {
     const notice = row.kind?.startsWith('notice_') && row.kind !== 'notice_renewal';
     const id = notice ? `${row.kind}:${row.ref_id}` : `${row.kind}:${String(row.sent_at).slice(0, 10)}`;
+    const to = { email: row.recipient, subject: row.subject || '', at: row.sent_at };
     const g = groups.get(id);
-    if (g) g.recipients++;
-    else groups.set(id, { kind: row.kind || 'email', subject: notice ? row.subject || '' : '', sentAt: row.sent_at, recipients: 1 });
+    if (g) { g.recipients++; g.to.push(to); }
+    else groups.set(id, { kind: row.kind || 'email', subject: notice ? row.subject || '' : '', sentAt: row.sent_at, recipients: 1, to: [to] });
   }
 
   return NextResponse.json({

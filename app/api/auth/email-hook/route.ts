@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.all(recipients.map(r => {
     const email = authEmail(data.email_action_type, linkFor(r.tokenHash), r.token, brand, r.changeTo);
-    return sendEmail({ to: r.to, ...email, fromName: brand?.name });
+    return sendEmail({ to: r.to, ...email, fromName: brand?.name, log: { kind: `auth_${data.email_action_type}` } });
   }));
   const failed = results.find(s => !s.ok);
   if (failed && !failed.ok) {

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     reason: reason || null,
     link: `${SITE_URL}/${row.club_slug}/admin/roles#support-access`,
   });
-  const sent = await sendEmail({ to: row.owner_email, ...message, ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}) });
+  const sent = await sendEmail({ to: row.owner_email, ...message, ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}), log: { kind: 'support_access', clubId } });
   if (!sent.ok) {
     console.error('[platform/support-access] send failed:', sent.error);
     return NextResponse.json({ ok: true, emailed: false, error: 'The request is saved, but the email to the Owner could not be sent. Tell them another way.' }, { status: 502 });

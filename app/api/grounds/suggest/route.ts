@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   // Best effort: the suggestion is saved either way and shows in the club's admin
   const { data: club } = ground.steward_club_id
-    ? await db.from('clubs').select('name, slug, custom_domain, contact_email, is_active').eq('id', ground.steward_club_id).maybeSingle()
+    ? await db.from('clubs').select('id, name, slug, custom_domain, contact_email, is_active').eq('id', ground.steward_club_id).maybeSingle()
     : { data: null };
   const to = club?.is_active && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(club.contact_email || '') ? club.contact_email : CONTACT_EMAIL;
   const email = groundSuggestion({
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     guideUrl: `${SITE_URL}${groundPath(ground)}`,
     adminUrl: club ? `${clubBaseUrl(club)}/admin/branding` : `${SITE_URL}${groundPath(ground)}`,
   });
-  await sendEmail({ to, ...email, replyTo: cleaned.row.contact && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned.row.contact) ? cleaned.row.contact : undefined })
+  await sendEmail({ to, ...email, replyTo: cleaned.row.contact && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned.row.contact) ? cleaned.row.contact : undefined, log: { kind: 'ground_suggestion', clubId: club?.id, refId: ground.id } })
     .catch(() => null);
 
   return NextResponse.json({ ok: true });

@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     link: `${SITE_URL}/invite/${token}`,
     expires: expiresOn(),
   });
-  const sent = await sendEmail({ to: email, ...message, ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}) });
+  const sent = await sendEmail({ to: email, ...message, ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}), log: { kind: 'club_invite', clubId } });
   if (!sent.ok) {
     console.error('[platform/club-invites] send failed:', sent.error);
     // The invite is saved; Resend from the drawer tries the email again with a new link
