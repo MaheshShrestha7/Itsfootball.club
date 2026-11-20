@@ -7,10 +7,11 @@ export type Side = 'us' | 'them';
 export type ChatCommand =
   | { kind: 'goal'; side: Side; player?: string; minute?: number; added?: number; type: 'goal' | 'penalty' | 'own_goal' }
   | { kind: 'card'; side: Side; player?: string; minute?: number; added?: number; color: 'yellow' | 'red' }
+  | { kind: 'sub'; side: 'us'; player: string; minute?: number; added?: number }
   | { kind: 'kickoff' | 'halftime' | 'second_half' | 'fulltime' | 'undo' | 'score' | 'help' | 'yes' | 'no' }
   | { kind: 'pick'; n: number };
 
-export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · ko · ht · 2h · ft · undo · score';
+export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · in ram · ko · ht · 2h · ft · undo · score';
 
 const WORDS: Record<string, ChatCommand> = {
   ko: { kind: 'kickoff' }, 'kick off': { kind: 'kickoff' }, kickoff: { kind: 'kickoff' }, 'kick-off': { kind: 'kickoff' },
@@ -19,10 +20,11 @@ const WORDS: Record<string, ChatCommand> = {
   ft: { kind: 'fulltime' }, 'full time': { kind: 'fulltime' }, fulltime: { kind: 'fulltime' }, 'full-time': { kind: 'fulltime' },
   undo: { kind: 'undo' }, score: { kind: 'score' }, help: { kind: 'help' }, '/help': { kind: 'help' }, '?': { kind: 'help' },
   yes: { kind: 'yes' }, yep: { kind: 'yes' }, yeah: { kind: 'yes' }, 'yes, end it': { kind: 'yes' },
-  no: { kind: 'no' }, nope: { kind: 'no' }, 'not yet': { kind: 'no' }, cancel: { kind: 'no' },
+  no: { kind: 'no' }, nope: { kind: 'no' }, 'not yet': { kind: 'no' }, cancel: { kind: 'no' }, 'no assist': { kind: 'no' },
 };
 const GOAL_WORDS: Record<string, 'goal' | 'penalty' | 'own_goal' | undefined> = { g: 'goal', goal: 'goal', pen: 'penalty', p: 'penalty', og: 'own_goal' };
 const CARD_WORDS: Record<string, 'yellow' | 'red' | undefined> = { y: 'yellow', yc: 'yellow', yellow: 'yellow', r: 'red', rc: 'red', red: 'red' };
+const SUB_WORDS = new Set(['in', 'on', 'sub']);
 const THEM = new Set(['them', 'they', 'opp', 'opposition', 'away', 'other']);
 
 /** Message text tidied for matching: lower case, one space, no trailing full stop or "!" */
@@ -49,8 +51,14 @@ export function parseShort(text: string): ChatCommand | null {
   const head = words.shift()!;
   const goal = Object.hasOwn(GOAL_WORDS, head) ? GOAL_WORDS[head] : undefined;
   const card = Object.hasOwn(CARD_WORDS, head) ? CARD_WORDS[head] : undefined;
-  if (!goal && !card) return null;
+  const sub = SUB_WORDS.has(head);
+  if (!goal && !card && !sub) return null;
   const at = takeMinute(words);
+  // Our sub coming on ("in ram 60"); who goes off is asked next. Their subs aren't logged by chat.
+  if (sub) {
+    if (!words.length || words.length > 4 || THEM.has(words[0]) || words.some(w => !/^[\p{L}'’-]+$/u.test(w))) return null;
+    return { kind: 'sub', side: 'us', player: words.join(' '), ...at };
+  }
   const side: Side = words.length && THEM.has(words[0]) ? 'them' : 'us';
   if (side === 'them') words.shift();
   if (words.some(w => !/^[\p{L}'’-]+$/u.test(w)) || words.length > 4) return null;

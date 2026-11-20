@@ -13,6 +13,7 @@ import { getLiveMinute } from './live-minute';
 import { fullMinutes, halfMinutes, periodStartMinute, splitMinute } from './match-length';
 import { clubTimeZone, SITE_TIME_ZONE } from './dates';
 import { durableRateLimit } from './rate-limit';
+import { subDetail } from './match-subs';
 import { isJuniorFixture, isTeamFixture, teamOfMatch } from './teams';
 import type { Club, ClubMember, ClubTeam, Match } from './supabase/types';
 
@@ -21,7 +22,10 @@ type Pending =
   | { type: 'game'; ids: string[]; text: string }
   | { type: 'player'; command: ChatCommand; options: string[] }
   | { type: 'fulltime' }
-  | { type: 'their_scorer'; eventId: string };
+  | { type: 'their_scorer'; eventId: string }
+  // Optional assist after our goal; who went off after "in ram". options: the names asked about when two match.
+  | { type: 'assist'; eventId: string; scorer: string; options?: string[] }
+  | { type: 'sub_off'; on: string; minute: number; added: number; options?: string[] };
 interface Link { id: string; club_id: string; member_id: string; chat_id: string; active_match_id: string | null; pending: Pending | null }
 interface Settings { ai_enabled: boolean; daily_limit: number; club_daily_limit: number; per_minute: number }
 const DEFAULT_SETTINGS: Settings = { ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 30 };
@@ -236,7 +240,7 @@ class Bot {
     if (pending?.type === 'player') {
       await this.setPending(null);
       const chosen = command?.kind === 'pick' ? pending.options[command.n - 1] : pending.options.find(o => tidy(o) === tidy(text));
-      if (chosen && (pending.command.kind === 'goal' || pending.command.kind === 'card')) return this.logEvent({ ...pending.command, player: chosen }, true);
+      if (chosen && (pending.command.kind === 'goal' || pending.command.kind === 'card' || pending.command.kind === 'sub')) return this.logEvent({ ...pending.command, player: chosen }, true);
     }
     if (pending?.type === 'their_scorer') {
       await this.setPending(null);
@@ -247,6 +251,12 @@ class Bot {
         this.log.result = `Their scorer: ${name}`;
         return [{ text: data?.length ? `Added their scorer: ${name}.` : "That goal isn't there any more." }];
       }
+    }
+
+    if (pending?.type === 'assist' || pending?.type === 'sub_off') {
+      await this.setPending(null);
+      const answer = await this.answerName(pending, text, command);
+      if (answer) return answer;
     }
 
     if (!command) {
@@ -320,7 +330,7 @@ class Bot {
         await this.setPending({ type: 'fulltime' });
         return [{ text: `End the match at ${this.score()}? Followers get the full-time alert.`, buttons: ['Yes, end it', 'Not yet'] }];
       case 'undo': return this.undo();
-      case 'goal': case 'card': return this.logEvent(c);
+      case 'goal': case 'card': case 'sub': return this.logEvent(c);
     }
   }
 
@@ -349,7 +359,58 @@ class Bot {
     return [{ text: `Full time: ${this.fullScore()}. Thanks for scoring!` }];
   }
 
-  private async logEvent(c: Extract<ChatCommand, { kind: 'goal' | 'card' }>, answered = false): Promise<BotReply[]> {
+  /**
+   * The reply to "Assist?" or "Who's going off?": a name from the squad (or a tap when two match), or No.
+   * Null when the message is something else (say "g jack"), which is then handled as usual.
+   */
+  private async answerName(p: Extract<Pending, { type: 'assist' | 'sub_off' }>, text: string, command: ChatCommand | null): Promise<BotReply[] | null> {
+    const assist = p.type === 'assist';
+    if (command?.kind === 'no') {
+      this.log.result = assist ? 'No assist' : 'Sub cancelled';
+      return [{ text: assist ? 'OK, no assist.' : 'OK, sub cancelled. Nothing saved.' }];
+    }
+    const words = tidy(text).split(' ');
+    const picked = command?.kind === 'pick' ? p.options?.[command.n - 1] : p.options?.find(o => tidy(o) === tidy(text));
+    const nameLike = !command && /^[\p{L}'’ -]{2,40}$/u.test(text.trim()) && words.length <= 3 && !words.some(w => NOT_A_NAME.has(w));
+    if (!picked && !nameLike) return null;
+    const other = assist ? p.scorer : p.on;
+    const hits = picked ? [{ id: '', name: picked }] : findPlayers(text, await this.squad()).filter(x => x.name !== other);
+    const again = assist ? 'No assist' : 'Cancel';
+    // After a goal, a longer message that names no one ("what a strike") just skips the assist
+    if (!hits.length && !picked && assist && words.length > 1) return null;
+    if (!hits.length) {
+      await this.setPending(p);
+      return [{ text: `No one called "${text.trim()}" in this game's squad. Send the name again, or tap ${again}.`, buttons: [again] }];
+    }
+    if (hits.length > 1) {
+      const options = hits.slice(0, 4).map(x => x.name);
+      await this.setPending({ ...p, options });
+      return [{ text: `${hits.length === 2 ? 'Two' : 'More than one'} players called "${titleCase(text.trim())}". Which one?`, buttons: options }];
+    }
+    const name = hits[0].name;
+    if (assist) {
+      const { data } = await this.db.from('match_events').update({ assist_player_name: name }).eq('id', p.eventId).eq('match_id', this.match.id).select('id');
+      this.log.result = `Assist: ${name}`;
+      return [{ text: data?.length ? `Assist: ${name}.` : "That goal isn't there any more." }];
+    }
+    return this.saveSub(p.on, name, p.minute, p.added);
+  }
+
+  private async saveSub(on: string, off: string, minute: number, added: number): Promise<BotReply[]> {
+    if (!['live', 'halftime'].includes(this.match.status)) return [{ text: 'This game is not live.' }];
+    const { data, error } = await this.db.rpc('chat_log_event', {
+      p_match_id: this.match.id, p_event_type: 'sub', p_team_side: this.ourSide, p_player_name: on,
+      p_minute: minute, p_added_minute: added, p_detail: subDetail(on, off), p_logged_via: `chat:${this.member.full_name}`.slice(0, 80),
+    });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) return [{ text: "Couldn't save that. Check the game is still live and try again." }];
+    this.log.eventId = row.event_id;
+    const when = minuteLabel(minute, added);
+    this.log.result = `Sub (${when}): ${on} on, ${off} off`;
+    return [{ text: `Sub (${when}): ${on} on, ${off} off.`, buttons: ['Undo'] }];
+  }
+
+  private async logEvent(c: Extract<ChatCommand, { kind: 'goal' | 'card' | 'sub' }>, answered = false): Promise<BotReply[]> {
     const m = this.match;
     if (m.status === 'upcoming') return [{ text: 'Kick-off first: send ko.' }];
     if (!['live', 'halftime'].includes(m.status)) return [{ text: 'This game is not live.' }];
@@ -371,6 +432,10 @@ class Bot {
 
     // When: the minute sent, else the live clock
     const at = c.minute ? { minute: c.minute, added: c.added || 0 } : (() => { const s = splitMinute(m, m.period, getLiveMinute(m, this.now.getTime())); return { minute: s.minute, added: s.added }; })();
+    if (c.kind === 'sub') {
+      await this.setPending({ type: 'sub_off', on: player, minute: at.minute, added: at.added });
+      return [{ text: `${player} coming on (${minuteLabel(at.minute, at.added)}). Who's going off?`, buttons: ['Cancel'] }];
+    }
     const side = c.side === 'us' ? this.ourSide : this.ourSide === 'home' ? 'away' : 'home';
     const type = c.kind === 'goal' ? c.type : c.color === 'yellow' ? 'yellow_card' : 'red_card';
     const { data, error } = await this.db.rpc('chat_log_event', {
@@ -394,6 +459,11 @@ class Bot {
     if (scoringSide(c) === 'them' && c.type !== 'own_goal' && !c.player) {
       await this.setPending({ type: 'their_scorer', eventId: row.event_id });
       return [{ text: `${label} (${when}). Now ${this.score()}. Know their scorer? Just send the name.`, buttons: ['Undo'] }];
+    }
+    // Our own goal from open play: ask for the assist (optional, any other message skips it)
+    if (c.side === 'us' && c.type === 'goal') {
+      await this.setPending({ type: 'assist', eventId: row.event_id, scorer: player });
+      return [{ text: `${label} (${when}). Now ${this.score()}. Assist? Send the name, or tap No assist.`, buttons: ['No assist', 'Undo'] }];
     }
     return [{ text: `${label} (${when}). Now ${this.score()}.`, buttons: ['Undo'] }];
   }

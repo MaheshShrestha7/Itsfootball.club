@@ -59,7 +59,7 @@ const rpc = async (fn: string, a: any) => {
     if (!m) return { data: null, error: { message: 'match is not live' } };
     assert.ok(Number.isInteger(a.p_minute), `minute must be a whole number, got ${a.p_minute}`);
     const id = uuid();
-    T.match_events.push({ id, match_id: m.id, club_id: m.club_id, minute: a.p_minute, added_minute: a.p_added_minute ?? 0, event_type: a.p_event_type, team_side: a.p_team_side, player_name: a.p_player_name, logged_via: a.p_logged_via });
+    T.match_events.push({ id, match_id: m.id, club_id: m.club_id, minute: a.p_minute, added_minute: a.p_added_minute ?? 0, event_type: a.p_event_type, team_side: a.p_team_side, player_name: a.p_player_name, detail_text: a.p_detail || undefined, logged_via: a.p_logged_via });
     const s = side(a.p_event_type, a.p_team_side);
     if (s === 'home') m.home_score++; if (s === 'away') m.away_score++;
     return { data: [{ event_id: id, home_score: m.home_score, away_score: m.away_score }], error: null };
@@ -152,8 +152,13 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // Goals and names
   assert.match(await say('g sam 23'), /Two players called "Sam".*\[Sam Lee \| Sam Gurung\]/);
   assert.equal(m1().home_score, 0, 'nothing saved before the pick');
-  assert.match(await say('Sam Gurung'), /Goal Sam Gurung \(23'\)\. Now 1-0\./);
-  assert.match(await say('g jack', '111', 30), /Goal Jack Tan \(31'\)\. Now 2-0/);
+  assert.match(await say('Sam Gurung'), /Goal Sam Gurung \(23'\)\. Now 1-0\. Assist\? .*\[No assist \| Undo\]/);
+  // Assist: "sam" can only mean the other Sam now, the scorer isn't their own assist
+  assert.match(await say('sam'), /Assist: Sam Lee\./);
+  assert.equal(T.match_events.at(-1)!.assist_player_name, 'Sam Lee');
+  assert.match(await say('g jack', '111', 30), /Goal Jack Tan \(31'\)\. Now 2-0. Assist\?/);
+  assert.match(await say('No assist'), /OK, no assist/);
+  assert.equal(T.match_events.at(-1)!.assist_player_name, undefined);
   assert.match(await say('g bob 31'), /No one called "bob"/);
   assert.match(await say('g kid 31'), /No one called "kid"/, 'junior squad not in senior game');
   assert.match(await say('g pending'), /No one called/, 'pending members not in squad');
@@ -189,6 +194,23 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('ht'), /only after the first half/);
   assert.match(await say('2h', '111', 15), /Second half under way/);
   assert.match(await say('g sam lee', '111', 10), /Goal Sam Lee \(56'\)\. Now 4-1/);
+  // Another message skips the assist: a typo'd single name asks again, a sentence moves on
+  assert.match(await say('arjn'), /No one called "arjn".*\[No assist\]/);
+  assert.match(await say('arjun'), /Assist: Arjun Rai/);
+  // Subs: in, then who's off; two Sams asks which; Cancel saves nothing; Undo removes it
+  assert.match(await say('in arjun 60'), /Arjun Rai coming on \(60'\)\. Who's going off\?/);
+  assert.match(await say('sam'), /Two players called "Sam".*\[Sam Lee \| Sam Gurung\]/);
+  assert.match(await say('2'), /Sub \(60'\): Arjun Rai on, Sam Gurung off\./);
+  const sub = T.match_events.at(-1)!;
+  assert.deepEqual([sub.event_type, sub.team_side, sub.player_name, sub.detail_text], ['sub', 'home', 'Arjun Rai', 'Substitution: Arjun Rai ON, Sam Gurung OFF.']);
+  assert.equal(m1().home_score, 4, 'a sub never changes the score');
+  assert.match(await say('in jack'), /Jack Tan coming on/);
+  assert.match(await say('Cancel'), /sub cancelled/);
+  assert.match(await say('in sam lee'), /Sam Lee coming on/);
+  assert.match(await say('sam lee'), /No one called "sam lee"/, "can't swap a player for themselves");
+  assert.match(await say('jack'), /Sub \(\d+'\): Sam Lee on, Jack Tan off/);
+  assert.match(await say('undo'), /Removed: Sub .*Sam Lee on, Jack Tan off/);
+  assert.equal(T.match_events.filter(e => e.event_type === 'sub').length, 1);
 
   // AI limits: club at its limit -> no AI
   T.platform_chat_settings[0].club_daily_limit = 2;

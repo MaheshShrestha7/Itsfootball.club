@@ -19,6 +19,12 @@ assert.deepEqual(parseShort('ft'), { kind: 'fulltime' });
 assert.deepEqual(parseShort('undo'), { kind: 'undo' });
 assert.deepEqual(parseShort('2'), { kind: 'pick', n: 2 });
 assert.deepEqual(parseShort('Yes'), { kind: 'yes' });
+assert.deepEqual(parseShort('in Ram'), { kind: 'sub', side: 'us', player: 'ram' });
+assert.deepEqual(parseShort('sub ram rai 60'), { kind: 'sub', side: 'us', player: 'ram rai', minute: 60, added: undefined });
+assert.deepEqual(parseShort('No assist'), { kind: 'no' });
+assert.equal(parseShort('in'), null);
+assert.equal(parseShort('in them'), null);
+assert.equal(parseShort('on 23'), null);
 // Not the short format: our goal without a name, a card without a name, sentences, numbers as names
 assert.equal(parseShort('g'), null);
 assert.equal(parseShort('y'), null);
