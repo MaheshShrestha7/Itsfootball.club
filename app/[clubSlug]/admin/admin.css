@@ -1270,6 +1270,7 @@ a.admin-tab { text-decoration: none; }
 .cm-li { min-width: 0; } .cm-li b { display: block; color: var(--color-ink); font-weight: 600; }
 .cm-li-end { display: inline-flex; align-items: center; gap: var(--space-xs); color: var(--color-muted); }
 
+.cm-type .admin-chips { flex-wrap: wrap; }
 .cm-type { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md); padding: var(--space-md) var(--space-md) var(--space-sm); }
 .cm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-sm); padding: 0 var(--space-md) var(--space-sm); }
 .cm-field { display: flex; flex-direction: column; gap: var(--space-2xs); }
@@ -1348,8 +1349,15 @@ a.admin-tab { text-decoration: none; }
   .cm-agenda li { grid-template-columns: 30px minmax(0, 1fr); }
   .cm-agenda li.is-sub { padding-left: var(--space-md); }
   .cm-row-btns { grid-column: 2; display: flex; }
-  .cm-it-meta, .cm-add { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .cm-add > :first-child, .cm-add > .btn { grid-column: 1 / -1; }
+  .cm-it-meta { grid-template-columns: minmax(0, 1fr) 84px; }
+  .cm-add { grid-template-columns: minmax(0, 1fr) 110px; }
+  .cm-add > :first-child, .cm-add > :nth-child(2), .cm-add > .btn { grid-column: 1 / -1; }
+  /* 16px stops iPhones zooming into a field; 40px taps for the row buttons */
+  .cm-page :is(.form-input, .form-select, textarea) { font-size: 16px; }
+  .cm-page .cm-x { width: 40px; height: 40px; }
+  .cm-page .cm-row-btns { gap: var(--space-2xs); }
+  :is(.cm-page, .cm-acts) .btn-sm { min-height: 40px; }
+  .cm-page .rv-crumb { display: inline-flex; align-items: center; min-height: 40px; }
   .cm-act-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cm-act-form > .btn { grid-column: 1 / -1; }
   .cm-clock { text-align: left; }
