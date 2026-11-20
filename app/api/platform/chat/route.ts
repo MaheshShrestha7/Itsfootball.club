@@ -90,6 +90,10 @@ export async function POST(req: NextRequest) {
 
   if (body?.action === 'webhook') {
     if (!telegramConfigured()) return NextResponse.json({ error: 'Add TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and TELEGRAM_WEBHOOK_SECRET to the site first.' }, { status: 400 });
+    // Telegram only takes letters, numbers, _ and - here, up to 256
+    if (!/^[A-Za-z0-9_-]{1,256}$/.test(process.env.TELEGRAM_WEBHOOK_SECRET || '')) {
+      return NextResponse.json({ error: 'TELEGRAM_WEBHOOK_SECRET can only use letters, numbers, _ and - (no spaces or other symbols). Change it in Cloudflare, deploy, then try again.' }, { status: 400 });
+    }
     const r = await setTelegramWebhook(`${SITE_URL}/api/chat/telegram`);
     if (!r.ok) return NextResponse.json({ error: `Telegram said: ${r.description || 'no'}` }, { status: 502 });
     await logPlatformAction(db, auth, { action: 'ai_bot_connected', table: 'platform_chat_settings', summary: 'Connected Itsfootball.club Bot to Telegram' });

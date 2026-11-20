@@ -34,6 +34,8 @@ export default function ChatAiTab({ clubs }: { clubs: PlatformClubItem[] }) {
   const [limits, setLimits] = useState<Settings | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState('');
+  // The bot card's own result, shown under its buttons (the page note is out of sight on a phone)
+  const [botNote, setBotNote] = useState('');
   const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(async () => {
@@ -63,10 +65,11 @@ export default function ChatAiTab({ clubs }: { clubs: PlatformClubItem[] }) {
   };
   const run = async (action: 'webhook' | 'test', reader?: string) => {
     setBusy(action + (reader || ''));
+    setBotNote('');
     const res = await platformApi<{ ok?: boolean; model?: string; answer?: string; error?: string }>('chat', { action, reader });
     setBusy('');
-    if (action === 'webhook') setNote(res.error || 'The bot is connected. Telegram now sends messages to this site.');
-    else setNote(res.ok ? `${res.model} works: it read the sample message.` : `${res.model || reader} didn't work: ${res.error || `it answered "${res.answer}"`}`);
+    if (action === 'webhook') setBotNote(res.error || 'The bot is connected. Telegram now sends messages to this site.');
+    else setBotNote(res.ok ? `${res.model} works: it read the sample message.` : `${res.model || reader} didn't work: ${res.error || `it answered "${res.answer}"`}`);
   };
 
   const s = data?.settings;
@@ -197,10 +200,11 @@ export default function ChatAiTab({ clubs }: { clubs: PlatformClubItem[] }) {
               <dt>Backup model</dt><dd><code>{data.setup.models.gemma}</code></dd>
             </dl>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.bot || busy === 'webhook'} onClick={() => run('webhook')}>Connect the bot</button>
-              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.ai || busy === 'testflash-lite'} onClick={() => run('test', 'flash-lite')}>Test Flash-Lite</button>
-              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.ai || busy === 'testgemma'} onClick={() => run('test', 'gemma')}>Test Gemma 4</button>
+              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.bot || busy === 'webhook'} onClick={() => run('webhook')}>{busy === 'webhook' ? 'Connecting…' : 'Connect the bot'}</button>
+              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.ai || busy === 'testflash-lite'} onClick={() => run('test', 'flash-lite')}>{busy === 'testflash-lite' ? 'Testing…' : 'Test Flash-Lite'}</button>
+              <button type="button" className="mc-pill-btn ghost" disabled={!data.setup.ai || busy === 'testgemma'} onClick={() => run('test', 'gemma')}>{busy === 'testgemma' ? 'Testing…' : 'Test Gemma 4'}</button>
             </div>
+            {botNote && <p role="status" className="mc-muted" style={{ margin: '12px 0 0', overflowWrap: 'anywhere' }}>{botNote}</p>}
           </section>
         </fieldset>
       )}

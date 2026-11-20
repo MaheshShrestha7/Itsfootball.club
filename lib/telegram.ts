@@ -1,5 +1,5 @@
 // Itsfootball.club Bot on Telegram (server only). Needs TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and
-// TELEGRAM_WEBHOOK_SECRET (any long random text: Telegram sends it back on every update, so only
+// TELEGRAM_WEBHOOK_SECRET (long random text of letters, numbers, _ and - only: Telegram sends it back on every update, so only
 // Telegram can call our webhook).
 
 export const telegramConfigured = () =>
