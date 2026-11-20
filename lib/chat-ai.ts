@@ -25,7 +25,7 @@ export async function askModel(reader: AiReader, text: string, names: string[]):
         contents: [{ role: 'user', parts: [{ text: aiPrompt(text, names) }] }],
         generationConfig: { maxOutputTokens: 200, thinkingConfig: { thinkingLevel: 'minimal' } },
       }),
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000),
     });
     const json = await res.json().catch(() => null);
     if (!res.ok) return { error: `${res.status} ${json?.error?.message || ''}`.trim().slice(0, 200) };
