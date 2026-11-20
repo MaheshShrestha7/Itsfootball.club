@@ -2,7 +2,7 @@
 
 import React, { use, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, CheckCircle2, Download, Save, Upload } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Copy, Download, Save, Sheet, Undo2, Upload } from 'lucide-react';
 import { BudgetMeter, BudgetPie, CHART_STYLES, PaceChart } from '@/components/admin/BudgetCharts';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { agmMoney, seasonOptions, type AgmExpense, type AgmPayment } from '@/lib/agm-report';
@@ -23,6 +23,9 @@ type Expense = AgmExpense;
 
 const MAX_ROWS = 100000;
 const MAX_FILE_BYTES = 1024 * 1024;
+const toCents = (v: string) => parseMoneyToCents(v.replace(/\$/g, ''));
+// What goes in a box: whole dollars unless there are cents, with thousands commas (parseMoneyToCents takes them back)
+const boxValue = (cents: number) => (cents / 100).toLocaleString('en-AU', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
 
 export default function BudgetPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
@@ -36,6 +39,9 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
   // What's in the boxes, by budgetKey. An entry only exists once it's been edited or imported.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<'track' | 'plan' | null>(null);
+  // Set once someone picks "Start blank" on a season with no budget, so the empty sheet shows
+  const [started, setStarted] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string; list?: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const db = getSupabaseClient();
@@ -76,6 +82,8 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
   const money = useMemo(() => (ledger && season ? agmMoney(payments, expenses, season, previous) : null), [ledger, payments, expenses, season, previous]);
   const currency = ledger?.currency || 'AUD';
   const fmt = (cents: number) => formatMoney(cents, currency);
+  // Whole dollars where there are no cents, for the budget sheet's many small figures
+  const short = (cents: number) => fmt(cents).replace(/\.00$/, '');
 
   const savedAmounts = useMemo(() => {
     const out: Record<string, number> = {};
@@ -85,10 +93,10 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
   // The plan as it stands on screen: saved figures with any edits on top
   const amounts = useMemo(() => {
     const out = { ...savedAmounts };
-    for (const [k, v] of Object.entries(drafts)) out[k] = v.trim() === '' ? 0 : parseMoneyToCents(v) ?? out[k] ?? 0;
+    for (const [k, v] of Object.entries(drafts)) out[k] = v.trim() === '' ? 0 : toCents(v) ?? out[k] ?? 0;
     return out;
   }, [savedAmounts, drafts]);
-  const badBoxes = Object.entries(drafts).filter(([, v]) => v.trim() !== '' && parseMoneyToCents(v) === null).map(([k]) => k);
+  const badBoxes = Object.entries(drafts).filter(([, v]) => v.trim() !== '' && toCents(v) === null).map(([k]) => k);
   const changed = Object.keys(drafts).filter(k => (amounts[k] || 0) !== (savedAmounts[k] || 0));
   const dirty = changed.length > 0;
 
@@ -113,6 +121,8 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
     if (dirty && !(await confirmAction({ title: 'Leave without saving?', message: 'Your changes to this budget haven\'t been saved.', confirmLabel: 'Leave without saving', danger: true }))) return;
     setDrafts({});
     setNotice(null);
+    setStarted(false);
+    setTab(null);
     setPicked(next);
   };
 
@@ -153,11 +163,11 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
     if (dirty && !(await confirmAction({ title: 'Replace your unsaved changes?', message: 'This fills in the budget from last season, on top of what you\'ve typed.', confirmLabel: 'Fill it in' }))) return;
     const next: Record<string, string> = {};
     if (source === 'budget') {
-      for (const b of saved || []) if (b.season === previous) next[budgetKey(b.kind, b.category)] = (b.amount_cents / 100).toFixed(2);
+      for (const b of saved || []) if (b.season === previous) next[budgetKey(b.kind, b.category)] = boxValue(b.amount_cents);
     } else {
       const last = agmMoney(payments, ledger.expenses, previous, null);
-      for (const l of last.income) if (l.cents > 0) next[budgetKey('income', l.key)] = (l.cents / 100).toFixed(2);
-      for (const l of last.expenses) if (l.cents > 0) next[budgetKey('expense', l.key)] = (l.cents / 100).toFixed(2);
+      for (const l of last.income) if (l.cents > 0) next[budgetKey('income', l.key)] = boxValue(l.cents);
+      for (const l of last.expenses) if (l.cents > 0) next[budgetKey('expense', l.key)] = boxValue(l.cents);
     }
     if (!Object.keys(next).length) return setNotice({ ok: false, text: source === 'budget' ? `${previous} has no budget to copy.` : `${previous} has no income or expenses to copy.` });
     setDrafts(next);
@@ -184,7 +194,7 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
     if (!read.length) return setNotice({ ok: false, text: 'Nothing was imported.', list: result.problems });
     // Only what differs from the plan on screen: the export lists every category, mostly at zero
     const differing = read.filter(([k, cents]) => cents !== (amounts[k] || 0));
-    setDrafts(d => ({ ...d, ...Object.fromEntries(differing.map(([k, cents]) => [k, (cents / 100).toFixed(2)])) }));
+    setDrafts(d => ({ ...d, ...Object.fromEntries(differing.map(([k, cents]) => [k, boxValue(cents)])) }));
     const count = differing.length;
     setNotice({
       ok: result.problems.length === 0,
@@ -193,39 +203,113 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
     });
   };
 
-  const table = (kind: BudgetKind, title: string, calculated: BudgetLine[], totals: ReturnType<typeof budgetTotals>) => {
-    // Anything being edited stays on screen even at zero, and rows are ordered by the saved budget, so
-    // they don't vanish or jump about while someone types
-    const editing = Object.keys(drafts).filter(k => k.startsWith(`${kind}:`)).map(k => k.split(':')[1]).filter(c => !calculated.some(l => l.category === c));
-    const steady = (l: BudgetLine) => Math.max(savedAmounts[budgetKey(kind, l.category)] || 0, l.actual);
-    const lines: BudgetLine[] = [
-      ...calculated,
-      ...editing.map(category => ({ kind, category, label: CATEGORIES[kind][category] || category, budget: 0, actual: 0, percent: null, variance: 0 })),
-    ].sort((a, b) => steady(b) - steady(a) || a.label.localeCompare(b.label));
-    const listed = new Set(lines.map(l => l.category));
-    const others = Object.entries(CATEGORIES[kind]).filter(([k]) => !listed.has(k));
+  const undo = () => {
+    setDrafts({});
+    setNotice(null);
+  };
+
+  // Last season, per category, to type against: its budget and what actually came in or went out
+  const lastBudget = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const b of saved || []) if (previous && b.season === previous) out[budgetKey(b.kind, b.category)] = b.amount_cents;
+    return out;
+  }, [saved, previous]);
+  const lastActual = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const l of money?.income || []) out[budgetKey('income', l.key)] = l.previousCents;
+    for (const l of money?.expenses || []) out[budgetKey('expense', l.key)] = l.previousCents;
+    return out;
+  }, [money]);
+  const lastTotals = (kind: BudgetKind, from: Record<string, number>) => Object.entries(from).filter(([k]) => k.startsWith(`${kind}:`)).reduce((n, [, c]) => n + c, 0);
+  const lastBudgetTotal = { income: lastTotals('income', lastBudget), expense: lastTotals('expense', lastBudget) };
+
+  const hasBudget = Object.values(savedAmounts).some(c => c > 0);
+  const view = tab ?? (hasBudget ? 'track' : 'plan');
+  const choosing = view === 'plan' && !hasBudget && !dirty && !started && !Object.keys(drafts).length;
+
+  // Enter moves to the next box, so a whole budget can be typed without the mouse
+  const nextBox = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const boxes = [...document.querySelectorAll<HTMLInputElement>('input[data-budget-box]')].filter(b => b.offsetParent);
+    boxes[boxes.indexOf(e.currentTarget) + 1]?.focus();
+  };
+  const closeMenu = (e: React.MouseEvent) => e.currentTarget.closest('details')?.removeAttribute('open');
+
+  const sheet = (kind: BudgetKind, title: string, total: number) => {
+    const actual = new Map(actualsFor(kind).map(a => [a.key, a.cents]));
+    const keys = [...new Set([...Object.keys(CATEGORIES[kind]), ...actual.keys(), ...Object.keys(lastActual).filter(k => k.startsWith(`${kind}:`)).map(k => k.split(':')[1])])];
+    // Ordered by figures that don't change while typing, so rows don't jump about
+    const weight = (c: string) => { const k = budgetKey(kind, c); return Math.max(savedAmounts[k] || 0, lastBudget[k] || 0, lastActual[k] || 0, actual.get(c) || 0); };
+    const rows = keys.map(category => ({ category, label: CATEGORIES[kind][category] || category, weight: weight(category) }))
+      .sort((a, b) => b.weight - a.weight || a.label.localeCompare(b.label));
+    const shown = rows.filter(r => r.weight > 0 || drafts[budgetKey(kind, r.category)] !== undefined);
+    const more = rows.filter(r => !shown.includes(r));
+    const word = kind === 'income' ? 'came in' : 'spent';
+    const row = ({ category, label }: { category: string; label: string }) => {
+      const key = budgetKey(kind, category);
+      const id = `budget-${kind}-${category}`;
+      const bad = badBoxes.includes(key);
+      const now = amounts[key] || 0;
+      const was = savedAmounts[key] || 0;
+      const isChanged = bad || (drafts[key] !== undefined && now !== was);
+      const lb = lastBudget[key] || 0;
+      const la = lastActual[key] || 0;
+      const suggestion = la || lb;
+      return (
+        <div key={key} className={`budget-row${isChanged ? ' is-changed' : ''}${bad ? ' is-bad' : ''}`}>
+          <label htmlFor={id}>{label}</label>
+          <div className="budget-money">
+            <span aria-hidden="true">$</span>
+            <input id={id} data-budget-box className="form-input" inputMode="decimal" autoComplete="off" placeholder="0" aria-invalid={bad}
+              aria-describedby={`${id}-hint${bad ? ` ${id}-err` : ''}`}
+              value={drafts[key] ?? (was ? boxValue(was) : '')} onChange={e => setBox(key, e.target.value)} onKeyDown={nextBox} />
+          </div>
+          <div className="budget-hint" id={`${id}-hint`}>
+            {previous && <span>{lb || la ? `${previous}: ${lb ? `${short(lb)} budget` : 'not budgeted'}, ${short(la)} ${word}` : `Nothing in ${previous}`}</span>}
+            {!!actual.get(category) && <span>{`This season so far: ${short(actual.get(category)!)}`}</span>}
+            {!bad && now === 0 && suggestion > 0 && <button type="button" className="budget-use" onClick={() => setBox(key, boxValue(suggestion))} aria-label={`Use ${short(suggestion)} for ${label}`}>Use {short(suggestion)}</button>}
+            {isChanged && was > 0 && <span className="budget-was">Was {short(was)}</span>}
+          </div>
+          {bad && <p className="budget-err" id={`${id}-err`}>That isn&apos;t an amount. Type it like 1500 or 1500.50.</p>}
+        </div>
+      );
+    };
+    return (
+      <section className="admin-panel budget-sheet" aria-labelledby={`budget-${kind}-h`}>
+        <div className="budget-sheet-head"><h2 id={`budget-${kind}-h`}>{title}</h2><span className="budget-sheet-total">{short(total)}</span></div>
+        <div className="budget-cols" aria-hidden="true"><span>{previous ? `Category, and ${previous} to compare` : 'Category'}</span><span>{season} budget</span></div>
+        {shown.map(row)}
+        {more.length > 0 && (
+          <details className="budget-more" open={shown.length === 0}>
+            <summary><ChevronRight size={16} aria-hidden="true" /> {more.length} more {kind === 'income' ? 'income' : 'spending'} {more.length === 1 ? 'category' : 'categories'}</summary>
+            {more.map(row)}
+          </details>
+        )}
+      </section>
+    );
+  };
+
+  const table = (kind: BudgetKind, title: string, lines: BudgetLine[], totals: ReturnType<typeof budgetTotals>) => {
     const statusText = (l: BudgetLine) => (l.budget === 0
       ? (l.actual !== 0 ? 'Not budgeted' : '')
       : `${varianceWord(kind, l.variance)}${l.variance !== 0 ? ` by ${fmt(Math.abs(l.variance))}` : ''}`);
     return (
       <section className="admin-panel" aria-label={title}>
-        <div className="admin-panel-head"><h2>{title}</h2><span className="admin-meta">{totals.percent === null ? 'No budget set' : `${totals.percent}% of budget`}</span></div>
+        <div className="admin-panel-head">
+          <h2>{title}</h2>
+          <span className="admin-meta">{totals.percent === null ? 'No budget set' : `${totals.percent}% of budget`}</span>
+        </div>
         <div className="admin-table-wrap">
           <table className="admin-table budget-table">
             <thead><tr><th scope="col">Category</th><th scope="col" className="is-num">Budget</th><th scope="col" className="is-num">Actual</th><th scope="col">How it&apos;s going</th></tr></thead>
             <tbody>
               {lines.map(l => {
-                const key = budgetKey(kind, l.category);
-                const bad = badBoxes.includes(key);
                 const over = kind === 'expense' && l.variance < 0;
                 return (
-                  <tr key={key}>
+                  <tr key={l.category}>
                     <td className="is-strong">{l.label}</td>
-                    <td className="is-num" data-label="Budget">
-                      <input className="form-input" inputMode="decimal" aria-label={`${title}: ${l.label} budget`} aria-invalid={bad}
-                        style={{ width: '7.5rem', textAlign: 'right', marginLeft: 'auto', ...(bad ? { borderColor: 'var(--c-red)' } : {}) }}
-                        value={drafts[key] ?? (l.budget ? (l.budget / 100).toFixed(2) : '')} placeholder="0.00" onChange={e => setBox(key, e.target.value)} />
-                    </td>
+                    <td className="is-num" data-label="Budget">{l.budget ? fmt(l.budget) : '-'}</td>
                     <td className="is-num is-strong" data-label="Actual">{fmt(l.actual)}</td>
                     <td style={{ minWidth: 170 }}>
                       <span style={over ? { color: 'var(--c-red)', fontWeight: 700 } : undefined}>{statusText(l)}</span>
@@ -245,22 +329,15 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
             </tbody>
           </table>
         </div>
-        {others.length > 0 && (
-          <div className="admin-section">
-            <label className="form-label" htmlFor={`add-${kind}`}>Add a category</label>
-            <select id={`add-${kind}`} className="form-select" style={{ width: 'auto', maxWidth: '100%', alignSelf: 'flex-start' }} value=""
-              onChange={e => { if (e.target.value) setBox(budgetKey(kind, e.target.value), '0.00'); }}>
-              <option value="">Choose…</option>
-              {others.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-            </select>
-          </div>
-        )}
       </section>
     );
   };
 
   const net = incomeTotal.actual - expenseTotal.actual;
   const netPlan = incomeTotal.budget - expenseTotal.budget;
+  const signed = (cents: number) => (cents < 0 ? `-${fmt(-cents)}` : fmt(cents));
+  const changeCount = new Set([...changed, ...badBoxes]).size;
+  const fileInput = <input ref={fileRef} type="file" accept=".csv,text/csv" aria-label="Import a budget from a CSV file" style={{ display: 'none' }} onChange={e => void importFile(e.target.files?.[0])} />;
 
   return (
     <div>
@@ -294,14 +371,10 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
           <p className="text-body" style={{ margin: 0 }}>Add a season first, under Seasons, and you can set a budget for it.</p>
         </div>
       ) : (
-        <div className="stack">
-          <div className="admin-toolbar" style={{ marginBottom: 0, flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn-primary" disabled={busy || !dirty} onClick={save}><Save size={16} aria-hidden="true" /> {busy ? 'Saving…' : dirty ? 'Save budget' : 'Saved'}</button>
-            <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} aria-hidden="true" /> Export CSV</button>
-            <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}><Upload size={16} aria-hidden="true" /> Import CSV</button>
-            <input ref={fileRef} type="file" accept=".csv,text/csv" aria-label="Import a budget from a CSV file" style={{ display: 'none' }} onChange={e => void importFile(e.target.files?.[0])} />
-            {previous && <button type="button" className="btn btn-secondary" onClick={() => void startFrom('budget')}>Copy {previous} budget</button>}
-            {previous && <button type="button" className="btn btn-secondary" onClick={() => void startFrom('actuals')}>Start from {previous} actuals</button>}
+        <>
+          <div role="tablist" aria-label="Budget" className="admin-tabs">
+            <button data-view-ok type="button" role="tab" aria-selected={view === 'track'} className="admin-tab" onClick={() => setTab('track')}>How it&apos;s going</button>
+            <button data-view-ok type="button" role="tab" aria-selected={view === 'plan'} className="admin-tab" onClick={() => setTab('plan')}>Set the budget</button>
           </div>
 
           {notice && (
@@ -313,31 +386,106 @@ export default function BudgetPage({ params }: { params: Promise<{ clubSlug: str
               </div>
             </div>
           )}
+          {fileInput}
 
-          <section className="admin-panel admin-dash-figures-wrap budget-figures" aria-label="Season totals">
-            <dl className="admin-dash-figures">
-              <div><dt>Income</dt><dd>{fmt(incomeTotal.actual)}</dd><span className="admin-note">of {fmt(incomeTotal.budget)} budget</span></div>
-              <div><dt>Spending</dt><dd>{fmt(expenseTotal.actual)}</dd><span className="admin-note">of {fmt(expenseTotal.budget)} budget</span></div>
-              <div><dt>Net so far</dt><dd className={net < 0 ? 'is-live' : undefined}>{net < 0 ? `-${fmt(-net)}` : fmt(net)}</dd><span className="admin-note">Budgeted {netPlan < 0 ? `-${fmt(-netPlan)}` : fmt(netPlan)}</span></div>
-            </dl>
-          </section>
+          {view === 'track' ? (
+            <div className="stack">
+              <section className="admin-panel admin-dash-figures-wrap budget-figures" aria-label="Season totals">
+                <dl className="admin-dash-figures">
+                  <div><dt>Income</dt><dd>{fmt(incomeTotal.actual)}</dd><span className="admin-note">of {fmt(incomeTotal.budget)} budget</span></div>
+                  <div><dt>Spending</dt><dd>{fmt(expenseTotal.actual)}</dd><span className="admin-note">of {fmt(expenseTotal.budget)} budget</span></div>
+                  <div><dt>Net so far</dt><dd className={net < 0 ? 'is-live' : undefined}>{signed(net)}</dd><span className="admin-note">Budgeted {signed(netPlan)}</span></div>
+                </dl>
+              </section>
 
-          {dated ? (
-            <div className="admin-two">
-              <section className="admin-panel"><div className="admin-section"><PaceChart title="Income through the season" points={incomePace} money={fmt} actualName="Income so far" /></div></section>
-              <section className="admin-panel"><div className="admin-section"><PaceChart title="Spending through the season" points={expensePace} money={fmt} actualName="Spending so far" /></div></section>
+              {dated ? (
+                <div className="admin-two">
+                  <section className="admin-panel"><div className="admin-section"><PaceChart title="Income through the season" points={incomePace} money={fmt} actualName="Income so far" /></div></section>
+                  <section className="admin-panel"><div className="admin-section"><PaceChart title="Spending through the season" points={expensePace} money={fmt} actualName="Spending so far" /></div></section>
+                </div>
+              ) : <p className="text-meta" style={{ margin: 0 }}>Season {season} has no start and end dates, so the charts over time aren&apos;t shown. Add them under Seasons.</p>}
+
+              <div className="admin-two">
+                <section className="admin-panel"><div className="admin-section"><BudgetPie title="Where the money came from" slices={pieSlices(incomeLines)} money={fmt} /></div></section>
+                <section className="admin-panel"><div className="admin-section"><BudgetPie title="Where the money went" slices={pieSlices(expenseLines)} money={fmt} /></div></section>
+              </div>
+
+              {table('income', 'Income', incomeLines, incomeTotal)}
+              {table('expense', 'Spending', expenseLines, expenseTotal)}
+              <div className="admin-toolbar" style={{ marginBottom: 0 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setTab('plan')}>Change the budget</button>
+                <button data-view-ok type="button" className="btn btn-secondary" onClick={exportCsv}><Download size={16} aria-hidden="true" /> Export CSV</button>
+              </div>
+              <p className="admin-table-foot" style={{ margin: 0 }}>Actuals come from Finance: income in the season it was paid, spending in the season it was spent.</p>
             </div>
-          ) : <p className="text-meta" style={{ margin: 0 }}>Season {season} has no start and end dates, so the charts over time aren&apos;t shown. Add them under Seasons.</p>}
+          ) : choosing ? (
+            <section className="admin-panel" aria-labelledby="budget-start-h">
+              <div className="admin-section budget-start" style={{ paddingTop: 'var(--space-md)' }}>
+                <h2 id="budget-start-h">No budget for {season} yet</h2>
+                <p>Pick a starting point. Nothing is saved until you tap Save budget, so you can change every figure first.</p>
+                <div className="budget-ways">
+                  {previous && lastBudgetTotal.income + lastBudgetTotal.expense > 0 && (
+                    <div className="budget-way"><div><b>Copy the {previous} budget</b><span>{short(lastBudgetTotal.income)} income, {short(lastBudgetTotal.expense)} spending</span></div>
+                      <button type="button" className="btn btn-primary" onClick={() => void startFrom('budget')}>Copy {previous} budget</button></div>
+                  )}
+                  {previous && money.previousIncome + money.previousExpenses > 0 && (
+                    <div className="budget-way"><div><b>Start from what happened in {previous}</b><span>{short(money.previousIncome)} came in, {short(money.previousExpenses)} went out</span></div>
+                      <button type="button" className="btn btn-secondary" onClick={() => void startFrom('actuals')}>Use {previous} actuals</button></div>
+                  )}
+                  <div className="budget-way"><div><b>Import a spreadsheet</b><span>A CSV with Type, Category and Budget columns, like the export</span></div>
+                    <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}><Upload size={16} aria-hidden="true" /> Import CSV</button></div>
+                  <div className="budget-way"><div><b>Start blank</b><span>{previous ? `Type each figure yourself, with ${previous} shown beside every box` : 'Type each figure yourself'}</span></div>
+                    <button type="button" className="btn btn-secondary" onClick={() => setStarted(true)}>Start blank</button></div>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <div className="stack">
+              <div className="budget-tools">
+                <p>Type whole dollars, like 1500. Enter moves to the next box.</p>
+                <div className="budget-tools-end">
+                  {previous && (
+                    <details className="budget-menu">
+                      <summary className="btn btn-secondary btn-sm"><Copy size={16} aria-hidden="true" /> Fill from {previous} <ChevronDown size={16} aria-hidden="true" /></summary>
+                      <div className="budget-menu-list">
+                        <button type="button" onClick={e => { closeMenu(e); void startFrom('budget'); }}>Copy the {previous} budget<small>{short(lastBudgetTotal.income)} income, {short(lastBudgetTotal.expense)} spending</small></button>
+                        <button type="button" onClick={e => { closeMenu(e); void startFrom('actuals'); }}>Use what happened in {previous}<small>{short(money.previousIncome)} came in, {short(money.previousExpenses)} went out</small></button>
+                      </div>
+                    </details>
+                  )}
+                  <details className="budget-menu">
+                    <summary className="btn btn-secondary btn-sm"><Sheet size={16} aria-hidden="true" /> Spreadsheet <ChevronDown size={16} aria-hidden="true" /></summary>
+                    <div className="budget-menu-list">
+                      <button data-view-ok type="button" onClick={e => { closeMenu(e); exportCsv(); }}>Export CSV<small>Every category, budget and actual</small></button>
+                      <button type="button" onClick={e => { closeMenu(e); fileRef.current?.click(); }}>Import CSV<small>Same columns as the export: Type, Category and Budget</small></button>
+                    </div>
+                  </details>
+                </div>
+              </div>
 
-          <div className="admin-two">
-            <section className="admin-panel"><div className="admin-section"><BudgetPie title="Where the money came from" slices={pieSlices(incomeLines)} money={fmt} /></div></section>
-            <section className="admin-panel"><div className="admin-section"><BudgetPie title="Where the money went" slices={pieSlices(expenseLines)} money={fmt} /></div></section>
-          </div>
+              <div className="budget-sheets">
+                {sheet('income', 'Income', incomeTotal.budget)}
+                {sheet('expense', 'Spending', expenseTotal.budget)}
+              </div>
 
-          {table('income', 'Income', incomeLines, incomeTotal)}
-          {table('expense', 'Spending', expenseLines, expenseTotal)}
-          <p className="admin-table-foot">Actuals come from Finance: income in the season it was paid, spending in the season it was spent. To import, use the same columns as the export: Type, Category and Budget.</p>
-        </div>
+              <div role="region" aria-label="Your budget" className={`admin-savebar budget-savebar${badBoxes.length ? ' is-error' : ''}`}>
+                <dl className="budget-plan">
+                  <div><dt>Income</dt><dd>{short(incomeTotal.budget)}</dd></div>
+                  <div><dt>Spending</dt><dd>{short(expenseTotal.budget)}</dd></div>
+                  <div><dt>{netPlan < 0 ? 'Planned loss' : 'Planned surplus'}</dt><dd className={netPlan < 0 ? 'is-bad' : 'is-ok'}>{netPlan < 0 ? `-${short(-netPlan)}` : short(netPlan)}</dd></div>
+                </dl>
+                <div className="budget-save-end">
+                  <span className="budget-changes" role="status">
+                    {changeCount ? `${changeCount} ${changeCount === 1 ? 'change' : 'changes'}` : 'All saved'}
+                    {badBoxes.length > 0 && <b>, {badBoxes.length} to fix</b>}
+                  </span>
+                  {dirty && <button type="button" className="btn btn-secondary btn-sm" onClick={undo}><Undo2 size={16} aria-hidden="true" /> Undo</button>}
+                  <button type="button" className="btn btn-primary" disabled={busy || !changeCount} onClick={save}><Save size={16} aria-hidden="true" /> {busy ? 'Saving…' : 'Save budget'}</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
