@@ -235,6 +235,9 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('Not yet'), /still playing/);
   assert.equal(m1().status, 'live');
   assert.match(await say('ft'), /End the match/);
+  // A message in between doesn't lose the question, and Player of the Match gets a straight answer
+  assert.match(await say('Man of the Match Mahesh'), /Player of the Match isn't in chat yet/);
+  assert.equal(T.chat_links[0].pending?.type, 'fulltime');
   assert.match(await say('Yes, end it'), /Full time: Austral 4-1 Liverpool Rangers/);
   assert.equal(m1().status, 'completed'); assert.equal(m1().period, 'full_time'); assert.equal(m1().current_minute, 90);
   assert.match(await say('g sam 90'), /No game for you to score today.*\nToday's games I can't score:\nAustral vs Liverpool Rangers: it is completed/s);

@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: Settings = { ai_enabled: true, daily_limit: 400, club_da
 
 // Words that mean the message is about the game, not a name for their scorer
 const NOT_A_NAME = new Set(['they', 'them', 'we', 'us', 'our', 'scored', 'score', 'goal', 'again', 'yellow', 'red', 'card', 'half', 'time', 'full', 'kick', 'off', 'penalty', 'pen', 'own', 'no', 'yes', 'undo', 'help']);
+const POTM = /\b(man|player|woman) of the match\b|\b[pm]otm\b/i;
 const NOT_LINKED = "This chat isn't set up to update scores. Ask your club admin for a Link chat link.";
 const OPEN = ['upcoming', 'live', 'halftime'];
 
@@ -258,10 +259,20 @@ class Bot {
     const pending = this.link.pending;
     let command = parseShort(text);
 
-    if (pending?.type === 'fulltime') {
+    // "Yes, end it" is only ever the full-time button: it ends the game even if a message came in between
+    if (tidy(text) === 'yes, end it') {
       await this.setPending(null);
-      if (command?.kind === 'yes') return this.fullTime();
-      if (command?.kind === 'no') return [{ text: 'OK, still playing.' }];
+      return this.fullTime();
+    }
+    if (pending?.type === 'fulltime') {
+      if (command?.kind === 'yes') { await this.setPending(null); return this.fullTime(); }
+      if (command?.kind === 'no') { await this.setPending(null); return [{ text: 'OK, still playing.' }]; }
+      // Chatter keeps the question open; another command (a late goal) moves on
+      if (command) await this.setPending(null);
+    }
+    if (!command && POTM.test(text)) {
+      this.log.result = 'Player of the Match asked';
+      return [{ text: "Player of the Match isn't in chat yet: pick them in Match Centre after full time, when you save the player stats." }];
     }
     if (pending?.type === 'player') {
       await this.setPending(null);
