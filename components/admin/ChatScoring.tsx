@@ -5,7 +5,8 @@ import { MessageCircle, Link2, Copy } from 'lucide-react';
 import { getAccessToken } from '@/lib/supabase/client';
 
 // Score by chat for club admins (Match Centre at "full"): the club's switch in Match Centre and the
-// Link chat card in People. Both stay hidden until the migration runs or for anyone without that access.
+// Link chat card in People. Both stay hidden until the migration runs or for anyone without that access;
+// with the club switch off, the People card says where to turn it on.
 
 interface Status { ready: boolean; botReady: boolean; scoringEnabled: boolean; aiAllowed: boolean; links: { member_id: string; linked_at: string; last_used_at: string | null }[] }
 
@@ -76,14 +77,22 @@ export function ChatScoringPanel({ clubId, peopleHref }: { clubId: string; peopl
 }
 
 /** People -> one person: link their chat, or unlink it */
-export function ChatLinkCard({ clubId, memberId, name }: { clubId: string; memberId: string; name: string }) {
+export function ChatLinkCard({ clubId, memberId, name, matchCentreHref }: { clubId: string; memberId: string; name: string; matchCentreHref: string }) {
   const { status, load } = useChatStatus(clubId);
   const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   useEffect(() => { setLink(null); setError(''); }, [memberId]);
-  if (!status?.ready || !status.scoringEnabled) return null;
+  if (!status?.ready) return null;
+  if (!status.scoringEnabled) {
+    return (
+      <div className="ppl-card">
+        <div className="ppl-card-label">Scoring by chat</div>
+        <div className="ppl-card-note">Off for the club. Turn on Score by chat in <a href={matchCentreHref} style={{ color: 'inherit', fontWeight: 600 }}>Match Centre</a> (Score and events tab), then link people here.</div>
+      </div>
+    );
+  }
 
   const linked = status.links.find(l => l.member_id === memberId);
   const first = name.split(' ')[0] || name;
