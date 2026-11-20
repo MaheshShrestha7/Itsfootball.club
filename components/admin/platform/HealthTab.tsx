@@ -7,19 +7,11 @@ import StorageCleanup from '@/components/admin/platform/StorageCleanup';
 import { timeAgo, type Light } from '@/lib/mission-control';
 import type { HealthReport } from '@/lib/platform-health';
 import type { PlatformHealthStats } from '@/lib/supabase/types';
+import { emailKindLabel } from '@/lib/email/kinds';
 import { RefreshCw, Play, Layers, Mail } from 'lucide-react';
 
 // MCF-8: club emails the site sent (email_log), get_platform_email_stats(), migration 20261177
 interface EmailStats { days: { day: string; n: number }[]; kinds: { kind: string; n: number }[]; clubs: { club_id: string; name: string; n: number }[] }
-const KIND_LABELS: Record<string, string> = {
-  availability: 'Availability reminders', event: 'Event reminders', renewal: 'Renewal reminders',
-  notice_match: 'Match notices', notice_event: 'Event notices', notice_news: 'News notices', notice_renewal: 'Renewal notices',
-  member_applied: 'Membership applications', member_approved: 'Members approved', member_rejected: 'Members not approved',
-  inquiry_reply: 'Inbox replies', fee_request: 'Fee requests', fee_reminder: 'Fee reminders', expense_claim: 'Expense claims',
-  sponsor_payment: 'Sponsor payments', sponsor_renewal: 'Sponsor renewals', sponsor_paid: 'Sponsor receipts',
-  sponsor_rejected: 'Sponsors declined', sponsor_change: 'Sponsor changes', sponsor_invoice: 'Sponsor invoices', sponsor_reminder: 'Sponsor reminders',
-  friendly_suggest: 'Friendly invites', friendly_confirm: 'Friendlies confirmed', friendly_update: 'Friendly updates',
-};
 const dayLabel = (d: string) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 
 function EmailsCard() {
@@ -59,7 +51,7 @@ function EmailsCard() {
           <h4 style={{ margin: '16px 0 8px' }}>What they were</h4>
           {stats.kinds.length === 0 ? <p className="mc-muted" style={{ margin: 0 }}>Nothing sent.</p> : (
             <dl className="mc-kv">
-              {stats.kinds.slice(0, 8).map(k => <React.Fragment key={k.kind}><dt>{KIND_LABELS[k.kind] || 'Other emails'}</dt><dd className="num">{k.n.toLocaleString()}</dd></React.Fragment>)}
+              {stats.kinds.slice(0, 8).map(k => <React.Fragment key={k.kind}><dt>{emailKindLabel(k.kind)}</dt><dd className="num">{k.n.toLocaleString()}</dd></React.Fragment>)}
             </dl>
           )}
           {stats.clubs.length > 0 && (
@@ -70,7 +62,7 @@ function EmailsCard() {
               </dl>
             </>
           )}
-          <p className="mc-muted" style={{ fontSize: 11, marginTop: 10 }}>Reminders, notices and other club emails, one per person. Sign-in emails aren&apos;t counted here.</p>
+          <p className="mc-muted" style={{ fontSize: 11, marginTop: 10 }}>Every email the site sent, one per person. Who got each one is in the Email log.</p>
         </>
       )}
     </div>

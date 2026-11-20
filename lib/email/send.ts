@@ -1,6 +1,7 @@
 // Sends email through the Resend API. Server-only: reads RESEND_API_KEY.
 
 import { logEvent } from '@/lib/platform-events';
+import { getServiceClient } from '@/lib/supabase/service';
 
 export const EMAIL_FROM_ADDRESS = process.env.EMAIL_FROM_ADDRESS || 'notifications@itsfootball.club';
 
@@ -16,6 +17,8 @@ export interface OutgoingEmail {
   idempotencyKey?: string;
   /** Extra headers, e.g. List-Unsubscribe */
   headers?: Record<string, string>;
+  /** Records the sent email in email_log (who, what, when) for the club Emails page and Mission Control's Email log */
+  log?: { kind: string; clubId?: string | null; refId?: string | null };
 }
 
 export type SendResult = { ok: true; id: string } | { ok: false; error: string };
@@ -44,6 +47,26 @@ async function failed(error: string, emails: OutgoingEmail[]): Promise<{ ok: fal
   return { ok: false, error };
 }
 
+/** Best effort: a log failure never fails the send. Keys start "sent:" so they never collide with sendClubEmails' claims. */
+async function record(emails: OutgoingEmail[], ids: string[]) {
+  const rows = emails.flatMap((e, i) => e.log ? [{
+    key: `sent:${ids[i] || crypto.randomUUID()}`,
+    club_id: e.log.clubId || null,
+    recipient: e.to.slice(0, 255),
+    kind: e.log.kind.slice(0, 32),
+    ref_id: e.log.refId || null,
+    subject: e.subject,
+  }] : []);
+  const db = rows.length ? getServiceClient() : null;
+  if (!db) return;
+  try {
+    const { error } = await db.from('email_log').insert(rows);
+    if (error) console.warn('[email] not logged:', error.message);
+  } catch (e) {
+    console.warn('[email] not logged:', (e as Error).message);
+  }
+}
+
 export async function sendEmail(email: OutgoingEmail): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: 'RESEND_API_KEY is not set' };
@@ -60,11 +83,10 @@ export async function sendEmail(email: OutgoingEmail): Promise<SendResult> {
 
   const body = await res.text();
   if (!res.ok) return failed(`Resend ${res.status}: ${body.slice(0, 300)}`, [email]);
-  try {
-    return { ok: true, id: String(JSON.parse(body).id || '') };
-  } catch {
-    return { ok: true, id: '' };
-  }
+  let id = '';
+  try { id = String(JSON.parse(body).id || ''); } catch { /* sent, id unreadable */ }
+  await record([email], [id]);
+  return { ok: true, id };
 }
 
 /**
@@ -89,9 +111,8 @@ export async function sendBatch(emails: OutgoingEmail[], idempotencyKey?: string
 
   const body = await res.text();
   if (!res.ok) return failed(`Resend ${res.status}: ${body.slice(0, 300)}`, emails);
-  try {
-    return { ok: true, ids: (JSON.parse(body).data || []).map((d: { id?: string }) => String(d.id || '')) };
-  } catch {
-    return { ok: true, ids: [] };
-  }
+  let ids: string[] = [];
+  try { ids = (JSON.parse(body).data || []).map((d: { id?: string }) => String(d.id || '')); } catch { /* sent, ids unreadable */ }
+  await record(emails, ids);
+  return { ok: true, ids };
 }

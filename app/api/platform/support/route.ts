@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(body)}</div>`
       + `<blockquote style="margin:16px 0 0;padding-left:12px;border-left:3px solid #ddd;color:#666;white-space:pre-wrap">${esc(request.message)}</blockquote>`,
     ...(replyTo ? { replyTo } : {}),
+    log: { kind: 'support_reply', clubId: request.club_id, refId: request.id },
   });
 
   const { error } = await db.from('support_replies').insert({ request_id: request.id, body, author_email: auth.confirmedEmail || null, emailed: sent.ok });
@@ -84,7 +85,7 @@ async function featureBuiltAction(db: Db, auth: Auth, input: { featureId?: unkno
         asked: new Date(a.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', timeZone: 'Australia/Sydney' }),
         link: club?.slug ? `${SITE_URL}/${club.slug}/admin` : SITE_URL,
       });
-      const r = await sendEmail({ to: a.from_email, ...message, ...(process.env.SUPPORT_EMAIL ? { replyTo: process.env.SUPPORT_EMAIL } : {}) });
+      const r = await sendEmail({ to: a.from_email, ...message, ...(process.env.SUPPORT_EMAIL ? { replyTo: process.env.SUPPORT_EMAIL } : {}), log: { kind: 'feature_built', clubId: a.club_id, refId: feature.id } });
       if (r.ok) sent++;
       else console.error('[platform/support] feature email failed:', r.error);
     }

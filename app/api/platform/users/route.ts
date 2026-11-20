@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       if (error || !data.properties) return json({ error: error?.message || 'Could not make the link.' }, 500);
       const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
       const link = `${supabaseUrl}/auth/v1/verify?token=${encodeURIComponent(data.properties.hashed_token)}&type=${type}&redirect_to=${encodeURIComponent(redirectTo)}`;
-      const sent = await sendEmail({ to: email, ...authEmail(type, link, data.properties.email_otp) });
+      const sent = await sendEmail({ to: email, ...authEmail(type, link, data.properties.email_otp), log: { kind: type === 'recovery' ? 'password_reset' : 'sign_in' } });
       if (!sent.ok) return json({ error: 'The email could not be sent. Please try again.' }, 502);
       await audit(`${type === 'recovery' ? 'Sent a password reset' : 'Sent a sign-in link'} to ${email}`);
       return json({ ok: true, message: `Sent to ${email}` });
@@ -125,6 +125,7 @@ export async function POST(req: NextRequest) {
           text: `Hi,\n\nAt your request, itsfootball.club support changed the email you sign in with to ${next}.\n\nIf you didn't ask for this, reply to this email straight away.`,
           html: `<p>Hi,</p><p>At your request, itsfootball.club support changed the email you sign in with to <b>${next.replace(/[<>&"]/g, '')}</b>.</p><p>If you didn't ask for this, reply to this email straight away.</p>`,
           ...(process.env.SUPPORT_EMAIL ? { replyTo: process.env.SUPPORT_EMAIL } : {}),
+          log: { kind: 'email_changed' },
         });
       }
       await audit(`Changed sign-in email from ${email} to ${next}`, { from: email, to: next });

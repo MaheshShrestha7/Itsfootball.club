@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
     text: message,
     html,
     ...(auth.confirmedEmail ? { replyTo: auth.confirmedEmail } : {}),
+    log: { kind: 'platform_email', clubId },
   })));
   if (!result.ok) {
     console.error('[platform/email] send failed:', result.error);

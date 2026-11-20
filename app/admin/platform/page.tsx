@@ -25,6 +25,7 @@ import ClubDetailDrawer from '@/components/admin/platform/ClubDetailDrawer';
 import PlatformAdminsModal from '@/components/admin/platform/PlatformAdminsModal';
 import TodayTab from '@/components/admin/platform/TodayTab';
 import LogTab from '@/components/admin/platform/LogTab';
+import EmailLogTab from '@/components/admin/platform/EmailLogTab';
 import SupportTab from '@/components/admin/platform/SupportTab';
 import CommandPalette from '@/components/admin/platform/CommandPalette';
 import EmailComposer, { type EmailDraft } from '@/components/admin/platform/EmailComposer';
@@ -46,6 +47,7 @@ import {
   LogOut,
   MoreHorizontal,
   Trophy,
+  Mail,
 } from 'lucide-react';
 import { confirmAction, notify } from '@/components/ConfirmDialog';
 import NewClubForm from '@/components/admin/platform/NewClubForm';
@@ -429,6 +431,7 @@ export default function PlatformOwnerDashboard() {
     { label: 'Tell and record', items: [
       { id: 'broadcasts', label: 'Broadcasts', icon: Radio },
       { id: 'log', label: 'Action log', icon: History },
+      { id: 'emails', label: 'Email log', icon: Mail },
     ] },
   ];
   const ALL_NAV = GROUPS.flatMap(g => g.items);
@@ -580,6 +583,7 @@ export default function PlatformOwnerDashboard() {
         )}
 
         {activeTab === 'log' && <LogTab clubs={clubs} admins={adminsList} />}
+        {activeTab === 'emails' && <EmailLogTab clubs={clubs} />}
 
         {activeTab === 'overview' && (
           <OverviewTab

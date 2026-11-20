@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     canReply: !!support,
   });
 
-  const sent = await sendEmail({ to, ...message, ...(support ? { replyTo: support } : {}) });
+  const sent = await sendEmail({ to, ...message, ...(support ? { replyTo: support } : {}), log: { kind: 'welcome_pack', clubId } });
   if (!sent.ok) {
     console.error('[admin/welcome-pack] send failed:', sent.error);
     return NextResponse.json({ error: 'The email could not be sent. Please try again in a moment.' }, { status: 502 });
