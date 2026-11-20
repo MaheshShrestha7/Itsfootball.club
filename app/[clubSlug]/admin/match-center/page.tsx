@@ -47,6 +47,7 @@ import {
   WifiOff,
   Loader2,
   Maximize2,
+  MessageCircle,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -64,6 +65,7 @@ import LocalTime from '@/components/LocalTime';
 import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import PopupPanel from '@/components/PopupPanel';
+import { ChatScoringPanel } from '@/components/admin/ChatScoring';
 import MatchEventSheet, { type SheetMode, type SheetResult } from '@/components/admin/MatchEventSheet';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 
@@ -138,11 +140,13 @@ export default function AdminMatchCenterControllerPage({
     activityLogs,
     syncStatus,
   } = useClub();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
   const reviewsReady = useMatchReviewsReady();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
+  // Score by chat's switch is for whoever runs Match Centre in full (Club Admins, Managers)
+  const canChatScoring = can(club.id, 'match-center', 'full');
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const clubSeasons = seasons.filter(s => s.club_id === club.id);
   const activeSeason = getActiveSeason ? getActiveSeason(club.id) : null;
@@ -1381,6 +1385,9 @@ export default function AdminMatchCenterControllerPage({
                         {(EVENT_LABEL[evt.event_type] || evt.event_type.replace('_', ' ')).replace(/^./, c => c.toUpperCase())}
                       </span>
                       <b>{evt.player_name}</b>
+                      {evt.logged_via?.startsWith('chat:') && (
+                        <span className="mc-log-via" title="Sent with Itsfootball.club Bot"><MessageCircle size={11} aria-hidden="true" />by chat, {evt.logged_via.slice(5).split(' ')[0]}</span>
+                      )}
                       <small>
                         {[evt.team_side === 'home' ? match.home_team_name : match.away_team_name, evt.assist_player_name && `assist ${evt.assist_player_name}`].filter(Boolean).join(', ')}
                         {evt.detail_text && <><br />{evt.detail_text}</>}
@@ -1406,6 +1413,8 @@ export default function AdminMatchCenterControllerPage({
       {/* ========================================================================= */}
       {/* TAB 2: TACTICAL PITCH & FREE-FORM FORMATIONS */}
       {/* ========================================================================= */}
+      {adminTab === 'events' && canChatScoring && <ChatScoringPanel clubId={club.id} peopleHref={`/${club.slug}/admin/people`} />}
+
       {adminTab === 'tactics' && (
         <div className="admin-stack">
           <section className="glass-panel mc-form" aria-labelledby="mc-tactics-title">

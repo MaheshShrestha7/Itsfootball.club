@@ -107,8 +107,8 @@ export function softTint(hex: string | null | undefined, alpha = 0.22): string {
 }
 
 /** The pages of Mission Control, in menu order. */
-export type MissionTab = 'today' | 'support' | 'overview' | 'clubs' | 'users' | 'matchday' | 'grounds' | 'health' | 'broadcasts' | 'log' | 'emails';
-export const MISSION_TABS: MissionTab[] = ['today', 'support', 'clubs', 'users', 'overview', 'matchday', 'grounds', 'health', 'broadcasts', 'log', 'emails'];
+export type MissionTab = 'today' | 'support' | 'overview' | 'clubs' | 'users' | 'matchday' | 'grounds' | 'health' | 'ai' | 'broadcasts' | 'log' | 'emails';
+export const MISSION_TABS: MissionTab[] = ['today', 'support', 'clubs', 'users', 'overview', 'matchday', 'grounds', 'health', 'ai', 'broadcasts', 'log', 'emails'];
 
 /** Where Mission Control is, from the web address: ?tab=support&request=<id>, ?tab=clubs&club=<id>.
  *  Unknown or missing values fall back to Today with nothing open. ?tab=cockpit (an old link) opens the Overview. */

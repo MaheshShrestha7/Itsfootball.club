@@ -974,3 +974,15 @@ textarea.mc-input { resize: vertical; }
 .mc .form-input:focus, .mc .form-select:focus, .mc .form-textarea:focus { border-color: var(--mc-green); }
 .mc .form-label { font-size: 13px; font-weight: 600; color: var(--mc-ink-2); text-transform: none; letter-spacing: 0; }
 .mc .glass-panel h3 { color: var(--mc-ink); }
+
+/* ---------- AI and chat (score by chat) ---------- */
+.mc-ai-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.mc-ai-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; }
+.mc-ai-use { display: grid; gap: 12px; font-size: 13px; }
+.mc-ai-use > div { display: grid; grid-template-columns: 96px minmax(0, 1fr) 72px; gap: 10px; align-items: center; }
+.mc-ai-use b { text-align: right; font-weight: 600; }
+.mc-ai-lim { display: grid; gap: 14px; }
+.mc-ai-lim label { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 4px 12px; align-items: center; font-size: 13.5px; }
+.mc-ai-lim small { grid-column: 1; color: var(--mc-ink-3); font-size: 12px; }
+.mc-ai-lim input { grid-row: 1 / span 2; grid-column: 2; text-align: right; }
+@media (max-width: 900px) { .mc-ai-grid { grid-template-columns: minmax(0, 1fr); } }
