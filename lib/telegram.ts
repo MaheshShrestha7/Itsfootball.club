@@ -31,7 +31,8 @@ const upTo64Bytes = (s: string) => { let d = s; while (new TextEncoder().encode(
 /** A reply, with optional buttons under it (each button sends its own text back as if typed) */
 export async function sendTelegram(chatId: string, text: string, buttons?: string[]) {
   const reply_markup = buttons?.length
-    ? { inline_keyboard: [buttons.slice(0, 4).map(b => ({ text: b, callback_data: upTo64Bytes(b) }))] }
+    // Short buttons sit in one row; long ones (the game list) get a row each
+    ? { inline_keyboard: buttons.some(b => b.length > 16) ? buttons.slice(0, 8).map(b => [{ text: b, callback_data: upTo64Bytes(b) }]) : [buttons.slice(0, 4).map(b => ({ text: b, callback_data: upTo64Bytes(b) }))] }
     : undefined;
   const r = await call('sendMessage', { chat_id: chatId, text, reply_markup, link_preview_options: { is_disabled: true } });
   if (!r.ok) console.error('[telegram] sendMessage failed:', r.description);
