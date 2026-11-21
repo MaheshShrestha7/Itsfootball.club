@@ -17,7 +17,7 @@ import { telegramConfigured } from './telegram';
 import { durableRateLimit } from './rate-limit';
 import { subDetail } from './match-subs';
 import { isJuniorFixture, juniorPublicName, teamLabel, teamOfMatch } from './teams';
-import { resolveTournament, STAGE_TITLES } from './tournament-engine';
+import { knockoutLockReason, resolveTournament, STAGE_TITLES } from './tournament-engine';
 import type { Club, ClubMember, ClubTeam, Match, MatchEvent, Tournament, TournamentParticipant } from './supabase/types';
 
 /** board: this reply is the live scoreboard; the channel pins it and remembers it for later edits */
@@ -550,6 +550,12 @@ class Bot {
       case 'yes': case 'no': case 'pick': return [{ text: `Nothing to answer right now.\n${SHORT_FORMAT_HELP}` }];
       case 'kickoff':
         if (m.status !== 'upcoming') return [{ text: 'This game is already under way.' }];
+        if (m.tournament_id && this.tour && isKnockout(m)) {
+          const { data: own } = await this.db.from('matches').select('*').eq('tournament_id', this.tour.t.id);
+          // Before migration 20261185 the row has no knockout_started_at, so only finished games are needed
+          const lock = knockoutLockReason(m, this.tour.t, (own || []) as Match[], 'knockout_started_at' in this.tour.t);
+          if (lock) return [{ text: lock }];
+        }
         await this.updateMatch({ status: 'live', period: 'first_half', current_minute: periodStartMinute(m, 'first_half') });
         await this.alert('kickoff');
         return [{ text: `Kick-off logged for ${m.home_team_name} vs ${m.away_team_name}. Clock running. The scoreboard below is pinned and updates itself.` }, await this.boardReply()];

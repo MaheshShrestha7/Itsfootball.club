@@ -792,6 +792,46 @@ export function resolveTournament(
   return result;
 }
 
+/** True once the host has started the knockout stage, or it was already being played (older tournaments) */
+export function knockoutStarted(tournament: Pick<Tournament, 'id' | 'knockout_started_at'>, matches: Match[]): boolean {
+  return !!tournament.knockout_started_at || matches.some(m => m.tournament_id === tournament.id
+    && !!m.tournament_stage && m.tournament_stage !== 'group' && m.status !== 'upcoming');
+}
+
+/** Group games of this tournament not yet at full time */
+export const groupGamesLeft = (tournamentId: string, matches: Match[]) =>
+  matches.filter(m => m.tournament_id === tournamentId && (m.tournament_stage || 'group') === 'group' && m.status !== 'completed').length;
+
+/**
+ * Why a knockout game can't be started or scored yet, or null when it can. A game waits for the games
+ * that feed it (a final for both semi-finals), and the first knockout round for every group game plus
+ * the host's "Start the knockout stage" tap. `needsStart` is false until the database can save that tap.
+ * A game already under way is never locked, so nothing being played today gets stuck.
+ */
+export function knockoutLockReason(
+  match: Match,
+  tournament: Pick<Tournament, 'id' | 'format' | 'knockout_started_at'> | undefined,
+  matches: Match[],
+  needsStart = true
+): string | null {
+  if (!tournament || match.tournament_id !== tournament.id) return null;
+  if (!match.tournament_stage || match.tournament_stage === 'group' || match.status !== 'upcoming') return null;
+  const own = matches.filter(m => m.tournament_id === tournament.id);
+  for (const source of [match.home_team_source, match.away_team_source]) {
+    const feed = source?.match(/^(?:Winner|Loser) M#(\d+)$/);
+    if (!feed) continue;
+    const from = own.find(m => m.tournament_match_number === Number(feed[1]));
+    if (from && from.status !== 'completed') return `Waiting for M#${feed[1]} to finish. This game opens once it has a full-time result.`;
+  }
+  const fromGroups = [match.home_team_source, match.away_team_source].some(s => !!s && !!parseGroupSource(s));
+  if (tournament.format === 'group_knockout' && fromGroups) {
+    const left = groupGamesLeft(tournament.id, matches);
+    if (left > 0) return `Knockout games open once every group game is played. ${left} group ${left === 1 ? 'game' : 'games'} still to finish.`;
+    if (needsStart && !knockoutStarted(tournament, matches)) return 'All group games are played. Start the knockout stage on the tournament page to open this game.';
+  }
+  return null;
+}
+
 /**
  * Brackets built by the old engine sourced the 3rd place playoff as "Loser Semi #1/#2";
  * rewrites those to "Loser M#<n>" so the result carries over like any other slot.

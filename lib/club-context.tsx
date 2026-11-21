@@ -55,7 +55,7 @@ import {
   computeStandings,
   cardPointsByTeam,
   resolveTournament,
-  upgradeLegacyMatches, type TiesheetOptions } from './tournament-engine';
+  upgradeLegacyMatches, knockoutLockReason, type TiesheetOptions } from './tournament-engine';
 
 /** Tiesheet options, plus noDraw: save the teams only and make the draw later */
 type DrawOptions = TiesheetOptions & { noDraw?: boolean };
@@ -3447,6 +3447,8 @@ export function ClubProvider({
       ...t,
       ...res.tournamentUpdates,
       status: res.matches.length > 0 ? 'ongoing' : t.status,
+      // A new draw starts the groups again, so the knockout stage waits for the host's tap again
+      ...(res.matches.length > 0 && t.knockout_started_at ? { knockout_started_at: null } : {}),
       updated_at: new Date().toISOString(),
     } : t));
     return res.matches;
@@ -3569,6 +3571,9 @@ export function ClubProvider({
     status: 'upcoming' | 'live' | 'completed' = 'completed'
   ) => {
     const played = status !== 'upcoming';
+    // Safety net behind the screens' own lock: a knockout game can't start before the games that feed it
+    const locked = matches.find(m => m.id === matchId);
+    if (played && locked && knockoutLockReason(locked, tournaments.find(t => t.id === locked.tournament_id), matches, false)) return;
     const updates: Partial<Match> = {
       home_score: played ? homeScore : 0,
       away_score: played ? awayScore : 0,

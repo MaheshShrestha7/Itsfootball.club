@@ -25,7 +25,9 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     // Migration 20261180: only sent once the app has seen the columns (useHostedTournamentsReady)
     'parent_id', 'age_group', 'is_junior', 'match_minutes', 'pitches', 'day_end_time', 'entry_fee_cents', 'entry_deadline', 'max_squad', 'team_info', 'event_id',
     // Migration 20261181: only sent once the app has seen the column (useTieBreakersReady)
-    'tie_breakers'],
+    'tie_breakers',
+    // Migration 20261185: only set once the app has seen the column (useKnockoutStartReady)
+    'knockout_started_at'],
   tournament_participants: ['id', 'tournament_id', 'team_type', 'internal_team_id', 'name', 'short_name', 'logo_url', 'color', 'seed', 'group', 'secondary_color', 'manager_name', 'coach_name'],
   gate_scans: ['id', 'club_id', 'scan_type', 'token', 'member_id', 'member_name', 'event_id', 'event_title', 'match_id', 'match_title', 'valid', 'scanned_at'],
   contact_inquiries: ['id', 'club_id', 'sender_name', 'sender_email', 'sender_phone', 'inquiry_type', 'message', 'status', 'details', 'team_id', 'match_id', 'created_at'],

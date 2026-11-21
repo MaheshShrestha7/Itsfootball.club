@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -26,7 +26,9 @@ function play(format: TournamentFormat, teams: number, groupCount = 2, advancing
 
   const real = new Set(parts.map(p => p.name));
   for (let guard = 0; guard < 500; guard++) {
-    const next = matches.find(m => m.status === 'upcoming' && real.has(m.home_team_name) && real.has(m.away_team_name));
+    // Only games the knockout lock lets through: every format must still play to the end
+    const next = matches.find(m => m.status === 'upcoming' && real.has(m.home_team_name) && real.has(m.away_team_name)
+      && !knockoutLockReason(m, tourney, matches, false));
     if (!next) break;
     const ko = next.tournament_stage !== 'group';
     const h = (next.tournament_match_number! * 7) % 4;
@@ -245,4 +247,37 @@ assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unch
   assert.equal(order({ tieBreakers: ['lots'], lotSeed: 'cup' }), order({ tieBreakers: ['lots'], lotSeed: 'cup' }), 'lots stay the same');
   assert.equal(tieBreakerLine(null), 'Level on points? Decided by goal difference, then goals scored, then head-to-head.');
   assert.equal(tieBreakerLine([]), 'Teams level on points share the place.');
+}
+
+// Knockout lock: group games first, then the host's start, then each round after the games that feed it
+{
+  const t = { id: 'lock', club_id: 'c', name: 'Lock Cup', slug: 'lock', season: '2026', format: 'group_knockout', status: 'draft',
+    points_win: 3, points_draw: 1, points_loss: 0, group_count: 2, teams_advancing_per_group: 2, has_third_place_match: true, start_date: '2026-10-03' } as Tournament;
+  const parts = Array.from({ length: 8 }, (_, i) => ({ id: `l${i}`, tournament_id: 'lock', team_type: 'internal', name: `L${i}`, short_name: `L${i}`, logo_url: '' })) as TournamentParticipant[];
+  const res = buildTiesheet(t, parts);
+  const tour = { ...t, ...res.tournamentUpdates };
+  let ms = res.matches;
+  const semi = () => ms.find(m => m.tournament_stage === 'semi_final')!;
+  const final = () => ms.find(m => m.tournament_stage === 'final')!;
+  const finish = (id: string) => {
+    ms = resolveTournament(ms.map(m => m.id === id ? { ...m, status: 'completed', home_score: 2, away_score: 1 } : m), tour, res.participants);
+  };
+  const groups = ms.filter(m => m.tournament_stage === 'group');
+  groups.slice(0, -1).forEach(g => finish(g.id));
+  assert.match(knockoutLockReason(semi(), tour, ms)!, /1 group game still to finish/);
+  finish(groups[groups.length - 1].id);
+  assert.match(knockoutLockReason(semi(), tour, ms)!, /Start the knockout stage/, 'groups done: waits for the host');
+  assert.equal(knockoutLockReason(semi(), tour, ms, false), null, 'before the migration: opens by itself');
+  assert.equal(knockoutStarted(tour, ms), false);
+  const started = { ...tour, knockout_started_at: '2026-10-04T00:00:00Z' };
+  assert.equal(knockoutLockReason(semi(), started, ms), null, 'started: semi open');
+  assert.match(knockoutLockReason(final(), started, ms)!, /Waiting for M#/, 'final waits for both semis');
+  const semis = ms.filter(m => m.tournament_stage === 'semi_final');
+  finish(semis[0].id);
+  assert.match(knockoutLockReason(final(), started, ms)!, /Waiting for M#/, 'final waits for the second semi');
+  finish(semis[1].id);
+  assert.equal(knockoutLockReason(final(), started, ms), null, 'both semis done: final open');
+  assert.equal(knockoutStarted(tour, ms), true, 'a played knockout game counts as started (older tournaments)');
+  // A game already under way is never locked
+  assert.equal(knockoutLockReason({ ...final(), status: 'live' }, tour, ms.map(m => m.tournament_stage === 'semi_final' ? { ...m, status: 'upcoming' } : m)), null);
 }
