@@ -2,7 +2,7 @@
 // The channel (Telegram today) only passes the text in and sends the replies out.
 //
 // Rules: only a chat linked to a member who may edit Match Centre, at a club that turned score by chat
-// on, and only today's club games that aren't finished. Goals and cards save at once with an Undo;
+// on, and only club and tournament games that aren't finished. Goals and cards save at once with an Undo;
 // full time waits for a yes. The AI reads only what the short format can't, never for a junior team,
 // and only within Mission Control's switches and daily limits.
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -14,19 +14,29 @@ import { fullMinutes, halfMinutes, periodStartMinute, splitMinute } from './matc
 import { clubTimeZone, SITE_TIME_ZONE } from './dates';
 import { durableRateLimit } from './rate-limit';
 import { subDetail } from './match-subs';
-import { isJuniorFixture, isTeamFixture, teamOfMatch } from './teams';
-import type { Club, ClubMember, ClubTeam, Match } from './supabase/types';
+import { isJuniorFixture, juniorPublicName, teamOfMatch } from './teams';
+import { resolveTournament, STAGE_TITLES } from './tournament-engine';
+import type { Club, ClubMember, ClubTeam, Match, MatchEvent, Tournament, TournamentParticipant } from './supabase/types';
 
 export interface BotReply { text: string; buttons?: string[] }
 type Pending =
-  | { type: 'game'; ids: string[]; text: string }
+  | { type: 'game'; ids: string[]; text: string; page?: number }
   | { type: 'player'; command: ChatCommand; options: string[] }
-  | { type: 'fulltime' }
+  // pens: the shoot-out of a level knockout game (home, away), waiting for the yes
+  | { type: 'fulltime'; pens?: [number, number] }
+  | { type: 'pens' }
   | { type: 'their_scorer'; eventId: string }
+  // A tournament goal or card whose team the message didn't settle
+  | { type: 'team'; command: ChatCommand }
   // Optional assist after our goal; who went off after "in ram". options: the names asked about when two match.
-  | { type: 'assist'; eventId: string; scorer: string; options?: string[] }
-  | { type: 'sub_off'; on: string; minute: number; added: number; options?: string[] }
-  | { type: 'potm'; options?: string[] };
+  // side: the team's side in a tournament game.
+  | { type: 'assist'; eventId: string; scorer: string; options?: string[]; side?: Side }
+  | { type: 'sub_off'; on: string; minute: number; added: number; options?: string[]; side?: Side }
+  | { type: 'potm'; options?: string[] }
+  | { type: 'pott'; options?: string[] };
+type Side = 'home' | 'away';
+/** A player the bot can name: one of our squad, or in a tournament anyone in either team */
+interface Player extends SquadPlayer { side?: Side; team?: string; memberId?: string; junior?: boolean }
 interface Link { id: string; club_id: string; member_id: string; chat_id: string; active_match_id: string | null; pending: Pending | null }
 interface Settings { ai_enabled: boolean; daily_limit: number; club_daily_limit: number; per_minute: number }
 const DEFAULT_SETTINGS: Settings = { ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 30 };
@@ -34,18 +44,43 @@ const DEFAULT_SETTINGS: Settings = { ai_enabled: true, daily_limit: 400, club_da
 // Words that mean the message is about the game, not a name for their scorer
 const NOT_A_NAME = new Set(['they', 'them', 'we', 'us', 'our', 'scored', 'score', 'goal', 'again', 'yellow', 'red', 'card', 'half', 'time', 'full', 'kick', 'off', 'penalty', 'pen', 'own', 'no', 'yes', 'undo', 'help']);
 const POTM = /\b(man|player|woman) of the match\b|\b[pm]otm\b/i;
+const POTT = /\b(man|player|woman) of the tournament\b|\bpott\b/i;
 const NOT_LINKED = "This chat isn't set up to update scores. Ask your club admin for a Link chat link.";
 const OPEN = ['upcoming', 'live', 'halftime'];
 // Messages that bring the game list back
 const SWITCH = new Set(['games', 'game', 'matches', 'match', 'switch', 'change game', 'switch game']);
 
 /** The name in "potm mahesh", "man of the match: mahesh" or "mahesh is man of the match" ('' when there isn't one) */
-export function potmName(text: string): string {
-  const m = POTM.exec(text);
+export function potmName(text: string, award = POTM): string {
+  const m = award.exec(text);
   if (!m) return '';
   const after = text.slice(m.index + m[0].length).replace(/^[\s:,-]*(?:(?:is|was|goes to|to)\b)?[\s:,-]*/i, '').trim();
   if (after) return after.replace(/[.!]+$/, '');
   return text.slice(0, m.index).replace(/\b(?:is|was)\s*(?:the\s*)?$/i, '').replace(/[\s:,-]+$/, '').trim();
+}
+
+/** A shoot-out score typed as "4-3" (home first), or null */
+export function parsePens(text: string): [number, number] | null {
+  const m = /^(\d{1,2})\s*[-–:]\s*(\d{1,2})$/.exec(text.trim());
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}
+
+/** A knockout-slot placeholder ("TBD", "1st Group A", "Winner M#3"): a game nobody can score yet */
+const placeholder = (name: string) => !name || name === 'TBD' || /^\d+(st|nd|rd|th) Group [A-H]$/.test(name) || /^(Winner|Loser) M#/.test(name);
+/** "Semi-Final", "Grand Final": one game's stage */
+const stageName = (stage?: string | null) => (stage && STAGE_TITLES[stage] ? STAGE_TITLES[stage].replace(/-Finals$/, '-Final') : '');
+const isKnockout = (m: Pick<Match, 'tournament_id' | 'tournament_stage'>) => !!m.tournament_id && !!m.tournament_stage && m.tournament_stage !== 'group';
+
+/** The side a typed team name means ("lions" for Camden Lions), or null when it's neither or both */
+export function sideByName(typed: string, home: { name: string; short?: string | null }, away: { name: string; short?: string | null }): Side | null {
+  const q = tidy(typed);
+  if (!q) return null;
+  const fits = (t: { name: string; short?: string | null }) => {
+    const n = tidy(t.name);
+    return n === q || tidy(t.short || '') === q || n.split(' ').includes(q) || n.startsWith(`${q} `);
+  };
+  const h = fits(home), a = fits(away);
+  return h === a ? null : h ? 'home' : 'away';
 }
 
 /** The day (YYYY-MM-DD) in a time zone */
@@ -146,6 +181,10 @@ async function linkChat(db: SupabaseClient, chatId: string, code: string, now: D
   return { text: `Hi ${first}! This chat is linked to ${club?.name || 'your club'}. When a game is on, send things like "g sam 23" or "they scored".\n${SHORT_FORMAT_HELP}` };
 }
 
+interface Game { link: Link; match: Match; day: string; today: string }
+/** "M#3 Austral Reds vs Camden Lions" for a tournament game, "Austral vs Rovers" otherwise */
+const gameName = (m: Match) => `${m.tournament_match_number ? `M#${m.tournament_match_number} ` : ''}${m.home_team_name} vs ${m.away_team_name}`;
+
 class Bot {
   private link!: Link;
   private match!: Match;
@@ -153,6 +192,8 @@ class Bot {
   private teams: ClubTeam[] = [];
   private member!: Pick<ClubMember, 'id' | 'full_name'>;
   private squadCache: SquadPlayer[] | null = null;
+  // A tournament game's tournament, its teams and everyone the bot can name in it
+  private tour: { t: Tournament; parts: TournamentParticipant[]; players: Player[] } | null = null;
   private log: { reader: AiReader | 'short' | 'none'; result: string; eventId?: string; aiError?: boolean } = { reader: 'short', result: '' };
 
   constructor(private db: SupabaseClient, private chatId: string, private links: Link[], private settings: Settings, private now: Date) {}
@@ -160,6 +201,7 @@ class Bot {
   async handle(text: string): Promise<BotReply[]> {
     const pick = await this.pickGame(text);
     if ('reply' in pick) return [pick.reply];
+    if (this.match.tournament_id) await this.loadTournament();
     // After a tap on the game list: say which game, then carry on with the message that brought the list up
     const replies = pick.picked ? [pick.picked, ...(pick.rerun ? await this.run(pick.rerun) : [])] : await this.run(text);
     await this.db.from('chat_messages').insert({
@@ -182,10 +224,10 @@ class Bot {
       this.db.from('club_teams').select('*').in('club_id', clubIds),
       this.db.from('club_members').select('id, full_name').in('id', this.links.map(l => l.member_id)),
     ]);
-    const potmMsg = POTM.test(text) || this.links.some(l => l.pending?.type === 'potm');
+    const awardMsg = POTM.test(text) || POTT.test(text) || this.links.some(l => l.pending?.type === 'potm' || l.pending?.type === 'pott');
     // Every game the scorer can pick: live ones (whatever their date), today's and later upcoming ones,
-    // and for Player of the Match, today's finished ones. Sorted by date, then kick-off time.
-    const games: { link: Link; match: Match; day: string; today: string }[] = [];
+    // and for the awards, today's finished ones. Live first, then by date and kick-off time.
+    const games: Game[] = [];
     const skipped: string[] = [];
     for (const l of this.links) {
       const club = (clubs || []).find(c => c.id === l.club_id);
@@ -194,7 +236,7 @@ class Bot {
       const today = dayIn(zone, this.now);
       const yesterday = dayIn('UTC', new Date(Date.parse(`${today}T12:00:00Z`) - 86_400_000));
       const [{ data: near }, { data: live }] = await Promise.all([
-        this.db.from('matches').select('*').eq('club_id', l.club_id).gte('match_date', yesterday).order('match_date', { ascending: true }).limit(60),
+        this.db.from('matches').select('*').eq('club_id', l.club_id).gte('match_date', yesterday).order('match_date', { ascending: true }).limit(200),
         this.db.from('matches').select('*').eq('club_id', l.club_id).in('status', ['live', 'halftime']),
       ]);
       const rows = [...((near || []) as Match[]), ...((live || []) as Match[]).filter(m => !(near || []).some(n => n.id === m.id))];
@@ -203,15 +245,19 @@ class Bot {
         const live = m.status === 'live' || m.status === 'halftime';
         if (!live && day < today) continue;
         if (!live && day > today && m.status !== 'upcoming') continue;
+        // A knockout game whose teams aren't known yet
+        if (m.tournament_id && m.status === 'upcoming' && (placeholder(m.home_team_name) || placeholder(m.away_team_name))) continue;
         // Why a game the scorer can see isn't offered, so "No game" is never a mystery.
-        // A finished game stays open for Player of the Match only.
-        const why = !OPEN.includes(m.status) && !(potmMsg && m.status === 'completed' && day === today) ? `it is ${m.status}`
-          : m.tournament_id ? "it's a tournament game (not covered yet)" : !isTeamFixture(m) ? "it's an in-house game (not covered yet)" : '';
+        // A finished game stays open for the awards only.
+        const why = !OPEN.includes(m.status) && !(awardMsg && m.status === 'completed' && day === today) ? `it is ${m.status}`
+          : !m.tournament_id && m.match_type === 'internal' ? "it's an in-house game (not covered yet)" : '';
         if (why) { if (day === today) skipped.push(`${m.home_team_name} vs ${m.away_team_name}: ${why}`); continue; }
         games.push({ link: l, match: m, day, today });
       }
     }
-    games.sort((a, b) => a.day.localeCompare(b.day) || (a.match.match_time || '').localeCompare(b.match.match_time || ''));
+    const isLive = (g: Game) => (g.match.status === 'live' || g.match.status === 'halftime' ? 0 : 1);
+    games.sort((a, b) => isLive(a) - isLive(b) || a.day.localeCompare(b.day) || (a.match.match_time || '').localeCompare(b.match.match_time || '')
+      || (a.match.tournament_match_number ?? 0) - (b.match.tournament_match_number ?? 0));
 
     const choose = (g: { link: Link; match: Match }) => {
       this.link = g.link;
@@ -220,43 +266,59 @@ class Bot {
       this.teams = ((teams || []) as ClubTeam[]).filter(t => t.club_id === g.link.club_id);
       this.member = (members || []).find(m => m.id === g.link.member_id) || { id: g.link.member_id, full_name: 'a scorer' };
     };
+    const pick = async (g: Game, waiting: string) => {
+      await this.db.from('chat_links').update({ active_match_id: null, pending: null }).in('id', this.links.map(l => l.id));
+      await this.db.from('chat_links').update({ active_match_id: g.match.id, pending: null }).eq('id', g.link.id);
+      this.links.forEach(l => { l.active_match_id = null; l.pending = null; });
+      g.link.active_match_id = g.match.id;
+      choose(g);
+      const m = g.match;
+      const where = [m.tournament_group, m.pitch_label].filter(Boolean).join(', ');
+      const picked = { text: `Scoring ${gameName(m)}, ${gameWhen(g)}${where ? ` (${where})` : ''}. ${m.status === 'upcoming' ? 'Send ko at kick-off, or games to switch.' : 'Send games to switch.'}` };
+      // Carry on with the message that brought up the list, if it was something to do (not just "hi")
+      const again = waiting && (parseShort(waiting) || POTM.test(waiting) || POTT.test(waiting)) && !SWITCH.has(tidy(waiting)) ? waiting : undefined;
+      return { picked, rerun: again };
+    };
 
     if (!games.length) {
       const seen = skipped.length ? `\nToday's games I can't score:\n${skipped.slice(0, 4).join('\n')}` : "\nThere's no upcoming or live game at your club.";
       return { reply: { text: `No game for you to score. Games show here until full time.${seen}\n${SHORT_FORMAT_HELP}` } };
     }
 
-    // A tap on the game list ("2. Austral vs ...", or just "2")
-    const asked = this.links.find(l => l.pending?.type === 'game');
-    const tapped = /^([1-9])(?:[.)\s]|$)/.exec(text.trim());
-    if (asked && asked.pending?.type === 'game' && tapped) {
-      const { ids, text: waiting } = asked.pending;
-      const g = games.find(x => x.match.id === ids[Number(tapped[1]) - 1]);
-      if (g) {
-        await this.db.from('chat_links').update({ active_match_id: null, pending: null }).in('id', this.links.map(l => l.id));
-        await this.db.from('chat_links').update({ active_match_id: g.match.id, pending: null }).eq('id', g.link.id);
-        this.links.forEach(l => { l.active_match_id = null; l.pending = null; });
-        g.link.active_match_id = g.match.id;
-        choose(g);
-        const m = g.match;
-        const picked = { text: `Scoring ${m.home_team_name} vs ${m.away_team_name}, ${gameWhen(g)}. ${m.status === 'upcoming' ? 'Send ko at kick-off, or games to switch.' : 'Send games to switch.'}` };
-        // Carry on with the message that brought up the list, if it was something to do (not just "hi")
-        const again = waiting && (parseShort(waiting) || POTM.test(waiting)) && !SWITCH.has(tidy(waiting)) ? waiting : undefined;
-        return { picked, rerun: again };
-      }
+    // "m12": a tournament game by its match number
+    const byNumber = /^m\s*#?\s*(\d{1,3})$/i.exec(text.trim());
+    if (byNumber) {
+      const hits = games.filter(g => g.match.tournament_match_number === Number(byNumber[1]));
+      if (hits.length === 1) return pick(hits[0], '');
+      if (!hits.length) return { reply: { text: `No match ${byNumber[1]} to score. Send games for the list.` } };
     }
 
+    // A tap on the game list ("2. Austral vs ...", or just "2"), or More games
+    const asked = this.links.find(l => l.pending?.type === 'game');
+    const pending = asked?.pending?.type === 'game' ? asked.pending : null;
+    const tapped = /^([1-9])(?:[.)\s]|$)/.exec(text.trim());
+    if (pending && tapped) {
+      const g = games.find(x => x.match.id === pending.ids[Number(tapped[1]) - 1]);
+      if (g) return pick(g, pending.text);
+    }
+    const more = pending && tidy(text) === 'more games';
+
     // The game picked earlier, until it's finished (or "games" to pick again)
-    const active = !SWITCH.has(tidy(text)) && games.find(g => g.link.active_match_id === g.match.id);
+    const active = !more && !SWITCH.has(tidy(text)) && games.find(g => g.link.active_match_id === g.match.id);
     if (active) { choose(active); return {}; }
 
-    const list = games.slice(0, 6);
-    await this.db.from('chat_links').update({ pending: { type: 'game', ids: list.map(g => g.match.id), text } }).eq('id', list[0].link.id);
-    list[0].link.pending = { type: 'game', ids: list.map(g => g.match.id), text };
+    // Five a page, with More games after them
+    const PAGE = 5;
+    const page = more ? ((pending!.page || 0) + 1) * PAGE < games.length ? (pending!.page || 0) + 1 : 0 : 0;
+    const list = games.slice(page * PAGE, page * PAGE + PAGE);
+    const next: Pending = { type: 'game', ids: list.map(g => g.match.id), text: more ? pending!.text : text, page };
+    await this.db.from('chat_links').update({ pending: next }).eq('id', list[0].link.id);
+    list[0].link.pending = next;
+    const hasMore = games.length > PAGE;
     return {
       reply: {
-        text: `Which game are you scoring? Tap one.${games.length > list.length ? ` (The next ${list.length} of ${games.length}.)` : ''}`,
-        buttons: list.map((g, i) => `${i + 1}. ${g.match.home_team_name} vs ${g.match.away_team_name}, ${gameWhen(g)}`),
+        text: `Which game are you scoring? Tap one.${hasMore ? ` (${page * PAGE + 1}-${page * PAGE + list.length} of ${games.length}. For a tournament game you can also send its number, like m12.)` : ''}`,
+        buttons: [...list.map((g, i) => `${i + 1}. ${gameName(g.match)}${g.match.pitch_label ? `, ${g.match.pitch_label}` : ''}, ${gameWhen(g)}`), ...(hasMore ? ['More games'] : [])],
       },
     };
   }
@@ -265,13 +327,17 @@ class Bot {
   // The message
   // ---------------------------------------------------------------------------
 
-  private get ourSide(): 'home' | 'away' { return this.match.is_club_home === false ? 'away' : 'home'; }
-  private get junior() { return isJuniorFixture(this.match, this.teams); }
+  /** Our side in a club game. A tournament game has no "us": every side is a team, and scores read home first. */
+  private get ourSide(): Side { return this.match.tournament_id ? 'home' : this.match.is_club_home === false ? 'away' : 'home'; }
+  private get junior() { return !!this.tour?.t.is_junior || isJuniorFixture(this.match, this.teams); }
+  private teamName(side: Side) { return side === 'home' ? this.match.home_team_name : this.match.away_team_name; }
   private score(home = this.match.home_score, away = this.match.away_score) {
     const [us, them] = this.ourSide === 'home' ? [home, away] : [away, home];
     return `${us}-${them}`;
   }
   private fullScore() { return `${this.match.home_team_name} ${this.match.home_score}-${this.match.away_score} ${this.match.away_team_name}`; }
+  /** "Sam Lee (Austral Reds)" in a tournament, where the same name can play for either team */
+  private label(p: Player) { return p.team ? `${p.name} (${p.team})` : p.name; }
 
   private async setPending(p: Pending | null) {
     this.link.pending = p;
@@ -281,17 +347,38 @@ class Bot {
   private async run(text: string): Promise<BotReply[]> {
     const pending = this.link.pending;
     let command = parseShort(text);
+    const tour = !!this.match.tournament_id;
 
     // "Yes, end it" is only ever the full-time button: it ends the game even if a message came in between
     if (tidy(text) === 'yes, end it') {
       await this.setPending(null);
-      return this.fullTime();
+      return this.fullTime(pending?.type === 'fulltime' ? pending.pens : undefined);
     }
     if (pending?.type === 'fulltime') {
-      if (command?.kind === 'yes') { await this.setPending(null); return this.fullTime(); }
+      if (command?.kind === 'yes') { await this.setPending(null); return this.fullTime(pending.pens); }
       if (command?.kind === 'no') { await this.setPending(null); return [{ text: 'OK, still playing.' }]; }
       // Chatter keeps the question open; another command (a late goal) moves on
       if (command) await this.setPending(null);
+    }
+    if (pending?.type === 'pens') {
+      const pens = parsePens(text);
+      if (pens) {
+        if (pens[0] === pens[1]) return [{ text: "A shoot-out can't end level. Send the final penalty score, like 4-3." }];
+        const winner = this.teamName(pens[0] > pens[1] ? 'home' : 'away');
+        await this.setPending({ type: 'fulltime', pens });
+        return [{ text: `End ${this.gameLabel()} at ${this.score()}, ${winner} win ${Math.max(...pens)}-${Math.min(...pens)} on penalties?`, buttons: ['Yes, end it', 'Not yet'] }];
+      }
+      if (command?.kind === 'no') { await this.setPending(null); return [{ text: 'OK, still playing.' }]; }
+      if (command) await this.setPending(null);
+    }
+    if (POTT.test(text)) {
+      if (!this.tour) return [{ text: 'Player of the Tournament is for tournament games. For this game, send potm and a name.' }];
+      const name = potmName(text, POTT);
+      if (!name) {
+        await this.setPending({ type: 'pott' });
+        return [{ text: `Who's Player of the Tournament for ${this.tour.t.name}? Send the name.`, buttons: ['Cancel'] }];
+      }
+      return (await this.answerName({ type: 'pott' }, name, null)) || [{ text: `"${name}" doesn't look like a name. Try: pott sam` }];
     }
     if (POTM.test(text)) {
       if (this.match.status === 'upcoming') return [{ text: 'Player of the Match comes once the game is under way.' }];
@@ -304,14 +391,21 @@ class Bot {
       return answer || [{ text: `"${name}" doesn't look like a name. Try: potm sam` }];
     }
     if (this.match.status === 'completed') {
-      // Only Player of the Match reaches a finished game
-      const answer = pending?.type === 'potm' ? (await this.setPending(null), await this.answerName(pending, text, command)) : null;
-      return answer || [{ text: 'This game has finished. Send potm and a name for Player of the Match, or fix anything else in Match Centre.' }];
+      // Only the awards reach a finished game
+      const answer = pending?.type === 'potm' || pending?.type === 'pott' ? (await this.setPending(null), await this.answerName(pending, text, command)) : null;
+      return answer || [{ text: `This game has finished. Send potm and a name for Player of the Match${tour ? ', pott for Player of the Tournament,' : ''} or fix anything else in ${tour ? 'the tournament screen' : 'Match Centre'}.` }];
     }
     if (pending?.type === 'player') {
       await this.setPending(null);
       const chosen = command?.kind === 'pick' ? pending.options[command.n - 1] : pending.options.find(o => tidy(o) === tidy(text));
       if (chosen && (pending.command.kind === 'goal' || pending.command.kind === 'card' || pending.command.kind === 'sub')) return this.logEvent({ ...pending.command, player: chosen }, true);
+    }
+    if (pending?.type === 'team') {
+      await this.setPending(null);
+      const c = pending.command;
+      const side = command?.kind === 'pick' ? (['home', 'away'] as const)[command.n - 1] : sideByName(text, { name: this.match.home_team_name }, { name: this.match.away_team_name });
+      if (side && (c.kind === 'goal' || c.kind === 'card' || c.kind === 'sub')) return this.logEvent(c, false, { side, player: c.player ? titleCase(c.player) : this.teamName(side), named: !!c.player });
+      if (command?.kind === 'no') return [{ text: 'OK, nothing saved.' }];
     }
     if (pending?.type === 'their_scorer') {
       await this.setPending(null);
@@ -319,16 +413,20 @@ class Bot {
       if (!command && /^[\p{L}'’ -]{2,40}$/u.test(text.trim()) && words.length <= 3 && !words.some(w => NOT_A_NAME.has(w))) {
         const name = titleCase(text.trim());
         const { data } = await this.db.from('match_events').update({ player_name: name }).eq('id', pending.eventId).eq('match_id', this.match.id).select('id');
-        this.log.result = `Their scorer: ${name}`;
-        return [{ text: data?.length ? `Added their scorer: ${name}.` : "That goal isn't there any more." }];
+        this.log.result = `Scorer: ${name}`;
+        return [{ text: data?.length ? `Added ${this.match.tournament_id ? 'the' : 'their'} scorer: ${name}.` : "That goal isn't there any more." }];
       }
     }
 
-    if (pending?.type === 'assist' || pending?.type === 'sub_off' || pending?.type === 'potm') {
+    if (pending?.type === 'assist' || pending?.type === 'sub_off' || pending?.type === 'potm' || pending?.type === 'pott') {
       await this.setPending(null);
       const answer = await this.answerName(pending, text, command);
       if (answer) return answer;
     }
+
+    // In a tournament "g 23" (no name) is a goal for a team we ask about
+    const bare = tour && !command ? /^(?:g|goal)(?:\s+(\d{1,3}))?$/i.exec(text.trim()) : null;
+    if (bare) command = { kind: 'goal', side: 'them', type: 'goal', ...(bare[1] ? { minute: Number(bare[1]) } : {}) };
 
     if (!command) {
       command = await this.readWithAi(text);
@@ -356,7 +454,7 @@ class Bot {
       this.log.result = 'AI limit reached';
       return null;
     }
-    const r = await readWithAi(text, firstNames(await this.squad()), readers);
+    const r = await readWithAi(text, firstNames(await this.pool()), readers);
     this.log.aiError = r.error;
     if (r.reader) this.log.reader = r.reader;
     return r.command;
@@ -375,6 +473,55 @@ class Bot {
     const { data } = await q;
     this.squadCache = (data || []).filter(m => m.full_name && m.membership_status !== 'rejected' && m.membership_status !== 'pending').map(m => ({ id: m.id, name: m.full_name }));
     return this.squadCache;
+  }
+
+  /**
+   * The tournament, its teams and their players: an internal team's roster (the whole club squad when it has none,
+   * as Match Centre does) or the squad a guest club entered.
+   */
+  private async loadTournament() {
+    const tid = this.match.tournament_id!;
+    const [{ data: t }, { data: parts }, { data: squads }] = await Promise.all([
+      this.db.from('tournaments').select('*').eq('id', tid).maybeSingle(),
+      this.db.from('tournament_participants').select('*').eq('tournament_id', tid),
+      this.db.from('tournament_squads').select('id, participant_id, name, is_junior').eq('tournament_id', tid),
+    ]);
+    if (!t) return;
+    const internal = ((parts || []) as TournamentParticipant[]).filter(p => p.team_type === 'internal' && p.internal_team_id);
+    const { data: rosters } = internal.length
+      ? await this.db.from('internal_teams').select('id, player_ids').in('id', internal.map(p => p.internal_team_id!))
+      : { data: [] as { id: string; player_ids: string[] }[] };
+    const { data: members } = internal.length
+      ? await this.db.from('club_members').select('id, full_name, membership_status').eq('club_id', this.club.id)
+      : { data: [] as { id: string; full_name: string; membership_status?: string }[] };
+    const approved = (members || []).filter(m => m.full_name && m.membership_status !== 'rejected' && m.membership_status !== 'pending');
+    const players: Player[] = [];
+    for (const p of (parts || []) as TournamentParticipant[]) {
+      if (p.team_type === 'internal') {
+        const roster = new Set((rosters || []).find(r => r.id === p.internal_team_id)?.player_ids || []);
+        approved.filter(m => !roster.size || roster.has(m.id)).forEach(m => players.push({ id: `${p.id}:${m.id}`, name: m.full_name, team: p.name, memberId: m.id }));
+      } else {
+        (squads || []).filter(r => r.participant_id === p.id).forEach(r => players.push({ id: r.id, name: r.name, team: p.name, junior: !!r.is_junior }));
+      }
+    }
+    this.tour = { t: t as Tournament, parts: (parts || []) as TournamentParticipant[], players };
+  }
+
+  /** Who the bot can name: our squad in a club game; in a tournament, a team's players (or both teams', or the whole tournament's) */
+  private async pool(side?: Side | 'tournament'): Promise<Player[]> {
+    if (!this.match.tournament_id) return (await this.squad()).map(p => ({ ...p, side: this.ourSide }));
+    const all = this.tour?.players || [];
+    if (side === 'tournament') return all;
+    const sides = (side ? [side] : ['home', 'away'] as Side[]);
+    return sides.flatMap(sd => all.filter(p => p.team === this.teamName(sd)).map(p => ({ ...p, side: sd })));
+  }
+
+  /** "M#14 Semi-final" in a tournament, "the match" otherwise */
+  private gameLabel() {
+    const m = this.match;
+    if (!m.tournament_id) return 'the match';
+    const stage = m.tournament_stage && m.tournament_stage !== 'group' && stageName(m.tournament_stage) ? ` ${stageName(m.tournament_stage)}` : '';
+    return m.tournament_match_number ? `M#${m.tournament_match_number}${stage}` : stage.trim() || 'the match';
   }
 
   private async execute(c: ChatCommand): Promise<BotReply[]> {
@@ -396,13 +543,24 @@ class Bot {
         if (m.status !== 'halftime') return [{ text: 'The second half starts after half time (send ht first).' }];
         await this.updateMatch({ status: 'live', period: 'second_half', current_minute: periodStartMinute(m, 'second_half') });
         return [{ text: 'Second half under way. Clock running.' }];
-      case 'fulltime':
+      case 'fulltime': {
         if (m.status === 'upcoming') return [{ text: "This game hasn't kicked off yet." }];
+        if (isKnockout(m) && m.home_score === m.away_score) return this.askPens();
         await this.setPending({ type: 'fulltime' });
-        return [{ text: `End the match at ${this.score()}? Followers get the full-time alert.`, buttons: ['Yes, end it', 'Not yet'] }];
+        if (!m.tournament_id) return [{ text: `End the match at ${this.score()}? Followers get the full-time alert.`, buttons: ['Yes, end it', 'Not yet'] }];
+        const result = m.home_score === m.away_score ? 'a draw' : `${this.teamName(m.home_score > m.away_score ? 'home' : 'away')} win`;
+        const after = m.tournament_stage === 'final' ? `The winner takes the ${this.tour?.t.name || 'cup'}.` : m.tournament_stage === 'third_place' ? 'The winner finishes third.'
+          : isKnockout(m) ? 'The winner goes through.' : `The ${m.tournament_group || 'league'} table updates.`;
+        return [{ text: `End ${this.gameLabel()} at ${this.score()}, ${result}? ${after}`, buttons: ['Yes, end it', 'Not yet'] }];
+      }
       case 'undo': return this.undo();
       case 'goal': case 'card': case 'sub': return this.logEvent(c);
     }
+  }
+
+  private async askPens(): Promise<BotReply[]> {
+    await this.setPending({ type: 'pens' });
+    return [{ text: `It's ${this.score()} and a knockout game needs a winner. Penalty score? Send it like 4-3, ${this.match.home_team_name} first.`, buttons: ['Not yet'] }];
   }
 
   private async updateMatch(patch: Partial<Match>) {
@@ -413,66 +571,121 @@ class Bot {
 
   private async alert(kind: 'kickoff' | 'goal' | 'fulltime', minute?: number, scorer?: string) {
     try {
-      await sendMatchAlert(this.db, this.club.slug, this.match, this.teams, kind, this.match.home_score, this.match.away_score, minute, scorer);
+      await sendMatchAlert(this.db, this.club.slug, this.match, this.teams, kind, this.match.home_score, this.match.away_score, minute, this.junior ? undefined : scorer);
     } catch (e) {
       console.error('[chat-bot] alert failed:', e);
     }
   }
 
-  private async fullTime(): Promise<BotReply[]> {
+  private async fullTime(pens?: [number, number]): Promise<BotReply[]> {
     const m = this.match;
     if (!['live', 'halftime'].includes(m.status)) return [{ text: 'This game is not live.' }];
+    // A level knockout game can't end without its shoot-out
+    if (isKnockout(m) && m.home_score === m.away_score && !pens) return this.askPens();
+    const shootout = isKnockout(m) && m.home_score === m.away_score && pens ? pens : undefined;
     const final = m.period === 'extra_time' || m.period === 'penalties' ? undefined : fullMinutes(m);
-    await this.updateMatch({ status: 'completed', period: 'full_time', ...(final ? { current_minute: final } : {}) });
+    await this.updateMatch({
+      status: 'completed', period: shootout ? 'penalties' : 'full_time', ...(final ? { current_minute: final } : {}),
+      ...(shootout ? { home_penalty_score: shootout[0], away_penalty_score: shootout[1] } : {}),
+    });
     await this.alert('fulltime');
-    this.log.result = `Full time ${this.score()}`;
-    return [{ text: `Full time: ${this.fullScore()}. Thanks for scoring! Send potm and a name for Player of the Match.` }];
+    const result = `${this.fullScore()}${shootout ? ` (${shootout[0]}-${shootout[1]} pens)` : ''}`;
+    this.log.result = `Full time ${this.score()}${shootout ? ` (${shootout[0]}-${shootout[1]} pens)` : ''}`;
+    if (!this.tour) return [{ text: `Full time: ${result}. Thanks for scoring! Send potm and a name for Player of the Match.` }];
+    const next = await this.advanceTournament();
+    return [{ text: `Full time: ${result}. ${next} Send potm and a name for Player of the Match${this.tour.t.status === 'completed' ? ', or pott for Player of the Tournament' : ', or games for your next game'}.` }];
   }
 
   /**
-   * The reply to "Assist?", "Who's going off?" or "Who's Player of the Match?": a name from the squad
-   * (or a tap when two match), or No. Null when the message is something else (say "g jack"), which is then handled as usual.
+   * After a tournament result: the same resolveTournament the tournament screen runs, here on the server, so the table
+   * fills the knockout slots and winners move on without anyone opening the admin. Saves only what changed.
    */
-  private async answerName(p: Extract<Pending, { type: 'assist' | 'sub_off' | 'potm' }>, text: string, command: ChatCommand | null): Promise<BotReply[] | null> {
+  private async advanceTournament(): Promise<string> {
+    const { t, parts } = this.tour!;
+    const m = this.match;
+    const { data: rows } = await this.db.from('matches').select('*').eq('tournament_id', t.id);
+    const own = ((rows || []) as Match[]).map(x => (x.id === m.id ? { ...x, ...m } : x));
+    const { data: cards } = await this.db.from('match_events').select('*').in('match_id', own.map(x => x.id)).in('event_type', ['yellow_card', 'red_card']);
+    const resolved = resolveTournament(own, t, parts, (cards || []) as MatchEvent[]);
+    const KEYS = ['home_team_name', 'home_team_logo', 'away_team_name', 'away_team_logo', 'winner_side'] as const;
+    for (const after of resolved) {
+      const before = own.find(x => x.id === after.id)!;
+      const patch = Object.fromEntries(KEYS.filter(k => (before[k] ?? null) !== (after[k] ?? null)).map(k => [k, after[k] ?? null]));
+      if (Object.keys(patch).length) await this.db.from('matches').update(patch).eq('id', after.id).eq('tournament_id', t.id);
+    }
+    const status = resolved.every(x => x.status === 'completed') ? 'completed' : 'ongoing';
+    if (t.status !== status) {
+      await this.db.from('tournaments').update({ status }).eq('id', t.id);
+      t.status = status;
+    }
+
+    const done = resolved.find(x => x.id === m.id)!;
+    const winner = done.winner_side ? this.teamName(done.winner_side as Side) : '';
+    if (m.tournament_stage === 'final' && winner) return `${winner} win the ${t.name}!${status === 'completed' ? ' The tournament is finished.' : ''}`;
+    if (isKnockout(m)) {
+      const next = done.next_match_id ? resolved.find(x => x.id === done.next_match_id) : undefined;
+      if (!winner || !next) return '';
+      const stage = stageName(next.tournament_stage) ? ` ${stageName(next.tournament_stage)}` : '';
+      const when = [next.match_time ? gameWhen({ match: next, day: next.match_date.slice(0, 10), today: next.match_date.slice(0, 10) }).replace(/^today /, '') : '', next.pitch_label].filter(Boolean).join(', ');
+      return `${winner} go through to M#${next.tournament_match_number}${stage}${when ? `, ${when}` : ''}.`;
+    }
+    return `${m.tournament_group || 'League'} table updated.`;
+  }
+
+  /**
+   * The reply to "Assist?", "Who's going off?", "Who's Player of the Match / Tournament?": a name (or a tap when two
+   * match), or No. Null when the message is something else (say "g jack"), which is then handled as usual.
+   */
+  private async answerName(p: Extract<Pending, { type: 'assist' | 'sub_off' | 'potm' | 'pott' }>, text: string, command: ChatCommand | null): Promise<BotReply[] | null> {
     const assist = p.type === 'assist';
+    const award = p.type === 'potm' ? 'Player of the Match' : p.type === 'pott' ? 'Player of the Tournament' : '';
     if (command?.kind === 'no') {
-      this.log.result = assist ? 'No assist' : p.type === 'potm' ? 'No Player of the Match' : 'Sub cancelled';
-      return [{ text: assist ? 'OK, no assist.' : p.type === 'potm' ? 'OK, no Player of the Match saved.' : 'OK, sub cancelled. Nothing saved.' }];
+      this.log.result = assist ? 'No assist' : award ? `No ${award}` : 'Sub cancelled';
+      return [{ text: assist ? 'OK, no assist.' : award ? `OK, no ${award} saved.` : 'OK, sub cancelled. Nothing saved.' }];
     }
     const words = tidy(text).split(' ');
     const picked = command?.kind === 'pick' ? p.options?.[command.n - 1] : p.options?.find(o => tidy(o) === tidy(text));
     const nameLike = !command && /^[\p{L}'’ -]{2,40}$/u.test(text.trim()) && words.length <= 3 && !words.some(w => NOT_A_NAME.has(w));
     if (!picked && !nameLike) return null;
     const other = p.type === 'assist' ? p.scorer : p.type === 'sub_off' ? p.on : undefined;
-    const hits = picked ? [{ id: '', name: picked }] : findPlayers(text, await this.squad()).filter(x => x.name !== other);
+    const pool = await this.pool(p.type === 'pott' ? 'tournament' : p.type === 'assist' || p.type === 'sub_off' ? p.side : undefined);
+    const hits = picked ? pool.filter(x => this.label(x) === picked) : findPlayers(text, pool).filter(x => x.name !== other);
     const again = assist ? 'No assist' : 'Cancel';
     // After a goal, a longer message that names no one ("what a strike") just skips the assist
     if (!hits.length && !picked && assist && words.length > 1) return null;
     if (!hits.length) {
       await this.setPending(p);
-      return [{ text: `No one called "${text.trim()}" in this game's squad. Send the name again, or tap ${again}.`, buttons: [again] }];
+      const where = p.type === 'pott' ? 'this tournament'
+        : !this.match.tournament_id ? "this game's squad" : (p.type === 'assist' || p.type === 'sub_off') && p.side ? this.teamName(p.side) : 'either team';
+      return [{ text: `No one called "${text.trim()}" in ${where}. Send the name again, or tap ${again}.`, buttons: [again] }];
     }
     if (hits.length > 1) {
-      const options = hits.slice(0, 4).map(x => x.name);
+      const options = hits.slice(0, 4).map(x => this.label(x));
       await this.setPending({ ...p, options });
-      return [{ text: `${hits.length === 2 ? 'Two' : 'More than one'} players called "${titleCase(text.trim())}". Which one?`, buttons: options }];
+      return [{ text: `${hits.length === 2 ? 'Two' : 'More than one'} players called "${titleCase(text.trim())}"${p.type === 'pott' ? ' in this tournament' : ''}. Which one?`, buttons: options }];
     }
-    const name = hits[0].name;
-    if (p.type === 'potm') return this.savePotm(name);
+    const hit = hits[0];
+    if (p.type === 'potm') return this.savePotm(hit);
+    if (p.type === 'pott') return this.savePott(hit);
     if (assist) {
-      const { data } = await this.db.from('match_events').update({ assist_player_name: name }).eq('id', p.eventId).eq('match_id', this.match.id).select('id');
-      this.log.result = `Assist: ${name}`;
-      return [{ text: data?.length ? `Assist: ${name}.` : "That goal isn't there any more." }];
+      const { data } = await this.db.from('match_events').update({ assist_player_name: hit.name }).eq('id', p.eventId).eq('match_id', this.match.id).select('id');
+      this.log.result = `Assist: ${hit.name}`;
+      return [{ text: data?.length ? `Assist: ${hit.name}.` : "That goal isn't there any more." }];
     }
-    return this.saveSub(p.on, name, p.minute, p.added);
+    return this.saveSub(p.on, hit.name, p.minute, p.added, p.side);
   }
 
+  /** A junior's name as the public pages show it ("Ruby S.") */
+  private publicName(p: Player) { return this.junior || p.junior ? juniorPublicName(p.name) : p.name; }
+
   /**
-   * Player of the Match as a commentary line (it replaces an earlier pick). Match Centre picks it up when the player
-   * stats are saved, which is what awards the points and puts it on the match page, so it's never counted twice.
+   * Player of the Match as a commentary line (it replaces an earlier pick). In a club game Match Centre picks it up
+   * when the player stats are saved, which is what awards the points, so it's never counted twice.
    */
-  private async savePotm(name: string): Promise<BotReply[]> {
+  private async savePotm(p: Player): Promise<BotReply[]> {
     const m = this.match;
+    const name = this.publicName(p);
+    const side = p.side || this.ourSide;
     const { data: notes } = await this.db.from('match_events').select('id, detail_text').eq('match_id', m.id).eq('event_type', 'commentary');
     const old = (notes || []).filter(n => (n.detail_text || '').startsWith(POTM_NOTE)).map(n => n.id);
     if (old.length) await this.db.from('match_events').delete().in('id', old);
@@ -481,23 +694,31 @@ class Bot {
       : splitMinute(m, m.period, getLiveMinute(m, this.now.getTime()));
     const id = crypto.randomUUID();
     const { error } = await this.db.from('match_events').insert({
-      id, match_id: m.id, club_id: m.club_id, minute: at.minute, added_minute: at.added || 0, event_type: 'commentary', team_side: this.ourSide,
-      player_name: this.ourSide === 'home' ? m.home_team_name : m.away_team_name, detail_text: `${POTM_NOTE}${name}`, logged_via: `chat:${this.member.full_name}`.slice(0, 80),
+      id, match_id: m.id, club_id: m.club_id, minute: at.minute, added_minute: at.added || 0, event_type: 'commentary', team_side: side,
+      player_name: this.teamName(side), detail_text: `${POTM_NOTE}${name}`, logged_via: `chat:${this.member.full_name}`.slice(0, 80),
     });
     if (error) return [{ text: "Couldn't save that. Try again, or pick them in Match Centre." }];
     this.log.eventId = id;
     this.log.result = `Player of the Match: ${name}`;
     const live = m.status !== 'completed';
-    return [{
-      text: `Player of the Match: ${name}. It goes on the match page when you save the player stats in Match Centre.${live ? '' : ' Send potm again to change it.'}`,
-      ...(live ? { buttons: ['Undo'] } : {}),
-    }];
+    const where = m.tournament_id ? `${name} (${p.team}). It's on the match page.` : `${name}. It goes on the match page when you save the player stats in Match Centre.`;
+    return [{ text: `Player of the Match: ${where}${live ? '' : ' Send potm again to change it.'}`, ...(live ? { buttons: ['Undo'] } : {}) }];
   }
 
-  private async saveSub(on: string, off: string, minute: number, added: number): Promise<BotReply[]> {
+  /** Player of the Tournament, saved on the tournament as the tournament screen saves it */
+  private async savePott(p: Player): Promise<BotReply[]> {
+    const t = this.tour!.t;
+    const name = p.memberId ? p.name : this.publicName(p);
+    const { error } = await this.db.from('tournaments').update({ player_of_tournament_member_id: p.memberId || null, player_of_tournament_name: name }).eq('id', t.id);
+    if (error) return [{ text: "Couldn't save that. Try again, or set it in the tournament screen." }];
+    this.log.result = `Player of the Tournament: ${name}`;
+    return [{ text: `Player of the Tournament: ${name} (${p.team}). It shows on the tournament page. Send pott again to change it.` }];
+  }
+
+  private async saveSub(on: string, off: string, minute: number, added: number, side: Side = this.ourSide): Promise<BotReply[]> {
     if (!['live', 'halftime'].includes(this.match.status)) return [{ text: 'This game is not live.' }];
     const { data, error } = await this.db.rpc('chat_log_event', {
-      p_match_id: this.match.id, p_event_type: 'sub', p_team_side: this.ourSide, p_player_name: on,
+      p_match_id: this.match.id, p_event_type: 'sub', p_team_side: side, p_player_name: on,
       p_minute: minute, p_added_minute: added, p_detail: subDetail(on, off), p_logged_via: `chat:${this.member.full_name}`.slice(0, 80),
     });
     const row = Array.isArray(data) ? data[0] : data;
@@ -508,14 +729,38 @@ class Bot {
     return [{ text: `Sub (${when}): ${on} on, ${off} off.`, buttons: ['Undo'] }];
   }
 
-  private async logEvent(c: Extract<ChatCommand, { kind: 'goal' | 'card' | 'sub' }>, answered = false): Promise<BotReply[]> {
+  /**
+   * A goal, card or sub. In a club game "us"/"them" gives the side. In a tournament the name does: a player found in
+   * one team, or a team's name ("g lions"); otherwise the bot asks which team. forced: the side (and name) settled already.
+   */
+  private async logEvent(c: Extract<ChatCommand, { kind: 'goal' | 'card' | 'sub' }>, answered = false, forced?: { side: Side; player: string; named: boolean }): Promise<BotReply[]> {
     const m = this.match;
     if (m.status === 'upcoming') return [{ text: 'Kick-off first: send ko.' }];
     if (!['live', 'halftime'].includes(m.status)) return [{ text: 'This game is not live.' }];
 
-    // Who: one of our squad, or their player's name as typed (or their team)
     let player: string;
-    if (c.side === 'us' && c.player) {
+    let side: Side;
+    // Whether the event names a person (not just a team)
+    let named: boolean;
+    if (forced) {
+      ({ player, side, named } = forced);
+    } else if (m.tournament_id) {
+      const pool = await this.pool();
+      const team = c.player && !answered ? sideByName(c.player, this.teamInfo('home'), this.teamInfo('away')) : null;
+      const hits = !c.player || team ? [] : answered ? pool.filter(p => this.label(p) === c.player) : findPlayers(c.player, pool);
+      if (team) { side = team; player = this.teamName(team); named = false; }
+      else if (hits.length === 1) { side = hits[0].side!; player = hits[0].name; named = true; }
+      else if (hits.length > 1) {
+        const options = hits.slice(0, 4).map(p => this.label(p));
+        await this.setPending({ type: 'player', command: c, options });
+        return [{ text: `${hits.length === 2 ? 'Two' : 'More than one'} players called "${titleCase(c.player!)}". Which one?`, buttons: options }];
+      } else {
+        await this.setPending({ type: 'team', command: c });
+        const what = c.kind === 'card' ? 'got the card' : c.kind === 'sub' ? 'made the sub' : c.type === 'own_goal' ? 'put it in their own net' : 'scored';
+        return [{ text: `${c.player ? `No one called "${c.player}" in either team. ` : ''}Which team ${what}?`, buttons: [m.home_team_name, m.away_team_name] }];
+      }
+    } else if (c.side === 'us' && c.player) {
+      // Who: one of our squad, or their player's name as typed (or their team)
       const hits = answered ? (await this.squad()).filter(p => p.name === c.player) : findPlayers(c.player, await this.squad());
       if (!hits.length) return [{ text: `No one called "${c.player}" in this game's squad. Send the name as it is on the team list.` }];
       if (hits.length > 1) {
@@ -524,17 +769,21 @@ class Bot {
         return [{ text: `${hits.length > 4 ? 'More than four' : hits.length === 2 ? 'Two' : String(hits.length)} players called "${titleCase(c.player)}" in this squad. Which one?`, buttons: options }];
       }
       player = hits[0].name;
+      side = this.ourSide;
+      named = true;
     } else {
-      player = c.player ? titleCase(c.player) : (this.ourSide === 'home' ? (c.side === 'us' ? m.home_team_name : m.away_team_name) : (c.side === 'us' ? m.away_team_name : m.home_team_name));
+      side = c.side === 'us' ? this.ourSide : this.ourSide === 'home' ? 'away' : 'home';
+      player = c.player ? titleCase(c.player) : this.teamName(side);
+      named = !!c.player;
     }
+    const tour = !!m.tournament_id;
 
     // When: the minute sent, else the live clock
     const at = c.minute ? { minute: c.minute, added: c.added || 0 } : (() => { const s = splitMinute(m, m.period, getLiveMinute(m, this.now.getTime())); return { minute: s.minute, added: s.added }; })();
     if (c.kind === 'sub') {
-      await this.setPending({ type: 'sub_off', on: player, minute: at.minute, added: at.added });
+      await this.setPending({ type: 'sub_off', on: player, minute: at.minute, added: at.added, ...(tour ? { side } : {}) });
       return [{ text: `${player} coming on (${minuteLabel(at.minute, at.added)}). Who's going off?`, buttons: ['Cancel'] }];
     }
-    const side = c.side === 'us' ? this.ourSide : this.ourSide === 'home' ? 'away' : 'home';
     const type = c.kind === 'goal' ? c.type : c.color === 'yellow' ? 'yellow_card' : 'red_card';
     const { data, error } = await this.db.rpc('chat_log_event', {
       p_match_id: m.id, p_event_type: type, p_team_side: side, p_player_name: player,
@@ -547,23 +796,31 @@ class Bot {
     this.log.eventId = row.event_id;
 
     const when = minuteLabel(at.minute, at.added);
+    const forTeam = tour && named ? ` for ${this.teamName(side)}` : '';
     if (c.kind === 'card') {
-      this.log.result = `${c.color === 'yellow' ? 'Yellow' : 'Red'} card ${player} (${when})`;
-      return [{ text: `${c.color === 'yellow' ? 'Yellow' : 'Red'} card ${player} (${when}).`, buttons: ['Undo'] }];
+      this.log.result = `${c.color === 'yellow' ? 'Yellow' : 'Red'} card ${player}${forTeam} (${when})`;
+      return [{ text: `${c.color === 'yellow' ? 'Yellow' : 'Red'} card ${player}${forTeam} (${when}).`, buttons: ['Undo'] }];
     }
-    await this.alert('goal', at.minute, c.side === 'us' && c.type !== 'own_goal' ? player : undefined);
-    const label = c.type === 'own_goal' ? `Own goal${c.player ? ` ${player}` : ''}` : c.type === 'penalty' ? `Penalty goal ${player}` : `Goal ${player}`;
-    this.log.result = `${label} (${when})`;
-    if (scoringSide(c) === 'them' && c.type !== 'own_goal' && !c.player) {
+    const ours = tour ? named : c.side === 'us';
+    await this.alert('goal', at.minute, ours && c.type !== 'own_goal' ? player : undefined);
+    const label = c.type === 'own_goal' ? `Own goal${named || c.player ? ` ${player}` : ''}` : c.type === 'penalty' ? `Penalty goal ${player}` : `Goal ${player}`;
+    this.log.result = `${label}${forTeam} (${when})`;
+    // A goal with no scorer's name: offer to add it
+    if ((tour ? !named : scoringSide(c) === 'them' && !c.player) && c.type !== 'own_goal') {
       await this.setPending({ type: 'their_scorer', eventId: row.event_id });
-      return [{ text: `${label} (${when}). Now ${this.score()}. Know their scorer? Just send the name.`, buttons: ['Undo'] }];
+      return [{ text: `${label} (${when}). Now ${this.score()}. Know ${tour ? 'the' : 'their'} scorer? Just send the name.`, buttons: ['Undo'] }];
     }
-    // Our own goal from open play: ask for the assist (optional, any other message skips it)
-    if (c.side === 'us' && c.type === 'goal') {
-      await this.setPending({ type: 'assist', eventId: row.event_id, scorer: player });
-      return [{ text: `${label} (${when}). Now ${this.score()}. Assist? Send the name, or tap No assist.`, buttons: ['No assist', 'Undo'] }];
+    // A named player's goal from open play: ask for the assist (optional, any other message skips it)
+    if (ours && c.type === 'goal') {
+      await this.setPending({ type: 'assist', eventId: row.event_id, scorer: player, ...(tour ? { side } : {}) });
+      return [{ text: `${label}${forTeam} (${when}). Now ${this.score()}. Assist? Send the name, or tap No assist.`, buttons: ['No assist', 'Undo'] }];
     }
-    return [{ text: `${label} (${when}). Now ${this.score()}.`, buttons: ['Undo'] }];
+    return [{ text: `${label}${forTeam} (${when}). Now ${this.score()}.`, buttons: ['Undo'] }];
+  }
+
+  private teamInfo(side: Side) {
+    const name = this.teamName(side);
+    return { name, short: this.tour?.parts.find(p => p.name === name)?.short_name };
   }
 
   private async undo(): Promise<BotReply[]> {

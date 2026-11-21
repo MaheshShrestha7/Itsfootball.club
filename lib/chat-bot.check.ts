@@ -1,7 +1,8 @@
 // Score by chat: a whole game through the bot, with an in-memory database and a stand-in AI. The SQL functions
 // themselves were checked on Postgres; this mirrors them. CHAT_BOT_VERBOSE=1 prints the conversation.
 import assert from 'node:assert/strict';
-import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay, potmName, gameWhen } from './chat-bot-server';
+import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay, potmName, gameWhen, parsePens, sideByName } from './chat-bot-server';
+import { buildTiesheet } from './tournament-engine';
 
 type Row = Record<string, any>;
 const T: Record<string, Row[]> = {};
@@ -322,6 +323,109 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   T.club_members[0].status = 'suspended';
   assert.match(await say('score'), /turned off for you/);
   T.club_members[0].status = 'active';
+
+  // ---------------------------------------------------------------------------
+  // A cup day: tournament games by chat (groups, table into the semis, penalties, final, awards)
+  // ---------------------------------------------------------------------------
+  assert.deepEqual(parsePens('4-3'), [4, 3]); assert.deepEqual(parsePens(' 10 – 9 '), [10, 9]); assert.equal(parsePens('4'), null);
+  assert.equal(sideByName('lions', { name: 'Camden Lions' }, { name: 'Bankstown' }), 'home');
+  assert.equal(sideByName('austral', { name: 'Austral Reds' }, { name: 'Austral Blues' }), null, 'both teams fit: ask');
+  assert.equal(sideByName('ABL', { name: 'Austral Reds', short: 'ARE' }, { name: 'Austral Blues', short: 'ABL' }), 'away');
+  const cup: any = { id: 'tc', club_id: club, name: 'Austral Cup', format: 'group_knockout', status: 'ongoing', points_win: 3, points_draw: 1, points_loss: 0, group_count: 2, teams_advancing_per_group: 2, has_third_place_match: false, start_date: `${today}T09:00` };
+  const cupTeams: any[] = [['Austral Reds', 'internal', 'itR'], ['Camden Lions', 'external'], ['Austral Blues', 'internal', 'itB'], ['Bankstown', 'external']]
+    .map(([name, team_type, internal_team_id], i) => ({ id: `tp${i}`, tournament_id: 'tc', team_type, internal_team_id, name, short_name: name.slice(0, 3).toUpperCase(), logo_url: '', seed: i + 1 }));
+  const sheet = buildTiesheet(cup, cupTeams);
+  T.tournaments = [cup];
+  T.tournament_participants = sheet.participants;
+  T.internal_teams = [{ id: 'itR', player_ids: ['p1', 'p3'] }, { id: 'itB', player_ids: ['p2', 'p4'] }];
+  T.tournament_squads = [{ id: 'sq1', tournament_id: 'tc', participant_id: 'tp1', name: 'Ben Hart' }, { id: 'sq2', tournament_id: 'tc', participant_id: 'tp3', name: 'Tom Ng' }];
+  T.matches = sheet.matches.map((m, i) => ({ ...m, club_id: club, match_date: `${today}T00:00:00+00:00`, match_time: `${String(9 + i).padStart(2, '0')}:00`, pitch_label: i % 2 ? 'Pitch 2' : 'Pitch 1', home_score: 0, away_score: 0, current_minute: 0, period: 'not_started', half_length: 10 }));
+  T.match_events = [];
+  T.chat_links[0].active_match_id = null; T.chat_links[0].pending = null;
+  const cm = (n: number) => T.matches.find(m => m.tournament_match_number === n)!;
+  // Only games whose teams are known; the semis and final wait for results
+  assert.match(await say('hi'), /^Which game are you scoring\? Tap one\. \[1\. M#1 Austral Reds vs Austral Blues, Pitch 1, today 9am \| 2\. M#2 Camden Lions vs Bankstown, Pitch 2, today 10am\]$/);
+  assert.match(await say('m1'), /^Scoring M#1 Austral Reds vs Austral Blues, today 9am \(Group A, Pitch 1\)\. Send ko/);
+  assert.match(await say('ko'), /Kick-off logged/);
+  // A name in both teams: tap the one you mean, labelled by team; the assist comes from the scorer's team
+  assert.match(await say('g sam 4'), /Two players called "Sam"\. Which one\? \[Sam Lee \(Austral Reds\) \| Sam Gurung \(Austral Blues\)\]/);
+  assert.match(await say('Sam Lee (Austral Reds)'), /^Goal Sam Lee for Austral Reds \(4'\)\. Now 1-0\. Assist\?/);
+  assert.match(await say('arjun'), /No one called "arjun" in Austral Reds/, 'assist only from the scorer\'s team');
+  assert.match(await say('jack'), /Assist: Jack Tan\./);
+  // No name: which team?
+  assert.match(await say('g 7'), /^Which team scored\? \[Austral Reds \| Austral Blues\]$/);
+  assert.match(await say('Austral Blues'), /^Goal Austral Blues \(7'\)\. Now 1-1\. Know the scorer\?/);
+  assert.match(await say('Arjun'), /Added the scorer: Arjun/);
+  assert.match(await say('g blues 9'), /^Goal Austral Blues \(9'\)\. Now 1-2\./);
+  assert.match(await say('y jack'), /^Yellow card Jack Tan for Austral Reds/);
+  assert.equal(T.match_events.find(e => e.event_type === 'yellow_card')!.team_side, 'home');
+  assert.match(await say('g bob'), /No one called "bob" in either team\. Which team scored\?/);
+  assert.match(await say('Cancel'), /nothing saved/);
+  assert.deepEqual([cm(1).home_score, cm(1).away_score], [1, 2]);
+  assert.match(await say('ft'), /^End M#1 at 1-2, Austral Blues win\? The Group A table updates\. \[Yes, end it \| Not yet\]$/);
+  assert.match(await say('Yes, end it'), /^Full time: Austral Reds 1-2 Austral Blues\. Group A table updated\. Send potm and a name for Player of the Match, or games for your next game\.$/);
+  // Group A is done: its places go into the semis on the server, no admin screen needed
+  assert.equal(cm(3).home_team_name, 'Austral Blues'); assert.equal(cm(4).away_team_name, 'Austral Reds');
+  assert.equal(cm(3).away_team_name, '2nd Group B', 'group B not finished');
+  // Awards after full time; anything else (Undo too) doesn't reach a finished game
+  assert.match(await say('potm arjun'), /^Player of the Match: Arjun Rai \(Austral Blues\)\. It's on the match page\. Send potm again/);
+  assert.equal(T.match_events.find(e => e.event_type === 'commentary')!.team_side, 'away');
+  assert.match(await say('undo'), /^Which game are you scoring\? Tap one\. \[1\. M#2 Camden Lions vs Bankstown/, 'a finished game is out of the list: no undo');
+  assert.deepEqual([cm(1).home_score, cm(1).away_score], [1, 2]);
+
+  // Group B, then the semi-finals are set
+  assert.match(await say('m2'), /Scoring M#2 Camden Lions vs Bankstown/);
+  await say('ko');
+  assert.match(await say('g ben'), /Goal Ben Hart for Camden Lions/);
+  await say('No assist');
+  assert.match(await say('ft'), /Camden Lions win\?/);
+  assert.match(await say('yes'), /Group B table updated/);
+  assert.deepEqual([cm(3).home_team_name, cm(3).away_team_name, cm(4).home_team_name, cm(4).away_team_name], ['Austral Blues', 'Bankstown', 'Camden Lions', 'Austral Reds']);
+
+  // Semi-final level at full time: penalties first, then the winner goes through
+  assert.match(await say('games'), /M#3 Austral Blues vs Bankstown/);
+  assert.match(await say('m3'), /Scoring M#3 Austral Blues vs Bankstown/);
+  await say('ko');
+  assert.match(await say('g tom'), /Goal Tom Ng for Bankstown.*Now 0-1/);
+  await say('No assist');
+  assert.match(await say('g blues'), /Now 1-1/);
+  assert.match(await say('ft'), /^It's 1-1 and a knockout game needs a winner\. Penalty score\? Send it like 4-3, Austral Blues first\. \[Not yet\]$/);
+  assert.match(await say('3-3'), /can't end level/);
+  assert.match(await say('4-3'), /^End M#3 Semi-Final at 1-1, Austral Blues win 4-3 on penalties\? \[Yes, end it \| Not yet\]$/);
+  assert.match(await say('Yes, end it'), /^Full time: Austral Blues 1-1 Bankstown \(4-3 pens\)\. Austral Blues go through to M#5 Grand Final, 1pm, Pitch 1\./);
+  assert.equal(cm(3).period, 'penalties'); assert.deepEqual([cm(3).home_penalty_score, cm(3).away_penalty_score], [4, 3]); assert.equal(cm(3).winner_side, 'home');
+  assert.equal(cm(5).home_team_name, 'Austral Blues');
+  // "Yes, end it" straight after ft on a level knockout game still asks for penalties
+  assert.match(await say('m4'), /Scoring M#4 Camden Lions vs Austral Reds/);
+  await say('ko');
+  assert.match(await say('Yes, end it'), /Penalty score\?/);
+  assert.match(await say('Not yet'), /still playing/);
+  assert.match(await say('g sam 3'), /^Goal Sam Lee for Austral Reds/, 'only the Sam playing in this game');
+  await say('No assist');
+  await say('ft');
+  assert.match(await say('Yes, end it'), /Austral Reds go through to M#5 Grand Final/);
+
+  // The final: the tournament finishes, then Player of the Tournament
+  assert.match(await say('m5'), /Scoring M#5 Austral Blues vs Austral Reds/);
+  await say('ko');
+  assert.match(await say('g arjun 10'), /Goal Arjun Rai for Austral Blues/);
+  await say('No assist');
+  assert.match(await say('ft'), /End M#5 Grand Final at 1-0, Austral Blues win\? The winner takes the Austral Cup\./);
+  assert.match(await say('Yes, end it'), /^Full time: Austral Blues 1-0 Austral Reds\. Austral Blues win the Austral Cup! The tournament is finished\. Send potm and a name for Player of the Match, or pott for Player of the Tournament\.$/);
+  assert.equal(T.tournaments[0].status, 'completed');
+  assert.match(await say('pott sam'), /Two players called "Sam" in this tournament\. Which one\? \[Sam Lee \(Austral Reds\) \| Sam Gurung \(Austral Blues\)\]/);
+  assert.match(await say('Sam Gurung (Austral Blues)'), /^Player of the Tournament: Sam Gurung \(Austral Blues\)\. It shows on the tournament page/);
+  assert.equal(T.tournaments[0].player_of_tournament_member_id, 'p2'); assert.equal(T.tournaments[0].player_of_tournament_name, 'Sam Gurung');
+  assert.match(await say('player of the tournament is Tom'), /Player of the Tournament: Tom Ng \(Bankstown\)/);
+  assert.equal(T.tournaments[0].player_of_tournament_member_id, null, 'a guest player has no member record');
+  assert.ok(T.match_events.every(e => e.logged_via === 'chat:Raj Thapa'));
+
+  // Paging: five games a page, then More games
+  T.matches.push(...[1, 2, 3, 4, 5, 6].map(i => ({ id: `pg${i}`, ...baseMatch, team_id: 't1', match_date: `2026-12-0${i}T00:00:00+00:00`, home_team_name: 'Austral', away_team_name: `Opp ${i}`, match_time: '10:00:00' })));
+  assert.match(await say('games'), /\(1-5 of 6\. .*m12\.\).*\[1\. Austral vs Opp 1.*5\. Austral vs Opp 5, Sat 5 Dec 10am \| More games\]$/);
+  assert.match(await say('More games'), /\(6-6 of 6\.[^\[]*\[1\. Austral vs Opp 6, Sun 6 Dec 10am \| More games\]$/);
+  assert.match(await say('1'), /^Scoring Austral vs Opp 6/);
+  assert.match(await say('pott jo'), /Player of the Tournament is for tournament games/);
 
   // Per-chat rate limit (30 a minute)
   T.platform_chat_settings[0].per_minute = 30;
