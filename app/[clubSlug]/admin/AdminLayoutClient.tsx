@@ -46,6 +46,7 @@ import AdminSearch from '@/components/AdminSearch';
 import ThemeToggle from '@/components/ThemeToggle';
 import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import { useMatchAlerts } from '@/lib/use-match-alerts';
+import { useChatBoards } from '@/lib/use-chat-boards';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { useWelcomePack } from '@/lib/use-welcome-pack';
@@ -99,6 +100,8 @@ export default function AdminLayout({
   const pack = useWelcomePack(club);
   // Followers' kick-off, goal and full-time alerts, from whichever admin screen the result is entered on
   useMatchAlerts(club?.id);
+  // Live scoreboards in scorers' chats follow changes made here too
+  useChatBoards(club?.id);
 
   // The club app's home-screen icons follow the crest (drawn here by whoever may edit the branding)
   useClubAppIcons(club, can(club.id, 'branding', 'edit'), icons => updateClubBranding(club.id, { app_icons: icons }));
