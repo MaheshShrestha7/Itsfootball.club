@@ -6,17 +6,24 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { editTelegram } from './telegram';
 import { clubTimeZone } from './dates';
 import { compareEventMinute, eventMinuteLabel } from './match-length';
-import type { Match, MatchEvent } from './supabase/types';
+import { teamLabel, teamOfMatch } from './teams';
+import type { ClubTeam, Match, MatchEvent } from './supabase/types';
 
 const PERIODS: Record<string, string> = { first_half: '1st half', second_half: '2nd half', extra_time: 'extra time', penalties: 'penalties' };
 
+/** "Seniors · League": the club team (once a club has several) and the competition, so a scorer can tell games apart */
+export function matchTag(m: Match, teams: ClubTeam[]): string {
+  const team = teams.length > 1 ? teamOfMatch(m, teams) : undefined;
+  return [team ? teamLabel(team) : '', m.competition?.trim() || ''].filter(Boolean).join(' · ');
+}
+
 /** The board's text: state, score, goals and cards in order, and when it was last updated */
-export function boardText(m: Match, events: Pick<MatchEvent, 'minute' | 'added_minute' | 'event_type' | 'player_name' | 'assist_player_name' | 'team_side'>[], zone: string, now: Date): string {
+export function boardText(m: Match, events: Pick<MatchEvent, 'minute' | 'added_minute' | 'event_type' | 'player_name' | 'assist_player_name' | 'team_side'>[], zone: string, now: Date, tag = ''): string {
   const state = m.status === 'completed' ? '🏁 FULL TIME'
     : m.status === 'halftime' ? '⏸ HALF TIME'
     : m.status === 'live' ? `🟢 LIVE${PERIODS[m.period || ''] ? ` · ${PERIODS[m.period || '']}` : ''}`
     : '⏱ NOT STARTED';
-  const where = m.tournament_id ? [m.tournament_match_number ? `M#${m.tournament_match_number}` : '', m.tournament_group || ''].filter(Boolean).join(' · ') : '';
+  const where = [tag, ...(m.tournament_id ? [m.tournament_match_number ? `M#${m.tournament_match_number}` : '', m.tournament_group || ''] : [])].filter(Boolean).join(' · ');
   const pens = m.home_penalty_score != null && m.away_penalty_score != null ? `\n(${m.home_penalty_score}-${m.away_penalty_score} on penalties)` : '';
   const lines = events
     .filter(e => ['goal', 'penalty', 'own_goal', 'yellow_card', 'red_card'].includes(e.event_type))
@@ -29,7 +36,8 @@ export function boardText(m: Match, events: Pick<MatchEvent, 'minute' | 'added_m
     });
   const time = new Intl.DateTimeFormat('en-AU', { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(now).replace(/\s/g, '').toLowerCase();
   return [
-    `${state}${where ? `   ${where}` : ''}`,
+    ...(where ? [where] : []),
+    state,
     '',
     `${m.home_team_name}  ${m.home_score ?? 0}`,
     `${m.away_team_name}  ${m.away_score ?? 0}${pens}`,
@@ -50,8 +58,11 @@ export async function refreshBoards(db: SupabaseClient, matchId: string, now = n
     db.from('match_events').select('minute, added_minute, event_type, player_name, assist_player_name, team_side').eq('match_id', matchId),
   ]);
   if (!match) return 0;
-  const { data: club } = await db.from('clubs').select('config').eq('id', match.club_id).maybeSingle();
-  const text = boardText(match as Match, events || [], clubTimeZone(club || {}), now);
+  const [{ data: club }, { data: teams }] = await Promise.all([
+    db.from('clubs').select('config').eq('id', match.club_id).maybeSingle(),
+    db.from('club_teams').select('*').eq('club_id', match.club_id),
+  ]);
+  const text = boardText(match as Match, events || [], clubTimeZone(club || {}), now, matchTag(match as Match, (teams || []) as ClubTeam[]));
   let edited = 0;
   for (const l of links) {
     const id = Number(l.board?.message_id);
