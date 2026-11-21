@@ -11,7 +11,7 @@ export type ChatCommand =
   | { kind: 'kickoff' | 'halftime' | 'second_half' | 'fulltime' | 'undo' | 'score' | 'help' | 'yes' | 'no' }
   | { kind: 'pick'; n: number };
 
-export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · in ram · ko · ht · 2h · ft · undo · score';
+export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · in ram · ko · ht · 2h · ft · undo · score · potm sam · games';
 
 const WORDS: Record<string, ChatCommand> = {
   ko: { kind: 'kickoff' }, 'kick off': { kind: 'kickoff' }, kickoff: { kind: 'kickoff' }, 'kick-off': { kind: 'kickoff' },
@@ -140,3 +140,6 @@ export function parseAiReply(raw: string): ChatCommand | null {
 export function scoringSide(c: { side: Side; type: 'goal' | 'penalty' | 'own_goal' }): Side {
   return c.type === 'own_goal' ? (c.side === 'us' ? 'them' : 'us') : c.side;
 }
+
+// How chat saves Player of the Match: a commentary line Match Centre reads back when the player stats are saved
+export const POTM_NOTE = 'Player of the Match: ';

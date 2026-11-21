@@ -1,6 +1,7 @@
 'use client';
 
 import { minutesOnPitch } from '@/lib/match-subs';
+import { POTM_NOTE } from '@/lib/chat-score';
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useDialog } from '@/lib/use-escape-to-close';
@@ -103,8 +104,13 @@ export default function StatsAuditModal({
   const [cleanSheetMemberIds, setCleanSheetMemberIds] = useState<string[]>(() =>
     isCleanSheetGame ? eligibleDefenders.filter(p => playedIds.includes(p.id)).map(p => p.id) : []);
 
-  // Player of the Match is the coach's call (it's published on the match page), so it starts empty
-  const [motmMemberId, setMotmMemberId] = useState<string>('');
+  // Player of the Match is the coach's call (it's published on the match page): it starts empty,
+  // unless a scorer already picked someone by chat (the latest "Player of the Match: <name>" line)
+  const [motmMemberId, setMotmMemberId] = useState<string>(() => {
+    const note = [...events].reverse().find(e => e.event_type === 'commentary' && (e.detail_text || '').startsWith(POTM_NOTE));
+    const name = (note?.detail_text || '').slice(POTM_NOTE.length).trim().toLowerCase();
+    return (name && squadPlayers.find(p => p.full_name.toLowerCase() === name)?.id) || '';
+  });
 
   const [appearanceMemberIds, setAppearanceMemberIds] = useState<string[]>(() => playedIds);
 
