@@ -12,13 +12,16 @@ import { sendMatchAlert } from './match-push-server';
 import { getLiveMinute } from './live-minute';
 import { fullMinutes, halfMinutes, periodStartMinute, splitMinute } from './match-length';
 import { clubTimeZone, SITE_TIME_ZONE } from './dates';
+import { boardText, refreshBoards } from './chat-board';
+import { telegramConfigured } from './telegram';
 import { durableRateLimit } from './rate-limit';
 import { subDetail } from './match-subs';
 import { isJuniorFixture, juniorPublicName, teamOfMatch } from './teams';
 import { resolveTournament, STAGE_TITLES } from './tournament-engine';
 import type { Club, ClubMember, ClubTeam, Match, MatchEvent, Tournament, TournamentParticipant } from './supabase/types';
 
-export interface BotReply { text: string; buttons?: string[] }
+/** board: this reply is the live scoreboard; the channel pins it and remembers it for later edits */
+export interface BotReply { text: string; buttons?: string[]; board?: { matchId: string; linkId: string } }
 type Pending =
   | { type: 'game'; ids: string[]; text: string; page?: number }
   | { type: 'player'; command: ChatCommand; options: string[] }
@@ -194,6 +197,8 @@ class Bot {
   private squadCache: SquadPlayer[] | null = null;
   // A tournament game's tournament, its teams and everyone the bot can name in it
   private tour: { t: Tournament; parts: TournamentParticipant[]; players: Player[] } | null = null;
+  // Something on the scoreboard changed this message (the boards get rewritten after it)
+  private changed = false;
   private log: { reader: AiReader | 'short' | 'none'; result: string; eventId?: string; aiError?: boolean } = { reader: 'short', result: '' };
 
   constructor(private db: SupabaseClient, private chatId: string, private links: Link[], private settings: Settings, private now: Date) {}
@@ -204,6 +209,11 @@ class Bot {
     if (this.match.tournament_id) await this.loadTournament();
     // After a tap on the game list: say which game, then carry on with the message that brought the list up
     const replies = pick.picked ? [pick.picked, ...(pick.rerun ? await this.run(pick.rerun) : [])] : await this.run(text);
+    // Picking a game that's already on brings its scoreboard (kick-off brings one too)
+    if (pick.picked && ['live', 'halftime'].includes(this.match.status) && !replies.some(r => r.board)) replies.push(await this.boardReply());
+    if (this.changed && telegramConfigured()) {
+      try { await refreshBoards(this.db, this.match.id, this.now); } catch (e) { console.error('[chat-bot] board refresh failed:', e); }
+    }
     await this.db.from('chat_messages').insert({
       club_id: this.link.club_id, member_id: this.link.member_id, match_id: this.match.id, chat_id: this.chatId,
       body: text.slice(0, 500), reader: this.log.reader, result: (this.log.result || replies.map(r => r.text).join(' | ')).slice(0, 500),
@@ -413,6 +423,7 @@ class Bot {
       if (!command && /^[\p{L}'’ -]{2,40}$/u.test(text.trim()) && words.length <= 3 && !words.some(w => NOT_A_NAME.has(w))) {
         const name = titleCase(text.trim());
         const { data } = await this.db.from('match_events').update({ player_name: name }).eq('id', pending.eventId).eq('match_id', this.match.id).select('id');
+        this.changed = true;
         this.log.result = `Scorer: ${name}`;
         return [{ text: data?.length ? `Added ${this.match.tournament_id ? 'the' : 'their'} scorer: ${name}.` : "That goal isn't there any more." }];
       }
@@ -534,7 +545,7 @@ class Bot {
         if (m.status !== 'upcoming') return [{ text: 'This game is already under way.' }];
         await this.updateMatch({ status: 'live', period: 'first_half', current_minute: periodStartMinute(m, 'first_half') });
         await this.alert('kickoff');
-        return [{ text: `Kick-off logged for ${m.home_team_name} vs ${m.away_team_name}. Clock running.` }];
+        return [{ text: `Kick-off logged for ${m.home_team_name} vs ${m.away_team_name}. Clock running. The scoreboard below is pinned and updates itself.` }, await this.boardReply()];
       case 'halftime':
         if (m.status !== 'live' || m.period !== 'first_half') return [{ text: m.status === 'upcoming' ? 'Kick-off first: send ko.' : 'Half time is only after the first half.' }];
         await this.updateMatch({ status: 'halftime', period: 'halftime', current_minute: halfMinutes(m) });
@@ -567,6 +578,13 @@ class Bot {
     const next = { ...patch, period_started_at: this.now.toISOString() };
     await this.db.from('matches').update(next).eq('id', this.match.id);
     Object.assign(this.match, next);
+    this.changed = true;
+  }
+
+  /** The live scoreboard for this game, as it stands */
+  private async boardReply(): Promise<BotReply> {
+    const { data: events } = await this.db.from('match_events').select('minute, added_minute, event_type, player_name, assist_player_name, team_side').eq('match_id', this.match.id);
+    return { text: boardText(this.match, events || [], clubTimeZone(this.club), this.now), board: { matchId: this.match.id, linkId: this.link.id } };
   }
 
   private async alert(kind: 'kickoff' | 'goal' | 'fulltime', minute?: number, scorer?: string) {
@@ -669,6 +687,7 @@ class Bot {
     if (p.type === 'pott') return this.savePott(hit);
     if (assist) {
       const { data } = await this.db.from('match_events').update({ assist_player_name: hit.name }).eq('id', p.eventId).eq('match_id', this.match.id).select('id');
+      this.changed = true;
       this.log.result = `Assist: ${hit.name}`;
       return [{ text: data?.length ? `Assist: ${hit.name}.` : "That goal isn't there any more." }];
     }
@@ -794,6 +813,7 @@ class Bot {
     this.match.home_score = row.home_score;
     this.match.away_score = row.away_score;
     this.log.eventId = row.event_id;
+    this.changed = true;
 
     const when = minuteLabel(at.minute, at.added);
     const forTeam = tour && named ? ` for ${this.teamName(side)}` : '';
@@ -831,6 +851,7 @@ class Bot {
     await this.db.from('chat_messages').update({ event_id: null, result: `${last.result || ''} (undone)`.slice(0, 500) }).eq('id', last.id);
     const row = Array.isArray(data) ? data[0] : data;
     if (error || !row) return [{ text: 'That was already removed in Match Centre.' }];
+    this.changed = true;
     this.match.home_score = row.home_score;
     this.match.away_score = row.away_score;
     await this.setPending(null);

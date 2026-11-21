@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { answerTelegramButton, sendTelegram, telegramConfigured } from '@/lib/telegram';
+import { answerTelegramButton, pinTelegram, sendTelegram, telegramConfigured } from '@/lib/telegram';
 import { handleChatMessage } from '@/lib/chat-bot-server';
+import { rememberBoard } from '@/lib/chat-board';
 
 // Itsfootball.club Bot: Telegram sends every message and button tap here (set up from Mission Control
 // -> AI and chat -> Connect the bot). Only Telegram knows TELEGRAM_WEBHOOK_SECRET, which it sends back
@@ -29,7 +30,14 @@ export async function POST(req: NextRequest) {
   }
   try {
     const replies = await handleChatMessage(db, chatId, text);
-    for (const r of replies) await sendTelegram(chatId, r.text, r.buttons);
+    for (const r of replies) {
+      const id = await sendTelegram(chatId, r.text, r.buttons);
+      // The live scoreboard: pinned at the top, and remembered so later changes rewrite it
+      if (r.board && id) {
+        await pinTelegram(chatId, id);
+        await rememberBoard(db, r.board.linkId, r.board.matchId, id);
+      }
+    }
   } catch (e) {
     console.error('[chat/telegram] failed:', e);
     await sendTelegram(chatId, 'Something went wrong on our side. Check Match Centre before sending it again.');

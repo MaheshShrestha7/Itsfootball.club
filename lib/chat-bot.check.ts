@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay, potmName, gameWhen, parsePens, sideByName } from './chat-bot-server';
 import { buildTiesheet } from './tournament-engine';
+import { boardText, refreshBoards, rememberBoard } from './chat-board';
 
 type Row = Record<string, any>;
 const T: Record<string, Row[]> = {};
@@ -16,7 +17,7 @@ class Q {
   private patch: any; private ord?: [string, boolean]; private lim?: number; private one = false; private head = false; private wantRows = false; private conflict?: string[];
   constructor(private table: string) { T[table] ||= []; }
   select(_c?: string, o?: { count?: string; head?: boolean }) { if (this.op !== 'select') this.wantRows = true; if (o?.head) this.head = true; return this; }
-  eq(c: string, v: any) { this.f.push(r => r[c] === v); return this; }
+  eq(c: string, v: any) { const [col, key] = c.split('->>'); this.f.push(r => (key ? r[col]?.[key] : r[c]) === v); return this; }
   in(c: string, v: any[]) { this.f.push(r => v.includes(r[c])); return this; }
   is(c: string, v: any) { this.f.push(r => (r[c] ?? null) === v); return this; }
   gte(c: string, v: any) { this.f.push(r => r[c] >= v); return this; }
@@ -83,7 +84,14 @@ const db = { from: (t: string) => new Q(t), rpc } as any;
 
 // Gemini stub: reads a few phrases, counts calls, can fail Flash-Lite
 const aiCalls: string[] = []; let flashDown = false; let lastPrompt = '';
+// Telegram stub: records the board edits the bot makes
+const tgCalls: { method: string; body: any }[] = [];
+process.env.TELEGRAM_BOT_TOKEN = 't'; process.env.TELEGRAM_BOT_USERNAME = 'bot'; process.env.TELEGRAM_WEBHOOK_SECRET = 's';
 globalThis.fetch = (async (url: string, init: any) => {
+  if (url.includes('api.telegram.org')) {
+    tgCalls.push({ method: url.split('/').pop()!, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 900 } }), { status: 200 });
+  }
   const model = /models\/([^:]+):/.exec(url)![1];
   aiCalls.push(model);
   const body = JSON.parse(init.body); lastPrompt = body.contents[0].parts[0].text;
@@ -176,7 +184,14 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // Before kick-off
   assert.match(await say('g sam 3'), /Kick-off first/);
   assert.match(await say('ft'), /hasn't kicked off/);
-  assert.match(await say('ko'), /Kick-off logged for Austral vs Liverpool Rangers/);
+  const ko = await handleChatMessage(db, '111', 'ko', new Date(t));
+  assert.match(ko[0].text, /Kick-off logged for Austral vs Liverpool Rangers\. Clock running\. The scoreboard below is pinned/);
+  // The second reply is the live scoreboard, for the channel to pin and remember
+  assert.deepEqual(ko[1].board, { matchId: 'm1', linkId: T.chat_links[0].id });
+  assert.match(ko[1].text, /^🟢 LIVE · 1st half\n\nAustral  0\nLiverpool Rangers  0\n\nUpdated 2:00pm$/);
+  await rememberBoard(db, T.chat_links[0].id, 'm1', 501);
+  const edits: [string, number, string][] = [];
+  const edit = async (c: string, id: number, text: string) => { edits.push([c, id, text]); return 'ok' as const; };
   assert.equal(m1().status, 'live'); assert.equal(m1().period, 'first_half');
   assert.match(await say('ko'), /already under way/);
 
@@ -187,6 +202,19 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // Assist: "sam" can only mean the other Sam now, the scorer isn't their own assist
   assert.match(await say('sam'), /Assist: Sam Lee\./);
   assert.equal(T.match_events.at(-1)!.assist_player_name, 'Sam Lee');
+  // The bot rewrote the pinned board itself after the goal and again after the assist
+  const boardEdits = tgCalls.filter(c => c.method === 'editMessageText' && c.body.message_id === 501);
+  assert.equal(boardEdits.length, 2);
+  assert.match(boardEdits[0].body.text, /Austral  1\nLiverpool Rangers  0\n\n23' ⚽ Sam Gurung\n/);
+  assert.match(boardEdits[1].body.text, /23' ⚽ Sam Gurung \(assist Sam Lee\)/);
+  assert.equal(await refreshBoards(db, 'm1', new Date(t), edit), 1);
+  assert.equal(edits[0][0], '111'); assert.equal(edits[0][1], 501);
+  assert.match(edits[0][2], /^🟢 LIVE · 1st half\n\nAustral  1\nLiverpool Rangers  0\n\n23' ⚽ Sam Gurung \(assist Sam Lee\)\n\nUpdated /);
+  assert.equal(await refreshBoards(db, 'nope', new Date(t), edit), 0, 'no board for that game');
+  // A board deleted in the chat is forgotten
+  assert.equal(await refreshBoards(db, 'm1', new Date(t), async () => 'gone'), 0);
+  assert.equal(T.chat_links[0].board, null);
+  await rememberBoard(db, T.chat_links[0].id, 'm1', 501);
   assert.match(await say('g jack', '111', 30), /Goal Jack Tan \(31'\)\. Now 2-0. Assist\?/);
   assert.match(await say('No assist'), /OK, no assist/);
   assert.equal(T.match_events.at(-1)!.assist_player_name, undefined);
@@ -327,6 +355,13 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // ---------------------------------------------------------------------------
   // A cup day: tournament games by chat (groups, table into the semis, penalties, final, awards)
   // ---------------------------------------------------------------------------
+  {
+    const base: any = { home_team_name: 'Camden Lions', away_team_name: 'Austral Blues', home_score: 2, away_score: 2, status: 'completed', period: 'penalties', tournament_id: 'tc', tournament_match_number: 14, home_penalty_score: 3, away_penalty_score: 4 };
+    const ev: any[] = [{ minute: 40, added_minute: 2, event_type: 'red_card', player_name: 'Ben Hart' }, { minute: 5, event_type: 'own_goal', player_name: 'Tom Ng' }, { minute: 12, event_type: 'penalty', player_name: 'Sam Lee' }, { minute: 30, event_type: 'sub', player_name: 'X' }];
+    assert.equal(boardText(base, ev, 'Australia/Sydney', new Date('2026-11-21T05:31:00Z')),
+      "🏁 FULL TIME   M#14\n\nCamden Lions  2\nAustral Blues  2\n(3-4 on penalties)\n\n5' ⚽ Own goal Tom Ng\n12' ⚽ Sam Lee (pen)\n40+2' 🟥 Ben Hart\n\nUpdated 4:31pm");
+    assert.match(boardText({ ...base, status: 'halftime', home_penalty_score: null, away_penalty_score: null }, [], 'Australia/Sydney', new Date()), /^⏸ HALF TIME   M#14\n\nCamden Lions  2\nAustral Blues  2\n\nUpdated/);
+  }
   assert.deepEqual(parsePens('4-3'), [4, 3]); assert.deepEqual(parsePens(' 10 – 9 '), [10, 9]); assert.equal(parsePens('4'), null);
   assert.equal(sideByName('lions', { name: 'Camden Lions' }, { name: 'Bankstown' }), 'home');
   assert.equal(sideByName('austral', { name: 'Austral Reds' }, { name: 'Austral Blues' }), null, 'both teams fit: ask');
