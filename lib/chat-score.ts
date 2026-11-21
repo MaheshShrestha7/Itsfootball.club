@@ -11,7 +11,7 @@ export type ChatCommand =
   | { kind: 'kickoff' | 'halftime' | 'second_half' | 'fulltime' | 'undo' | 'score' | 'help' | 'yes' | 'no' }
   | { kind: 'pick'; n: number };
 
-export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · in ram · ko · ht · 2h · ft · undo · score · potm sam · games';
+export const SHORT_FORMAT_HELP = 'Short format: g sam 23 · g them · y jack · r jack · og them · in ram · ko · ht · 2h · ft · undo · score · potm sam · pott sam · m12 · games';
 
 const WORDS: Record<string, ChatCommand> = {
   ko: { kind: 'kickoff' }, 'kick off': { kind: 'kickoff' }, kickoff: { kind: 'kickoff' }, 'kick-off': { kind: 'kickoff' },
@@ -79,11 +79,11 @@ export interface SquadPlayer { id: string; name: string }
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 /** Everyone in the squad a typed name can mean: the full name, else the first or last name, else names starting with it */
-export function findPlayers(typed: string, squad: SquadPlayer[]): SquadPlayer[] {
+export function findPlayers<T extends SquadPlayer>(typed: string, squad: T[]): T[] {
   const q = fold(typed);
   if (!q) return [];
   const parts = (p: SquadPlayer) => fold(p.name).split(/\s+/);
-  const tiers: ((p: SquadPlayer) => boolean)[] = [
+  const tiers: ((p: T) => boolean)[] = [
     p => fold(p.name) === q,
     p => parts(p)[0] === q || parts(p)[parts(p).length - 1] === q,
     p => fold(p.name).startsWith(q) || parts(p).some(w => w.startsWith(q)),
