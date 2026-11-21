@@ -23,7 +23,6 @@ import {
   MessageSquare, List, LayoutGrid, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
 import { useMemberHealth } from '@/lib/use-member-health';
-import { ChatLinkCard } from '@/components/admin/ChatScoring';
 import MedicalNote from '@/components/admin/MedicalNote';
 
 const CHIPS: { id: PeopleGroup; label: string }[] = [
@@ -615,7 +614,6 @@ function PersonPanel({
                 <div className="ppl-card-check is-clear"><CheckCircle2 size={13} aria-hidden="true" /> Nothing to check</div>
               )}
             </div>
-            {!isApplication && <ChatLinkCard clubId={club.id} memberId={m.id} name={m.full_name} matchCentreHref={`/${clubSlug}/admin/match-center`} />}
           </>
         )}
 

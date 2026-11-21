@@ -1429,7 +1429,7 @@ export default function AdminMatchCenterControllerPage({
       {/* ========================================================================= */}
       {/* TAB 2: TACTICAL PITCH & FREE-FORM FORMATIONS */}
       {/* ========================================================================= */}
-      {adminTab === 'events' && canChatScoring && <ChatScoringPanel clubId={club.id} peopleHref={`/${club.slug}/admin/people`} />}
+      {adminTab === 'events' && canChatScoring && <ChatScoringPanel clubId={club.id} />}
 
       {adminTab === 'tactics' && (
         <div className="admin-stack">

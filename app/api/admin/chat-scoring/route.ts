@@ -9,13 +9,11 @@ import { answerJoin } from '@/lib/chat-join';
 // Score by chat for one club (club admins: Match Centre at "full").
 //   GET  ?clubId=                                   -> the switch, whether AI reading is allowed, who is linked
 //   POST { clubId, action: 'toggle', on }          -> turn score by chat on or off
-//   POST { clubId, action: 'link', memberId }      -> a one-time Link chat link for that member (24 hours)
 //   POST { clubId, action: 'unlink', memberId }    -> unlink every chat of that member
 //   POST { clubId, action: 'join-link' }           -> a new club scoring link (the old one stops working)
 //   POST { clubId, action: 'answer', requestId, allow } -> Allow / No for someone who asked through the club link
 // The tables are server-only (migration 20261183_score_by_chat.sql), so this route uses the service role.
 
-const DAY = 24 * 60 * 60 * 1000;
 const NOT_READY = 'Run the score by chat migration (20261183_score_by_chat.sql) first.';
 
 async function guard(req: NextRequest, clubId: unknown) {
@@ -101,20 +99,6 @@ export async function POST(req: NextRequest) {
     const { error } = await db.from('chat_links').delete().eq('member_id', member.id).eq('club_id', clubId);
     if (error) return NextResponse.json({ error: NOT_READY }, { status: 503 });
     return NextResponse.json({ ok: true });
-  }
-
-  if (body.action === 'link') {
-    if (!telegramConfigured()) return NextResponse.json({ error: 'The bot is not set up yet. A platform admin connects it in Mission Control.' }, { status: 503 });
-    const { data: may } = await db.rpc('chat_member_can_score', { p_member_id: member.id });
-    if (may !== true) {
-      return NextResponse.json({ error: `${member.full_name}'s role doesn't allow editing Match Centre. Give them a role such as Manager or Volunteer first.` }, { status: 400 });
-    }
-    const code = b64url(crypto.getRandomValues(new Uint8Array(12)));
-    const expiresAt = new Date(Date.now() + DAY).toISOString();
-    await db.from('chat_link_codes').delete().eq('member_id', member.id).is('used_at', null);
-    const { error } = await db.from('chat_link_codes').insert({ code, club_id: clubId, member_id: member.id, expires_at: expiresAt });
-    if (error) return NextResponse.json({ error: NOT_READY }, { status: 503 });
-    return NextResponse.json({ ok: true, link: telegramStartLink(code), expiresAt });
   }
 
   return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });

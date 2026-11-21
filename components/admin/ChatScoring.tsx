@@ -5,8 +5,8 @@ import { MessageCircle, Link2, Copy, QrCode, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getAccessToken } from '@/lib/supabase/client';
 
-// Score by chat for club admins (Match Centre at "full"): the club's switch, scoring link, asks waiting
-// for a yes and who can score, in Match Centre; and the per-person Link chat card in People. Both stay hidden until the migration runs or for anyone without that access;
+// Score by chat for club admins (Match Centre at "full"): the club's switch, its scoring link, asks
+// waiting for a yes and who can score. People join through the club link (no per-person linking). Both stay hidden until the migration runs or for anyone without that access;
 // with the club switch off, the People card says where to turn it on.
 
 interface Status {
@@ -45,7 +45,7 @@ function useChatStatus(clubId: string) {
 const when = (iso: string) => new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 /** Match Centre: the club's Score by chat switch, its scoring link, asks waiting for a yes, and who can score */
-export function ChatScoringPanel({ clubId, peopleHref }: { clubId: string; peopleHref: string }) {
+export function ChatScoringPanel({ clubId }: { clubId: string }) {
   const { status, load } = useChatStatus(clubId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -149,78 +149,10 @@ export function ChatScoringPanel({ clubId, peopleHref }: { clubId: string; peopl
               </li>
             ))}
           </ul>
-        ) : <p style={note}>Nobody yet. Share the club link, or link someone in <a href={peopleHref} style={{ color: 'inherit', fontWeight: 600 }}>People</a>.</p>}
+        ) : <p style={note}>Nobody yet. Share the club link above; asks show here when nobody scores by chat yet.</p>}
         <p style={note}>Removing someone, or changing their role so they can&apos;t edit Match Centre, stops their chat at once.</p>
       </div>
       {error && <p role="alert" style={{ margin: 'var(--space-xs) 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-danger, #DC2626)' }}>{error}</p>}
     </section>
-  );
-}
-
-/** People -> one person: link their chat, or unlink it */
-export function ChatLinkCard({ clubId, memberId, name, matchCentreHref }: { clubId: string; memberId: string; name: string; matchCentreHref: string }) {
-  const { status, load } = useChatStatus(clubId);
-  const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
-  useEffect(() => { setLink(null); setError(''); }, [memberId]);
-  if (!status?.ready) return null;
-  if (!status.scoringEnabled) {
-    return (
-      <div className="ppl-card">
-        <div className="ppl-card-label">Scoring by chat</div>
-        <div className="ppl-card-note">Off for the club. Turn on Score by chat in <a href={matchCentreHref} style={{ color: 'inherit', fontWeight: 600 }}>Match Centre</a> (Score and events tab), then link people here.</div>
-      </div>
-    );
-  }
-
-  const linked = status.links.find(l => l.member_id === memberId);
-  const first = name.split(' ')[0] || name;
-  const makeLink = async () => {
-    setBusy(true);
-    const res = await api<{ link: string; expiresAt: string }>(clubId, { action: 'link', memberId });
-    setBusy(false);
-    setError(res.error || '');
-    if (!res.error) setLink({ url: res.link, expiresAt: res.expiresAt });
-  };
-  const unlink = async () => {
-    setBusy(true);
-    const res = await api(clubId, { action: 'unlink', memberId });
-    setBusy(false);
-    setError(res.error || '');
-    load();
-  };
-  const copy = async () => {
-    if (!link) return;
-    try { await navigator.clipboard.writeText(link.url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* the link is on screen to copy by hand */ }
-  };
-
-  return (
-    <div className="ppl-card">
-      <div className="ppl-card-label">Scoring by chat</div>
-      <div className="row row-wrap" style={{ gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--space-3xs)' }}>
-        <div className="ppl-card-value" style={{ marginTop: 0 }}>
-          {linked ? <span className="admin-pill is-ok">Linked</span> : 'Not linked yet'}
-        </div>
-        {linked
-          ? <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={unlink}>Unlink</button>
-          : <button type="button" className="btn btn-primary btn-sm" disabled={busy || !status.botReady} onClick={makeLink}><Link2 size={14} aria-hidden="true" /> {link ? 'New link' : 'Link chat'}</button>}
-      </div>
-      {linked && <div className="ppl-card-note">Linked {when(linked.linked_at)}.{linked.last_used_at ? ` Last used ${when(linked.last_used_at)}.` : ''}</div>}
-      {!linked && link && (
-        <div style={{ marginTop: 'var(--space-sm)', padding: 'var(--space-sm)', border: '1px dashed var(--color-rule-strong)', borderRadius: 'var(--radius-control)', display: 'grid', gap: 'var(--space-xs)' }}>
-          <div className="ppl-card-note" style={{ marginTop: 0 }}>Send {first} this link. They tap it on their phone, open Itsfootball.club Bot in Telegram, and they&apos;re set.</div>
-          <code style={{ fontSize: 'var(--text-xs)', overflowWrap: 'anywhere', color: 'var(--color-ink)' }}>{link.url}</code>
-          <div className="row row-wrap" style={{ gap: '0.5rem' }}>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={copy}><Copy size={14} aria-hidden="true" /> {copied ? 'Copied' : 'Copy link'}</button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={load}>Check if linked</button>
-          </div>
-          <div className="ppl-card-note" style={{ marginTop: 0 }}>Works once, until {when(link.expiresAt)}. Only for this club.</div>
-        </div>
-      )}
-      {!status.botReady && !linked && <div className="ppl-card-note">The bot is still being set up by itsfootball.club.</div>}
-      {error && <div role="alert" className="ppl-card-note" style={{ color: 'var(--color-danger, #DC2626)' }}>{error}</div>}
-    </div>
   );
 }
