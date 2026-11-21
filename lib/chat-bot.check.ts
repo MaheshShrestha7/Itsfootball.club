@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { handleChatMessage, dayIn, dayStartIso, allowedReaders, matchDay, potmName, gameWhen, parsePens, sideByName } from './chat-bot-server';
 import { buildTiesheet } from './tournament-engine';
 import { boardText, refreshBoards, rememberBoard } from './chat-board';
+import { senderName } from './chat-join';
 
 type Row = Record<string, any>;
 const T: Record<string, Row[]> = {};
@@ -477,6 +478,65 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // A chat still holding two clubs' links (linked before this change) uses the one linked last
   T.chat_links.push({ id: 'old-link2', club_id: 'c2', member_id: 'raj-c2', channel: 'telegram', chat_id: '444', linked_at: '2026-11-01T00:00:00Z', active_match_id: null, pending: null });
   assert.doesNotMatch(await say('games', '444'), /Test 7/);
+
+  // ---------------------------------------------------------------------------
+  // The club's scoring link: tap, say who you are, an admin taps Allow or No
+  // ---------------------------------------------------------------------------
+  {
+    assert.equal(senderName({ first_name: 'Priya', last_name: 'G', username: 'priyag' }), 'Priya G (@priyag)');
+    assert.equal(senderName({ username: 'x' }), '@x');
+    assert.equal(senderName(null), undefined);
+    T.club_chat_settings[0].join_code = 'austral-K7P2abcd';
+    T.club_members.push(
+      { id: 'priya', club_id: club, full_name: 'Priya Gurung', role: 'Club Admin', status: 'active', membership_status: 'approved' },
+      { id: 'dev', club_id: club, full_name: 'Dev Rai', role: 'Club Admin', status: 'active', membership_status: 'approved' },
+    );
+    const join = (text: string, chat: string) => handleChatMessage(db, chat, text, new Date(t), 'Priya G (@priyag)').then(r => r.map(x => x.text).join(' // '));
+    assert.match(await say('/start nope12345', '555'), /expired or was already used/, 'an unknown code is still the one-time link message');
+    assert.match(await join('/start austral-K7P2abcd', '555'), /^Hi! This is the scoring chat for Austral Nepalese Community Club\. Which member are you\?/);
+    assert.match(await join('zzz nobody', '555'), /I can't find "zzz nobody" at Austral/);
+    assert.match(await join('sam', '555'), /More than one member matches "sam"\. Send your full name\./);
+    assert.match(await join('sam lee', '555'), /Thanks, Sam Lee\. Your role at .* doesn't allow scoring/, 'a player is turned away, nothing goes to admins');
+    assert.match(await say('g sam 3', '555'), /Send the link|not linked|Link/i, 'still not linked');
+
+    const before = tgCalls.length;
+    assert.match(await join('/start austral-K7P2abcd', '555'), /Which member are you/);
+    assert.match(await join('priya gurung', '555'), /^Thanks, Priya Gurung \(Club Admin\)\. I've asked the club's admins to let you score\./);
+    const asks = tgCalls.slice(before).filter(c => c.method === 'sendMessage');
+    assert.ok(asks.length >= 1 && asks.every(a => a.body.chat_id !== '555'), 'the ask goes to scorers, not the asker');
+    const ask = asks.find(a => a.body.chat_id === '111')!;
+    assert.match(ask.body.text, /^🙋 Priya Gurung wants to score for Austral Nepalese Community Club\.\nClub role: Club Admin\nTelegram: Priya G \(@priyag\)$/);
+    const [allowBtn, noBtn] = ask.body.reply_markup.inline_keyboard[0];
+    assert.equal(allowBtn.text, 'Allow'); assert.equal(noBtn.text, 'No');
+    const reqId = allowBtn.callback_data.split(':')[1];
+    assert.equal(T.chat_join_requests.find(r => r.id === reqId)!.status, 'waiting');
+
+    const mark = tgCalls.length;
+    assert.match(await say(allowBtn.callback_data, '111'), /^Done\. Priya can score now, and I've let them know\.$/);
+    assert.ok(T.chat_links.some(l => l.chat_id === '555' && l.member_id === 'priya'), 'Priya linked');
+    const after = tgCalls.slice(mark);
+    assert.ok(after.some(c => c.method === 'sendMessage' && c.body.chat_id === '555' && /^You're in\. Raj Thapa said yes/.test(c.body.text)));
+    assert.ok(after.some(c => c.method === 'editMessageText' && c.body.chat_id === '111' && /✓ Allowed by Raj Thapa, /.test(c.body.text) && !c.body.reply_markup), 'the ask shows who answered, no buttons');
+    assert.match(await say(noBtn.callback_data, '111'), /^Already answered by Raj Thapa\.$/);
+    assert.match(await say('games', '555'), /Which game|No game/, 'Priya can score');
+    assert.match(await join('/start austral-K7P2abcd', '555'), /This chat already scores for Austral/);
+
+    // No: Dev asks, Priya (now scoring) turns it down
+    assert.match(await join('/start austral-K7P2abcd', '556'), /Which member are you/);
+    assert.match(await join('dev rai', '556'), /I've asked the club's admins/);
+    const devReq = T.chat_join_requests.find(r => r.member_id === 'dev')!;
+    assert.match(await say(`deny:${devReq.id}`, '555'), /^Done\. I've told Dev no\.$/);
+    assert.ok(!T.chat_links.some(l => l.chat_id === '556'));
+    assert.ok(tgCalls.some(c => c.method === 'sendMessage' && c.body.chat_id === '556' && /didn't allow scoring by chat/.test(c.body.text)));
+    // An answer from a chat at another club, or a made-up id, does nothing
+    assert.match(await say(`allow:${devReq.id}`, '555'), /Already answered by Priya Gurung/);
+    assert.match(await say('allow:00000000-0000-0000-0000-000000000000', '555'), /isn't there any more/);
+
+    // Club scoring switched off: the link says so
+    T.club_chat_settings[0].scoring_enabled = false;
+    assert.match(await join('/start austral-K7P2abcd', '557'), /turned off at Austral/);
+    T.club_chat_settings[0].scoring_enabled = true;
+  }
 
   // Per-chat rate limit (30 a minute)
   T.platform_chat_settings[0].per_minute = 30;

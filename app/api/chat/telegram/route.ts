@@ -3,6 +3,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { answerTelegramButton, pinTelegram, sendTelegram, telegramConfigured } from '@/lib/telegram';
 import { handleChatMessage } from '@/lib/chat-bot-server';
 import { rememberBoard } from '@/lib/chat-board';
+import { senderName } from '@/lib/chat-join';
 
 // Itsfootball.club Bot: Telegram sends every message and button tap here (set up from Mission Control
 // -> AI and chat -> Connect the bot). Only Telegram knows TELEGRAM_WEBHOOK_SECRET, which it sends back
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
   try {
-    const replies = await handleChatMessage(db, chatId, text);
+    const replies = await handleChatMessage(db, chatId, text, new Date(), senderName(button?.from || update?.message?.from));
     for (const r of replies) {
       const id = await sendTelegram(chatId, r.text, r.buttons);
       // The live scoreboard: pinned at the top, and remembered so later changes rewrite it

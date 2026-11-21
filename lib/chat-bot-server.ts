@@ -13,6 +13,7 @@ import { getLiveMinute } from './live-minute';
 import { fullMinutes, halfMinutes, periodStartMinute, splitMinute } from './match-length';
 import { clubTimeZone, SITE_TIME_ZONE } from './dates';
 import { boardText, matchTag, refreshBoards } from './chat-board';
+import { answerJoin, nameJoin, namingRequest, startJoin } from './chat-join';
 import { telegramConfigured } from './telegram';
 import { durableRateLimit } from './rate-limit';
 import { subDetail } from './match-subs';
@@ -131,13 +132,19 @@ export function gameWhen({ match: m, day, today }: { match: Pick<Match, 'status'
 const titleCase = (s: string) => s.replace(/\b\p{L}/gu, c => c.toUpperCase());
 const minuteLabel = (m: number, added?: number) => (added ? `${m}+${added}'` : `${m}'`);
 
-export async function handleChatMessage(db: SupabaseClient, chatId: string, rawText: string, now = new Date()): Promise<BotReply[]> {
+export async function handleChatMessage(db: SupabaseClient, chatId: string, rawText: string, now = new Date(), sender?: string): Promise<BotReply[]> {
   const text = rawText.trim().slice(0, 300);
   if (!text) return [];
 
-  // Linking: /start <code> from the member's one-time link
+  // Linking: /start <code> from the club's link (asks who they are), or a member's one-time link
   const start = /^\/start(?:\s+([A-Za-z0-9_-]{8,64}))?$/.exec(text);
-  if (start) return start[1] ? [await linkChat(db, chatId, start[1], now)] : [{ text: NOT_LINKED }];
+  if (start) {
+    if (!start[1]) return [{ text: NOT_LINKED }];
+    return [(await startJoin(db, chatId, start[1], sender)) || (await linkChat(db, chatId, start[1], now))];
+  }
+  // After the club link: this message is their name
+  const naming = await namingRequest(db, chatId, now);
+  if (naming) return [await nameJoin(db, naming, text)];
 
   const { data: all, error } = await db.from('chat_links').select('id, club_id, member_id, chat_id, active_match_id, pending, linked_at').eq('channel', 'telegram').eq('chat_id', chatId);
   if (error) return [{ text: "Score by chat isn't ready yet. Please try again later." }];
@@ -160,6 +167,13 @@ export async function handleChatMessage(db: SupabaseClient, chatId: string, rawT
     if (club?.scoring_enabled && may === true) usable.push(l);
   }
   if (!usable.length) return [{ text: 'Score by chat is turned off for you right now. Ask your club admin.' }];
+
+  // An admin's Allow / No on someone who asked through the club link
+  const answer = /^(allow|deny):([0-9a-f-]{36})$/.exec(text);
+  if (answer) {
+    const { data: me } = await db.from('club_members').select('full_name').eq('id', usable[0].member_id).maybeSingle();
+    return [{ text: (await answerJoin(db, answer[2], answer[1] === 'allow', me?.full_name || 'a club admin', usable[0].club_id, now)).text }];
+  }
 
   const bot = new Bot(db, chatId, usable, settings, now);
   const replies = await bot.handle(text);
