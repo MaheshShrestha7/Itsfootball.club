@@ -28,3 +28,7 @@ export const useHostedTournamentsReady = () => useColumnReady('tournaments', 'ma
 
 /** True once tournaments can keep their own tie-breakers (tournaments.tie_breakers, migration 20261181) */
 export const useTieBreakersReady = () => useColumnReady('tournaments', 'tie_breakers');
+
+/** True once the host's "Start the knockout stage" tap can be saved (tournaments.knockout_started_at, migration 20261185).
+ *  Until then knockout games open by themselves once every group game is played. */
+export const useKnockoutStartReady = () => useColumnReady('tournaments', 'knockout_started_at');

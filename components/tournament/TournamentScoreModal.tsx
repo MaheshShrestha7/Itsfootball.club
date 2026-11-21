@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Match, TournamentParticipant } from '@/lib/supabase/types';
-import { X, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight } from 'lucide-react';
+import { X, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight, Lock } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import PopupPanel from '@/components/PopupPanel';
 import { tournamentMatchLabel } from '@/lib/tournament-engine';
@@ -27,6 +27,8 @@ interface TournamentScoreModalProps {
   teams?: TournamentParticipant[];
   /** False on public tournaments, whose tournament-only club has no match centre */
   linkToMatch?: boolean;
+  /** Set while this knockout game can't be played yet (knockoutLockReason): the score stays shut, the schedule can still change */
+  lockReason?: string | null;
 }
 
 export default function TournamentScoreModal({
@@ -38,6 +40,7 @@ export default function TournamentScoreModal({
   onSaveSchedule,
   teams,
   linkToMatch = true,
+  lockReason,
 }: TournamentScoreModalProps) {
   const isKnockout = Boolean(match.tournament_stage && match.tournament_stage !== 'group');
 
@@ -87,8 +90,8 @@ export default function TournamentScoreModal({
         home_team_name: homeName, away_team_name: awayName, home_team_logo: logoOf(homeName), away_team_logo: logoOf(awayName),
       });
     }
-    // Leave the result untouched when only the schedule changed
-    if (status !== 'upcoming' || initialStatus !== 'upcoming') {
+    // Leave the result untouched when only the schedule changed (or the game is still locked)
+    if (!lockReason && (status !== 'upcoming' || initialStatus !== 'upcoming')) {
       onSaveScore(
         match.id,
         Number(homeScore),
@@ -136,7 +139,7 @@ export default function TournamentScoreModal({
         ) : <span className="ht-fx-name">{name}</span>}
         <span className="ht-sub">{which === 'home' ? 'Home' : 'Away'}</span>
         <input aria-label={`${name} score`} type="number" min="0" max="99" inputMode="numeric"
-          value={score} onChange={scoreTyped(which === 'home' ? setHomeScore : setAwayScore)} className="form-input ht-fx-score" />
+          value={score} disabled={!!lockReason} onChange={scoreTyped(which === 'home' ? setHomeScore : setAwayScore)} className="form-input ht-fx-score" />
       </div>
     );
   };
@@ -165,7 +168,13 @@ export default function TournamentScoreModal({
             {side('away')}
           </div>
 
-          <fieldset className="ht-fx-status">
+          {lockReason && (
+            <p role="status" className="ht-lock">
+              <Lock size={15} aria-hidden="true" /><span>{lockReason}</span>
+            </p>
+          )}
+
+          <fieldset className="ht-fx-status" disabled={!!lockReason}>
             <legend className="form-label">Match status</legend>
             <div className="ht-fx-seg">
               {(['upcoming', 'live', 'completed'] as const).map(st => (
@@ -174,7 +183,7 @@ export default function TournamentScoreModal({
             </div>
           </fieldset>
 
-          {isKnockout && (
+          {isKnockout && !lockReason && (
             <fieldset className="ht-fieldset">
               <legend>Penalty shootout</legend>
               <div className="ht-fx-pens-head">
@@ -225,13 +234,13 @@ export default function TournamentScoreModal({
           )}
 
           <div className="ht-fx-actions">
-            {linkToMatch && (
+            {linkToMatch && !lockReason && (
               <Link href={`/${clubSlug}/admin/match-center?match=${encodeURIComponent(match.id)}`} className="btn btn-secondary">
                 <Radio size={15} aria-hidden="true" /><span>Match Centre</span>
               </Link>
             )}
             <button type="submit" className="btn btn-primary">
-              <CheckCircle2 size={16} aria-hidden="true" /><span>Save and update bracket</span>
+              <CheckCircle2 size={16} aria-hidden="true" /><span>{lockReason ? 'Save' : 'Save and update bracket'}</span>
             </button>
           </div>
         </form>

@@ -48,6 +48,7 @@ import {
   Loader2,
   Maximize2,
   MessageCircle,
+  Lock,
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
@@ -58,7 +59,9 @@ import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, fullMinutes, halfMinutes, maxMinute, periodStartMinute, splitMinute } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
-import { clubLineupSide, clubSidePlayers, compareTournamentMatches, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers, compareTournamentMatches, knockoutLockReason, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
+import '@/components/tournament/hosted.css';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GOAL_EVENT_TYPES, goalScoringSide, publicScoreHidden, squadForMatch } from '@/lib/teams';
 import LocalTime from '@/components/LocalTime';
@@ -143,6 +146,7 @@ export default function AdminMatchCenterControllerPage({
   const { user, can } = useAuth();
   // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
   const reviewsReady = useMatchReviewsReady();
+  const koStartReady = useKnockoutStartReady();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   // Score by chat's switch is for whoever runs Match Centre in full (Club Admins, Managers)
@@ -444,8 +448,12 @@ export default function AdminMatchCenterControllerPage({
     );
   }
 
+  // A knockout game whose feeder games (or the group stage) aren't finished can't be started or scored yet
+  const koLock = knockoutLockReason(match, matchTournament, matches, koStartReady);
+
   // Adjust score
   const handleScoreAdjust = (side: 'home' | 'away', delta: number) => {
+    if (koLock) return showFeedback(koLock, 'error');
     // Taking a goal off: the latest goal logged for that side goes with it, so the match log, the
     // public timeline and the report never list more goals than the score. (Deleting the event
     // lowers the score itself.) With no goal logged for that side, only the number changes.
@@ -470,6 +478,7 @@ export default function AdminMatchCenterControllerPage({
 
   // Adjust match period
   const handlePeriodTransition = (period: MatchPeriod, status: any, defaultMin?: number) => {
+    if (koLock) return showFeedback(koLock, 'error');
     const updates: any = { period, status };
     if (typeof defaultMin === 'number') {
       updates.current_minute = defaultMin;
@@ -578,6 +587,7 @@ export default function AdminMatchCenterControllerPage({
   // A goal: the club's own side asks who scored; an outside team's goal is one tap (nobody here knows
   // their scorer), with Undo on the toast. A shootout kick only counts in the shootout score.
   const addGoal = (side: 'home' | 'away') => {
+    if (koLock) return showFeedback(koLock, 'error');
     if (inShootout) return handleScoreAdjust(side, 1);
     if ((side === 'home' ? homePlayers : awayPlayers) !== null) return openSheet('goal', 'goal', side, true);
     const name = side === 'home' ? match.home_team_name : match.away_team_name;
@@ -632,7 +642,7 @@ export default function AdminMatchCenterControllerPage({
   // The one big scoreboard button: the next whistle for where the game is (none once it's over)
   const scoreText = `${match.home_score ?? 0}–${match.away_score ?? 0}`;
   const nextStep: { label: string; hint: string; go: () => void } | null =
-    match.status === 'completed' || match.status === 'cancelled' || match.status === 'postponed' ? null
+    koLock || match.status === 'completed' || match.status === 'cancelled' || match.status === 'postponed' ? null
     : match.status === 'upcoming' || !match.period || match.period === 'pre_match'
       ? { label: 'Kick off', hint: 'Starts the clock and the live score', go: () => (kickoffIsOffSchedule ? setConfirmKickoff(true) : kickOff()) }
     : match.status === 'halftime' || match.period === 'halftime'
@@ -1169,6 +1179,12 @@ export default function AdminMatchCenterControllerPage({
                   </button>
                 ))}
               </div>
+            )}
+
+            {koLock && (
+              <p role="status" className="ht-lock" style={{ marginBottom: '0.75rem' }}>
+                <Lock size={15} aria-hidden="true" /><span>{koLock}</span>
+              </p>
             )}
 
             <div className="mc-score">

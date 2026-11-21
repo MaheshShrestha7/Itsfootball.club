@@ -11,14 +11,14 @@ import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import RunSheet from '@/components/tournament/RunSheet';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
+import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted, groupGamesLeft } from '@/lib/tournament-engine';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
-import { useHostedTournamentsReady } from '@/lib/use-event-fixtures-ready';
+import { useHostedTournamentsReady, useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import { ageGroupFamily, ageGroupLabel } from '@/lib/hosted-tournaments';
 import GuestTeamsPanel from '@/components/tournament/GuestTeamsPanel';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
@@ -54,6 +54,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   } = useClub();
   const reviewsReady = useMatchReviewsReady();
   const hosted = useHostedTournamentsReady();
+  const koStartReady = useKnockoutStartReady();
   const [addAgeGroup, setAddAgeGroup] = useState(false);
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
@@ -172,6 +173,22 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     setTimeout(() => setFeedback(null), 5000);
   };
 
+  // Group stage + knockout: the knockout games wait for every group game, then for the host's confirm
+  const groupsLeft = groupGamesLeft(tournament.id, tourneyMatches);
+  const koWaiting = tournament.format === 'group_knockout'
+    && tourneyMatches.some(m => m.tournament_stage && m.tournament_stage !== 'group')
+    && tourneyMatches.some(m => (m.tournament_stage || 'group') === 'group')
+    && !knockoutStarted(tournament, tourneyMatches);
+  const handleStartKnockout = async () => {
+    if (!(await confirmAction({
+      title: 'Start the knockout stage?',
+      message: 'All group games are played. The group tables are final and the qualified teams go into the knockout games. Check the group results first.',
+      confirmLabel: 'Start knockout stage',
+    }))) return;
+    updateTournament(tournament.id, { knockout_started_at: new Date().toISOString() });
+    showFeedback('success', 'Knockout stage started. The knockout games can now be played and scored.');
+  };
+
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
       <Link
@@ -284,6 +301,22 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           </div>
         ))}
       </dl>
+
+      {koWaiting && (groupsLeft > 0 ? (
+        <p role="status" className="ht-lock ht-ko-start">
+          <Lock size={16} aria-hidden="true" />
+          <span>Knockout games are locked until every group game is played. {groupsLeft} group {groupsLeft === 1 ? 'game' : 'games'} still to finish.</span>
+        </p>
+      ) : koStartReady && (
+        <div role="status" className="ht-lock ht-ko-start" data-ready="true">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>All group games are played. Check the results, then start the knockout stage to open the knockout games.</span>
+          <button type="button" className="btn btn-sm btn-primary" style={actionBtn} onClick={handleStartKnockout}>
+            <Play size={14} aria-hidden="true" />
+            <span>Start knockout stage</span>
+          </button>
+        </div>
+      ))}
 
       {/* Public tournaments show teams only, no player names */}
       {!isEvent && (
@@ -457,6 +490,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           isOpen={!!selectedMatch}
           onClose={() => setSelectedMatch(null)}
           teams={participants}
+          lockReason={knockoutLockReason(selectedMatch, tournament, tourneyMatches, koStartReady)}
           onSaveSchedule={(matchId, changes) => updateMatch(matchId, changes)}
           onSaveScore={(matchId, homeScore, awayScore, homePens, awayPens, status) => {
             updateTournamentMatchScore(matchId, homeScore, awayScore, homePens, awayPens, status);
