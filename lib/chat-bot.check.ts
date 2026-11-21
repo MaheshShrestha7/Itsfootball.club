@@ -18,6 +18,7 @@ class Q {
   constructor(private table: string) { T[table] ||= []; }
   select(_c?: string, o?: { count?: string; head?: boolean }) { if (this.op !== 'select') this.wantRows = true; if (o?.head) this.head = true; return this; }
   eq(c: string, v: any) { const [col, key] = c.split('->>'); this.f.push(r => (key ? r[col]?.[key] : r[c]) === v); return this; }
+  neq(c: string, v: any) { this.f.push(r => r[c] !== v); return this; }
   in(c: string, v: any[]) { this.f.push(r => v.includes(r[c])); return this; }
   is(c: string, v: any) { this.f.push(r => (r[c] ?? null) === v); return this; }
   gte(c: string, v: any) { this.f.push(r => r[c] >= v); return this; }
@@ -461,6 +462,21 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('More games'), /\(6-6 of 6\.[^\[]*\[1\. Seniors: Austral vs Opp 6, Sun 6 Dec 10am \| More games\]$/);
   assert.match(await say('1'), /^Scoring Seniors: Austral vs Opp 6/);
   assert.match(await say('pott jo'), /Player of the Tournament is for tournament games/);
+
+  // Switching club: linking another club drops the old club's games from the list
+  T.clubs.push({ id: 'c2', name: 'Test Club', slug: 'test-club', config: {} });
+  T.club_members.push({ id: 'raj-c2', club_id: 'c2', full_name: 'Raj Thapa', role: 'Admin', status: 'active', membership_status: 'approved' });
+  T.club_chat_settings.push({ club_id: 'c2', scoring_enabled: true, ai_allowed: false });
+  T.chat_links.push({ id: 'old-link', club_id: 'c2', member_id: 'raj-c2', channel: 'telegram', chat_id: '444', linked_at: '2026-11-01T00:00:00Z', active_match_id: null, pending: null });
+  T.matches.push({ id: 'c2m', ...baseMatch, club_id: 'c2', home_team_name: 'Test 7', away_team_name: 'Test 10', status: 'live' });
+  assert.match(await say('games', '444'), /Test 7 vs Test 10/, 'only linked to the test club so far');
+  T.chat_link_codes.push({ code: 'switchcode1', club_id: club, member_id: 'raj', expires_at: '2026-11-22T00:00:00Z', used_at: null });
+  assert.match(await say('/start switchcode1', '444'), /linked to Austral Nepalese[^.]*\. It's no longer linked to Test Club\./);
+  assert.ok(!T.chat_links.some(l => l.chat_id === '444' && l.club_id === 'c2'), 'old club link removed');
+  assert.doesNotMatch(await say('games', '444'), /Test 7/);
+  // A chat still holding two clubs' links (linked before this change) uses the one linked last
+  T.chat_links.push({ id: 'old-link2', club_id: 'c2', member_id: 'raj-c2', channel: 'telegram', chat_id: '444', linked_at: '2026-11-01T00:00:00Z', active_match_id: null, pending: null });
+  assert.doesNotMatch(await say('games', '444'), /Test 7/);
 
   // Per-chat rate limit (30 a minute)
   T.platform_chat_settings[0].per_minute = 30;

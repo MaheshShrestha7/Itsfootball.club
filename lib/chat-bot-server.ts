@@ -139,9 +139,12 @@ export async function handleChatMessage(db: SupabaseClient, chatId: string, rawT
   const start = /^\/start(?:\s+([A-Za-z0-9_-]{8,64}))?$/.exec(text);
   if (start) return start[1] ? [await linkChat(db, chatId, start[1], now)] : [{ text: NOT_LINKED }];
 
-  const { data: links, error } = await db.from('chat_links').select('id, club_id, member_id, chat_id, active_match_id, pending').eq('channel', 'telegram').eq('chat_id', chatId);
+  const { data: all, error } = await db.from('chat_links').select('id, club_id, member_id, chat_id, active_match_id, pending, linked_at').eq('channel', 'telegram').eq('chat_id', chatId);
   if (error) return [{ text: "Score by chat isn't ready yet. Please try again later." }];
-  if (!links?.length) return [{ text: NOT_LINKED }];
+  if (!all?.length) return [{ text: NOT_LINKED }];
+  // One club per chat: the club linked last. Linking another club switches the chat over to it.
+  const latest = [...all].sort((a, b) => String(b.linked_at || '').localeCompare(String(a.linked_at || '')))[0].club_id;
+  const links = all.filter(l => l.club_id === latest);
 
   const { data: settingsRow } = await db.from('platform_chat_settings').select('ai_enabled, daily_limit, club_daily_limit, per_minute').eq('id', 1).maybeSingle();
   const settings: Settings = { ...DEFAULT_SETTINGS, ...(settingsRow || {}) };
@@ -180,8 +183,16 @@ async function linkChat(db: SupabaseClient, chatId: string, code: string, now: D
     { onConflict: 'channel,chat_id,member_id' },
   );
   if (error) return { text: "Couldn't link this chat. Please try the link again." };
+  // Linking another club switches the chat over: drop the old club's links so its games don't mix in
+  const { data: old } = await db.from('chat_links').select('club_id').eq('channel', 'telegram').eq('chat_id', chatId).neq('club_id', row.club_id);
+  let was = '';
+  if (old?.length) {
+    await db.from('chat_links').delete().eq('channel', 'telegram').eq('chat_id', chatId).neq('club_id', row.club_id);
+    const { data: names } = await db.from('clubs').select('name').in('id', [...new Set(old.map(o => o.club_id))]);
+    was = ` It's no longer linked to ${(names || []).map(n => n.name).join(' or ') || 'your other club'}.`;
+  }
   const first = member?.first_name || (member?.full_name || '').split(' ')[0] || 'there';
-  return { text: `Hi ${first}! This chat is linked to ${club?.name || 'your club'}. When a game is on, send things like "g sam 23" or "they scored".\n${SHORT_FORMAT_HELP}` };
+  return { text: `Hi ${first}! This chat is linked to ${club?.name || 'your club'}.${was} When a game is on, send things like "g sam 23" or "they scored".\n${SHORT_FORMAT_HELP}` };
 }
 
 interface Game { link: Link; match: Match; day: string; today: string }
