@@ -12,11 +12,11 @@ import { sendMatchAlert } from './match-push-server';
 import { getLiveMinute } from './live-minute';
 import { fullMinutes, halfMinutes, periodStartMinute, splitMinute } from './match-length';
 import { clubTimeZone, SITE_TIME_ZONE } from './dates';
-import { boardText, refreshBoards } from './chat-board';
+import { boardText, matchTag, refreshBoards } from './chat-board';
 import { telegramConfigured } from './telegram';
 import { durableRateLimit } from './rate-limit';
 import { subDetail } from './match-subs';
-import { isJuniorFixture, juniorPublicName, teamOfMatch } from './teams';
+import { isJuniorFixture, juniorPublicName, teamLabel, teamOfMatch } from './teams';
 import { resolveTournament, STAGE_TITLES } from './tournament-engine';
 import type { Club, ClubMember, ClubTeam, Match, MatchEvent, Tournament, TournamentParticipant } from './supabase/types';
 
@@ -284,7 +284,8 @@ class Bot {
       choose(g);
       const m = g.match;
       const where = [m.tournament_group, m.pitch_label].filter(Boolean).join(', ');
-      const picked = { text: `Scoring ${gameName(m)}, ${gameWhen(g)}${where ? ` (${where})` : ''}. ${m.status === 'upcoming' ? 'Send ko at kick-off, or games to switch.' : 'Send games to switch.'}` };
+      const tag = matchTag(m, this.teams);
+      const picked = { text: `Scoring ${tag ? `${tag}: ` : ''}${gameName(m)}, ${gameWhen(g)}${where ? ` (${where})` : ''}. ${m.status === 'upcoming' ? 'Send ko at kick-off, or games to switch.' : 'Send games to switch.'}` };
       // Carry on with the message that brought up the list, if it was something to do (not just "hi")
       const again = waiting && (parseShort(waiting) || POTM.test(waiting) || POTT.test(waiting)) && !SWITCH.has(tidy(waiting)) ? waiting : undefined;
       return { picked, rerun: again };
@@ -325,10 +326,16 @@ class Bot {
     await this.db.from('chat_links').update({ pending: next }).eq('id', list[0].link.id);
     list[0].link.pending = next;
     const hasMore = games.length > PAGE;
+    // "Seniors: " before a club game once the club has several teams (a tournament game has its M#)
+    const teamOf = (m: Match) => {
+      const own = ((teams || []) as ClubTeam[]).filter(t => t.club_id === m.club_id);
+      const t = own.length > 1 ? teamOfMatch(m, own) : undefined;
+      return t ? `${teamLabel(t)}: ` : '';
+    };
     return {
       reply: {
         text: `Which game are you scoring? Tap one.${hasMore ? ` (${page * PAGE + 1}-${page * PAGE + list.length} of ${games.length}. For a tournament game you can also send its number, like m12.)` : ''}`,
-        buttons: [...list.map((g, i) => `${i + 1}. ${gameName(g.match)}${g.match.pitch_label ? `, ${g.match.pitch_label}` : ''}, ${gameWhen(g)}`), ...(hasMore ? ['More games'] : [])],
+        buttons: [...list.map((g, i) => `${i + 1}. ${teamOf(g.match)}${gameName(g.match)}${g.match.pitch_label ? `, ${g.match.pitch_label}` : ''}, ${gameWhen(g)}`), ...(hasMore ? ['More games'] : [])],
       },
     };
   }
@@ -584,7 +591,7 @@ class Bot {
   /** The live scoreboard for this game, as it stands */
   private async boardReply(): Promise<BotReply> {
     const { data: events } = await this.db.from('match_events').select('minute, added_minute, event_type, player_name, assist_player_name, team_side').eq('match_id', this.match.id);
-    return { text: boardText(this.match, events || [], clubTimeZone(this.club), this.now), board: { matchId: this.match.id, linkId: this.link.id } };
+    return { text: boardText(this.match, events || [], clubTimeZone(this.club), this.now, matchTag(this.match, this.teams)), board: { matchId: this.match.id, linkId: this.link.id } };
   }
 
   private async alert(kind: 'kickoff' | 'goal' | 'fulltime', minute?: number, scorer?: string) {

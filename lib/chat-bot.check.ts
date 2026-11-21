@@ -120,7 +120,7 @@ T.club_members = [
 T.club_team_members = [...['p1', 'p2', 'p3', 'p4'].map(m => ({ team_id: 't1', member_id: m, team_role: 'player', is_active: true })), { team_id: 'tj', member_id: 'p5', team_role: 'player', is_active: true }];
 // match_date is a timestamp in the database: a date-only fixture comes back as midnight UTC
 const baseMatch = { club_id: club, match_date: `${today}T00:00:00+00:00`, status: 'upcoming', home_score: 0, away_score: 0, current_minute: 0, period: 'not_started', period_started_at: null, half_length: 45, is_club_home: true, match_type: 'league', tournament_id: null };
-T.matches = [{ id: 'm1', ...baseMatch, team_id: 't1', home_team_name: 'Austral', away_team_name: 'Liverpool Rangers', match_time: '15:00:00' }];
+T.matches = [{ id: 'm1', ...baseMatch, team_id: 't1', competition: 'League', home_team_name: 'Austral', away_team_name: 'Liverpool Rangers', match_time: '15:00:00' }];
 T.club_chat_settings = [{ club_id: club, scoring_enabled: true, ai_allowed: true }];
 T.platform_chat_settings = [{ id: 1, ai_enabled: true, daily_limit: 400, club_daily_limit: 50, per_minute: 1000 }];
 T.chat_link_codes = [{ code: 'goodcode123', club_id: club, member_id: 'raj', expires_at: '2026-11-22T00:00:00Z', used_at: null }, { code: 'oldcode1234', club_id: club, member_id: 'raj', expires_at: '2026-11-20T00:00:00Z', used_at: null }, { code: 'viewcode123', club_id: club, member_id: 'viewer', expires_at: '2026-11-22T00:00:00Z', used_at: null }];
@@ -170,15 +170,15 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // First message: the list of games to pick from (next week's too), sorted by date; the tap carries on with the message
   T.matches.push({ id: 'm0', ...baseMatch, team_id: 't1', match_date: '2026-11-28T00:00:00+00:00', home_team_name: 'Austral', away_team_name: 'Next Week FC', match_time: '10:00:00' });
   T.matches.push({ id: 'mold', ...baseMatch, team_id: 't1', match_date: '2026-11-14T00:00:00+00:00', home_team_name: 'Austral', away_team_name: 'Last Week FC', match_time: '10:00:00' });
-  assert.match(await say('g sam 3'), /^Which game are you scoring\? Tap one\. \[1\. Austral vs Liverpool Rangers, today 3pm \| 2\. Austral vs Next Week FC, Sat 28 Nov 10am\]$/);
-  assert.match(await say('1. Austral vs Liverpool Rangers, today 3pm'), /^Scoring Austral vs Liverpool Rangers, today 3pm\. Send ko at kick-off, or games to switch\. \/\/ Kick-off first/);
+  assert.match(await say('g sam 3'), /^Which game are you scoring\? Tap one\. \[1\. Seniors: Austral vs Liverpool Rangers, today 3pm \| 2\. Seniors: Austral vs Next Week FC, Sat 28 Nov 10am\]$/);
+  assert.match(await say('1. Austral vs Liverpool Rangers, today 3pm'), /^Scoring Seniors · League: Austral vs Liverpool Rangers, today 3pm\. Send ko at kick-off, or games to switch\. \/\/ Kick-off first/);
   assert.equal(T.chat_links[0].active_match_id, 'm1');
   // "games" brings the list back; a tap on its own just switches
   assert.match(await say('games'), /Which game are you scoring/);
-  assert.match(await say('2. Austral vs Next Week FC, Sat 28 Nov 10am'), /^Scoring Austral vs Next Week FC, Sat 28 Nov 10am\. Send ko at kick-off, or games to switch\.$/);
+  assert.match(await say('2. Austral vs Next Week FC, Sat 28 Nov 10am'), /^Scoring Seniors: Austral vs Next Week FC, Sat 28 Nov 10am\. Send ko at kick-off, or games to switch\.$/);
   assert.match(await say('score'), /Austral 0-0 Next Week FC, not started/);
   assert.match(await say('games'), /Which game/);
-  assert.match(await say('1'), /^Scoring Austral vs Liverpool Rangers/);
+  assert.match(await say('1'), /^Scoring Seniors · League: Austral vs Liverpool Rangers/);
   T.matches = T.matches.filter(m => m.id !== 'm0' && m.id !== 'mold');
 
   // Before kick-off
@@ -188,7 +188,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(ko[0].text, /Kick-off logged for Austral vs Liverpool Rangers\. Clock running\. The scoreboard below is pinned/);
   // The second reply is the live scoreboard, for the channel to pin and remember
   assert.deepEqual(ko[1].board, { matchId: 'm1', linkId: T.chat_links[0].id });
-  assert.match(ko[1].text, /^🟢 LIVE · 1st half\n\nAustral  0\nLiverpool Rangers  0\n\nUpdated 2:00pm$/);
+  assert.match(ko[1].text, /^Seniors · League\n🟢 LIVE · 1st half\n\nAustral  0\nLiverpool Rangers  0\n\nUpdated 2:00pm$/);
   await rememberBoard(db, T.chat_links[0].id, 'm1', 501);
   const edits: [string, number, string][] = [];
   const edit = async (c: string, id: number, text: string) => { edits.push([c, id, text]); return 'ok' as const; };
@@ -209,7 +209,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(boardEdits[1].body.text, /23' ⚽ Sam Gurung \(assist Sam Lee\)/);
   assert.equal(await refreshBoards(db, 'm1', new Date(t), edit), 1);
   assert.equal(edits[0][0], '111'); assert.equal(edits[0][1], 501);
-  assert.match(edits[0][2], /^🟢 LIVE · 1st half\n\nAustral  1\nLiverpool Rangers  0\n\n23' ⚽ Sam Gurung \(assist Sam Lee\)\n\nUpdated /);
+  assert.match(edits[0][2], /^Seniors · League\n🟢 LIVE · 1st half\n\nAustral  1\nLiverpool Rangers  0\n\n23' ⚽ Sam Gurung \(assist Sam Lee\)\n\nUpdated /);
   assert.equal(await refreshBoards(db, 'nope', new Date(t), edit), 0, 'no board for that game');
   // A board deleted in the chat is forgotten
   assert.equal(await refreshBoards(db, 'm1', new Date(t), async () => 'gone'), 0);
@@ -318,8 +318,8 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   // Two games today: away game for us + junior game; asks which, then remembers
   T.matches.push({ id: 'm2', ...baseMatch, team_id: 't1', is_club_home: false, home_team_name: 'Bankstown', away_team_name: 'Austral', match_time: '17:00:00', status: 'live', period: 'first_half', period_started_at: new Date(t).toISOString() });
   T.matches.push({ id: 'm3', ...baseMatch, team_id: 'tj', home_team_name: 'Austral U12', away_team_name: 'Camden U12', match_time: '09:00:00', status: 'live', period: 'first_half', period_started_at: new Date(t).toISOString() });
-  assert.match(await say('g sam lee 5'), /Which game are you scoring\? Tap one\. \[1\. Austral U12 vs Camden U12, LIVE \| 2\. Bankstown vs Austral, LIVE\]/);
-  assert.match(await say('2. Bankstown vs Austral, LIVE'), /Scoring Bankstown vs Austral, LIVE\. Send games to switch\. \/\/ Goal Sam Lee \(5'\)\. Now 1-0/);
+  assert.match(await say('g sam lee 5'), /Which game are you scoring\? Tap one\. \[1\. Under 12s: Austral U12 vs Camden U12, LIVE \| 2\. Seniors: Bankstown vs Austral, LIVE\]/);
+  assert.match(await say('2. Seniors: Bankstown vs Austral, LIVE'), /Scoring Seniors: Bankstown vs Austral, LIVE\. Send games to switch\. \/\/ Goal Sam Lee \(5'\)\. Now 1-0/);
   const m2 = T.matches.find(m => m.id === 'm2')!;
   assert.deepEqual([m2.home_score, m2.away_score], [0, 1], 'away game: our goal goes to the away side');
   assert.match(await say('g them 7'), /Goal Bankstown \(7'\)\. Now 1-1/);
@@ -334,7 +334,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   T.matches = [{ id: 'm9', ...baseMatch, team_id: 't1', match_date: `${dayIn('Australia/Sydney', new Date(t - 86_400_000))}T00:00:00+00:00`, status: 'live', period: 'second_half', current_minute: 60, period_started_at: new Date(t).toISOString(), home_team_name: 'Austral', away_team_name: 'Night Owls', match_time: '21:30:00' },
     { id: 'm8', ...baseMatch, team_id: 't1', match_date: `${dayIn('Australia/Sydney', new Date(t - 86_400_000))}T00:00:00+00:00`, home_team_name: 'Austral', away_team_name: 'Never Played', match_time: '20:00:00' }];
   T.chat_links[0].active_match_id = null; T.chat_links[0].pending = null;
-  assert.match(await say('score'), /Which game.*\[1\. Austral vs Night Owls, LIVE\]$/);
+  assert.match(await say('score'), /Which game.*\[1\. Seniors: Austral vs Night Owls, LIVE\]$/);
   assert.match(await say('1'), /Austral 0-0 Night Owls, 60'/);
   // Live two days on (date typed wrong) still counts; an in-house game today is named
   T.matches[0].match_date = '2026-11-19T00:00:00+00:00';
@@ -358,9 +358,9 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   {
     const base: any = { home_team_name: 'Camden Lions', away_team_name: 'Austral Blues', home_score: 2, away_score: 2, status: 'completed', period: 'penalties', tournament_id: 'tc', tournament_match_number: 14, home_penalty_score: 3, away_penalty_score: 4 };
     const ev: any[] = [{ minute: 40, added_minute: 2, event_type: 'red_card', player_name: 'Ben Hart' }, { minute: 5, event_type: 'own_goal', player_name: 'Tom Ng' }, { minute: 12, event_type: 'penalty', player_name: 'Sam Lee' }, { minute: 30, event_type: 'sub', player_name: 'X' }];
-    assert.equal(boardText(base, ev, 'Australia/Sydney', new Date('2026-11-21T05:31:00Z')),
-      "🏁 FULL TIME   M#14\n\nCamden Lions  2\nAustral Blues  2\n(3-4 on penalties)\n\n5' ⚽ Own goal Tom Ng\n12' ⚽ Sam Lee (pen)\n40+2' 🟥 Ben Hart\n\nUpdated 4:31pm");
-    assert.match(boardText({ ...base, status: 'halftime', home_penalty_score: null, away_penalty_score: null }, [], 'Australia/Sydney', new Date()), /^⏸ HALF TIME   M#14\n\nCamden Lions  2\nAustral Blues  2\n\nUpdated/);
+    assert.equal(boardText(base, ev, 'Australia/Sydney', new Date('2026-11-21T05:31:00Z'), 'Austral Cup'),
+      "Austral Cup · M#14\n🏁 FULL TIME\n\nCamden Lions  2\nAustral Blues  2\n(3-4 on penalties)\n\n5' ⚽ Own goal Tom Ng\n12' ⚽ Sam Lee (pen)\n40+2' 🟥 Ben Hart\n\nUpdated 4:31pm");
+    assert.match(boardText({ ...base, status: 'halftime', home_penalty_score: null, away_penalty_score: null }, [], 'Australia/Sydney', new Date()), /^M#14\n⏸ HALF TIME\n\nCamden Lions  2\nAustral Blues  2\n\nUpdated/);
   }
   assert.deepEqual(parsePens('4-3'), [4, 3]); assert.deepEqual(parsePens(' 10 – 9 '), [10, 9]); assert.equal(parsePens('4'), null);
   assert.equal(sideByName('lions', { name: 'Camden Lions' }, { name: 'Bankstown' }), 'home');
@@ -380,7 +380,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   const cm = (n: number) => T.matches.find(m => m.tournament_match_number === n)!;
   // Only games whose teams are known; the semis and final wait for results
   assert.match(await say('hi'), /^Which game are you scoring\? Tap one\. \[1\. M#1 Austral Reds vs Austral Blues, Pitch 1, today 9am \| 2\. M#2 Camden Lions vs Bankstown, Pitch 2, today 10am\]$/);
-  assert.match(await say('m1'), /^Scoring M#1 Austral Reds vs Austral Blues, today 9am \(Group A, Pitch 1\)\. Send ko/);
+  assert.match(await say('m1'), /^Scoring Austral Cup: M#1 Austral Reds vs Austral Blues, today 9am \(Group A, Pitch 1\)\. Send ko/);
   assert.match(await say('ko'), /Kick-off logged/);
   // A name in both teams: tap the one you mean, labelled by team; the assist comes from the scorer's team
   assert.match(await say('g sam 4'), /Two players called "Sam"\. Which one\? \[Sam Lee \(Austral Reds\) \| Sam Gurung \(Austral Blues\)\]/);
@@ -409,7 +409,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.deepEqual([cm(1).home_score, cm(1).away_score], [1, 2]);
 
   // Group B, then the semi-finals are set
-  assert.match(await say('m2'), /Scoring M#2 Camden Lions vs Bankstown/);
+  assert.match(await say('m2'), /Scoring Austral Cup: M#2 Camden Lions vs Bankstown/);
   await say('ko');
   assert.match(await say('g ben'), /Goal Ben Hart for Camden Lions/);
   await say('No assist');
@@ -419,7 +419,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
 
   // Semi-final level at full time: penalties first, then the winner goes through
   assert.match(await say('games'), /M#3 Austral Blues vs Bankstown/);
-  assert.match(await say('m3'), /Scoring M#3 Austral Blues vs Bankstown/);
+  assert.match(await say('m3'), /Scoring Austral Cup: M#3 Austral Blues vs Bankstown/);
   await say('ko');
   assert.match(await say('g tom'), /Goal Tom Ng for Bankstown.*Now 0-1/);
   await say('No assist');
@@ -431,7 +431,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.equal(cm(3).period, 'penalties'); assert.deepEqual([cm(3).home_penalty_score, cm(3).away_penalty_score], [4, 3]); assert.equal(cm(3).winner_side, 'home');
   assert.equal(cm(5).home_team_name, 'Austral Blues');
   // "Yes, end it" straight after ft on a level knockout game still asks for penalties
-  assert.match(await say('m4'), /Scoring M#4 Camden Lions vs Austral Reds/);
+  assert.match(await say('m4'), /Scoring Austral Cup: M#4 Camden Lions vs Austral Reds/);
   await say('ko');
   assert.match(await say('Yes, end it'), /Penalty score\?/);
   assert.match(await say('Not yet'), /still playing/);
@@ -441,7 +441,7 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
   assert.match(await say('Yes, end it'), /Austral Reds go through to M#5 Grand Final/);
 
   // The final: the tournament finishes, then Player of the Tournament
-  assert.match(await say('m5'), /Scoring M#5 Austral Blues vs Austral Reds/);
+  assert.match(await say('m5'), /Scoring Austral Cup: M#5 Austral Blues vs Austral Reds/);
   await say('ko');
   assert.match(await say('g arjun 10'), /Goal Arjun Rai for Austral Blues/);
   await say('No assist');
@@ -457,9 +457,9 @@ const m1 = () => T.matches.find(m => m.id === 'm1')!;
 
   // Paging: five games a page, then More games
   T.matches.push(...[1, 2, 3, 4, 5, 6].map(i => ({ id: `pg${i}`, ...baseMatch, team_id: 't1', match_date: `2026-12-0${i}T00:00:00+00:00`, home_team_name: 'Austral', away_team_name: `Opp ${i}`, match_time: '10:00:00' })));
-  assert.match(await say('games'), /\(1-5 of 6\. .*m12\.\).*\[1\. Austral vs Opp 1.*5\. Austral vs Opp 5, Sat 5 Dec 10am \| More games\]$/);
-  assert.match(await say('More games'), /\(6-6 of 6\.[^\[]*\[1\. Austral vs Opp 6, Sun 6 Dec 10am \| More games\]$/);
-  assert.match(await say('1'), /^Scoring Austral vs Opp 6/);
+  assert.match(await say('games'), /\(1-5 of 6\. .*m12\.\).*\[1\. Seniors: Austral vs Opp 1.*5\. Seniors: Austral vs Opp 5, Sat 5 Dec 10am \| More games\]$/);
+  assert.match(await say('More games'), /\(6-6 of 6\.[^\[]*\[1\. Seniors: Austral vs Opp 6, Sun 6 Dec 10am \| More games\]$/);
+  assert.match(await say('1'), /^Scoring Seniors: Austral vs Opp 6/);
   assert.match(await say('pott jo'), /Player of the Tournament is for tournament games/);
 
   // Per-chat rate limit (30 a minute)
