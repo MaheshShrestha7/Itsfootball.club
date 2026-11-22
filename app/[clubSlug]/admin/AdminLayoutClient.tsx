@@ -16,6 +16,7 @@ import {
   Award,
   DollarSign,
   FileText,
+  Megaphone,
   BarChart3,
   QrCode,
   ExternalLink,
@@ -375,6 +376,7 @@ export default function AdminLayout({
       title: 'Club content',
       items: [
         { area: 'content', label: 'News', href: `/${club.slug}/admin/content`, icon: FileText },
+        { area: 'content', label: 'Social media', href: `/${club.slug}/admin/social`, icon: Megaphone },
         { area: 'gallery', label: 'Photo gallery', href: `/${club.slug}/admin/gallery`, icon: Images },
         { area: 'hero-slider', label: 'Homepage slider', href: `/${club.slug}/admin/hero-slider`, icon: Sparkles },
       ],

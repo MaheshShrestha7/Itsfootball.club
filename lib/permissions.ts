@@ -78,6 +78,8 @@ export function areaFromLocation(pathname: string, tab: string | null): string |
   const area = areaFromPath(pathname);
   // Pages for everyone with admin access, like the dashboard (each shows only what their roles allow)
   if (area && (OPEN_ADMIN_PAGES as readonly string[]).includes(area)) return null;
+  // Social media posts belong to whoever runs the News
+  if (area === 'social') return 'content';
   if (area !== 'people') return area;
   return (PEOPLE_MEMBER_TABS as readonly string[]).includes(tab || '') ? 'members' : 'squad';
 }

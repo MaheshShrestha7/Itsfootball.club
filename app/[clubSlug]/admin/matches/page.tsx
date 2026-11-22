@@ -7,8 +7,8 @@ import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
 import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
-import { Match, MatchType, isPlayerMember, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
-import { GOAL_EVENT_TYPES, clubTeamsOf, defaultTeamOf, isJuniorFixture, isTeamFixture, juniorMemberIds, juniorPublicName, matchTypeForCompetition, publicMember, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
+import { Match, MatchType, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
+import { clubTeamsOf, defaultTeamOf, isTeamFixture, matchTypeForCompetition, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone, { uploadImage } from '@/components/ImageUploadZone';
 import EventFlyerMaker from '@/components/admin/EventFlyerMaker';
 import CoverImage from '@/components/CoverImage';
@@ -16,7 +16,7 @@ import MatchGroundPicker from '@/components/grounds/MatchGroundPicker';
 import { venueText } from '@/lib/grounds';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
 import MatchShareButton from '@/components/MatchShareButton';
-import { lineupBench } from '@/lib/lineup-bench';
+import { useMatchShare } from '@/lib/use-match-share';
 import CheckinPoster from '@/components/admin/CheckinPoster';
 import {
   Calendar,
@@ -103,15 +103,10 @@ export default function AdminMatchesPage({
     seasons,
     getActiveSeason,
     clubTeams,
-    matchEvents,
-    members,
-    clubTeamMembers,
-    activityLogs,
     events,
     inquiries,
     updateInquiry,
     applyInquiryRow,
-    getMatchAvailabilities,
   } = useClub();
 
   const { can, user } = useAuth();
@@ -123,48 +118,8 @@ export default function AdminMatchesPage({
   const teams = useMemo(() => clubTeamsOf(clubTeams, club.id), [clubTeams, club.id]);
   const mainTeamId = defaultTeamOf(clubTeams, club.id)?.id || '';
   const multiTeam = teams.length > 1;
-  // Goals for the share graphics, with the same public names as the match page (junior players shortened)
-  const goalsByMatch = useMemo(() => {
-    const byMatch = new Map<string, typeof matchEvents>();
-    for (const e of matchEvents) {
-      if (!GOAL_EVENT_TYPES.includes(e.event_type)) continue;
-      const m = clubMatches.find(x => x.id === e.match_id);
-      if (!m) continue;
-      const ev = isJuniorFixture(m, clubTeams) ? { ...e, player_name: juniorPublicName(e.player_name) } : e;
-      byMatch.set(m.id, [...(byMatch.get(m.id) || []), ev]);
-    }
-    return byMatch;
-  }, [matchEvents, clubMatches, clubTeams]);
-  // The share graphic is public: lineup names and photos follow the match page's junior rules
-  const juniorIds = useMemo(() => juniorMemberIds(members, clubTeams, clubTeamMembers, { includeU18: club.junior_includes_u18 !== false }), [members, clubTeams, clubTeamMembers]);
-  const memberPhotos = useMemo(() => Object.fromEntries(members.map(m => [m.id, publicMember(m, juniorIds).photo_url])), [members, juniorIds]);
-  // Each fixture's Player of the Match (from the verified stats), named as the match page shows them
-  const motmByMatch = useMemo(() => {
-    const byId = new Map(members.map(m => [m.id, m]));
-    return new Map(activityLogs.filter(l => l.event_type === 'match_motm' && l.reference_id && byId.has(l.member_id)).map(l => {
-      const m = publicMember(byId.get(l.member_id)!, juniorIds);
-      return [l.reference_id!, { name: m.full_name, photo: m.photo_url }];
-    }));
-  }, [activityLogs, members, juniorIds]);
-  const publicMatches = useMemo(() => new Map(clubMatches.map(m => {
-    const juniorFixture = isJuniorFixture(m, clubTeams);
-    if (!juniorFixture && juniorIds.size === 0) return [m.id, m];
-    const shorten = (coords: Match['home_lineup_coords']) => coords?.map(p =>
-      juniorFixture || (p.member_id && juniorIds.has(p.member_id)) ? { ...p, name: juniorPublicName(p.name) } : p);
-    return [m.id, { ...m, home_lineup_coords: shorten(m.home_lineup_coords), away_lineup_coords: shorten(m.away_lineup_coords) }];
-  })), [clubMatches, clubTeams, juniorIds]);
-
-  // The share graphic's Team list: the substitutes after the starters, as the match page lists them
-  // (the named bench, else the other players who said they're in), with the same public names
-  const shareSquad = useMemo(() => members.filter(p => p.club_id === club.id && isPlayerMember(p)).map(p => publicMember(p, juniorIds)), [members, club.id, juniorIds]);
-  const shareSubs = (m: Match) => {
-    const juniorFixture = isJuniorFixture(m, clubTeams);
-    const squad = shareSquad;
-    const inIds = new Set(getMatchAvailabilities(m.id).filter(a => a.status === 'available').map(a => a.member_id));
-    const side = (m.is_club_home ?? true) ? 'home' : 'away';
-    return lineupBench(m, side, squad, squad.filter(p => inIds.has(p.id)))
-      .map(p => ({ number: p.jersey_number || 0, name: juniorFixture ? juniorPublicName(p.full_name) : p.full_name }));
-  };
+  // The share graphics' goals, photos, substitutes and Player of the Match, with junior players shortened
+  const shareProps = useMatchShare(club);
 
   // Filters state
   const [statusTab, setStatusTab] = useState<'all' | 'upcoming' | 'completed' | 'live'>('all');
@@ -1180,13 +1135,7 @@ export default function AdminMatchesPage({
 
                   {/* Matchday / result graphic for Instagram, Facebook and WhatsApp */}
                   <MatchShareButton
-                    match={publicMatches.get(m.id) || m}
-                    club={club}
-                    hideScore={publicScoreHidden(m, clubTeams)}
-                    events={goalsByMatch.get(m.id)}
-                    photos={memberPhotos}
-                    subs={shareSubs(m)}
-                    motm={motmByMatch.get(m.id)}
+                    {...shareProps(m)}
                     trigger={open => (
                       <button
                         type="button"
