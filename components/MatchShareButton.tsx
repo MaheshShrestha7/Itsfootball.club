@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Share2, Download, X } from 'lucide-react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Share2, Download, X, Copy } from 'lucide-react';
 import { CARD_SIZES, drawMatchCard, lineupHasPositions, shareLink, type CardFormat, type CardKind, type CardOptions } from '@/lib/share-card';
 import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
@@ -22,7 +22,8 @@ const motmFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 's
 // photos: player photos by member id for the lineup pitch, as the public site shows them
 // motm: the Player of the Match, as the public site names them: adds a Player of the Match card
 // subs: the substitutes under the starters on the Team list card, as the match page lists them
-export default function MatchShareButton({ match, club, hideScore = false, events, photos, subs, motm, trigger, autoOpen }: {
+// caption (Admin > Social media): the post's words, editable here, copied and handed to the share sheet
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, subs, motm, trigger, autoOpen, caption, onCaption, initialKind, headline, onShared }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
@@ -34,9 +35,20 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   trigger?: (open: () => void) => React.ReactNode;
   /** Opens the dialog once on arrival (the link Match Centre gives after the stats are saved) */
   autoOpen?: boolean;
+  /** The post's caption (Admin > Social media), shown to edit and copied when sharing */
+  caption?: string;
+  onCaption?: (caption: string) => void;
+  /** The graphic the dialog opens on */
+  initialKind?: CardKind;
+  /** The fixture card's headline in place of the usual one ("KICK OFF") */
+  headline?: [string, string];
+  /** The share sheet finished (the person picked an app) */
+  onShared?: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [kind, setKind] = useState<CardKind>('score');
+  const [kind, setKind] = useState<CardKind>(initialKind || 'score');
+  const [copied, setCopied] = useState(false);
+  const captionId = useId();
   const [format, setFormat] = useState<CardFormat>('story');
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +99,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       ...(showSponsors && potmSponsor ? { motmSponsor: { src: potmSponsor.logo_url || undefined, name: potmSponsor.name } } : {}),
     } : {
       hideScore, format, events: hideScore ? undefined : goals, photos,
+      ...(card === 'score' && headline ? { headline } : {}),
       // The Team list is the whole matchday squad: the starters, then the substitutes
       ...(card === 'lineup-list' ? { headline: ['MATCHDAY', 'SQUAD'] as [string, string], subs: bench } : {}),
       ...(showSponsors && cardSponsors.length ? { sponsors: cardSponsors, sponsorsLabel: 'CLUB SPONSORS' } : {}),
@@ -98,7 +111,7 @@ export default function MatchShareButton({ match, club, hideScore = false, event
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [open, kind, format, match, club, hideScore, goals, photos, bench, showSponsors, cardSponsors, hasMotm, motmName, motmPhoto, motmLine, potmSponsor]);
+  }, [open, kind, format, match, club, hideScore, goals, photos, bench, showSponsors, cardSponsors, hasMotm, motmName, motmPhoto, motmLine, potmSponsor, headline]);
 
   const show = () => { setOpen(true); ref.current?.showModal(); };
   const hide = () => { ref.current?.close(); };
@@ -117,13 +130,24 @@ export default function MatchShareButton({ match, club, hideScore = false, event
     const path = matchPath(club.slug, match);
     // Tagged so visits from the shared graphic's link show up in Analytics
     const link = tagLink(`${window.location.origin}${path}`, 'share', 'share', path.split('/').filter(Boolean).slice(1).join('/'));
+    // Instagram and TikTok drop text handed to them, so the caption is on the clipboard to paste
+    if (caption !== undefined) await copyCaption();
     if (navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: `${match.home_team_name} vs ${match.away_team_name}`, text: link });
+        await navigator.share({ files: [file], title: `${match.home_team_name} vs ${match.away_team_name}`, text: caption ?? link });
+        onShared?.();
       } catch { /* the user closed the share sheet */ }
       return;
     }
     download();
+  };
+
+  const copyCaption = async () => {
+    try {
+      await navigator.clipboard.writeText(caption || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { /* no clipboard here: the caption box can still be copied by hand */ }
   };
 
   const download = () => {
@@ -190,6 +214,20 @@ export default function MatchShareButton({ match, club, hideScore = false, event
             <input type="checkbox" checked={showSponsors} onChange={e => setShowSponsors(e.target.checked)} style={{ width: 18, height: 18 }} />
             Show sponsors
           </label>
+        )}
+
+        {caption !== undefined && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              <label htmlFor={captionId} style={{ fontSize: '0.85rem', fontWeight: 700 }}>Caption</label>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={copyCaption}>
+                <Copy size={14} aria-hidden="true" /> {copied ? 'Copied' : 'Copy caption'}
+              </button>
+            </div>
+            <textarea id={captionId} className="form-input" rows={5} maxLength={2200} value={caption}
+              onChange={e => onCaption?.(e.target.value)} style={{ width: '100%', resize: 'vertical', fontSize: '0.88rem' }} />
+            <p className="text-note" style={{ margin: '0.3rem 0 0', fontSize: '0.78rem' }}>Share copies the caption too. Paste it in when the app opens.</p>
+          </div>
         )}
 
         <div className="confirm-dialog-actions">

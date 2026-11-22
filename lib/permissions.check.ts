@@ -18,6 +18,7 @@ assert.equal(areaFromPath('/fc-united/admin/tournaments/abc'), 'tournaments');
 // The People page is the squad's, except its applications and passes tabs
 assert.equal(areaFromLocation('/fc-united/admin/people', null), 'squad');
 assert.equal(areaFromLocation('/fc-united/admin/people', 'applications'), 'members');
+assert.equal(areaFromLocation('/fc-united/admin/social', null), 'content', 'social media posts go with News');
 assert.equal(areaFromLocation('/fc-united/admin/people', 'rejected'), 'members');
 assert.equal(areaFromLocation('/fc-united/admin/finance', 'income'), 'finance');
 
