@@ -145,6 +145,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
           <Link href={`/${club.slug}/admin/finance/agm`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> AGM report</Link>
           <Link href={`/${club.slug}/admin/committee/season-review`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> Season review</Link>
           <Link href={`/${club.slug}/admin/finance/audit-pack`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> Audit pack</Link>
+          <Link href={`/${club.slug}/admin/finance/grant-report`} className="btn btn-secondary"><FileText size={16} aria-hidden="true" /> Grant report</Link>
         </div>
       </div>
 
