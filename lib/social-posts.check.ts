@@ -81,4 +81,68 @@ assert.equal(split.later[0].key, 'fixture:later');
 assert.equal(clubUrl({ slug: 'cp', custom_domain: 'cpfc.com.au' }, '/cp/match/x'), 'https://cpfc.com.au/match/x');
 assert.equal(clubUrl({ slug: 'cp', custom_domain: 'cpfc.com.au' }, '/cp'), 'https://cpfc.com.au/');
 
+// Player birthdays: today ready, coming up in 14d, alumni & unapproved skipped, junior privacy enforced
+const bdayQueue = socialQueue({
+  ...input,
+  matches: [],
+  events: [],
+  members: [
+    { id: 'm1', full_name: 'Rohan Gurung', date_of_birth: '2000-11-20', jersey_number: 10, player_position: 'Forward', photo_url: 'https://img/r.jpg', status: 'active', membership_status: 'approved', team_name: "Men's First Team" },
+    { id: 'm2', full_name: 'Maya Patel', date_of_birth: '2014-11-24', jersey_number: 7, player_position: 'Midfielder', photo_url: 'https://img/m.jpg', photo_consent: false, status: 'active', membership_status: 'approved', is_junior: true, team_name: 'U12 Girls' },
+    { id: 'm3', full_name: 'Samira Lee', date_of_birth: '2013-11-20', photo_url: 'https://img/s.jpg', photo_consent: true, status: 'active', membership_status: 'approved', is_junior: true },
+    { id: 'm4', full_name: 'Old Alumni', date_of_birth: '1990-11-20', status: 'alumni', membership_status: 'approved' },
+    { id: 'm5', full_name: 'Pending Player', date_of_birth: '1998-11-20', status: 'active', membership_status: 'pending' },
+    { id: 'm6', full_name: 'Far Away', date_of_birth: '1995-03-10', status: 'active', membership_status: 'approved' },
+  ],
+});
+assert.deepEqual(bdayQueue.map(p => p.key).sort(), ['birthday:m1:2026', 'birthday:m2:2026', 'birthday:m3:2026']);
+const rohan = bdayQueue.find(p => p.key === 'birthday:m1:2026')!;
+assert.equal(rohan.ready, true);
+assert.equal(rohan.birthday?.displayName, 'Rohan Gurung');
+assert.equal(rohan.birthday?.turningAge, 26);
+assert.equal(rohan.birthday?.photoUrl, 'https://img/r.jpg');
+assert.match(rohan.caption, /^Happy Birthday Rohan Gurung! Wishing our #10 Forward \(Men's First Team\)/);
+
+const maya = bdayQueue.find(p => p.key === 'birthday:m2:2026')!;
+assert.equal(maya.ready, false, '4 days away goes into Coming up');
+assert.equal(maya.birthday?.displayName, 'Maya P.', 'junior name shortened');
+assert.equal(maya.birthday?.photoUrl, undefined, 'junior photo hidden without consent');
+assert.equal(maya.birthday?.turningAge, undefined, 'junior age never exposed');
+
+const samira = bdayQueue.find(p => p.key === 'birthday:m3:2026')!;
+assert.equal(samira.birthday?.photoUrl, 'https://img/s.jpg', 'junior photo allowed when photo_consent is true');
+
+// Dec -> Jan year rollover & leap day (Feb 29 -> Feb 28 in non-leap year 2027)
+const decRoll = socialQueue({
+  ...input,
+  matches: [],
+  events: [],
+  now: Date.parse('2026-12-29T00:00:00Z'),
+  members: [{ id: 'jan', full_name: 'Alex Kim', date_of_birth: '1999-01-02', status: 'active', membership_status: 'approved' }],
+});
+assert.equal(decRoll.length, 1);
+assert.equal(decRoll[0].key, 'birthday:jan:2027');
+assert.equal(decRoll[0].birthday?.turningAge, 28);
+
+const leapDay = socialQueue({
+  ...input,
+  matches: [],
+  events: [],
+  now: Date.parse('2027-02-28T00:00:00Z'),
+  members: [{ id: 'leap', full_name: 'Leap Star', date_of_birth: '2000-02-29', status: 'active', membership_status: 'approved' }],
+});
+assert.equal(leapDay.length, 1);
+assert.equal(leapDay[0].ready, true);
+assert.equal(leapDay[0].birthday?.dateLabel, '28 February');
+
+// Turning off the birthday rule hides all birthday posts
+const noBdays = socialQueue({
+  ...input,
+  matches: [],
+  events: [],
+  settings: readSocialSettings({ rules: { birthday: { on: false } } }),
+  members: [{ id: 'm1', full_name: 'Rohan Gurung', date_of_birth: '2000-11-20', status: 'active', membership_status: 'approved' }],
+});
+assert.equal(noBdays.length, 0);
+
 console.log('social-posts checks passed');

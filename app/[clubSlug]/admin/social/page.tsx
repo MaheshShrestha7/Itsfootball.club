@@ -1,22 +1,34 @@
 'use client';
 
 import React, { use, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, Clock, Megaphone, Radio, Settings2, Share2, Shield, Star, Trophy, Users } from 'lucide-react';
+import { Cake, CalendarDays, CheckCircle2, Clock, Megaphone, Radio, Settings2, Share2, Shield, Star, Trophy, Users } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useMatchShare } from '@/lib/use-match-share';
 import { useSocialMarks, useSocialReady, useSocialSettings } from '@/lib/use-social-posts';
-import { SOCIAL_TRIGGERS, TIMING_LABEL, socialQueue, splitQueue, type SocialPost, type SocialTiming, type SocialTrigger } from '@/lib/social-posts';
+import {
+  SOCIAL_TRIGGERS,
+  TIMING_LABEL,
+  buildBirthdayPostData,
+  socialCaption,
+  socialQueue,
+  splitQueue,
+  type BirthdayMember,
+  type SocialPost,
+  type SocialTiming,
+  type SocialTrigger,
+} from '@/lib/social-posts';
 import { clubTimeZone, DATE_LOCALE } from '@/lib/dates';
-import { publicScoreHidden } from '@/lib/teams';
+import { juniorMemberIds, publicScoreHidden } from '@/lib/teams';
 import MatchShareButton from '@/components/MatchShareButton';
 import EventShareButton from '@/components/admin/EventShareButton';
+import BirthdayShareButton from '@/components/admin/BirthdayShareButton';
 import ReviewSaveNote from '@/components/admin/ReviewSaveNote';
 import type { CardKind } from '@/lib/share-card';
 
 const ICON: Record<SocialTrigger, typeof Clock> = {
-  fixture: CalendarDays, team: Users, kickoff: Radio, halftime: Clock, fulltime: Trophy, motm: Star, event: Megaphone,
+  fixture: CalendarDays, team: Users, kickoff: Radio, halftime: Clock, fulltime: Trophy, motm: Star, event: Megaphone, birthday: Cake,
 };
 const KIND: Partial<Record<SocialTrigger, CardKind>> = { team: 'lineup-list', motm: 'motm' };
 const KICK_OFF: [string, string] = ['KICK', 'OFF'];
@@ -32,7 +44,7 @@ function shortWhen(ms: number, tz: string) {
 
 export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, matches, events, clubTeams } = useClub();
+  const { clubs, selectClubBySlug, matches, events, members, clubTeams, clubTeamMembers } = useClub();
   const { user, can } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const canEdit = can(club.id, 'content', 'edit');
@@ -48,14 +60,64 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(t); }, []);
 
+  // Active club members with team name and junior privacy flag resolved
+  const birthdayMembers: BirthdayMember[] = useMemo(() => {
+    const clubMems = members.filter(m => m.club_id === club.id);
+    const teams = clubTeams.filter(t => t.club_id === club.id);
+    const teamById = new Map(teams.map(t => [t.id, t]));
+    const juniorIds = juniorMemberIds(clubMems, teams, clubTeamMembers);
+    const teamNameFor = new Map<string, string>();
+    for (const row of clubTeamMembers) {
+      if (row.is_active === false || teamNameFor.has(row.member_id)) continue;
+      const t = teamById.get(row.team_id);
+      if (t) teamNameFor.set(row.member_id, t.name);
+    }
+    return clubMems.map(m => ({
+      id: m.id,
+      full_name: m.full_name,
+      date_of_birth: m.date_of_birth,
+      jersey_number: m.jersey_number,
+      player_position: m.player_position,
+      photo_url: m.photo_url,
+      photo_consent: m.photo_consent,
+      status: m.status,
+      membership_status: m.membership_status,
+      is_junior: juniorIds.has(m.id),
+      team_name: teamNameFor.get(m.id) || null,
+    }));
+  }, [members, club.id, clubTeams, clubTeamMembers]);
+
+  // On-demand birthday card picker so admins can generate a card for any active player anytime
+  const activeMembers = useMemo(
+    () => birthdayMembers
+      .filter(m => m.status !== 'alumni' && (!m.membership_status || m.membership_status === 'approved'))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [birthdayMembers],
+  );
+  const [pickedMemberId, setPickedMemberId] = useState('');
+  const pickedMember = useMemo(
+    () => activeMembers.find(m => m.id === pickedMemberId) || activeMembers[0] || null,
+    [activeMembers, pickedMemberId],
+  );
+  const pickedBirthday = useMemo(
+    () => (pickedMember ? buildBirthdayPostData(pickedMember, new Date(now).getFullYear()) : null),
+    [pickedMember, now],
+  );
+  const [pickedCaption, setPickedCaption] = useState<string | null>(null);
+  const defaultPickedCaption = useMemo(
+    () => (pickedBirthday ? socialCaption('birthday', { club, settings, timeZone: tz }, { birthday: pickedBirthday }) : ''),
+    [pickedBirthday, club, settings, tz],
+  );
+
   const posts = useMemo(() => socialQueue({
     matches: matches.filter(m => m.club_id === club.id),
     events: events.filter(e => e.club_id === club.id),
+    members: birthdayMembers,
     settings, club, timeZone: tz, now,
     hideScore: m => publicScoreHidden(m, clubTeams),
     motm: m => shareProps(m).motm?.name,
     hasLineup: m => !!((m.is_club_home ?? true) ? m.home_lineup_coords : m.away_lineup_coords)?.length,
-  }), [matches, events, club, settings, tz, now, clubTeams, shareProps]);
+  }), [matches, events, birthdayMembers, club, settings, tz, now, clubTeams, shareProps]);
   const { todo, later, done } = splitQueue(posts, marks || {});
 
   // Captions as edited here, before the post is marked (then the mark keeps them)
@@ -71,6 +133,7 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
       <button type="button" className="btn btn-primary btn-sm" onClick={open}><Share2 size={14} aria-hidden="true" /> Share from my phone</button>
     );
     const common = { caption: captionOf(p), onCaption: (c: string) => setEdits(e => ({ ...e, [p.key]: c })), onShared: () => void setMark(p, 'shared'), trigger };
+    if (p.birthday) return <BirthdayShareButton player={p.birthday} club={club} {...common} />;
     if (p.event) return <EventShareButton event={p.event} club={club} {...common} />;
     if (!p.match) return null;
     return <MatchShareButton {...shareProps(p.match)} {...common} initialKind={KIND[p.trigger]} headline={p.trigger === 'kickoff' && p.match.home_score + p.match.away_score === 0 ? KICK_OFF : undefined} />;
@@ -120,8 +183,36 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
       <div className="admin-head">
         <div>
           <h1>Social media</h1>
-          <p>Posts for your club&apos;s Facebook, Instagram, TikTok and WhatsApp, made from your fixtures, results and events. Share each one from your phone with the graphic and caption ready.</p>
+          <p>Posts for your club&apos;s Facebook, Instagram, TikTok and WhatsApp, made from your fixtures, results, events and player birthdays. Share each one from your phone with the graphic and caption ready.</p>
         </div>
+        {canEdit && pickedBirthday && (
+          <div className="bday-quick-bar">
+            <select
+              aria-label="Pick a player for a birthday card"
+              className="form-input"
+              value={pickedMember?.id || ''}
+              onChange={e => { setPickedMemberId(e.target.value); setPickedCaption(null); }}
+            >
+              {activeMembers.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name}{m.jersey_number != null ? ` (#${m.jersey_number})` : ''}
+                </option>
+              ))}
+            </select>
+            <BirthdayShareButton
+              key={pickedBirthday.memberId}
+              player={pickedBirthday}
+              club={club}
+              caption={pickedCaption ?? defaultPickedCaption}
+              onCaption={setPickedCaption}
+              trigger={open => (
+                <button type="button" className="btn btn-primary btn-sm" onClick={open}>
+                  <Cake size={14} aria-hidden="true" /> Make birthday card
+                </button>
+              )}
+            />
+          </div>
+        )}
       </div>
 
       <div className="admin-tabs" role="tablist" aria-label="Social media">
