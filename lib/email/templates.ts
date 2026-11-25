@@ -28,6 +28,9 @@ interface EmailContent {
   paragraphs: string[];
   cta?: { label: string; url: string };
   details?: [label: string, value: string][];
+  /** Titled lists under the intro (round-up, admin summary): each row a label, a value and an optional
+   *  smaller line, the value linked when it has an https url */
+  sections?: EmailSection[];
   /** A row of smaller links under the button, e.g. "Add to calendar · Directions" (https only) */
   links?: { label: string; url: string }[];
   /** Small print under the button, e.g. "This link expires in 1 hour" */
@@ -67,6 +70,15 @@ export function renderEmail(c: EmailContent): RenderedEmail {
 ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-top:1px solid #E2E8F0;' : ''}font:600 13px ${font};color:#64748B;width:34%;vertical-align:top">${esc(k)}</td><td style="padding:10px 16px;${i ? 'border-top:1px solid #E2E8F0;' : ''}font:600 14px ${font};color:#0F172A">${esc(v)}</td></tr>`).join('\n')}
 </table>`
     : '';
+
+  const sections = (c.sections || []).filter(sec => sec.rows.length).map(sec => `<p style="margin:0 0 8px;font:800 11px ${font};color:#64748B;text-transform:uppercase;letter-spacing:0.16em">${esc(sec.heading)}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:separate;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">
+${sec.rows.map((r, i) => {
+    const value = r.url && /^https:\/\//.test(r.url) ? `<a href="${esc(r.url)}" target="_blank" style="color:#0F172A;text-decoration:underline">${esc(r.value)}</a>` : esc(r.value);
+    const top = i ? 'border-top:1px solid #E2E8F0;' : '';
+    return `<tr><td style="padding:10px 16px;${top}font:600 13px ${font};color:#64748B;width:34%;vertical-align:top">${esc(r.label)}</td><td style="padding:10px 16px;${top}font:600 14px/1.45 ${font};color:#0F172A">${value}${r.sub ? `<div style="font:500 12.5px/1.4 ${font};color:#64748B">${esc(r.sub)}</div>` : ''}</td></tr>`;
+  }).join('\n')}
+</table>`).join('\n');
 
   const cta = c.cta
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px"><tr><td style="border-radius:10px;background:${color}">
@@ -131,6 +143,7 @@ ${c.checklist.map((st, i) => `<tr>
   ${c.paragraphs.map(p => `<p style="margin:0 0 16px;font:16px/1.6 ${font};color:#334155">${esc(p)}</p>`).join('\n  ')}
   ${message}
   ${details}
+  ${sections}
   ${cta}
   ${checklist}
   ${linkRow}
@@ -154,6 +167,7 @@ ${c.checklist.map((st, i) => `<tr>
     ...c.paragraphs.flatMap(p => [p, '']),
     ...(c.message?.trim() ? [`Message from ${brand.name}:`, c.message.trim(), ''] : []),
     ...(c.details?.length ? [...c.details.map(([k, v]) => `${k}: ${v}`), ''] : []),
+    ...(c.sections || []).filter(sec => sec.rows.length).flatMap(sec => [sec.heading.toUpperCase(), ...sec.rows.map(r => `${r.label}: ${r.value}${r.sub ? ` (${r.sub})` : ''}${r.url ? ` ${r.url}` : ''}`), '']),
     ...(c.cta ? [`${c.cta.label}: ${c.cta.url}`, ''] : []),
     ...(c.checklist?.length ? [...c.checklist.map((st, i) => `${st.done ? '[done]' : `${i + 1}.`} ${st.title} (${st.sub})`), ''] : []),
     ...(links.length ? [...links.map(l => `${l.label}: ${l.url}`), ''] : []),
@@ -292,6 +306,11 @@ export function authEmail(action: AuthAction, link: string, token: string, brand
 // ---------------------------------------------------------------------------------------------
 // Reminders (sent by /api/cron/reminders)
 // ---------------------------------------------------------------------------------------------
+
+export interface EmailSection {
+  heading: string;
+  rows: { label: string; value: string; sub?: string | null; url?: string | null }[];
+}
 
 const firstName = (full: string) => full.trim().split(/\s+/)[0] || 'there';
 
@@ -947,5 +966,58 @@ export function committeeMeetingEmail(p: {
     details: p.rows.length ? p.rows : [[agenda ? 'Agenda' : 'Minutes', agenda ? 'No items yet' : 'No decisions or actions were recorded']],
     ...(p.link ? { cta: { label: 'Read the minutes', url: p.link } } : {}),
     reason: `You're receiving this because you're on the committee of ${p.brand.name}.`,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Automatic club emails: the admin morning summary, payment receipts and the weekly round-up
+// ---------------------------------------------------------------------------------------------
+
+/** AUTO-1: what's waiting for one admin, only the parts of the club they look after */
+export function adminSummary(p: { brand: EmailBrand; adminName: string; items: { area: string; text: string; url: string }[]; dashboardUrl: string; unsubscribeUrl?: string | null }): RenderedEmail {
+  const n = p.items.length;
+  const head = n === 1 ? '1 thing needs you today' : `${n} things need you today`;
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl,
+    subject: `${p.brand.name}: ${head}`,
+    preheader: p.items.slice(0, 3).map(i => i.text).join(', '),
+    heading: head,
+    paragraphs: [`${p.adminName.trim() ? `Morning ${firstName(p.adminName)}` : 'Good morning'}, here's what's waiting at ${p.brand.name}. Each line opens the page to deal with it.`],
+    sections: [{ heading: 'Needs doing', rows: p.items.map(i => ({ label: i.area, value: i.text, url: i.url })) }],
+    cta: { label: 'Open the dashboard', url: p.dashboardUrl },
+    note: 'We only send this on mornings when something new is waiting, and only for the parts of the club you look after.',
+    reason: `You're receiving this because you're an admin of ${p.brand.name}. Club admins can switch it off in Admin > Emails.`,
+  });
+}
+
+/** AUTO-4: a receipt once a member's payment is in (card, or a bank transfer the club checked) */
+export function paymentReceipt(p: { brand: EmailBrand; payerName: string; what: string; price: string; paidOn: string; method: 'card' | 'bank'; reference: string; link: string; canReply: boolean }): RenderedEmail {
+  const bank = p.method === 'bank';
+  return renderEmail({
+    brand: p.brand,
+    subject: `Receipt: ${p.what}, ${p.price}`,
+    preheader: bank ? `${p.brand.name} has checked your bank transfer. Thank you.` : `${p.brand.name} has received your payment. Thank you.`,
+    heading: bank ? 'Bank transfer received, thank you' : 'Payment received, thank you',
+    paragraphs: [bank
+      ? `Hi ${firstName(p.payerName)}, ${p.brand.name} has checked your bank transfer and marked it paid. Keep this email as your receipt.`
+      : `Hi ${firstName(p.payerName)}, ${p.brand.name} has received your payment. Keep this email as your receipt.`],
+    details: [['For', p.what], ['Amount', p.price], [bank ? 'Marked paid' : 'Paid', p.paidOn], ['Paid by', bank ? 'Bank transfer' : 'Card'], ['Reference', p.reference]],
+    cta: { label: 'Open the club site', url: p.link },
+    note: p.canReply ? 'Questions about this payment? Just reply to this email.' : undefined,
+    reason: `You're receiving this because you paid ${p.brand.name}.`,
+  });
+}
+
+/** AUTO-8: the week at the club, to members */
+export function weeklyRoundup(p: { brand: EmailBrand; memberName: string; sections: EmailSection[]; subjectBits: string[]; fixturesUrl: string; unsubscribeUrl?: string | null }): RenderedEmail {
+  return renderEmail({
+    brand: p.brand, unsubscribeUrl: p.unsubscribeUrl,
+    subject: `This week at ${p.brand.name}: ${p.subjectBits.join(', ')}`,
+    preheader: 'What\'s on this week, last week\'s results and the latest news.',
+    heading: `This week at ${p.brand.name}`,
+    paragraphs: [`Hi ${firstName(p.memberName)}, here's what's on this week and what happened last week.`],
+    sections: p.sections,
+    cta: { label: 'See all fixtures', url: p.fixturesUrl },
+    reason: `You're receiving this because you're a member of ${p.brand.name}.`,
   });
 }

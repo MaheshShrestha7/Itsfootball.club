@@ -15,7 +15,8 @@ export type EmailKind =
   | 'sponsor_rejected' | 'sponsor_change' | 'sponsor_invoice' | 'sponsor_reminder'
   | 'fee_request' | 'fee_reminder' | 'expense_claim'
   | 'friendly_suggest' | 'friendly_confirm' | 'friendly_update'
-  | 'tournament_entry' | 'tournament_reminder' | 'tournament_info';
+  | 'tournament_entry' | 'tournament_reminder' | 'tournament_info'
+  | 'admin_summary' | 'receipt' | 'weekly_roundup';
 
 export interface ClubEmail {
   /** Unique name of this email; a key already in email_log is never sent again */

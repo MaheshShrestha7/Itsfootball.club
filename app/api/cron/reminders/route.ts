@@ -14,6 +14,7 @@ import { cleanSettings, type ReminderSetting } from '@/lib/email/settings';
 import { formatWhen, formatMatchWhen, formatDay, localDate } from '@/lib/email/format';
 import { clubTimeZone, formatClock } from '@/lib/dates';
 import { logEvent } from '@/lib/platform-events';
+import { adminSummaryDrafts, roundupDrafts, sendFeeReminders } from '@/lib/email/automations';
 
 // Daily reminder emails, triggered by the Cloudflare cron in worker.ts (or by hand:
 // POST with "Authorization: Bearer $CRON_SECRET"; add ?dry=1 to list what would be sent).
@@ -23,6 +24,7 @@ import { logEvent } from '@/lib/platform-events';
 //   - sponsors: 30 days before the sponsorship ends, and once in the week after, with the renewal link
 //   - sponsor instalments: each invoice 14 days before it's due, and one reminder 3 days after. These are
 //     bills the club set up, so they go out whatever its reminder settings or the sponsor's opt-out say
+//   - admin summary, fee request reminders, weekly round-up (lib/email/automations.ts)
 // Juniors' reminders go to their parent or guardian (memberRecipient).
 // Each club switches these on in Admin -> Email Notifications (clubs.email_settings); all start off.
 // Unsubscribed addresses are skipped, and each reminder goes out at most once (email_log).
@@ -253,6 +255,10 @@ async function instalmentEmails(db: SupabaseClient, dry: boolean) {
   return { due: due.map(j => j.key), sent: ok, failed };
 }
 
+/** The newer automatic emails: one failing (a missing table, a bad row) mustn't stop the reminders */
+const safe = (name: string, drafts: Promise<EmailDraft[]>) =>
+  drafts.catch(err => { console.error(`[reminders] ${name} failed:`, err); return [] as EmailDraft[]; });
+
 /** Equal-time string compare, so the secret can't be guessed byte by byte from response timing */
 function sameSecret(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -275,14 +281,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not configured', missing }, { status: 503 });
   }
 
-  const drafts = (await Promise.all([availabilityDrafts(db), eventDrafts(db), renewalDrafts(db), sponsorRenewalDrafts(db)])).flat();
+  const drafts = (await Promise.all([availabilityDrafts(db), eventDrafts(db), renewalDrafts(db), sponsorRenewalDrafts(db), safe('admin summary', adminSummaryDrafts(db)), safe('weekly round-up', roundupDrafts(db))])).flat();
+  const dry = req.nextUrl.searchParams.get('dry') === '1';
 
   const { due, optedOut, alreadySent } = await filterDrafts(db, drafts);
 
-  if (req.nextUrl.searchParams.get('dry') === '1') {
+  if (dry) {
     return NextResponse.json({
       dryRun: true,
       instalments: (await instalmentEmails(db, true)).due,
+      feeReminders: (await sendFeeReminders(db, true)).due,
       due: due.map(d => ({ key: d.key, to: d.to, subject: d.render(null).subject })),
       alreadySent,
       optedOut,
@@ -295,7 +303,9 @@ export async function POST(req: NextRequest) {
 
   const report = await sendClubEmails(db, await materialize(due.slice(0, MAX_SENDS)));
   const instalments = await instalmentEmails(db, false);
-  const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS), instalments: { sent: instalments.sent, failed: instalments.failed } };
+  // One club's failure mustn't stop the rest of the run
+  const fees = await sendFeeReminders(db, false).catch(err => ({ due: 0, emailed: 0, notEmailed: 0, error: String(err) }));
+  const body = { ...report, alreadySent: report.alreadySent + alreadySent, optedOut, deferred: Math.max(0, due.length - MAX_SENDS), instalments: { sent: instalments.sent, failed: instalments.failed }, feeReminders: fees };
   await logEvent('cron', 'reminders', !report.error, body);
   if (report.error?.startsWith('email_log')) {
     console.error('[reminders]', report.error);
