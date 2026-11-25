@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useClub } from '@/lib/club-context';
+import { featureOn } from '@/lib/club-features';
 
 /** True once the club has at least one product on sale and takes card payments (shop checkout is
- *  card only): the shop is only linked to from then on */
+ *  card only): the shop is only linked to from then on, and never while the club has it switched off */
 export function useShopOpen(clubId: string): boolean {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -15,5 +17,6 @@ export function useShopOpen(clubId: string): boolean {
       client.from('club_payment_settings').select('stripe_charges_enabled').eq('club_id', clubId).maybeSingle(),
     ]).then(([products, settings]) => setOpen(Boolean(products.count) && settings.data?.stripe_charges_enabled === true));
   }, [clubId]);
-  return open;
+  const { clubs } = useClub();
+  return open && featureOn(clubs.find(c => c.id === clubId), 'shop');
 }

@@ -64,6 +64,7 @@ import {
 import { AuthAlert, AuthTabs, EmailField, InboxSent, PasswordField, SubmitButton, useShake } from '@/components/auth/AuthBits';
 import PlayerAvatar from '@/components/PlayerAvatar';
 import { DATE_LOCALE } from '@/lib/dates';
+import { featureOn } from '@/lib/club-features';
 
 /** The signed-in user's own pending or rejected application (my_membership_application RPC) */
 interface MyApplication {
@@ -307,7 +308,9 @@ export default function MemberPortalPage({
   // Fee requests the club sent this member or their children
   const openFees = useOpenFees(club.id, [...(activeMember ? [activeMember.id] : []), ...childMembers.map(c => c.id)]);
   const feeNames = new Map(childMembers.map(c => [c.id, c.full_name]));
-  const { claims: expenseClaims, refresh: refreshExpenseClaims } = useExpenseClaims(club.id, activeMember?.id ?? null);
+  // Null (tab hidden) while the club has Expense claims switched off, like before the table exists
+  const { claims: loadedClaims, refresh: refreshExpenseClaims } = useExpenseClaims(club.id, activeMember?.id ?? null);
+  const expenseClaims = featureOn(club, 'expense_claims') ? loadedClaims : null;
   const openClaimCount = expenseClaims?.filter(isOpenClaim).length ?? 0;
   const feesOwed = new Map<string, number>();
   openFees.filter(f => f.status === 'pending').forEach(f => feesOwed.set(f.member_id, (feesOwed.get(f.member_id) || 0) + 1));
