@@ -79,9 +79,9 @@ function Switch({ checked, onChange, label, disabled }: { checked: boolean; onCh
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="touch-target"
       style={{
         flexShrink: 0,
+        padding: 0,
         width: '48px',
         height: '28px',
         borderRadius: '999px',
