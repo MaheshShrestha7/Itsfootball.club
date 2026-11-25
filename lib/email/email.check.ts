@@ -8,6 +8,7 @@ import { memberRecipient } from './club-emails';
 import { formatMatchWhen, formatWhen } from './format';
 import { authSignInLink } from './auth-link';
 import { EMAIL_KIND_GROUPS, EMAIL_KIND_LABELS, emailKindLabel } from './kinds';
+import { fillClubSponsors } from './club-sponsors';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -220,6 +221,23 @@ assert.equal(emailKindLabel(null), 'Other emails');
   ] });
   assert.equal(week.subject, 'This week at Riverside FC: 2 games, 1 result');
   assert.ok(week.html.includes('Coming up') && !week.html.includes('>News<'), 'empty sections are left out');
+}
+
+// Club emails: club colour band, sponsors filled in at send time (or nothing), sign-in left bare
+{
+  const brand = { name: 'Sunny FC', color: '#FACC15', url: 'https://itsfootball.club/sunny' };
+  const fee = feeRequest({ brand, memberName: 'Sam Lee', title: 'Boots', price: '$5.00', dueOn: 'Friday', overdue: false, reminder: false, link: 'https://x.test/p' });
+  assert.ok(fee.html.includes('background:#FACC15;border-radius:16px 16px 0 0'), 'club colour band');
+  assert.match(fee.html, /<!--club-sponsors:#[0-9a-fA-F]{6}-->/, 'marker with a readable ink');
+  const none = fillClubSponsors(fee, 'Sunny FC', []);
+  assert.ok(!none.html.includes('club-sponsors') && !none.html.includes('supported by') && none.text === fee.text, 'no sponsors, no strip');
+  const filled = fillClubSponsors(fee, 'Sunny FC', [{ name: 'Big <Co>', big: true, url: 'javascript:x' }, { name: 'Small Co', logoUrl: 'https://cdn.example.com/s.png', url: 'https://small.example/' }]);
+  assert.ok(filled.html.includes('Sunny FC is supported by') && filled.html.includes('Big &lt;Co&gt;') && !filled.html.includes('javascript:'));
+  assert.ok(filled.html.includes('height="32"') && filled.html.includes('href="https://small.example/"'));
+  assert.ok(filled.text.includes('Sunny FC is supported by: Big <Co>, Small Co\n\n--\n'), 'text line above the footer');
+  const tix = ticketsEmail({ brand, buyerName: 'A', event: 'Gala', quantity: 1, when: 'Sat', venue: 'Park', link: 'https://x.test/t', sponsors: [{ name: 'Event Co' }] });
+  assert.ok(!tix.html.includes('<!--club-sponsors') && tix.html.includes('This event is supported by'), 'event sponsors win');
+  assert.ok(!authEmail('magiclink', 'https://x.test/l', '123456').html.includes('club-sponsors'), 'platform emails have no marker');
 }
 
 console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');

@@ -1,7 +1,7 @@
 // Email templates. One layout (table-based, inline styles: what Gmail, Outlook and Apple Mail
 // all render the same) plus a builder per email. Every value is escaped; builders pass plain text.
 import { SITE_URL } from '@/lib/seo';
-import { evaluateColorContrast } from '@/lib/theme-utils';
+import { evaluateColorContrast, readableClubInk } from '@/lib/theme-utils';
 import { tagLink } from '@/lib/visit-source';
 
 /** Who the email is from: a club, or the platform itself when omitted */
@@ -12,6 +12,8 @@ export interface EmailBrand {
   color?: string | null;
   url: string;
 }
+
+export interface EmailSponsor { name: string; logoUrl?: string | null; url?: string | null; big?: boolean }
 
 export interface RenderedEmail {
   subject: string;
@@ -46,7 +48,7 @@ interface EmailContent {
   /** Footer unsubscribe link (club emails other than sign-in) */
   unsubscribeUrl?: string | null;
   /** Sponsor logos (or names) at the bottom of the card, under a small heading */
-  sponsors?: { heading: string; list: { name: string; logoUrl?: string | null; url?: string | null }[] };
+  sponsors?: { heading: string; list: EmailSponsor[] };
 }
 
 const PLATFORM: EmailBrand = { name: 'itsfootball.club', logoUrl: `${SITE_URL}/logo-96.png`, color: '#047857', url: SITE_URL };
@@ -55,6 +57,30 @@ export const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const absolute = (url?: string | null) => (!url ? null : /^https:\/\//.test(url) ? url : url.startsWith('/') ? SITE_URL + url : null);
+const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+// inline-block boxes so a long list wraps on phones; top-tier sponsors get bigger logos
+const sponsorCell = (sp: EmailSponsor) => {
+  const src = absolute(sp.logoUrl);
+  const h = sp.big ? 48 : 32;
+  const inner = src
+    ? `<img src="${esc(src)}" height="${h}" alt="${esc(sp.name)}" style="display:inline-block;vertical-align:middle;height:${h}px;max-width:${sp.big ? 150 : 110}px;width:auto">`
+    : `<span style="font:800 ${sp.big ? 15 : 13}px ${font};color:#0F172A">${esc(sp.name)}</span>`;
+  const href = sp.url && /^https?:\/\//.test(sp.url) ? sp.url : null;
+  return `<div style="display:inline-block;vertical-align:middle;margin:4px;padding:8px 14px;min-width:${sp.big ? 120 : 88}px;line-height:${h}px;border:1px solid #E2E8F0;border-radius:8px;background:#FFFFFF;text-align:center">${href ? `<a href="${esc(href)}" target="_blank" style="text-decoration:none">${inner}</a>` : inner}</div>`;
+};
+
+/** The "supported by" strip at the bottom of the card */
+export const sponsorStrip = (heading: string, list: EmailSponsor[], ink = '#64748B') => list.length
+  ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-top:1px solid #E2E8F0"><tr><td align="center" style="padding-top:16px">
+<p style="margin:0 0 10px;font:800 11px ${font};color:${ink};text-transform:uppercase;letter-spacing:0.16em">${esc(heading)}</p>
+${list.map(sponsorCell).join('')}
+</td></tr></table>`
+  : '';
+
+/** Club emails leave this where their sponsors go; sendClubEmails fills it in (club-sponsors.ts) */
+export const CLUB_SPONSORS_MARK = /<!--club-sponsors:(#[0-9a-fA-F]{6})-->/;
+
 const hex = (c?: string | null) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : null);
 
 export function renderEmail(c: EmailContent): RenderedEmail {
@@ -63,7 +89,8 @@ export function renderEmail(c: EmailContent): RenderedEmail {
   const onColor = evaluateColorContrast(color).bestTextColor;
   const logo = absolute(brand.logoUrl);
   const isClub = !!c.brand;
-  const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  // Club colour as text on white, darkened when the club colour is too light to read
+  const ink = isClub ? readableClubInk(color, 'light') : '#64748B';
 
   const details = c.details?.length
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:separate;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">
@@ -71,7 +98,7 @@ ${c.details.map(([k, v], i) => `<tr><td style="padding:10px 16px;${i ? 'border-t
 </table>`
     : '';
 
-  const sections = (c.sections || []).filter(sec => sec.rows.length).map(sec => `<p style="margin:0 0 8px;font:800 11px ${font};color:#64748B;text-transform:uppercase;letter-spacing:0.16em">${esc(sec.heading)}</p>
+  const sections = (c.sections || []).filter(sec => sec.rows.length).map(sec => `<p style="margin:0 0 8px;font:800 11px ${font};color:${ink};text-transform:uppercase;letter-spacing:0.16em">${esc(sec.heading)}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-collapse:separate;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px">
 ${sec.rows.map((r, i) => {
     const value = r.url && /^https:\/\//.test(r.url) ? `<a href="${esc(r.url)}" target="_blank" style="color:#0F172A;text-decoration:underline">${esc(r.value)}</a>` : esc(r.value);
@@ -110,20 +137,8 @@ ${c.checklist.map((st, i) => `<tr>
 </table>`
     : '';
 
-  const sponsorCell = (sp: { name: string; logoUrl?: string | null; url?: string | null }) => {
-    const src = absolute(sp.logoUrl);
-    const inner = src
-      ? `<img src="${esc(src)}" height="40" alt="${esc(sp.name)}" style="display:block;height:40px;max-width:120px;width:auto;margin:0 auto">`
-      : `<span style="font:800 13px ${font};color:#0F172A">${esc(sp.name)}</span>`;
-    const href = sp.url && /^https?:\/\//.test(sp.url) ? sp.url : null;
-    return `<td style="padding:4px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" style="height:52px;min-width:96px;padding:6px 12px;border:1px solid #E2E8F0;border-radius:8px;background:#FFFFFF">${href ? `<a href="${esc(href)}" target="_blank" style="text-decoration:none">${inner}</a>` : inner}</td></tr></table></td>`;
-  };
-  const sponsors = c.sponsors?.list.length
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border-top:1px solid #E2E8F0"><tr><td align="center" style="padding-top:16px">
-<p style="margin:0 0 10px;font:800 11px ${font};color:#64748B;text-transform:uppercase;letter-spacing:0.16em">${esc(c.sponsors.heading)}</p>
-<table role="presentation" cellpadding="0" cellspacing="0"><tr>${c.sponsors.list.map(sponsorCell).join('')}</tr></table>
-</td></tr></table>`
-    : '';
+  // A club email without its own sponsors (tickets list the event's) gets the club's, filled in at send
+  const sponsors = c.sponsors?.list.length ? sponsorStrip(c.sponsors.heading, c.sponsors.list, ink) : isClub ? `<!--club-sponsors:${ink}-->` : '';
 
   const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(c.subject)}</title></head>
@@ -131,13 +146,18 @@ ${c.checklist.map((st, i) => `<tr>
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(c.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
-<tr><td style="padding:0 4px 20px">
+${isClub ? `<tr><td style="background:${color};border-radius:16px 16px 0 0;padding:18px 24px">
+  <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+    ${logo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${esc(logo)}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border-radius:10px;object-fit:cover;background:#FFFFFF"></td>` : ''}
+    <td style="vertical-align:middle;font:800 18px ${font};color:${onColor}">${esc(brand.name)}</td>
+  </tr></table>
+</td></tr>` : `<tr><td style="padding:0 4px 20px">
   <table role="presentation" cellpadding="0" cellspacing="0"><tr>
     ${logo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${esc(logo)}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border-radius:10px;object-fit:cover"></td>` : ''}
     <td style="vertical-align:middle;font:800 18px ${font};color:#0F172A">${esc(brand.name)}</td>
   </tr></table>
-</td></tr>
-<tr><td style="background:#FFFFFF;border-radius:16px;border:1px solid #E2E8F0;border-top:4px solid ${color};padding:32px 32px 8px">
+</td></tr>`}
+<tr><td style="background:#FFFFFF;${isClub ? 'border-radius:0 0 16px 16px;border:1px solid #E2E8F0;border-top:0' : `border-radius:16px;border:1px solid #E2E8F0;border-top:4px solid ${color}`};padding:32px 32px 8px">
   ${image ? `<img src="${esc(image)}" width="496" alt="" style="display:block;width:100%;max-width:496px;height:auto;border-radius:10px;margin:0 0 20px">` : ''}
   <h1 style="margin:0 0 16px;font:800 24px/1.25 ${font};color:#0F172A">${esc(c.heading)}</h1>
   ${c.paragraphs.map(p => `<p style="margin:0 0 16px;font:16px/1.6 ${font};color:#334155">${esc(p)}</p>`).join('\n  ')}

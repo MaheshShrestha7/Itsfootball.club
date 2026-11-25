@@ -26,7 +26,8 @@ const DAY = 86400000;
 /** Active clubs that switched `setting` on */
 async function clubsWith(db: SupabaseClient, setting: ReminderSetting, ids?: string[]): Promise<Club[]> {
   let query = db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, email_settings, owner_id`).eq('is_active', true);
-  if (ids) query = query.in('id', [...new Set(ids)]);
+  // payments of a deleted club keep a null club_id; one null would fail the whole lookup
+  if (ids) query = query.in('id', [...new Set(ids)].filter(Boolean));
   const { data } = await query;
   return ((data || []) as Club[]).filter(c => cleanSettings(c.email_settings)[setting]);
 }

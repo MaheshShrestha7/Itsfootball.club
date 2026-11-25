@@ -6,6 +6,7 @@ import { unsubscribeHeaders, unsubscribeLinks } from './unsubscribe';
 import type { RenderedEmail } from './templates';
 import type { ClubBrandRow } from './club-brand';
 import { normalizeEmail } from './recipient';
+import { clubEmailSponsors, fillClubSponsors } from './club-sponsors';
 
 export type EmailKind =
   | 'availability' | 'event' | 'renewal'
@@ -65,6 +66,8 @@ export async function alreadyLogged(db: SupabaseClient, keys: string[]): Promise
  */
 export async function sendClubEmails(db: SupabaseClient, emails: ClubEmail[]): Promise<SendReport> {
   const report: SendReport = { sent: 0, failed: 0, alreadySent: 0 };
+  const sponsors = new Map<string, Promise<Awaited<ReturnType<typeof clubEmailSponsors>>>>();
+  const sponsorsOf = (clubId: string) => sponsors.get(clubId) ?? sponsors.set(clubId, clubEmailSponsors(db, clubId)).get(clubId)!;
   for (let i = 0; i < emails.length; i += 100) {
     const chunk = emails.slice(i, i + 100);
     const { data: claimed, error } = await db.from('email_log')
@@ -82,9 +85,10 @@ export async function sendClubEmails(db: SupabaseClient, emails: ClubEmail[]): P
     report.alreadySent += chunk.length - batch.length;
     if (!batch.length) continue;
 
-    const result = await sendBatch(batch.map(e => ({
+    const filled = await Promise.all(batch.map(async e => fillClubSponsors(e.email, e.fromName, await sponsorsOf(e.clubId))));
+    const result = await sendBatch(batch.map((e, j) => ({
       to: e.to,
-      ...e.email,
+      ...filled[j],
       fromName: e.fromName,
       replyTo: e.replyTo,
       headers: e.oneClickUnsubscribe ? unsubscribeHeaders(e.oneClickUnsubscribe) : undefined,
