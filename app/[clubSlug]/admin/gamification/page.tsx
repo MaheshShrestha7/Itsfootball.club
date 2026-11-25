@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useEffect, useRef, useState, use } from 'react';
 import { useClub } from '@/lib/club-context';
 import { isPlayerMember, type ClubScoreRuleConfig } from '@/lib/supabase/types';
@@ -191,7 +192,9 @@ export default function AdminGamificationPage({
     setRulesError(false);
     setRulesSaving(true);
     saveRulesPendingRef.current = true;
-    updateClubScoreRules(club.id, rulesForm);
+    // On/off is on the Features page now, so saving the rules leaves it as it is
+    const { is_active: _onOff, ...pointRules } = rulesForm; // eslint-disable-line @typescript-eslint/no-unused-vars
+    updateClubScoreRules(club.id, pointRules);
   };
 
   const handleManualAward = (e: React.FormEvent) => {
@@ -435,16 +438,10 @@ export default function AdminGamificationPage({
             </div>
 
             <form onSubmit={handleSaveRules} className="stack" style={{ padding: '1.5rem' }}>
-              <label className="row" style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={rulesForm.is_active}
-                  onChange={e => setRulesForm({ ...rulesForm, is_active: e.target.checked })} />
-                ClubScore is on for this club
-              </label>
-              {!rulesForm.is_active && (
-                <p className="text-note" style={{ marginTop: '-0.5rem' }}>
-                  While it is off, players earn no points from check-ins, matches or coach bonuses. Points already earned stay.
-                </p>
-              )}
+              <p className="text-note" style={{ margin: 0 }}>
+                ClubScore is {rules.is_active ? 'on' : 'off'}. Switch it on or off on the{' '}
+                <Link href={`/${club.slug}/admin/features`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>Features</Link> page.
+              </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                 {POINT_FIELDS.map(f => ruleInput(f))}

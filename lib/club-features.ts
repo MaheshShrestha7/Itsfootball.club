@@ -30,6 +30,13 @@ export const CLUB_FEATURES: ClubFeature[] = [
   { key: 'committee', label: 'Committee meetings', hides: 'Admin → Committee (meetings, agendas and minutes).', adminPaths: ['committee'] },
 ];
 
+/** ClubScore has had its own on/off since migration 20261105 (clubscore_rules.is_active, which also stops the
+ *  database awarding points), so it keeps that switch and only shows beside the others */
+export const CLUBSCORE_FEATURE = {
+  label: 'ClubScore (points and badges)',
+  hides: 'While it’s off, players earn no points from check-ins, matches or coach bonuses. Points already earned stay.',
+};
+
 type WithConfig = { config?: unknown } | null | undefined;
 
 /** The keys a club has switched off */

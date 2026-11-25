@@ -4,19 +4,22 @@ import React, { use, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { CLUB_FEATURES, configWithFeaturesOff, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
+import { CLUB_FEATURES, CLUBSCORE_FEATURE, configWithFeaturesOff, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
+import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
 import Switch from '@/components/admin/Switch';
 
 // Admin -> Club settings -> Features: turn parts of the club site off (clubs.config.features_off).
 // Everything starts on. Off only hides: no data is deleted, and turning it on brings it all back.
 export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, updateClubBranding, saveNow } = useClub();
+  const { clubs, selectClubBySlug, updateClubBranding, updateClubScoreRules, clubScoreRules, saveNow } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const off = featuresOff(club);
-  const [saving, setSaving] = useState<ClubFeatureKey | null>(null);
+  const [saving, setSaving] = useState<ClubFeatureKey | 'clubscore' | null>(null);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
-  const pending = useRef<{ key: ClubFeatureKey; on: boolean } | null>(null);
+  const pending = useRef<{ key: ClubFeatureKey | 'clubscore'; on: boolean } | null>(null);
+  // ClubScore's switch lives in its own rules (clubscore_rules.is_active): off also stops points being awarded
+  const clubScoreOn = club ? (clubScoreRules[club.id] || getDefaultClubScoreRules(club.id)).is_active : true;
 
   // "Saved" only once the database has it (the save runs after the change is in state)
   useEffect(() => {
@@ -25,12 +28,12 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
     pending.current = null;
     saveNow().then(saved => {
       setSaving(null);
-      const label = CLUB_FEATURES.find(f => f.key === done.key)?.label;
+      const label = done.key === 'clubscore' ? CLUBSCORE_FEATURE.label : CLUB_FEATURES.find(f => f.key === done.key)?.label;
       setFlash(saved
         ? { ok: true, text: `${label} is ${done.on ? 'on' : 'off'}.` }
         : { ok: false, text: `${label} couldn't be saved. Check your connection and try again.` });
     });
-  }, [club?.config, saveNow]);
+  }, [club?.config, clubScoreOn, saveNow]);
 
   if (!club) return null;
 
@@ -45,6 +48,18 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
     pending.current = { key, on };
     updateClubBranding(club.id, { config: configWithFeaturesOff(base, next) });
   };
+
+  const toggleClubScore = (on: boolean) => {
+    setSaving('clubscore');
+    setFlash(null);
+    pending.current = { key: 'clubscore', on };
+    updateClubScoreRules(club.id, { is_active: on });
+  };
+  const onCount = CLUB_FEATURES.length + 1 - off.length - (clubScoreOn ? 0 : 1);
+  const rows = [
+    ...CLUB_FEATURES.map(f => ({ key: f.key as ClubFeatureKey | 'clubscore', label: f.label, hides: f.hides, on: !off.includes(f.key) })),
+    { key: 'clubscore' as const, label: CLUBSCORE_FEATURE.label, hides: CLUBSCORE_FEATURE.hides, on: clubScoreOn },
+  ];
 
   return (
     <div style={{ maxWidth: '960px' }}>
@@ -65,11 +80,11 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
       <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>Club features</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-          {off.length === 0 ? 'Everything is on.' : `${CLUB_FEATURES.length - off.length} of ${CLUB_FEATURES.length} on.`}
+          {onCount === rows.length ? 'Everything is on.' : `${onCount} of ${rows.length} on.`}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {CLUB_FEATURES.map((f, i) => {
-            const on = !off.includes(f.key);
+          {rows.map((f, i) => {
+            const on = f.on;
             return (
               <div key={f.key} style={{ padding: '0.9rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
                 <div style={{ minWidth: 0 }}>
@@ -77,9 +92,9 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
                     {f.label}
                     {!on && <span className="admin-pill">Off</span>}
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{on ? 'Switch off to hide: ' : 'Hidden: '}{f.hides}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{f.key === 'clubscore' ? '' : on ? 'Switch off to hide: ' : 'Hidden: '}{f.hides}</div>
                 </div>
-                <Switch label={f.label} checked={on} disabled={saving !== null} onChange={v => toggle(f.key, v)} />
+                <Switch label={f.label} checked={on} disabled={saving !== null} onChange={v => (f.key === 'clubscore' ? toggleClubScore(v) : toggle(f.key, v))} />
               </div>
             );
           })}
