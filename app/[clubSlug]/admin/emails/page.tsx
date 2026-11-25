@@ -3,7 +3,7 @@
 import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { useClub } from '@/lib/club-context';
 import { getAccessToken } from '@/lib/supabase/client';
-import { REMINDER_SETTINGS, type EmailSettings, type ReminderSetting } from '@/lib/email/settings';
+import { DEFAULT_ROUNDUP_DAY, REMINDER_SETTINGS, ROUNDUP_DAYS, type EmailSettings, type ReminderSetting } from '@/lib/email/settings';
 import { emailKindLabel } from '@/lib/email/kinds';
 import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw, ChevronRight, Search } from 'lucide-react';
 
@@ -45,6 +45,16 @@ const HISTORY_LABELS: Record<string, string> = {
   notice_event: 'Event notice',
   notice_news: 'News notice',
 };
+
+/** The automatic emails, grouped by who gets them; each key's label and description is in REMINDER_SETTINGS */
+const GROUPS: { title: string; keys: ReminderSetting[]; receipts?: boolean }[] = [
+  { title: 'For your admins', keys: ['admin_summary'] },
+  { title: 'For players and members', keys: ['availability_reminders', 'event_reminders', 'renewal_reminders', 'fee_reminders', 'weekly_roundup'], receipts: true },
+  { title: 'For sponsors', keys: ['sponsor_renewal_reminders'] },
+];
+type AutoPreview = 'admin_summary' | 'fee_reminders' | 'weekly_roundup' | 'receipt';
+const PREVIEWABLE: Partial<Record<ReminderSetting, AutoPreview>> = { admin_summary: 'admin_summary', fee_reminders: 'fee_reminders', weekly_roundup: 'weekly_roundup' };
+const NEW_KEYS: ReminderSetting[] = ['admin_summary', 'fee_reminders', 'weekly_roundup'];
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -105,7 +115,8 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<ReminderSetting | null>(null);
+  const [savingKey, setSavingKey] = useState<ReminderSetting | 'weekly_roundup_day' | null>(null);
+  const [autoPreview, setAutoPreview] = useState<{ which: AutoPreview; subject?: string; html?: string; empty?: string; loading?: boolean } | null>(null);
 
   const [kind, setKind] = useState<NoticeKind>('match');
   const [refId, setRefId] = useState('');
@@ -156,6 +167,50 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
     }
     setSavingKey(null);
   };
+
+  const saveRoundupDay = async (day: number) => {
+    if (!overview) return;
+    const before = overview.settings.weekly_roundup_day;
+    setSavingKey('weekly_roundup_day');
+    setOverview({ ...overview, settings: { ...overview.settings, weekly_roundup_day: day } });
+    const r = await api('PATCH', { clubId: club.id, settings: { weekly_roundup_day: day } });
+    if (r.ok) setOverview(o => (o ? { ...o, settings: r.data.settings } : o));
+    else {
+      setOverview(o => (o ? { ...o, settings: { ...o.settings, weekly_roundup_day: before } } : o));
+      setFeedback({ type: 'error', text: r.error || 'Could not save.' });
+    }
+    setSavingKey(null);
+  };
+
+  const showAutoPreview = async (which: AutoPreview) => {
+    if (autoPreview?.which === which && !autoPreview.loading) return setAutoPreview(null);
+    setAutoPreview({ which, loading: true });
+    const r = await api('GET', undefined, `?clubId=${encodeURIComponent(club.id)}&preview=${which}`);
+    setAutoPreview(r.ok ? { which, ...r.data } : { which, empty: r.error || 'Could not load the preview.' });
+  };
+
+  const previewBlock = (which: AutoPreview) => autoPreview?.which === which && (
+    <div className="glass-panel" style={{ marginTop: '0.75rem', padding: '0.75rem', overflow: 'hidden' }}>
+      {autoPreview.loading ? <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Preparing the preview...</p>
+        : autoPreview.empty ? <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{autoPreview.empty}</p>
+        : (
+          <>
+            <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>
+              <strong className="text-primary">Subject:</strong> {autoPreview.subject}
+              {(which === 'fee_reminders' || which === 'receipt') && <> (an example)</>}
+            </div>
+            <iframe title="Email preview" sandbox="" srcDoc={autoPreview.html} style={{ width: '100%', height: '560px', border: 0, background: 'var(--color-print-2)', display: 'block', borderRadius: '8px' }} />
+          </>
+        )}
+    </div>
+  );
+
+  const previewLink = (which: AutoPreview) => (
+    <button type="button" className="btn btn-outline btn-sm" onClick={() => showAutoPreview(which)} aria-expanded={autoPreview?.which === which}
+      style={{ minHeight: '40px', display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
+      <Eye size={14} aria-hidden="true" /> {autoPreview?.which === which ? 'Hide preview' : 'Preview'}
+    </button>
+  );
 
   const notice = () => ({ clubId: club.id, kind, refId: refId || undefined, audience, message: message.trim() || undefined });
 
@@ -216,28 +271,78 @@ export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug
         </div>
       )}
 
-      {/* Automatic reminders */}
+      {/* Automatic emails, grouped by who gets them */}
       <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>Automatic reminders</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          Sent every morning at about 8 am. Each person gets each reminder once. All are off until you switch them on.
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>Automatic emails</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+          Sent every morning at about 8 am. Each person gets each email once. Switches start off until you turn them on.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {REMINDER_SETTINGS.map((s, i) => (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.9rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none' }}>
-              <div>
-                <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{s.label}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.description}</div>
-              </div>
-              <Switch
-                label={s.label}
-                checked={!!overview?.settings[s.key]}
-                disabled={!overview || savingKey === s.key}
-                onChange={v => toggle(s.key, v)}
-              />
+        {GROUPS.map(group => (
+          <div key={group.title}>
+            <h3 style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '1.1rem 0 0.1rem' }}>{group.title}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {group.keys.map((key, i) => {
+                const s = REMINDER_SETTINGS.find(x => x.key === key)!;
+                const previewable = PREVIEWABLE[key];
+                return (
+                  <div key={key} style={{ padding: '0.9rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {s.label}
+                          {NEW_KEYS.includes(key) && <span className="admin-pill is-ok">New</span>}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{s.description}</div>
+                        {(previewable || key === 'weekly_roundup') && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.35rem 0.9rem', marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {previewable && previewLink(previewable)}
+                            {key === 'weekly_roundup' && (
+                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                                Send on
+                                <select className="form-select" style={{ width: 'auto', minHeight: '40px', fontSize: '16px', padding: '0.25rem 2rem 0.25rem 0.6rem' }}
+                                  value={overview?.settings.weekly_roundup_day ?? DEFAULT_ROUNDUP_DAY}
+                                  disabled={!overview || savingKey === 'weekly_roundup_day'}
+                                  onChange={e => saveRoundupDay(Number(e.target.value))}>
+                                  {ROUNDUP_DAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                                </select>
+                              </label>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <Switch
+                        label={s.label}
+                        checked={!!overview?.settings[key]}
+                        disabled={!overview || savingKey === key}
+                        onChange={v => toggle(key, v)}
+                      />
+                    </div>
+                    {previewable && previewBlock(previewable)}
+                  </div>
+                );
+              })}
+              {group.receipts && (
+                <div style={{ padding: '0.9rem 0', borderTop: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        Payment receipts <span className="admin-pill is-ok">New</span>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        When someone pays for a membership, a fee request or a shop order, by card or by a bank transfer you check, they get a receipt. Ticket buyers and sponsors already get one.
+                      </div>
+                      <div style={{ marginTop: '0.3rem' }}>{previewLink('receipt')}</div>
+                    </div>
+                    <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      <CheckCircle2 size={16} aria-hidden="true" color="var(--color-success, #10b981)" /> Always sent
+                    </span>
+                  </div>
+                  {previewBlock('receipt')}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </section>
 
       {/* Manual notice */}

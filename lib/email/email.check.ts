@@ -1,7 +1,7 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail, feeRequest, expenseClaimUpdate } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail, feeRequest, expenseClaimUpdate, adminSummary, paymentReceipt, weeklyRoundup } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
@@ -83,6 +83,9 @@ async function main() {
   // --- settings ---
   assert.deepEqual(cleanSettings({ availability_reminders: true, event_reminders: 'yes', bogus: true }), { availability_reminders: true }, 'only known boolean switches');
   assert.deepEqual(cleanSettings(null), {});
+  assert.deepEqual(cleanSettings({ weekly_roundup: true, weekly_roundup_day: 5, admin_summary: false }), { weekly_roundup: true, weekly_roundup_day: 5, admin_summary: false });
+  assert.deepEqual(cleanSettings({ weekly_roundup_day: 6 }), {}, 'weekends are not offered');
+  assert.deepEqual(cleanSettings({ weekly_roundup_day: '4' }), {}, 'a number only');
 
   // --- notices ---
   const news = newsNotice({ brand: evil, recipientName: 'Sam', title: 'Big <win>', summary: 'We won', image: 'http://insecure/img.jpg', link: 'https://x/#news', message: 'Hi <b>all</b>\n\nSecond para', unsubscribeUrl: 'https://itsfootball.club/unsubscribe?c=1&e=a&t=b' });
@@ -189,6 +192,35 @@ const grouped = EMAIL_KIND_GROUPS.flatMap(g => g.kinds);
 assert.equal(new Set(grouped).size, grouped.length);
 for (const k of grouped) assert.ok(EMAIL_KIND_LABELS[k], `no label for ${k}`);
 assert.equal(emailKindLabel(null), 'Other emails');
+
+// AUTO-1/4/8: sections are escaped, links only when https, and the text version carries them
+{
+  const brand = { name: 'Riverside FC', color: '#C8102E', url: 'https://itsfootball.club/rfc' };
+  const sum = adminSummary({ brand, adminName: 'Sam Lee', dashboardUrl: 'https://itsfootball.club/rfc/admin', items: [
+    { area: 'Inbox', text: '3 unread messages <b>', url: 'https://itsfootball.club/rfc/admin/inquiries' },
+    { area: 'Finance', text: '1 expense claim to review', url: 'javascript:alert(1)' },
+  ] });
+  assert.equal(sum.subject, 'Riverside FC: 2 things need you today');
+  assert.ok(sum.html.includes('3 unread messages &lt;b&gt;') && !sum.html.includes('<b>'), 'escaped');
+  assert.ok(sum.html.includes('href="https://itsfootball.club/rfc/admin/inquiries"') && !sum.html.includes('javascript:'), 'https links only');
+  assert.ok(sum.text.includes('NEEDS DOING') && sum.text.includes('Inbox: 3 unread messages'), 'text version');
+  assert.ok(sum.html.includes('Morning Sam,'));
+  const one = adminSummary({ brand, adminName: '', dashboardUrl: 'https://x.test', items: [{ area: 'Seasons', text: 'x', url: 'https://x.test' }] });
+  assert.equal(one.subject, 'Riverside FC: 1 thing needs you today');
+
+  const card = paymentReceipt({ brand, payerName: 'Jack Ng', what: 'Senior (Jack Ng)', price: '$220.00', paidOn: 'Wednesday 25 November 2026', method: 'card', reference: 'ABCD1234', link: 'https://x.test', canReply: false });
+  assert.equal(card.subject, 'Receipt: Senior (Jack Ng), $220.00');
+  assert.ok(card.text.includes('Paid by: Card') && card.text.includes('Reference: ABCD1234') && !card.text.includes('reply'));
+  const bank = paymentReceipt({ brand, payerName: 'Pat', what: 'Camp', price: '$85.00', paidOn: 'today', method: 'bank', reference: 'X', link: 'https://x.test', canReply: true });
+  assert.ok(bank.html.includes('Bank transfer received') && bank.text.includes('Paid by: Bank transfer') && bank.text.includes('Just reply'));
+
+  const week = weeklyRoundup({ brand, memberName: 'Jack Ng', subjectBits: ['2 games', '1 result'], fixturesUrl: 'https://x.test/fixtures', sections: [
+    { heading: 'Coming up', rows: [{ label: 'Sat 29 Nov, 9:00 am', value: 'U12 vs Lions', sub: 'Park', url: 'https://x.test/match/a' }] },
+    { heading: 'News', rows: [] },
+  ] });
+  assert.equal(week.subject, 'This week at Riverside FC: 2 games, 1 result');
+  assert.ok(week.html.includes('Coming up') && !week.html.includes('>News<'), 'empty sections are left out');
+}
 
 console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');
 }

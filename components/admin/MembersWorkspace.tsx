@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { passTokenHint } from '@/lib/ids';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { notify } from '@/components/ConfirmDialog';
 import { useClub } from '@/lib/club-context';
 import { receiptLink } from '@/lib/receipts';
@@ -160,6 +160,12 @@ export default function MembersWorkspace({
     try {
       const { error } = await client.rpc('fulfil_payment', { p_payment_id: pending.id });
       if (error) { await notify('Payment not verified', error.message); return null; }
+      // The applicant's receipt (AUTO-4); best effort, the verify already happened
+      void getAccessToken().then(token => fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: pending.id }),
+      })).catch(() => {});
       setSignupPayments(prev => ({ ...prev, [member.id]: 'paid' }));
       setReceiptsToCheck(prev => { const next = { ...prev }; delete next[member.id]; return next; });
       // Under an auto-approve policy the payment approved them too

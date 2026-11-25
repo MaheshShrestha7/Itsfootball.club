@@ -448,8 +448,17 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
       flash('ok', res?.sent ? 'Payment verified. The sponsor was emailed a thank-you with the link to their sponsor page.' : 'Payment verified. Put them on the site from the Sponsors page.');
       return load();
     }
-    flash('ok', kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
-      : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
+    // Memberships, fee requests and shop orders: the payer gets a receipt (AUTO-4), best effort
+    const receipt = ['membership_signup', 'membership_renewal', 'fee_request', 'shop_order'].includes(kind)
+      ? await fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
+      }).then(r => r.json()).catch(() => null)
+      : null;
+    const emailed = receipt?.sent ? ' A receipt was emailed to them.' : '';
+    flash('ok', (kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
+      : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.') + emailed);
     load();
   };
   const reject = async (p: Payment) => {

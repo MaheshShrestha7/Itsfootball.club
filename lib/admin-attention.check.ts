@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { attentionItems, needsLineup, needsResult } from './admin-attention';
+import { attentionItems, needsLineup, needsResult, seasonToStart } from './admin-attention';
 import { clubResult, defaultFixture, hasKickoffTime, matchKind, prepFixtures, publicFixtures, teamSideIn, tournamentTeamGroups } from './fixtures';
 import type { TournamentParticipant } from './supabase/types';
 import { nextOnPitch } from './tournament-engine';
@@ -117,7 +117,6 @@ assert.equal(defaultFixture([bibs, league], [], 'Riverside FC', { skipLive: true
 assert.equal(defaultFixture([bibs, league], [], 'Riverside FC', { skipLive: true })?.id, 'bibs');
 assert.equal(defaultFixture([bibs], [], 'Riverside FC', { preferClubGames: true })?.id, 'bibs', 'falls back to in-house');
 
-console.log('admin-attention checks passed');
 
 // DASH-6, DASH-7: overdue fee requests, expired memberships and juniors with details missing
 const more = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, feesOverdue: 3, membershipsExpired: 1, juniorsToCheck: 2 }, [], NOW);
@@ -126,3 +125,16 @@ assert.equal(more[0].text, '3 fee requests overdue');
 assert.equal(more[0].href, '/rfc/admin/finance?tab=requests');
 assert.equal(more[1].text, '2 juniors are missing photo consent or a parent contact');
 assert.equal(more[2].text, '1 membership has expired and not been renewed');
+
+// AUTO-7: a new season that has started while the old one is still current
+const season = (id: string, start_date: string, end_date: string, is_current = false) => ({ id, name: id, start_date, end_date, is_current });
+const old = season('2026', '2026-03-01', '2026-09-30', true);
+assert.equal(seasonToStart([old, season('2027', '2027-03-01', '2027-09-30')], '2027-02-28'), null, 'not started yet');
+assert.equal(seasonToStart([old, season('2027', '2027-03-01', '2027-09-30')], '2027-03-01')?.id, '2027', 'starts today');
+assert.equal(seasonToStart([old, season('2027', '2027-03-01', '2027-09-30')], '2027-10-01'), null, 'already over');
+assert.equal(seasonToStart([season('2026', '2026-03-01', '2026-09-30', true), season('2025', '2025-03-01', '2025-09-30')], '2026-05-01'), null, 'an older season never asks');
+assert.equal(seasonToStart([season('2027', '2027-03-01', '2027-09-30')], '2027-03-05')?.id, '2027', 'no current season at all');
+assert.equal(seasonToStart([old, season('2027', '2027-03-01', '')], '2027-12-01')?.id, '2027', 'no end date');
+const seasonItem = attentionItems('rfc', { pendingApplications: 0, receiptsToReview: 0, unreadMessages: 0, ordersToHandOut: 0, newSeason: { id: 's1', name: 'Winter 2027' } }, [], NOW);
+assert.deepEqual(seasonItem.map(i => [i.key, i.area, i.text]), [['season-s1', 'seasons', 'Winter 2027 has started. Make it the current season?']]);
+console.log('admin-attention checks passed');
