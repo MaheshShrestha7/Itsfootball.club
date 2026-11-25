@@ -27,6 +27,7 @@ import FeeRequestsTab from '@/components/admin/FeeRequestsTab';
 import ExpenseClaimsTab from '@/components/admin/ExpenseClaimsTab';
 import { isLedgerRow } from '@/lib/fee-requests';
 import { siteToday } from '@/lib/member-prices';
+import { featureOn } from '@/lib/club-features';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'requests' | 'claims' | 'settings';
 const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'requests', 'claims', 'settings'];
@@ -157,7 +158,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       )}
 
       <div role="tablist" aria-label="Finance" className="admin-tabs">
-        {TABS.map(t => (
+        {TABS.filter(t => t.id !== 'claims' || featureOn(club, 'expense_claims')).map(t => (
           <button data-view-ok key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="admin-tab">
             {t.label}
             {t.id === 'income' && payments.some(p => p.status === 'awaiting_review') && (

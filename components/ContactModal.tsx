@@ -10,6 +10,7 @@ import FriendlyInviteFields, { emptyFriendlyForm, friendlyPayload, type Friendly
 import { useAuth } from '@/lib/auth-context';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { FRIENDLY_TYPE, invitableTeams } from '@/lib/friendlies';
+import { featureOn } from '@/lib/club-features';
 import Captcha, { captchaError, type CaptchaHandle } from '@/components/Captcha';
 
 interface ContactModalProps {
@@ -25,8 +26,10 @@ interface ContactModalProps {
 
 export default function ContactModal({ club, isOpen, onClose, defaultType = 'General Inquiry', about, defaultTeamId }: ContactModalProps) {
   const { submitInquiry, clubTeams } = useClub();
-  // Teams taking friendly invitations (none until migration 20261157, so the choice stays hidden)
-  const openTeams = useMemo(() => invitableTeams(clubTeams, club.id), [clubTeams, club.id]);
+  // Teams taking friendly invitations (none until migration 20261157, or while the club has Friendly
+  // match invites switched off, so the choice stays hidden)
+  const friendliesOn = featureOn(club, 'friendlies');
+  const openTeams = useMemo(() => (friendliesOn ? invitableTeams(clubTeams, club.id) : []), [clubTeams, club.id, friendliesOn]);
   const startTeam = openTeams.find(t => t.id === defaultTeamId) || (openTeams.length === 1 ? openTeams[0] : undefined);
   const [friendly, setFriendly] = useState<FriendlyForm>(() => emptyFriendlyForm(startTeam));
   const [senderName, setSenderName] = useState('');

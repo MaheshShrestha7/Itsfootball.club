@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, durableRateLimit, getClientIp } from '@/lib/rate-limit';
 import { TURNSTILE_FAILED, verifyTurnstile } from '@/lib/turnstile-server';
 import { FRIENDLY_TYPE, friendlyMessage, parseFriendly } from '@/lib/friendlies';
+import { featureOn } from '@/lib/club-features';
 import { isUuid } from '@/lib/ids';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { getServiceClient } from '@/lib/supabase/service';
@@ -102,7 +103,8 @@ export async function POST(req: NextRequest) {
       const { data: team } = client
         ? await client.from('club_teams').select('id, name, is_active, open_to_friendlies').eq('id', teamId).eq('club_id', clubId).maybeSingle()
         : { data: null };
-      if (!team || !team.is_active || team.open_to_friendlies !== true) {
+      const { data: owner } = client ? await client.from('clubs').select('config').eq('id', clubId).maybeSingle() : { data: null };
+      if (!team || !team.is_active || team.open_to_friendlies !== true || !featureOn(owner, 'friendlies')) {
         return NextResponse.json({ success: false, error: 'That team isn’t taking friendly invitations right now.' }, { status: 400 });
       }
       const note = message.slice(0, 1500);

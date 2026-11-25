@@ -26,6 +26,7 @@ import { useClubSections } from '@/lib/use-club-sections';
 import { useMyChildren } from '@/lib/use-my-children';
 import MyTickets from '@/components/MyTickets';
 import PushToggle from '@/components/PushToggle';
+import { featureClosingPath } from '@/lib/club-features';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -318,6 +319,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
 
   const tools: Tile[] = STAFF_TOOLS
     .filter(t => (t.area === 'roles' ? superUser : can(club.id, t.area) || (t.area === 'shop' && can(club.id, 'shop-orders'))))
+    // Admin pages of features the club switched off (Admin -> Features) close, so no shortcut to them
+    .filter(t => !featureClosingPath(club, `/admin/${t.path}`))
     .map(t => ({ label: t.label, href: `${base}/admin/${t.path}`, icon: t.icon }));
 
   const clubTiles: Tile[] = approved
@@ -326,10 +329,10 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         { label: 'Messages', href: `${base}/member?tab=messages`, icon: MessageSquare },
         { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
         { label: 'Squad', href: `${base}/squad`, icon: Users },
-        { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
+        ...(sections.events ? [{ label: 'Events & tickets', href: `${base}/events`, icon: Ticket }] : []),
         ...(sections.tournaments ? [{ label: 'Tournaments', href: `${base}/tournaments`, icon: Trophy }] : []),
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
-        { label: 'News', href: `${base}/news`, icon: Newspaper },
+        ...(sections.news ? [{ label: 'News', href: `${base}/news`, icon: Newspaper }] : []),
         ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },
       ]
@@ -339,8 +342,8 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
           ? { label: 'My family', href: `${base}/member`, icon: Users }
           : { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
         { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
-        { label: 'Events & tickets', href: `${base}/events`, icon: Ticket },
-        { label: 'News', href: `${base}/news`, icon: Newspaper },
+        ...(sections.events ? [{ label: 'Events & tickets', href: `${base}/events`, icon: Ticket }] : []),
+        ...(sections.news ? [{ label: 'News', href: `${base}/news`, icon: Newspaper }] : []),
         ...(shopOpen ? [{ label: 'Shop', href: `${base}/shop`, icon: ShoppingBag }] : []),
         ...(sections.gallery ? [{ label: 'Gallery', href: `${base}/gallery`, icon: Images }] : []),
         { label: 'About the club', href: `${base}/about`, icon: BookOpen },

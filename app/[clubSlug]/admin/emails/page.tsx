@@ -5,6 +5,7 @@ import { useClub } from '@/lib/club-context';
 import { getAccessToken } from '@/lib/supabase/client';
 import { DEFAULT_ROUNDUP_DAY, REMINDER_SETTINGS, ROUNDUP_DAYS, type EmailSettings, type ReminderSetting } from '@/lib/email/settings';
 import { emailKindLabel } from '@/lib/email/kinds';
+import Switch from '@/components/admin/Switch';
 import { Mail, Send, Eye, AlertTriangle, CheckCircle2, History, CalendarDays, Calendar, Newspaper, RefreshCw, ChevronRight, Search } from 'lucide-react';
 
 type NoticeKind = 'renewal' | 'match' | 'event' | 'news';
@@ -68,44 +69,6 @@ async function api(method: 'GET' | 'PATCH' | 'POST', body?: object, query = '') 
   }).catch(() => null);
   const data = res ? await res.json().catch(() => ({})) : {};
   return { ok: !!res?.ok, data, error: res ? data.error : 'Network error. Check your connection.' };
-}
-
-function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      style={{
-        flexShrink: 0,
-        padding: 0,
-        width: '48px',
-        height: '28px',
-        borderRadius: '999px',
-        border: '1px solid var(--border-medium)',
-        background: checked ? 'var(--club-primary)' : 'color-mix(in oklab, var(--color-ink) 10%, transparent)',
-        position: 'relative',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'background-color 0.2s ease',
-      }}
-    >
-      <span style={{
-        position: 'absolute',
-        top: '3px',
-        left: checked ? '23px' : '3px',
-        width: '20px',
-        height: '20px',
-        borderRadius: '50%',
-        background: 'var(--color-print)',
-        boxShadow: 'var(--shadow-pop)',
-        transition: 'left 0.2s var(--ease-out)',
-      }} />
-    </button>
-  );
 }
 
 export default function AdminEmailsPage({ params }: { params: Promise<{ clubSlug: string }> }) {

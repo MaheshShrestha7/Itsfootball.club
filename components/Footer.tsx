@@ -10,6 +10,7 @@ import SponsorTrackedLink from './SponsorTrackedLink';
 import SponsorLogo from './SponsorLogo';
 import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorLabel } from '@/lib/sponsors';
+import { featureOn } from '@/lib/club-features';
 import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
 
 interface FooterProps {
@@ -149,7 +150,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                 );
               })}
             </div>
-            {club && (
+            {club && featureOn(club, 'sponsor_page') && (
               <p style={{ textAlign: 'center', margin: '1.1rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 Your business here?{' '}
                 <Link href={`/${club.slug}/sponsor`} style={{ color: 'var(--club-ink)', fontWeight: 700 }}>See sponsor packages</Link>
@@ -311,7 +312,7 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                   )}
                   <Link href={`/${club.slug}/member`} style={{ color: 'var(--text-secondary)' }}>Membership &amp; Pass</Link>
                   {/* SPP-5: on every club page, signed in or not */}
-                  <Link href={`/${club.slug}/sponsor`} style={{ color: 'var(--text-secondary)' }}>Become a Sponsor</Link>
+                  {featureOn(club, 'sponsor_page') && <Link href={`/${club.slug}/sponsor`} style={{ color: 'var(--text-secondary)' }}>Become a Sponsor</Link>}
                   <Link href="/faq" style={{ color: 'var(--text-secondary)' }}>FAQ</Link>
                 </>
               ) : (

@@ -6,6 +6,7 @@ import { durableRateLimit } from '@/lib/rate-limit';
 import { canClaim, parseClaim } from '@/lib/expense-claims';
 import { isUuid } from '@/lib/ids';
 import { siteToday } from '@/lib/member-prices';
+import { featureOn } from '@/lib/club-features';
 
 // A member claims money back: POST multipart { clubId, description, amount, category, spentOn, vendor?,
 // accountName?, bankName?, bsb?, accountNumber?, receipt }. It waits for the treasurer and is not in the club's books until approved.
@@ -31,10 +32,12 @@ export async function POST(req: NextRequest) {
   if (!db) return NextResponse.json({ error: 'Claims are not available right now.' }, { status: 503 });
 
   // The member comes from the session, so nobody can claim as someone else
-  const [{ data: records }, { data: settings }] = await Promise.all([
+  const [{ data: records }, { data: settings }, { data: clubRow }] = await Promise.all([
     db.from('club_members').select('id, full_name, email, membership_status, status').eq('club_id', clubId).eq('user_id', auth.userId),
     db.from('club_payment_settings').select('currency').eq('club_id', clubId).maybeSingle(),
+    db.from('clubs').select('config').eq('id', clubId).maybeSingle(),
   ]);
+  if (!featureOn(clubRow, 'expense_claims')) return NextResponse.json({ error: 'This club doesn\'t take expense claims here. Please ask the treasurer.' }, { status: 403 });
   const member = (records || []).find(canClaim);
   if (!member) return NextResponse.json({ error: 'Only current members of this club can send it an expense claim.' }, { status: 403 });
 
