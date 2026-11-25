@@ -9,6 +9,7 @@ import { MAX_MESSAGE_LENGTH, NOTICE_KINDS, prepareNotice, type NoticeRequest } f
 import { pushConfigured, pushToClub } from '@/lib/push';
 import { isUuid } from '@/lib/ids';
 import { automationPreview, isAutomationPreview } from '@/lib/email/automations';
+import { clubEmailSponsors, fillClubSponsors } from '@/lib/email/club-sponsors';
 
 // Admin -> Email Notifications. Club admins only (checked with their own session token).
 //   GET    ?clubId=           switches, setup status, opt-out count, recent sends and who got each
@@ -42,7 +43,8 @@ export async function GET(req: NextRequest) {
   if (preview !== null) {
     if (!isAutomationPreview(preview)) return NextResponse.json({ error: 'Unknown email.' }, { status: 400 });
     const canSee = async (area: string) => (await requireClubPerm(req, club.id, [area], 'view')).ok;
-    return NextResponse.json(await automationPreview(db, club, preview, canSee));
+    const shown = await automationPreview(db, club, preview, canSee);
+    return NextResponse.json('html' in shown ? { ...shown, html: fillClubSponsors({ ...shown, text: '' }, club.name, await clubEmailSponsors(db, club.id)).html } : shown);
   }
 
   const [{ count: optOuts }, { data: log, error: logError }] = await Promise.all([
@@ -123,7 +125,8 @@ export async function POST(req: NextRequest) {
 
   if (!body.send) {
     // Preview with the first recipient's details (or any, if everyone already has it)
-    const sample = (due[0] || prepared.drafts[0])?.render('https://itsfootball.club/unsubscribe');
+    const drawn = (due[0] || prepared.drafts[0])?.render('https://itsfootball.club/unsubscribe');
+    const sample = drawn && fillClubSponsors(drawn, club.name, await clubEmailSponsors(db, club.id));
     return NextResponse.json({ ...summary, preview: sample ? { subject: sample.subject, html: sample.html } : null });
   }
 
