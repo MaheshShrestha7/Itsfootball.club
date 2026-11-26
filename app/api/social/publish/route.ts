@@ -3,7 +3,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { requireClubPerm } from '@/lib/supabase/server-auth';
 import { durableRateLimit } from '@/lib/rate-limit';
 import { matchesFileSignature } from '@/lib/file-signature';
-import { uploadBufferToR2 } from '@/lib/storage/r2';
+import { isR2Configured, uploadBufferToR2 } from '@/lib/storage/r2';
 import { MetaError, metaConfig, postInstagram, postPagePhoto, unseal } from '@/lib/meta-graph';
 import { AUTO_TRIGGERS, readSocialSettings } from '@/lib/social-posts';
 
@@ -65,7 +65,14 @@ export async function POST(req: NextRequest) {
     if (!claimed?.length) return fail('This one has already been posted.', 409);
   }
 
-  const url = await uploadBufferToR2(`clubs/${clubId}/social/${key.replace(/:/g, '-')}-${Date.now()}.jpg`, Buffer.from(bytes), 'image/jpeg').catch(() => null);
+  // Stored where the club's other photos go: R2 when it's set up, else Supabase Storage (as /api/upload)
+  const path = `clubs/${clubId}/social/${key.replace(/:/g, '-')}-${Date.now()}.jpg`;
+  let url = isR2Configured ? await uploadBufferToR2(path, Buffer.from(bytes), 'image/jpeg').catch(() => null) : null;
+  if (!url) {
+    const { error } = await db.storage.from('club-assets').upload(path, bytes, { contentType: 'image/jpeg', upsert: false });
+    if (error) console.error('Social post picture not stored:', error.message);
+    else url = db.storage.from('club-assets').getPublicUrl(path).data.publicUrl;
+  }
   const results: { facebook?: string; instagram?: string; errors?: string[] } = {};
   const errors: string[] = [];
   if (!url) errors.push('The picture could not be stored.');
