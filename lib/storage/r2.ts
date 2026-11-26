@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID;
@@ -99,6 +99,20 @@ export async function putPrivateObject(key: string, body: Uint8Array, contentTyp
   if (!client || !privateBucketName) return null;
   await client.send(new PutObjectCommand({ Bucket: privateBucketName, Key: key, Body: body, ContentType: contentType }));
   return key;
+}
+
+/** Whether the private bucket holds `key` (false when it isn't configured or the object is missing) */
+export async function privateObjectExists(key: string): Promise<boolean> {
+  const client = getR2Client();
+  if (!client || !privateBucketName) return false;
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: privateBucketName, Key: key }));
+    return true;
+  } catch (e) {
+    const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+    if (status === 404) return false;
+    throw e;
+  }
 }
 
 /** Short-lived download link for a private object */
