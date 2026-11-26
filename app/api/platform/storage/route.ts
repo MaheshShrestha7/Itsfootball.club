@@ -39,7 +39,16 @@ export async function GET(req: NextRequest) {
   if (!db) return NextResponse.json({ error: 'Not configured on the server.' }, { status: 503 });
   if (!isR2Configured) return NextResponse.json({ folders: [], canDelete: false, note: 'File storage (R2) is not set up.' });
 
-  const ids = (await listR2Folders('clubs/')).map(p => p.split('/')[1]).filter(isUuid);
+  let prefixes: string[];
+  try {
+    prefixes = await listR2Folders('clubs/');
+  } catch (e) {
+    // Show R2's own reason (wrong bucket, key or account) to the platform admin instead of a bare 500
+    const err = e as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    console.error('R2 list failed:', err.name, err.message);
+    return NextResponse.json({ error: `R2 refused the request: ${err.name || 'Error'} (${err.$metadata?.httpStatusCode ?? 'no status'}) ${err.message || ''}`.trim() }, { status: 502 });
+  }
+  const ids = prefixes.map(p => p.split('/')[1]).filter(isUuid);
   const alive = await existing(db, ids);
   const orphans = ids.filter(id => !alive.has(id)).slice(0, MAX_FOLDERS);
 
