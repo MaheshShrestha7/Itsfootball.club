@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { platformApi, useCanChange } from '@/components/admin/platform/api';
 import StorageCleanup from '@/components/admin/platform/StorageCleanup';
+import StorageMove from '@/components/admin/platform/StorageMove';
 import { timeAgo, type Light } from '@/lib/mission-control';
 import type { HealthReport } from '@/lib/platform-health';
 import type { PlatformHealthStats } from '@/lib/supabase/types';
@@ -182,6 +183,8 @@ export default function HealthTab({ showToast }: { showToast: (msg: string) => v
           </div>
 
           <EmailsCard />
+
+          <StorageMove showToast={showToast} />
 
           <StorageCleanup showToast={showToast} />
 
