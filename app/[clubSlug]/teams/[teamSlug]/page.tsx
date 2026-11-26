@@ -19,6 +19,7 @@ import PlayerCardDialog from '@/components/PlayerCardDialog';
 import { isPastFixture } from '@/lib/club-lists';
 import { kickoff, latestResult, teamForm, teamRecord } from '@/lib/fixtures';
 import ContactModal from '@/components/ContactModal';
+import { featureOn } from '@/lib/club-features';
 
 // Short enough that the games column fits beside the squad as it sticks; the Fixtures page has the rest
 const UPCOMING_SHOWN = 2;
@@ -160,7 +161,7 @@ export default function TeamPage({ params }: { params: Promise<{ clubSlug: strin
         </section>
 
         {/* Friendly invitations (migration 20261157): the team's switch decides, so nothing shows before it runs */}
-        {team.is_active && team.open_to_friendlies === true && (
+        {team.is_active && team.open_to_friendlies === true && featureOn(club, 'friendlies') && (
           <div className="team-invite">
             <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
               <Handshake size={17} aria-hidden="true" /> Invite us to a friendly

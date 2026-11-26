@@ -80,6 +80,8 @@ export function areaFromLocation(pathname: string, tab: string | null): string |
   if (area && (OPEN_ADMIN_PAGES as readonly string[]).includes(area)) return null;
   // Social media posts belong to whoever runs the News
   if (area === 'social') return 'content';
+  // Switching features on and off is part of setting the club up
+  if (area === 'features') return 'branding';
   if (area !== 'people') return area;
   return (PEOPLE_MEMBER_TABS as readonly string[]).includes(tab || '') ? 'members' : 'squad';
 }

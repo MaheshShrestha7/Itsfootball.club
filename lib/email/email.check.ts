@@ -1,13 +1,14 @@
 // Run: npx esbuild lib/email/email.check.ts --bundle --platform=node | node   (part of `npm run check`)
 import assert from 'node:assert/strict';
 import { verifyWebhook } from './webhook';
-import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail, feeRequest, expenseClaimUpdate } from './templates';
+import { authEmail, authRecipients, availabilityReminder, renewalReminder, newsNotice, matchNotice, applicationReceived, applicationApproved, applicationRejected, ticketsEmail, feeRequest, expenseClaimUpdate, adminSummary, paymentReceipt, weeklyRoundup } from './templates';
 import { unsubscribeToken, verifyUnsubscribeToken } from './unsubscribe';
 import { cleanSettings } from './settings';
 import { memberRecipient } from './club-emails';
 import { formatMatchWhen, formatWhen } from './format';
 import { authSignInLink } from './auth-link';
 import { EMAIL_KIND_GROUPS, EMAIL_KIND_LABELS, emailKindLabel } from './kinds';
+import { fillClubSponsors } from './club-sponsors';
 
 // Test fixture only, NOT a real key: a made-up string, wrapped in the "v1,whsec_<base64>" format
 // Supabase uses. Built at runtime so no secret-shaped literal sits in the repo.
@@ -83,6 +84,9 @@ async function main() {
   // --- settings ---
   assert.deepEqual(cleanSettings({ availability_reminders: true, event_reminders: 'yes', bogus: true }), { availability_reminders: true }, 'only known boolean switches');
   assert.deepEqual(cleanSettings(null), {});
+  assert.deepEqual(cleanSettings({ weekly_roundup: true, weekly_roundup_day: 5, admin_summary: false }), { weekly_roundup: true, weekly_roundup_day: 5, admin_summary: false });
+  assert.deepEqual(cleanSettings({ weekly_roundup_day: 6 }), {}, 'weekends are not offered');
+  assert.deepEqual(cleanSettings({ weekly_roundup_day: '4' }), {}, 'a number only');
 
   // --- notices ---
   const news = newsNotice({ brand: evil, recipientName: 'Sam', title: 'Big <win>', summary: 'We won', image: 'http://insecure/img.jpg', link: 'https://x/#news', message: 'Hi <b>all</b>\n\nSecond para', unsubscribeUrl: 'https://itsfootball.club/unsubscribe?c=1&e=a&t=b' });
@@ -189,6 +193,52 @@ const grouped = EMAIL_KIND_GROUPS.flatMap(g => g.kinds);
 assert.equal(new Set(grouped).size, grouped.length);
 for (const k of grouped) assert.ok(EMAIL_KIND_LABELS[k], `no label for ${k}`);
 assert.equal(emailKindLabel(null), 'Other emails');
+
+// AUTO-1/4/8: sections are escaped, links only when https, and the text version carries them
+{
+  const brand = { name: 'Riverside FC', color: '#C8102E', url: 'https://itsfootball.club/rfc' };
+  const sum = adminSummary({ brand, adminName: 'Sam Lee', dashboardUrl: 'https://itsfootball.club/rfc/admin', items: [
+    { area: 'Inbox', text: '3 unread messages <b>', url: 'https://itsfootball.club/rfc/admin/inquiries' },
+    { area: 'Finance', text: '1 expense claim to review', url: 'javascript:alert(1)' },
+  ] });
+  assert.equal(sum.subject, 'Riverside FC: 2 things need you today');
+  assert.ok(sum.html.includes('3 unread messages &lt;b&gt;') && !sum.html.includes('<b>'), 'escaped');
+  assert.ok(sum.html.includes('href="https://itsfootball.club/rfc/admin/inquiries"') && !sum.html.includes('javascript:'), 'https links only');
+  assert.ok(sum.text.includes('NEEDS DOING') && sum.text.includes('Inbox: 3 unread messages'), 'text version');
+  assert.ok(sum.html.includes('Morning Sam,'));
+  const one = adminSummary({ brand, adminName: '', dashboardUrl: 'https://x.test', items: [{ area: 'Seasons', text: 'x', url: 'https://x.test' }] });
+  assert.equal(one.subject, 'Riverside FC: 1 thing needs you today');
+
+  const card = paymentReceipt({ brand, payerName: 'Jack Ng', what: 'Senior (Jack Ng)', price: '$220.00', paidOn: 'Wednesday 25 November 2026', method: 'card', reference: 'ABCD1234', link: 'https://x.test', canReply: false });
+  assert.equal(card.subject, 'Receipt: Senior (Jack Ng), $220.00');
+  assert.ok(card.text.includes('Paid by: Card') && card.text.includes('Reference: ABCD1234') && !card.text.includes('reply'));
+  const bank = paymentReceipt({ brand, payerName: 'Pat', what: 'Camp', price: '$85.00', paidOn: 'today', method: 'bank', reference: 'X', link: 'https://x.test', canReply: true });
+  assert.ok(bank.html.includes('Bank transfer received') && bank.text.includes('Paid by: Bank transfer') && bank.text.includes('Just reply'));
+
+  const week = weeklyRoundup({ brand, memberName: 'Jack Ng', subjectBits: ['2 games', '1 result'], fixturesUrl: 'https://x.test/fixtures', sections: [
+    { heading: 'Coming up', rows: [{ label: 'Sat 29 Nov, 9:00 am', value: 'U12 vs Lions', sub: 'Park', url: 'https://x.test/match/a' }] },
+    { heading: 'News', rows: [] },
+  ] });
+  assert.equal(week.subject, 'This week at Riverside FC: 2 games, 1 result');
+  assert.ok(week.html.includes('Coming up') && !week.html.includes('>News<'), 'empty sections are left out');
+}
+
+// Club emails: club colour band, sponsors filled in at send time (or nothing), sign-in left bare
+{
+  const brand = { name: 'Sunny FC', color: '#FACC15', url: 'https://itsfootball.club/sunny' };
+  const fee = feeRequest({ brand, memberName: 'Sam Lee', title: 'Boots', price: '$5.00', dueOn: 'Friday', overdue: false, reminder: false, link: 'https://x.test/p' });
+  assert.ok(fee.html.includes('background:#FACC15;border-radius:16px 16px 0 0'), 'club colour band');
+  assert.match(fee.html, /<!--club-sponsors:#[0-9a-fA-F]{6}-->/, 'marker with a readable ink');
+  const none = fillClubSponsors(fee, 'Sunny FC', []);
+  assert.ok(!none.html.includes('club-sponsors') && !none.html.includes('supported by') && none.text === fee.text, 'no sponsors, no strip');
+  const filled = fillClubSponsors(fee, 'Sunny FC', [{ name: 'Big <Co>', big: true, url: 'javascript:x' }, { name: 'Small Co', logoUrl: 'https://cdn.example.com/s.png', url: 'https://small.example/' }]);
+  assert.ok(filled.html.includes('Sunny FC is supported by') && filled.html.includes('Big &lt;Co&gt;') && !filled.html.includes('javascript:'));
+  assert.ok(filled.html.includes('height="32"') && filled.html.includes('href="https://small.example/"'));
+  assert.ok(filled.text.includes('Sunny FC is supported by: Big <Co>, Small Co\n\n--\n'), 'text line above the footer');
+  const tix = ticketsEmail({ brand, buyerName: 'A', event: 'Gala', quantity: 1, when: 'Sat', venue: 'Park', link: 'https://x.test/t', sponsors: [{ name: 'Event Co' }] });
+  assert.ok(!tix.html.includes('<!--club-sponsors') && tix.html.includes('This event is supported by'), 'event sponsors win');
+  assert.ok(!authEmail('magiclink', 'https://x.test/l', '123456').html.includes('club-sponsors'), 'platform emails have no marker');
+}
 
 console.log('email: webhook signatures, unsubscribe tokens, sign-in link routing and templates OK');
 }

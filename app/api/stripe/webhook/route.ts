@@ -3,6 +3,7 @@ import { getStripe, Stripe } from '@/lib/stripe';
 import { getServiceClient } from '@/lib/supabase/service';
 import { emailTickets } from '@/lib/email/tickets';
 import { emailSponsorPaid } from '@/lib/email/sponsor-paid';
+import { emailReceipt, receiptMethod } from '@/lib/email/receipt';
 import type { Payment } from '@/lib/supabase/types';
 import { logEvent } from '@/lib/platform-events';
 
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
       if ((paid as Payment | null)?.kind === 'event_ticket' && (paid as Payment).status === 'paid') await emailTickets(db, paid as Payment);
       // Best effort: a failed thank-you email must not make Stripe retry a payment that went through
       if ((paid as Payment | null)?.kind === 'sponsorship') await emailSponsorPaid(db, paid as Payment).catch(() => false);
+      // Memberships, fee requests and shop orders: the payer's receipt (AUTO-4); best effort, never throws
+      if (paid && receiptMethod(paid as Payment)) await emailReceipt(db, paid as Payment);
       break;
     }
     case 'checkout.session.async_payment_failed':

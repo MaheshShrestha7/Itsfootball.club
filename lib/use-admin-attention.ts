@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseClient } from './supabase/client';
 import { useClub } from './club-context';
 import { useAuth } from './auth-context';
-import { attentionItems, type AttentionItem } from './admin-attention';
+import { attentionItems, seasonToStart, type AttentionItem } from './admin-attention';
 import { siteToday } from './member-prices';
 import { membershipInfo, personChecks } from './people';
 import { juniorMemberIds } from './teams';
@@ -12,7 +12,7 @@ import { isEndingSoon, hasRecentlyLapsed, hasSentChange, isStaleSignup, sponsorS
 
 /** The dashboard's "Needs you" list for one club, limited to what this person's roles can act on */
 export function useAdminAttention(club: { id: string; slug: string }): AttentionItem[] {
-  const { members, matches, inquiries, memberMessages, sponsors, clubTeams, clubTeamMembers } = useClub();
+  const { members, matches, inquiries, memberMessages, sponsors, clubTeams, clubTeamMembers, seasons } = useClub();
   const { can } = useAuth();
   const [receiptsToReview, setReceiptsToReview] = useState(0);
   const [ordersToHandOut, setOrdersToHandOut] = useState(0);
@@ -77,7 +77,22 @@ export function useAdminAttention(club: { id: string; slug: string }): Attention
     staleSponsorSignups: clubSponsors.filter(s => isStaleSignup(s, now)).length,
     instalmentsOverdue,
     sponsorChanges: clubSponsors.filter(s => hasSentChange(s)).length,
+    newSeason: visibleSeason(seasonToStart(seasons.filter(s => s.club_id === club.id), siteToday()), now),
   };
   return attentionItems(club.slug, counts, matches.filter(m => m.club_id === club.id), now)
     .filter(item => can(club.id, item.area));
+}
+
+// AUTO-7: "Not yet" on the new-season line hides it on this device for a week
+const SNOOZE_DAYS = 7;
+const snoozeKey = (seasonId: string) => `itsfc-season-snooze:${seasonId}`;
+
+export function snoozeSeason(seasonId: string) {
+  try { localStorage.setItem(snoozeKey(seasonId), String(Date.now() + SNOOZE_DAYS * 86400000)); } catch { /* private mode: it just shows again */ }
+}
+
+function visibleSeason<S extends { id: string }>(season: S | null, now: number): S | null {
+  if (!season) return null;
+  try { if (Number(localStorage.getItem(snoozeKey(season.id))) > now) return null; } catch { /* no storage: show it */ }
+  return season;
 }

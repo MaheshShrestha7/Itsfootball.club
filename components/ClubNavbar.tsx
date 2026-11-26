@@ -77,7 +77,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
 
   // The Shop link only once the club has something on sale
   const hasShop = useShopOpen(club.id);
-  const { tournaments: hasTournaments, gallery: hasGallery, leadership: hasLeadership } = useClubSections(club.id);
+  const { tournaments: hasTournaments, gallery: hasGallery, leadership: hasLeadership, events: hasEvents, news: hasNews, sponsor: hasSponsorPage } = useClubSections(club.id);
 
   // A match being played right now (half time included, as in the phone tab bar)
   const liveMatch = matches.find(m => m.club_id === club.id && (m.status === 'live' || m.status === 'halftime'));
@@ -206,18 +206,18 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     );
   };
   // Become a Sponsor is a pitch to visitors; signed-in users don't need it in the bar
-  const showSponsor = !isAuthenticated;
+  const showSponsor = !isAuthenticated && hasSponsorPage;
   // The menu: every page the bar reaches, in three groups; links the visitor can't use (no shop yet) left out
   const menuGroups: { title: string; links: { path: string; label: string; icon: typeof Shield }[] }[] = [
     { title: 'Matchday', links: [
       { path: '/fixtures', label: 'Fixtures', icon: Calendar },
       ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments', icon: Trophy }] : []),
-      { path: '/events', label: 'Events', icon: CalendarDays },
+      ...(hasEvents ? [{ path: '/events', label: 'Events', icon: CalendarDays }] : []),
       { path: teamsLink.path, label: teamsLink.label, icon: Users },
     ] },
     { title: 'The club', links: [
       { path: '/', label: 'Club home', icon: Shield },
-      { path: '/news', label: 'News', icon: Newspaper },
+      ...(hasNews ? [{ path: '/news', label: 'News', icon: Newspaper }] : []),
       ...(hasGallery ? [{ path: '/gallery', label: 'Gallery', icon: Images }] : []),
       ...(hasLeadership ? [{ path: '/leadership', label: 'Leadership', icon: Award }] : []),
       { path: '/about', label: 'About', icon: BookOpen },
@@ -225,7 +225,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     { title: 'Support the club', links: [
       ...(hasShop ? [{ path: '/shop', label: 'Shop', icon: ShoppingBag }] : []),
       // SPP-5: for everyone, signed in too: the parents and players who run local businesses are the club's likeliest sponsors
-      { path: '/sponsor', label: 'Sponsors', icon: Handshake },
+      ...(hasSponsorPage ? [{ path: '/sponsor', label: 'Sponsors', icon: Handshake }] : []),
     ] },
   ];
 
@@ -352,8 +352,8 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
             ...(hasTournaments ? [{ path: '/tournaments', label: 'Tournaments' }] : []),
             teamsLink,
           ])}
-          {barLink('/events', 'Events', 5)}
-          {barLink('/news', 'News', 4)}
+          {hasEvents && barLink('/events', 'Events', 5)}
+          {hasNews && barLink('/news', 'News', 4)}
           {barMenu('Club', [
             ...(hasGallery ? [{ path: '/gallery', label: 'Gallery' }] : []),
             ...(hasLeadership ? [{ path: '/leadership', label: 'Leadership' }] : []),

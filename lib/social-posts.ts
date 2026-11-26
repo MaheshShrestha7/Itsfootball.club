@@ -1,6 +1,7 @@
 // Social media posts (Admin > Social media, migration 20261187): what the club could post right now,
 // worked out from its fixtures and events, with a caption written only from what the data says.
-// Nothing here posts anywhere: the admin shares each one from their phone (Phase 1). Pure, no browser.
+// The admin shares each one from their phone, or posts it to the club's connected Facebook Page and
+// Instagram (phase 2, /api/social/publish). Pure, no browser.
 import { DATE_LOCALE, formatClock } from '@/lib/dates';
 import { hasKickoffTime, kickoff } from '@/lib/fixtures';
 import { SITE_URL, matchPath } from '@/lib/slugs';
@@ -12,7 +13,8 @@ export type SocialTrigger = 'fixture' | 'team' | 'kickoff' | 'halftime' | 'fullt
 /** When a fixture or event post becomes ready: as soon as it's on the site, or a set time before it starts */
 export type SocialTiming = 'now' | 'day' | 'two_days' | 'week';
 
-export interface SocialRule { on: boolean; when?: SocialTiming }
+/** auto: posted to the connected Facebook Page and Instagram by itself (AUTO_TRIGGERS only); otherwise an admin checks it first */
+export interface SocialRule { on: boolean; when?: SocialTiming; auto?: boolean }
 export interface SocialSettings { rules: Record<SocialTrigger, SocialRule>; hashtags: string }
 
 export const SOCIAL_TRIGGERS: { key: SocialTrigger; label: string; what: string; timings?: SocialTiming[] }[] = [
@@ -25,6 +27,18 @@ export const SOCIAL_TRIGGERS: { key: SocialTrigger; label: string; what: string;
   { key: 'event', label: 'Events', what: 'Public events, with the flyer if there is one', timings: ['now', 'week', 'two_days', 'day'] },
   { key: 'birthday', label: 'Player birthdays', what: 'Birthday card from squad dates of birth (junior privacy rules apply)' },
 ];
+
+/** Posts that can go out by themselves: the moment matters, and the words and graphic come from the score */
+export const AUTO_TRIGGERS = ['kickoff', 'halftime', 'fulltime'] as const;
+
+/** The post a status change makes: kick-off, the break, or the final whistle */
+export function autoTriggerFor(prev: Match['status'], now: Match['status']): (typeof AUTO_TRIGGERS)[number] | null {
+  if (prev === now) return null;
+  if (now === 'live' && prev === 'upcoming') return 'kickoff';
+  if (now === 'halftime') return 'halftime';
+  if (now === 'completed' && prev !== 'cancelled' && prev !== 'postponed') return 'fulltime';
+  return null;
+}
 
 export const TIMING_LABEL: Record<SocialTiming, string> = {
   now: 'As soon as it is added', day: 'A day before', two_days: 'Two days before', week: 'A week before',
@@ -49,6 +63,7 @@ export function readSocialSettings(raw: unknown): SocialSettings {
     rules[t.key] = {
       on: typeof saved.on === 'boolean' ? saved.on : rules[t.key].on,
       ...(t.timings ? { when: t.timings.includes(saved.when as SocialTiming) ? saved.when as SocialTiming : rules[t.key].when } : {}),
+      ...((AUTO_TRIGGERS as readonly string[]).includes(t.key) && saved.auto === true ? { auto: true } : {}),
     };
   }
   return { rules, hashtags: typeof r.hashtags === 'string' ? r.hashtags.slice(0, 300) : '' };
@@ -102,7 +117,8 @@ export interface SocialPost {
   caption: string;
 }
 
-export type SocialMark = { status: 'shared' | 'skipped'; caption?: string | null; by_name?: string | null; at: string };
+/** posting: the site is posting it now; failed: posting didn't work, so it's still to do */
+export type SocialMark = { status: 'shared' | 'skipped' | 'posting' | 'failed'; caption?: string | null; by_name?: string | null; at: string };
 
 export interface QueueInput {
   matches: Match[];
@@ -344,9 +360,10 @@ export function socialQueue(input: QueueInput): SocialPost[] {
 
 /** Ready posts split by what the admin has done with them; posts still to come, soonest first */
 export function splitQueue(posts: SocialPost[], marks: Record<string, SocialMark>) {
+  const isDone = (p: SocialPost) => marks[p.key]?.status === 'shared' || marks[p.key]?.status === 'skipped';
   return {
-    todo: posts.filter(p => p.ready && !marks[p.key]),
+    todo: posts.filter(p => p.ready && !isDone(p)),
     later: posts.filter(p => !p.ready).sort((a, b) => a.readyAt - b.readyAt),
-    done: posts.filter(p => p.ready && marks[p.key]),
+    done: posts.filter(p => p.ready && isDone(p)),
   };
 }

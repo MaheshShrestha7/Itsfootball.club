@@ -1,13 +1,15 @@
 'use client';
 
 import React, { use, useEffect, useMemo, useState } from 'react';
-import { Cake, CalendarDays, CheckCircle2, Clock, Megaphone, Radio, Settings2, Share2, Shield, Star, Trophy, Users } from 'lucide-react';
+import { Cake, CalendarDays, CheckCircle2, Clock, Link2, Megaphone, Radio, Settings2, Share2, Shield, Star, Trophy, Users } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { useUrlTab } from '@/lib/use-url-tab';
 import { useMatchShare } from '@/lib/use-match-share';
 import { useSocialMarks, useSocialReady, useSocialSettings } from '@/lib/use-social-posts';
+import { publishSocial, publishSummary, useSocialAccount } from '@/lib/social-publish';
 import {
+  AUTO_TRIGGERS,
   SOCIAL_TRIGGERS,
   TIMING_LABEL,
   buildBirthdayPostData,
@@ -25,6 +27,7 @@ import MatchShareButton from '@/components/MatchShareButton';
 import EventShareButton from '@/components/admin/EventShareButton';
 import BirthdayShareButton from '@/components/admin/BirthdayShareButton';
 import ReviewSaveNote from '@/components/admin/ReviewSaveNote';
+import SocialAccounts from '@/components/admin/SocialAccounts';
 import type { CardKind } from '@/lib/share-card';
 
 const ICON: Record<SocialTrigger, typeof Clock> = {
@@ -48,13 +51,16 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
   const { user, can } = useAuth();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const canEdit = can(club.id, 'content', 'edit');
-  const [tab, setTab] = useUrlTab(['posts', 'rules'] as const);
+  const [tab, setTab] = useUrlTab(['posts', 'rules', 'accounts'] as const);
   const db = useSocialReady();
   const name = user?.full_name || '';
   const { settings, change, saveState, retry, ready: settingsReady, failed } = useSocialSettings(club.id, db, name);
   const { marks, error: marksError, mark } = useSocialMarks(club.id, db, name);
   const shareProps = useMatchShare(club);
   const tz = clubTimeZone(club);
+  const { account, reload } = useSocialAccount(club.id);
+  const connected = !!account?.connected && !!account.page;
+  const postTo = account?.page?.instagram ? 'Facebook and Instagram' : 'Facebook';
 
   // Re-worked out each minute, so a post becomes ready without a reload
   const [now, setNow] = useState(() => Date.now());
@@ -128,11 +134,20 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
     setSaveError(!(await mark(p.key, status, status ? captionOf(p) : undefined)));
   };
 
+  // Straight to the club's Page and Instagram; the server marks it, this screen catches up
+  const postNow = async (key: string, caption: string, image: Blob) => {
+    const r = await publishSocial({ clubId: club.id, key, caption, by: name, image });
+    return { note: publishSummary(r), ok: r.status === 'shared' };
+  };
+
   const shareButton = (p: SocialPost) => {
     const trigger = (open: () => void) => (
       <button type="button" className="btn btn-primary btn-sm" onClick={open}><Share2 size={14} aria-hidden="true" /> Share from my phone</button>
     );
-    const common = { caption: captionOf(p), onCaption: (c: string) => setEdits(e => ({ ...e, [p.key]: c })), onShared: () => void setMark(p, 'shared'), trigger };
+    const common = {
+      caption: captionOf(p), onCaption: (c: string) => setEdits(e => ({ ...e, [p.key]: c })), onShared: () => void setMark(p, 'shared'), trigger,
+      post: connected ? { to: postTo, onPost: (image: Blob) => postNow(p.key, captionOf(p), image), onDone: () => void setMark(p, 'shared') } : undefined,
+    };
     if (p.birthday) return <BirthdayShareButton player={p.birthday} club={club} {...common} />;
     if (p.event) return <EventShareButton event={p.event} club={club} {...common} />;
     if (!p.match) return null;
@@ -150,6 +165,8 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
           <p className="social-post-when">
             {state === 'later' ? `Ready ${shortWhen(p.readyAt, tz)}`
               : state === 'done' && m ? `${m.status === 'shared' ? 'Shared' : 'Skipped'}${m.by_name ? ` by ${m.by_name}` : ''}, ${shortWhen(Date.parse(m.at), tz)}`
+              : m?.status === 'posting' ? 'Posting now…'
+              : m?.status === 'failed' ? 'It didn’t post last time. Try again, or share it from your phone.'
               : p.trigger === 'kickoff' || p.trigger === 'halftime' ? 'Happening now' : 'Ready to share'}
           </p>
           {state !== 'done' && <p className="social-post-caption">{captionOf(p)}</p>}
@@ -175,7 +192,7 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
     );
   };
 
-  const setRule = (key: SocialTrigger, next: { on?: boolean; when?: SocialTiming }) =>
+  const setRule = (key: SocialTrigger, next: { on?: boolean; when?: SocialTiming; auto?: boolean }) =>
     change({ ...settings, rules: { ...settings.rules, [key]: { ...settings.rules[key], ...next } } });
 
   return (
@@ -183,7 +200,7 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
       <div className="admin-head">
         <div>
           <h1>Social media</h1>
-          <p>Posts for your club&apos;s Facebook, Instagram, TikTok and WhatsApp, made from your fixtures, results, events and player birthdays. Share each one from your phone with the graphic and caption ready.</p>
+          <p>Posts for your club&apos;s Facebook, Instagram, TikTok and WhatsApp, made from your fixtures, results, events and player birthdays. Share each one from your phone with the graphic and caption ready, or connect your Facebook Page under Accounts to post straight there.</p>
         </div>
         {canEdit && pickedBirthday && (
           <div className="bday-quick-bar">
@@ -205,6 +222,11 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
               club={club}
               caption={pickedCaption ?? defaultPickedCaption}
               onCaption={setPickedCaption}
+              post={connected ? {
+                to: postTo,
+                onPost: image => postNow(`birthday:${pickedBirthday.memberId}:${pickedBirthday.year}`, pickedCaption ?? defaultPickedCaption, image),
+                onDone: () => void mark(`birthday:${pickedBirthday.memberId}:${pickedBirthday.year}`, 'shared', pickedCaption ?? defaultPickedCaption),
+              } : undefined}
               trigger={open => (
                 <button type="button" className="btn btn-primary btn-sm" onClick={open}>
                   <Cake size={14} aria-hidden="true" /> Make birthday card
@@ -222,6 +244,9 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
         <button type="button" role="tab" aria-selected={tab === 'rules'} data-view-ok onClick={() => setTab('rules')} className="admin-tab">
           <Settings2 size={14} aria-hidden="true" /> When to post
         </button>
+        <button type="button" role="tab" aria-selected={tab === 'accounts'} data-view-ok onClick={() => setTab('accounts')} className="admin-tab">
+          <Link2 size={14} aria-hidden="true" /> Accounts {connected && <span className="num">Connected</span>}
+        </button>
       </div>
 
       {db === false && (
@@ -229,7 +254,9 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
       )}
       {(saveError || marksError) && <p className="admin-notice is-danger" role="alert">That didn&apos;t save. Check your connection and try again.</p>}
 
-      {tab === 'posts' ? (
+      {tab === 'accounts' ? (
+        <SocialAccounts clubId={club.id} account={account} reload={reload} canConnect={can(club.id, 'content', 'full')} name={name} />
+      ) : tab === 'posts' ? (
         marks === null ? <p className="text-note" role="status">Loading posts…</p> : (
           <>
             <section aria-labelledby="social-todo">
@@ -269,6 +296,13 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
                         <select className="form-input" aria-label={`When the ${t.label} post is ready`} value={rule.when} disabled={!rule.on || !canEdit}
                           onChange={e => setRule(t.key, { when: e.target.value as SocialTiming })}>
                           {t.timings.map(v => <option key={v} value={v}>{TIMING_LABEL[v]}</option>)}
+                        </select>
+                      )}
+                      {connected && (AUTO_TRIGGERS as readonly string[]).includes(t.key) && (
+                        <select className="form-input" aria-label={`How the ${t.label} post goes out`} value={rule.auto ? 'auto' : 'check'} disabled={!rule.on || !canEdit}
+                          onChange={e => setRule(t.key, { auto: e.target.value === 'auto' })}>
+                          <option value="check">Check first</option>
+                          <option value="auto">Post to {postTo} by itself</option>
                         </select>
                       )}
                       <input type="checkbox" role="switch" className="mc-switch" aria-labelledby={`rule-${t.key}`} checked={rule.on} disabled={!canEdit}

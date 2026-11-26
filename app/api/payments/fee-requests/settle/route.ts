@@ -6,6 +6,7 @@ import { closeOpenCheckout } from '@/lib/payments-server';
 import { canReopenFee } from '@/lib/fee-requests';
 import { isUuid } from '@/lib/ids';
 import type { Payment } from '@/lib/supabase/types';
+import { emailReceipt } from '@/lib/email/receipt';
 
 // The treasurer settles bills themselves (finance editors):
 //   POST { clubId, paymentId, action: 'cash' | 'bank' | 'excuse' | 'reopen' }    one person ('bank': a
@@ -70,8 +71,10 @@ export async function POST(req: NextRequest) {
     const { error: updateError } = await auth.supabase.from('payments')
       .update({ method: action === 'bank' ? 'bank_transfer' : 'cash', stripe_session_id: null, stripe_payment_intent_id: null }).eq('id', ids[0]).eq('status', 'pending');
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
-    const { error } = await auth.supabase.rpc('fulfil_payment', { p_payment_id: ids[0] });
+    const { data: paid, error } = await auth.supabase.rpc('fulfil_payment', { p_payment_id: ids[0] });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // A transfer the treasurer saw arrive gets the payer's receipt (AUTO-4); cash was handed over in person
+    if (action === 'bank' && paid) await emailReceipt(db, paid as Payment);
     return NextResponse.json({ updated: 1 });
   }
 

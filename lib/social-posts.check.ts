@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { DEFAULT_SOCIAL, clubUrl, readSocialSettings, socialQueue, splitQueue, type QueueInput } from './social-posts';
+import { DEFAULT_SOCIAL, autoTriggerFor, clubUrl, readSocialSettings, socialQueue, splitQueue, type QueueInput } from './social-posts';
 import type { ClubEvent, Match } from './supabase/types';
 
 const H = 36e5;
@@ -76,6 +76,24 @@ const split = splitQueue(q, { 'fulltime:ft': { status: 'shared', at: at(now) } }
 assert.ok(split.done.some(p => p.key === 'fulltime:ft'));
 assert.ok(!split.todo.some(p => p.key === 'fulltime:ft'));
 assert.equal(split.later[0].key, 'fixture:later');
+// A post that failed to go out (or is going out now) stays to do
+const failed = splitQueue(q, { 'fulltime:ft': { status: 'failed', at: at(now) }, 'kickoff:live': { status: 'posting', at: at(now) } });
+assert.ok(failed.todo.some(p => p.key === 'fulltime:ft') && failed.todo.some(p => p.key === 'kickoff:live'));
+
+// Posting by itself: only kick-off, half time and full time, and only when switched on
+const autos = readSocialSettings({ rules: { kickoff: { auto: true }, fixture: { auto: true }, fulltime: { auto: 'yes' } } });
+assert.equal(autos.rules.kickoff.auto, true);
+assert.equal(autos.rules.kickoff.on, true);
+assert.equal(autos.rules.fixture.auto, undefined);
+assert.equal(autos.rules.fulltime.auto, undefined);
+assert.equal(DEFAULT_SOCIAL.rules.fulltime.auto, undefined, 'check first by default');
+assert.equal(autoTriggerFor('upcoming', 'live'), 'kickoff');
+assert.equal(autoTriggerFor('live', 'halftime'), 'halftime');
+assert.equal(autoTriggerFor('halftime', 'live'), null, 'second half starting is no post');
+assert.equal(autoTriggerFor('live', 'completed'), 'fulltime');
+assert.equal(autoTriggerFor('upcoming', 'completed'), 'fulltime', 'a result typed in');
+assert.equal(autoTriggerFor('postponed', 'completed'), null);
+assert.equal(autoTriggerFor('live', 'live'), null);
 
 // Custom domains drop the slug
 assert.equal(clubUrl({ slug: 'cp', custom_domain: 'cpfc.com.au' }, '/cp/match/x'), 'https://cpfc.com.au/match/x');

@@ -8,9 +8,12 @@ import { cleanSettings } from '@/lib/email/settings';
 import { MAX_MESSAGE_LENGTH, NOTICE_KINDS, prepareNotice, type NoticeRequest } from '@/lib/email/notices';
 import { pushConfigured, pushToClub } from '@/lib/push';
 import { isUuid } from '@/lib/ids';
+import { automationPreview, isAutomationPreview } from '@/lib/email/automations';
+import { clubEmailSponsors, fillClubSponsors } from '@/lib/email/club-sponsors';
 
 // Admin -> Email Notifications. Club admins only (checked with their own session token).
 //   GET    ?clubId=           switches, setup status, opt-out count, recent sends and who got each
+//   GET    ?clubId=&preview=  one automatic email as it would go out today (admin_summary | fee_reminders | weekly_roundup | receipt)
 //   PATCH  { clubId, settings }   save the automatic-reminder switches
 //   POST   { clubId, kind, refId?, audience?, message?, memberId?, send? }
 //          (memberId / memberIds: a renewal email to that member / those ticked members, from Member passes)
@@ -35,6 +38,14 @@ export async function GET(req: NextRequest) {
   const a = await authorise(req, req.nextUrl.searchParams.get('clubId'), 'view');
   if ('error' in a) return a.error;
   const { db, club } = a;
+
+  const preview = req.nextUrl.searchParams.get('preview');
+  if (preview !== null) {
+    if (!isAutomationPreview(preview)) return NextResponse.json({ error: 'Unknown email.' }, { status: 400 });
+    const canSee = async (area: string) => (await requireClubPerm(req, club.id, [area], 'view')).ok;
+    const shown = await automationPreview(db, club, preview, canSee);
+    return NextResponse.json('html' in shown ? { ...shown, html: fillClubSponsors({ ...shown, text: '' }, club.name, await clubEmailSponsors(db, club.id)).html } : shown);
+  }
 
   const [{ count: optOuts }, { data: log, error: logError }] = await Promise.all([
     db.from('email_opt_outs').select('email', { count: 'exact', head: true }).eq('club_id', club.id),
@@ -114,7 +125,8 @@ export async function POST(req: NextRequest) {
 
   if (!body.send) {
     // Preview with the first recipient's details (or any, if everyone already has it)
-    const sample = (due[0] || prepared.drafts[0])?.render('https://itsfootball.club/unsubscribe');
+    const drawn = (due[0] || prepared.drafts[0])?.render('https://itsfootball.club/unsubscribe');
+    const sample = drawn && fillClubSponsors(drawn, club.name, await clubEmailSponsors(db, club.id));
     return NextResponse.json({ ...summary, preview: sample ? { subject: sample.subject, html: sample.html } : null });
   }
 

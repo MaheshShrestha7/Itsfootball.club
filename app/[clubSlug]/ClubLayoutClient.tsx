@@ -10,6 +10,7 @@ import Footer from '@/components/Footer';
 import ClubTabBar from '@/components/ClubTabBar';
 import { hexToRgb, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
+import { featureClosingPath } from '@/lib/club-features';
 
 export default function ClubLayoutClient({
   children,
@@ -83,6 +84,11 @@ export default function ClubLayoutClient({
   const ownSponsorBlock = pathname === `/${club.slug}` || pathname === '/' || /^\/[^/]+\/match\//.test(pathname || '')
     || pathname === `/${club.slug}/sponsor` || pathname === '/sponsor';
   const isAdmin = /^\/[^/]+\/admin(\/|$)/.test(pathname || '');
+  // A public page of a feature the club switched off (Admin -> Features); admin pages say so themselves
+  const path = pathname || '';
+  // On a club's own domain the path has no /{club} in front
+  const rest = path === `/${club.slug}` || path.startsWith(`/${club.slug}/`) ? path.slice(club.slug.length + 1) : path;
+  const closedBy = isAdmin || /^\/admin(\/|$)/.test(rest) ? null : featureClosingPath(club, rest);
 
   return (
     <div
@@ -106,7 +112,13 @@ export default function ClubLayoutClient({
     >
       <ClubNavbar club={club} />
       <div style={{ flex: 1 }}>
-        {children}
+        {closedBy ? (
+          <div className="container" style={{ maxWidth: 560, padding: '5rem 1rem', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.5rem' }}>Not available</h1>
+            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>{club.name} doesn&apos;t use this part of the site.</p>
+            <Link href={`/${club.slug}`} className="btn btn-primary">Back to the club</Link>
+          </div>
+        ) : children}
       </div>
       {/* Admin pages get a slim footer: the public sponsors block and site links only made them longer */}
       <Footer club={club} sponsors={ownSponsorBlock ? undefined : clubSponsors} compact={isAdmin} />

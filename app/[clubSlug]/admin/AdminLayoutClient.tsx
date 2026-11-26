@@ -40,16 +40,19 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   PanelLeftClose,
-  PanelLeftOpen } from 'lucide-react';
+  PanelLeftOpen,
+  ToggleRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { DEFAULT_CREST } from '@/lib/crest';
 import AdminSearch from '@/components/AdminSearch';
 import ThemeToggle from '@/components/ThemeToggle';
 import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import { useMatchAlerts } from '@/lib/use-match-alerts';
+import { useSocialAuto } from '@/lib/use-social-auto';
 import { useChatBoards } from '@/lib/use-chat-boards';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
+import { featureClosingPath, featureOn } from '@/lib/club-features';
 import { useWelcomePack } from '@/lib/use-welcome-pack';
 import { CALENDAR_AREAS } from '@/lib/admin-calendar';
 import { useClubAppIcons } from '@/lib/app-icons';
@@ -101,6 +104,8 @@ export default function AdminLayout({
   const pack = useWelcomePack(club);
   // Followers' kick-off, goal and full-time alerts, from whichever admin screen the result is entered on
   useMatchAlerts(club?.id);
+  // Kick-off, half time and full time posts the club set to go to Facebook and Instagram by themselves
+  useSocialAuto(club);
   // Live scoreboards in scorers' chats follow changes made here too
   useChatBoards(club?.id);
 
@@ -344,7 +349,7 @@ export default function AdminLayout({
             { label: 'Income', href: `/${club.slug}/admin/finance?tab=income` },
             { label: 'Expenses', href: `/${club.slug}/admin/finance?tab=expenses` },
             { label: 'Fee requests', href: `/${club.slug}/admin/finance?tab=requests` },
-            { label: 'Expense claims', href: `/${club.slug}/admin/finance?tab=claims`, badge: badgeOf(claimsToReview, 'to review') },
+            ...(featureOn(club, 'expense_claims') ? [{ label: 'Expense claims', href: `/${club.slug}/admin/finance?tab=claims`, badge: badgeOf(claimsToReview, 'to review') }] : []),
             { label: 'Budget vs actuals', href: `/${club.slug}/admin/finance/budget` },
             { label: 'AGM report', href: `/${club.slug}/admin/finance/agm` },
             { label: 'Audit pack', href: `/${club.slug}/admin/finance/audit-pack` },
@@ -396,6 +401,7 @@ export default function AdminLayout({
       title: 'Club settings',
       items: [
         { area: 'branding', label: 'Club profile and branding', href: `/${club.slug}/admin/branding`, icon: Palette },
+        { area: 'branding', label: 'Features', href: `/${club.slug}/admin/features`, icon: ToggleRight },
         { area: 'seasons', label: 'Seasons', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
         // Opens the junior settings (U18 rule, welfare officer) on Club Teams; only once the club has a junior team
         ...(hasJuniorTeam ? [{ area: 'teams', label: 'Junior and safeguarding', href: `/${club.slug}/admin/teams#junior-settings`, icon: ShieldCheck }] : []),
@@ -408,6 +414,8 @@ export default function AdminLayout({
       ...section,
       items: section.items
         .filter(i => !i.area || can(club.id, i.area))
+        // Features the club switched off (Admin -> Features) leave the menu
+        .filter(i => !featureClosingPath(club, i.href.slice(club.slug.length + 1)))
         .map(i => ({ ...i, children: i.children?.filter(c => can(club.id, c.area || i.area || '')) })),
     }))
     .filter(section => section.items.length > 0);
@@ -416,6 +424,10 @@ export default function AdminLayout({
   const currentTab = useSearchParams().get('tab');
   // The page's area: someone whose roles don't cover it gets a notice instead of the page
   const currentArea = areaFromLocation(pathname, currentTab);
+  // A page of a feature the club switched off says so instead (the Expense claims tab too)
+  const adminRest = pathname.startsWith(`/${club.slug}/`) ? pathname.slice(club.slug.length + 1) : pathname;
+  const closedFeature = featureClosingPath(club, adminRest)
+    || (/\/admin\/finance\/?$/.test(pathname) && currentTab === 'claims' && !featureOn(club, 'expense_claims') ? { label: 'Expense claims' } : null);
   // Shop orders have their own area, so a role may hand them out without editing the shop
   const canViewPage = !currentArea || can(club.id, currentArea) || (currentArea === 'shop' && can(club.id, 'shop-orders'))
     // The calendar isn't an area of its own: it shows the fixtures, tournaments and events a role already sees
@@ -776,7 +788,16 @@ export default function AdminLayout({
                 <span>View only: anything your role can&apos;t change on this page is locked.</span>
               </div>
             )}
-            {canViewPage ? <div ref={pageRef} className={viewOnly ? 'admin-view-only' : noDelete ? 'admin-no-delete' : undefined}>{children}</div> : (
+            {closedFeature ? (
+              <div className="admin-locked">
+                <ToggleRight size={28} color="var(--color-muted)" aria-hidden="true" />
+                <h2>{closedFeature.label} is switched off</h2>
+                <p>
+                  {club.name} has turned this feature off, so it&apos;s hidden from the site and this menu. Nothing was deleted.
+                </p>
+                <Link href={`/${club.slug}/admin/features`} className="btn btn-primary btn-sm">Open Features</Link>
+              </div>
+            ) : canViewPage ? <div ref={pageRef} className={viewOnly ? 'admin-view-only' : noDelete ? 'admin-no-delete' : undefined}>{children}</div> : (
               <div className="admin-locked">
                 <Lock size={28} color="var(--color-muted)" aria-hidden="true" />
                 <h2>Not part of your role</h2>

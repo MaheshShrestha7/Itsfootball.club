@@ -41,6 +41,7 @@ import { HOME_NEWS_COUNT, newestFirst } from '@/lib/news';
 import { POSITION_NAMES, initialsOf } from '@/lib/positions';
 import { type PositionGroup, type StatKey, hasSeasonStats, inPositionGroup, rankPlaces, rankPlayers, rankView } from '@/lib/top-players';
 import TopPlayerLeader from '@/components/TopPlayerLeader';
+import { featureOn } from '@/lib/club-features';
 
 
 const EVENT_TAB_LABELS: Record<EventCategory, string> = {
@@ -229,7 +230,10 @@ export default function ClubPublicPage({
     // Until a tab is picked it's a short list; "All fixtures & results" has the rest
     : fixturesTabPicked === null ? (seasonResults.length > 0 ? seasonResults.slice(0, 5) : recentResults)
     : seasonResults;
-  const clubEvents = events.filter(e => e.club_id === clubId);
+  // A club that switched Events or News off (lib/club-features.ts) shows none on its home page
+  const eventsOn = featureOn(club, 'events');
+  const newsOn = featureOn(club, 'news');
+  const clubEvents = eventsOn ? events.filter(e => e.club_id === clubId) : [];
   // Soonest first, and only events that haven't finished yet
   const nowMs = Date.now();
   const upcomingEvents = clubEvents
@@ -245,7 +249,7 @@ export default function ClubPublicPage({
   // Club-wide showcase only - event-scoped sponsors show on their own event's page instead.
   // Admins also load hidden and ended sponsors; they see the same showcase as fans.
   const clubSponsors = sponsors.filter(s => s.club_id === clubId && !s.event_id && isSponsorOnSite(s));
-  const clubNews = newestFirst(news.filter(n => n.club_id === clubId));
+  const clubNews = newsOn ? newestFirst(news.filter(n => n.club_id === clubId)) : [];
   const featuredArticle = clubNews.find(n => n.is_featured) || clubNews[0] || null;
 
   // Squad filtering
@@ -1092,9 +1096,11 @@ export default function ClubPublicPage({
           <div className="container">
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
               <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>Thank you to our sponsors</h2>
+              {featureOn(club, 'sponsor_page') && (
               <Link href={`/${club.slug}/sponsor`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: '44px', color: 'var(--club-ink)', fontSize: '0.875rem', fontWeight: 700 }}>
                 Become a sponsor
               </Link>
+              )}
             </div>
             {/* Highest tier first (a size override changes a card's size, not its place in the order) */}
             <SponsorShowcase sponsors={sortSponsorsByTier(clubSponsors)} placement="club_home_showcase" />
@@ -1103,6 +1109,7 @@ export default function ClubPublicPage({
       )}
 
       {/* 4.4 EVENTS: each card opens the event */}
+      {eventsOn && (
       <section id="events" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -1146,7 +1153,10 @@ export default function ClubPublicPage({
         </div>
       </section>
 
+      )}
+
       {/* 4.5 LATEST NEWS */}
+      {newsOn && (
       <section id="news" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1.5rem' }}>Latest news</h2>
@@ -1242,6 +1252,8 @@ export default function ClubPublicPage({
           </div>
         </div>
       </section>
+
+      )}
 
       {/* 4.6 COMMITTEE: left out until the club lists someone */}
       {executiveStaff.length > 0 && (

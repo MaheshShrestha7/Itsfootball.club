@@ -34,7 +34,7 @@ export interface BillEmailReport {
  * Emails bills to the people on them. A failure here never undoes the request: the rows exist and the
  * treasurer can copy each link. Reminders are keyed by day, so a double tap can't send two.
  */
-export async function emailBills(db: SupabaseClient, clubId: string, rows: BillRow[], opts: { reminder: boolean; message?: string | null }): Promise<BillEmailReport> {
+export async function emailBills(db: SupabaseClient, clubId: string, rows: BillRow[], opts: BillEmailOptions): Promise<BillEmailReport> {
   // Never throws: the bills are already saved, and an error here would have the treasurer send them all again
   return sendBills(db, clubId, rows, opts).catch(err => {
     console.error('[fee-requests] email failed:', err);
@@ -42,7 +42,14 @@ export async function emailBills(db: SupabaseClient, clubId: string, rows: BillR
   });
 }
 
-async function sendBills(db: SupabaseClient, clubId: string, rows: BillRow[], opts: { reminder: boolean; message?: string | null }): Promise<BillEmailReport> {
+export interface BillEmailOptions {
+  reminder: boolean;
+  message?: string | null;
+  /** email_log key per bill instead of one a day, e.g. the daily job's numbered reminders (AUTO-3) */
+  key?: (row: BillRow) => string;
+}
+
+async function sendBills(db: SupabaseClient, clubId: string, rows: BillRow[], opts: BillEmailOptions): Promise<BillEmailReport> {
   if (!process.env.RESEND_API_KEY) return { emailed: 0, notEmailed: rows.length, alreadySent: 0, error: 'Email isn\'t set up yet, so copy the links and send them yourself.' };
   const { data } = await db.from('clubs').select(`${CLUB_BRAND_COLUMNS}, contact_email`).eq('id', clubId).maybeSingle();
   if (!data) return { emailed: 0, notEmailed: rows.length, alreadySent: 0, error: 'Club not found.' };
@@ -57,7 +64,7 @@ async function sendBills(db: SupabaseClient, clubId: string, rows: BillRow[], op
     const recipient = billRecipient(row);
     if (!recipient || !row.due_on) return [];
     return [{
-      key: opts.reminder ? `fee_reminder:${row.id}:${today}` : `fee_request:${row.id}`,
+      key: opts.key ? opts.key(row) : opts.reminder ? `fee_reminder:${row.id}:${today}` : `fee_request:${row.id}`,
       clubId: club.id, kind: opts.reminder ? 'fee_reminder' as const : 'fee_request' as const, refId: row.id, to: recipient.to,
       fromName: club.name,
       replyTo,

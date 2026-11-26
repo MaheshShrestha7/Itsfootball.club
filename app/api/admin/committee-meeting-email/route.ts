@@ -5,6 +5,7 @@ import { durableRateLimit } from '@/lib/rate-limit';
 import { sendBatch } from '@/lib/email/send';
 import { committeeMeetingEmail } from '@/lib/email/templates';
 import { CLUB_BRAND_COLUMNS, clubBrand, type ClubBrandRow } from '@/lib/email/club-brand';
+import { clubEmailSponsors, fillClubSponsors } from '@/lib/email/club-sponsors';
 import { isUuid } from '@/lib/ids';
 import { clubTimeZone } from '@/lib/dates';
 import { SITE_URL } from '@/lib/slugs';
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
     if (meeting.share_token) link = `${SITE_URL}/report/m/${meeting.share_token}`;
   }
 
-  const message = committeeMeetingEmail({ brand: clubBrand(club as ClubBrandRow), kind, title, when, where: meeting.location, rows, link });
+  const message = fillClubSponsors(committeeMeetingEmail({ brand: clubBrand(club as ClubBrandRow), kind, title, when, where: meeting.location, rows, link }), club.name, await clubEmailSponsors(db, club.id));
   const sent = await sendBatch(to.slice(0, 100).map(addr => ({ to: addr, ...message, fromName: club.name, log: { kind: `committee_${kind}`, clubId: club.id, refId: meeting.id } })));
   if (!sent.ok) {
     console.error('[admin/committee-meeting-email] send failed:', sent.error);

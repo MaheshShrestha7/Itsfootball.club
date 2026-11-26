@@ -1,6 +1,6 @@
 // What's waiting for a club admin: the dashboard's "Needs you" card and the dot on the phone
 // Admin Menu button. Pure, so it can be checked without a browser (lib/admin-attention.check.ts).
-import type { Match } from './supabase/types';
+import type { ClubSeason, Match } from './supabase/types';
 import { countsTowardClubRecord } from './supabase/types';
 import { kickoff, hasKickoffTime } from './fixtures';
 
@@ -36,6 +36,8 @@ export interface AttentionCounts {
   membershipsExpired?: number;
   /** Juniors with photo consent not asked or no parent or guardian contact (lib/people.ts personChecks) */
   juniorsToCheck?: number;
+  /** A season that has started but isn't the current one yet (seasonToStart) */
+  newSeason?: Pick<ClubSeason, 'id' | 'name'> | null;
 }
 
 export interface AttentionItem {
@@ -66,6 +68,19 @@ export function needsLineup(m: Match, now = Date.now()): boolean {
   return lineup.length === 0;
 }
 
+/**
+ * AUTO-7: a season whose start date has come (and not gone past its end) while an older one is still
+ * current. Asked about, never switched by itself. `today` is YYYY-MM-DD in the club's time zone.
+ */
+export function seasonToStart<S extends Pick<ClubSeason, 'id' | 'name' | 'start_date' | 'end_date' | 'is_current'>>(seasons: S[], today: string): S | null {
+  const current = seasons.find(x => x.is_current);
+  const started = seasons
+    .filter(x => !x.is_current && x.start_date && x.start_date <= today && (!x.end_date || x.end_date >= today)
+      && (!current?.start_date || x.start_date > current.start_date))
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
+  return started[0] || null;
+}
+
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const opponentOf = (m: Match) => m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name);
 
@@ -75,6 +90,7 @@ export function attentionItems(slug: string, counts: AttentionCounts, matches: M
   for (const m of matches.filter(x => needsResult(x, now)).sort((a, b) => kickoff(a) - kickoff(b))) {
     items.push({ key: `result-${m.id}`, area: 'match-center', text: `Enter the result: ${m.home_team_name} vs ${m.away_team_name}`, href: `${base}/match-center?match=${m.id}`, tone: 'urgent' });
   }
+  if (counts.newSeason) items.push({ key: `season-${counts.newSeason.id}`, area: 'seasons', text: `${counts.newSeason.name} has started. Make it the current season?`, href: `${base}/seasons`, tone: 'normal' });
   if (counts.pendingApplications) items.push({ key: 'applications', area: 'members', count: counts.pendingApplications, text: `${plural(counts.pendingApplications, 'application', 'applications')} to approve`, href: `${base}/people?tab=applications`, tone: 'urgent' });
   if (counts.receiptsToReview) items.push({ key: 'receipts', area: 'finance', count: counts.receiptsToReview, text: `${plural(counts.receiptsToReview, 'bank transfer receipt', 'bank transfer receipts')} to check`, href: `${base}/finance`, tone: 'urgent' });
   if (counts.claimsToReview) items.push({ key: 'claims', area: 'finance', count: counts.claimsToReview, text: `${plural(counts.claimsToReview, 'expense claim', 'expense claims')} to review`, href: `${base}/finance?tab=claims`, tone: 'urgent' });

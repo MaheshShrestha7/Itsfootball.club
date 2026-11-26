@@ -4,6 +4,9 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { logPlatformAction } from '@/lib/platform-audit';
 import { newClubRow } from '@/lib/new-club';
 import { isUuid, newId } from '@/lib/ids';
+import { CLUB_FEATURES, configWithFeaturesOff, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
+import { getDefaultClubScoreRules } from '@/lib/clubscore-defaults';
+import { stableId } from '@/lib/ids';
 
 // Mission Control -> Clubs -> New club (components/admin/platform/NewClubForm.tsx).
 //   POST { name, short_name, slug, colours, logo_url, stadium_*, contact_email, contact_phone }
@@ -13,6 +16,9 @@ import { isUuid, newId } from '@/lib/ids';
 // Operators and Super admins only.
 //   POST { action: 'hidden', clubId, hidden }   the "Test club" switch in the club panel: sets clubs.config.hidden, which
 //                              keeps the club out of lists, the sitemap and search (lib/public-tournaments.ts)
+//   POST { action: 'feature', clubId, feature, on }   a switch in the club panel's Features: sets clubs.config.features_off,
+//                              the same setting as the club's own Admin -> Features page (lib/club-features.ts)
+//   POST { action: 'clubscore', clubId, on }   the ClubScore switch there: clubscore_rules.is_active
 
 export async function POST(req: NextRequest) {
   const auth = await requirePlatformAdmin(req, true);
@@ -21,6 +27,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Nothing was sent.' }, { status: 400 });
   if (body.action === 'hidden') return setHidden(auth, body);
+  if (body.action === 'feature') return setFeature(auth, body);
+  if (body.action === 'clubscore') return setClubScore(auth, body);
 
   const made = newClubRow(body, { id: newId(), ownerId: auth.userId });
   if ('error' in made) return NextResponse.json({ error: made.error }, { status: 400 });
@@ -72,4 +80,58 @@ async function setHidden(auth: Extract<AuthCheck, { ok: true }>, body: { clubId?
     summary: body.hidden ? `Made ${club.name} (/${club.slug}) a hidden test club` : `Made ${club.name} (/${club.slug}) public again`,
   });
   return NextResponse.json({ ok: true, hidden: body.hidden });
+}
+
+async function setFeature(auth: Extract<AuthCheck, { ok: true }>, body: { clubId?: unknown; feature?: unknown; on?: unknown }) {
+  const clubId = body?.clubId;
+  const feature = CLUB_FEATURES.find(f => f.key === body?.feature);
+  if (!isUuid(clubId) || !feature || typeof body?.on !== 'boolean') return NextResponse.json({ error: 'Send a club, a feature and on true or false.' }, { status: 400 });
+  const db = getServiceClient();
+  if (!db) return NextResponse.json({ error: 'Not configured on the server.' }, { status: 503 });
+
+  const { data: club, error: readErr } = await db.from('clubs').select('name, slug, config').eq('id', clubId).maybeSingle();
+  if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
+  if (!club) return NextResponse.json({ error: 'Club not found.' }, { status: 404 });
+  const current = featuresOff(club).filter(k => k !== feature.key);
+  const off: ClubFeatureKey[] = body.on ? current : [...current, feature.key];
+  // Merged into the club's other settings (time zone, test club...), never replacing them
+  const config = configWithFeaturesOff(club.config, off);
+  const { error } = await db.from('clubs').update({ config, updated_at: new Date().toISOString() }).eq('id', clubId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await logPlatformAction(db, auth, {
+    clubId,
+    action: body.on ? 'club_feature_on' : 'club_feature_off',
+    table: 'clubs',
+    targetId: clubId,
+    summary: `Switched ${feature.label} ${body.on ? 'on' : 'off'} for ${club.name} (/${club.slug})`,
+  });
+  return NextResponse.json({ ok: true, featuresOff: featuresOff({ config }) });
+}
+
+async function setClubScore(auth: Extract<AuthCheck, { ok: true }>, body: { clubId?: unknown; on?: unknown }) {
+  const clubId = body?.clubId;
+  if (!isUuid(clubId) || typeof body?.on !== 'boolean') return NextResponse.json({ error: 'Send a club and on true or false.' }, { status: 400 });
+  const db = getServiceClient();
+  if (!db) return NextResponse.json({ error: 'Not configured on the server.' }, { status: 503 });
+
+  const { data: club, error: readErr } = await db.from('clubs').select('name, slug').eq('id', clubId).maybeSingle();
+  if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
+  if (!club) return NextResponse.json({ error: 'Club not found.' }, { status: 404 });
+  const { data: updated, error } = await db.from('clubscore_rules').update({ is_active: body.on }).eq('club_id', clubId).select('id');
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!updated?.length) {
+    // A club still on the default rules has no row yet: save the defaults, with the id the app would give it (lib/supabase/sync.ts)
+    const { error: insertErr } = await db.from('clubscore_rules').insert({ ...getDefaultClubScoreRules(clubId), id: stableId(`clubscore-rules-${clubId}`), is_active: body.on });
+    if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+  }
+
+  await logPlatformAction(db, auth, {
+    clubId,
+    action: body.on ? 'club_feature_on' : 'club_feature_off',
+    table: 'clubscore_rules',
+    targetId: clubId,
+    summary: `Switched ClubScore ${body.on ? 'on' : 'off'} for ${club.name} (/${club.slug})`,
+  });
+  return NextResponse.json({ ok: true, on: body.on });
 }

@@ -312,11 +312,11 @@ body.admin-drawer-open { overflow: clip; }
 /* Heading, one line about the screen, and the screen's own actions */
 .admin-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-lg); }
 .admin-head > div:first-child { min-width: 0; }
-.admin-head p { margin: var(--space-2xs) 0 0; max-width: 65ch; color: var(--color-ink-2); font-size: var(--text-sm); }
+.admin-head p:not(dialog p) { margin: var(--space-2xs) 0 0; max-width: 65ch; color: var(--color-ink-2); font-size: var(--text-sm); }
 .admin-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); }
 @media (max-width: 60rem) {
   .admin-head { gap: var(--space-sm); margin-bottom: var(--space-md); }
-  .admin-head p { display: none; }
+  .admin-head p:not(dialog p) { display: none; }
 }
 
 /* Tabs: an underlined row that scrolls sideways on a phone */
@@ -547,6 +547,14 @@ button.admin-dash-link { border: 0; background: none; padding-inline: 0; font-fa
 .admin-dash-queue :is(a, .admin-queue-row) { display: grid; width: 100%; border: 0; background: none; font: inherit; text-align: left; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: var(--space-sm); min-height: 48px; padding: var(--space-xs); border-radius: var(--radius-control); color: var(--color-ink); text-decoration: none; font-size: var(--text-sm); -webkit-tap-highlight-color: transparent; transition: background-color var(--dur-micro) var(--ease-out); }
 .admin-dash-queue :is(a, button.admin-queue-row):active { background: var(--color-paper-3); }
 .admin-dash-queue button.admin-queue-row { cursor: pointer; }
+/* AUTO-7: the new-season line answers itself (Not yet / Make current); buttons drop under the text on phones */
+.admin-season-row small { display: block; color: var(--color-muted); font-size: var(--text-xs); }
+.admin-season-acts { display: flex; flex-wrap: wrap; gap: var(--space-2xs, .4rem); justify-content: flex-end; }
+.admin-season-acts .btn { min-height: 40px; padding: .35rem .8rem; font-size: var(--text-xs); }
+@media (max-width: 560px) {
+  .admin-dash-queue .admin-season-row { grid-template-columns: 32px minmax(0, 1fr); }
+  .admin-season-acts { grid-column: 2; justify-content: flex-start; }
+}
 .admin-dash-mark { display: grid; place-items: center; color: var(--color-muted); }
 .admin-dash-queue .is-urgent .admin-dash-mark { color: var(--color-danger); }
 .admin-dash-go { color: var(--color-muted); font-size: var(--text-xs); font-weight: 600; }
@@ -1492,3 +1500,16 @@ a.admin-tab { text-decoration: none; }
   .bday-row-2 { grid-template-columns: 1fr; }
   .bday-preview-stage { max-height: 360px; }
 }
+/* Social media > Accounts (phase 2) */
+.social-accs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-md); }
+.social-acc { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); padding: var(--space-md); }
+.social-acc-top { display: flex; align-items: center; gap: var(--space-sm); }
+.social-acc-top h3 { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
+.social-acc-top p, .social-acc-sub { margin: 0; font-size: var(--text-xs); color: var(--color-muted); overflow-wrap: anywhere; }
+.social-acc-mark { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--radius-control); font-weight: 800; color: #fff; }
+.social-acc-mark.is-fb { background: #1877F2; }
+.social-acc-mark.is-ig { background: linear-gradient(45deg, #F58529, #DD2A7B 50%, #8134AF); }
+.social-acc ul { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--space-3xs); font-size: var(--text-sm); color: var(--color-ink-2); }
+.social-acc-pick { display: grid; gap: var(--space-xs); width: 100%; margin: 0; padding: 0; border: 0; }
+.social-acc-pick legend { margin-bottom: var(--space-2xs); font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.social-acc-foot { display: flex; flex-wrap: wrap; gap: var(--space-xs); width: 100%; margin-top: auto; padding-top: var(--space-sm); border-top: 1px solid var(--color-rule); }

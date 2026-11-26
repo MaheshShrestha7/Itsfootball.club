@@ -27,6 +27,7 @@ import FeeRequestsTab from '@/components/admin/FeeRequestsTab';
 import ExpenseClaimsTab from '@/components/admin/ExpenseClaimsTab';
 import { isLedgerRow } from '@/lib/fee-requests';
 import { siteToday } from '@/lib/member-prices';
+import { featureOn } from '@/lib/club-features';
 
 type Tab = 'overview' | 'income' | 'expenses' | 'requests' | 'claims' | 'settings';
 const TAB_IDS: Tab[] = ['overview', 'income', 'expenses', 'requests', 'claims', 'settings'];
@@ -157,7 +158,7 @@ export default function FinancePage({ params }: { params: Promise<{ clubSlug: st
       )}
 
       <div role="tablist" aria-label="Finance" className="admin-tabs">
-        {TABS.map(t => (
+        {TABS.filter(t => t.id !== 'claims' || featureOn(club, 'expense_claims')).map(t => (
           <button data-view-ok key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className="admin-tab">
             {t.label}
             {t.id === 'income' && payments.some(p => p.status === 'awaiting_review') && (
@@ -448,8 +449,17 @@ function IncomeTab({ club, db, currency, money, load, flash, payments, plans, me
       flash('ok', res?.sent ? 'Payment verified. The sponsor was emailed a thank-you with the link to their sponsor page.' : 'Payment verified. Put them on the site from the Sponsors page.');
       return load();
     }
-    flash('ok', kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
-      : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.');
+    // Memberships, fee requests and shop orders: the payer gets a receipt (AUTO-4), best effort
+    const receipt = ['membership_signup', 'membership_renewal', 'fee_request', 'shop_order'].includes(kind)
+      ? await fetch('/api/payments/tickets-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAccessToken()}` },
+        body: JSON.stringify({ clubId: club.id, paymentId: p.id }),
+      }).then(r => r.json()).catch(() => null)
+      : null;
+    const emailed = receipt?.sent ? ' A receipt was emailed to them.' : '';
+    flash('ok', (kind === 'membership_signup' ? 'Payment verified. Approve the application in Members (the Application button opens it).'
+      : kind.startsWith('membership') ? 'Payment verified and membership extended.' : 'Payment verified.') + emailed);
     load();
   };
   const reject = async (p: Payment) => {

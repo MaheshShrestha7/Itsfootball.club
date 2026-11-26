@@ -12,6 +12,7 @@ import { Crest } from '@/components/admin/platform/McArt';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { platformApi, useCanChange } from '@/components/admin/platform/api';
 import { isHiddenClub } from '@/lib/public-tournaments';
+import { CLUB_FEATURES, CLUBSCORE_FEATURE, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
 import { notify } from '@/components/ConfirmDialog';
 import { X, Mail, Users, ExternalLink, Shield, Link2, Check } from 'lucide-react';
 
@@ -56,13 +57,25 @@ export default function ClubDetailDrawer({
   // The "Test club" switch: clubs.config.hidden (undefined while loading)
   const [hiddenFor, setHiddenFor] = React.useState<{ id: string; hidden: boolean } | null>(null);
   const [hiddenSaving, setHiddenSaving] = React.useState(false);
+  // The club's Features switches: clubs.config.features_off, the same list as its Admin -> Features page
+  const [offFor, setOffFor] = React.useState<{ id: string; off: ClubFeatureKey[] } | null>(null);
+  const [featureSaving, setFeatureSaving] = React.useState<ClubFeatureKey | 'clubscore' | null>(null);
+  // ClubScore's own switch (clubscore_rules.is_active; no row = the default rules, which are on)
+  const [scoreFor, setScoreFor] = React.useState<{ id: string; on: boolean } | null>(null);
   React.useEffect(() => {
     const client = getSupabaseClient();
     if (!client || !club) return;
     client.from('clubs').select('config').eq('id', club.id).maybeSingle()
-      .then(({ data }) => setHiddenFor({ id: club.id, hidden: isHiddenClub(data) }));
+      .then(({ data }) => {
+        setHiddenFor({ id: club.id, hidden: isHiddenClub(data) });
+        setOffFor({ id: club.id, off: featuresOff(data) });
+      });
+    client.from('clubscore_rules').select('is_active').eq('club_id', club.id).limit(1).maybeSingle()
+      .then(({ data }) => setScoreFor({ id: club.id, on: data?.is_active !== false }));
   }, [club]);
   const hidden = club && hiddenFor?.id === club.id ? hiddenFor.hidden : undefined;
+  const off = club && offFor?.id === club.id ? offFor.off : undefined;
+  const scoreOn = club && scoreFor?.id === club.id ? scoreFor.on : undefined;
 
   if (!club) return null;
 
@@ -93,6 +106,24 @@ export default function ClubDetailDrawer({
     showToast(res.hidden
       ? `${club.name} is now a hidden test club. Lists and search drop it within a few minutes; direct links still work.`
       : `${club.name} is public again. It shows in club lists and search within a few minutes.`);
+  };
+
+  const toggleFeature = async (key: ClubFeatureKey, on: boolean) => {
+    setFeatureSaving(key);
+    const res = await platformApi<{ featuresOff?: ClubFeatureKey[] }>('clubs', { action: 'feature', clubId: club.id, feature: key, on });
+    setFeatureSaving(null);
+    if (res.error) return showToast(res.error);
+    setOffFor({ id: club.id, off: res.featuresOff || [] });
+    showToast(`${CLUB_FEATURES.find(f => f.key === key)?.label} is ${on ? 'on' : 'off'} for ${club.name}.`);
+  };
+
+  const toggleClubScore = async (on: boolean) => {
+    setFeatureSaving('clubscore');
+    const res = await platformApi<{ on?: boolean }>('clubs', { action: 'clubscore', clubId: club.id, on });
+    setFeatureSaving(null);
+    if (res.error) return showToast(res.error);
+    setScoreFor({ id: club.id, on });
+    showToast(`ClubScore is ${on ? 'on' : 'off'} for ${club.name}.`);
   };
 
   // The web address already names this club (?tab=…&club=<id>), so the link opens it again
@@ -165,6 +196,33 @@ export default function ClubDetailDrawer({
             </>
           }
           beforeClosing={<>
+            {off !== undefined && (
+              <section className="mc-cp-sec" aria-labelledby="mc-cp-features">
+                <h3 id="mc-cp-features">Features</h3>
+                <p className="mc-muted" style={{ marginBottom: 10 }}>
+                  On by default. Off hides it from the club&apos;s site and admin menu; nothing is deleted. The club&apos;s admins see the same switches under Admin, Features.
+                </p>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                  {CLUB_FEATURES.map(f => {
+                    const on = !off.includes(f.key);
+                    return (
+                      <li key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <span>{f.label}{!on && <span className="mc-muted"> (off)</span>}</span>
+                        <button type="button" className="mc-switch" role="switch" aria-checked={on} aria-label={`${f.label} for ${club.name}`}
+                          disabled={featureSaving !== null} onClick={() => toggleFeature(f.key, !on)} />
+                      </li>
+                    );
+                  })}
+                  {scoreOn !== undefined && (
+                    <li style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <span>{CLUBSCORE_FEATURE.label}{!scoreOn && <span className="mc-muted"> (off)</span>}</span>
+                      <button type="button" className="mc-switch" role="switch" aria-checked={scoreOn} aria-label={`ClubScore for ${club.name}`}
+                        disabled={featureSaving !== null} onClick={() => toggleClubScore(!scoreOn)} />
+                    </li>
+                  )}
+                </ul>
+              </section>
+            )}
             {hidden !== undefined && (
               <section className="mc-cp-sec" aria-labelledby="mc-cp-test">
                 <h3 id="mc-cp-test">Test club</h3>

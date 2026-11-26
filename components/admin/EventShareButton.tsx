@@ -5,6 +5,7 @@ import { Copy, Download, Share2, X } from 'lucide-react';
 import { drawEventFlyer } from '@/lib/event-flyer';
 import { useGroundSponsors } from '@/components/GroundSponsors';
 import type { Club, ClubEvent } from '@/lib/supabase/types';
+import SocialPostButton, { type SocialPostProps } from './SocialPostButton';
 
 /** The event's own flyer when it has one, else a Post-size flyer drawn from the event */
 async function eventImage(event: ClubEvent, club: Pick<Club, 'name' | 'logo_url' | 'primary_color'>, sponsors: { src?: string; name: string }[]): Promise<Blob> {
@@ -19,13 +20,14 @@ async function eventImage(event: ClubEvent, club: Pick<Club, 'name' | 'logo_url'
 
 // "Share from my phone" for an event post in Admin > Social media: the flyer, the caption to edit and
 // copy, and the phone's share sheet (downloads where the browser can't share files)
-export default function EventShareButton({ event, club, caption, onCaption, onShared, trigger }: {
+export default function EventShareButton({ event, club, caption, onCaption, onShared, trigger, post }: {
   event: ClubEvent;
   club: Pick<Club, 'id' | 'name' | 'logo_url' | 'primary_color'>;
   caption: string;
   onCaption: (caption: string) => void;
   onShared: () => void;
   trigger: (open: () => void) => React.ReactNode;
+  post?: SocialPostProps;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
@@ -104,6 +106,7 @@ export default function EventShareButton({ event, club, caption, onCaption, onSh
             onChange={e => onCaption(e.target.value)} style={{ width: '100%', resize: 'vertical', fontSize: '0.88rem' }} />
           <p className="text-note" style={{ margin: '0.3rem 0 0', fontSize: '0.78rem' }}>Share copies the caption too. Paste it in when the app opens.</p>
         </div>
+        {post && <SocialPostButton image={image?.blob ?? null} {...post} />}
         <div className="confirm-dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={download} disabled={!image}><Download size={16} aria-hidden="true" /> Download</button>
           <button type="button" className="btn btn-primary" onClick={share} disabled={!image}><Share2 size={16} aria-hidden="true" /> Share</button>
