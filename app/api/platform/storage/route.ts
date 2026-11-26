@@ -44,9 +44,9 @@ export async function GET(req: NextRequest) {
     prefixes = await listR2Folders('clubs/');
   } catch (e) {
     // Show R2's own reason (wrong bucket, key or account) to the platform admin instead of a bare 500
-    const err = e as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    const err = e as { name?: string; message?: string; status?: number };
     console.error('R2 list failed:', err.name, err.message);
-    return NextResponse.json({ error: `R2 refused the request: ${err.name || 'Error'} (${err.$metadata?.httpStatusCode ?? 'no status'}) ${err.message || ''}`.trim() }, { status: 502 });
+    return NextResponse.json({ error: `R2 refused the request: ${err.name || 'Error'} (${err.status || 'no status'}) ${err.message || ''}`.trim() }, { status: 502 });
   }
   const ids = prefixes.map(p => p.split('/')[1]).filter(isUuid);
   const alive = await existing(db, ids);

@@ -1,5 +1,7 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { AwsClient } from 'aws4fetch';
+
+// Cloudflare R2 over its S3 API, signed with aws4fetch. Not the AWS SDK: its Node build reads
+// ~/.aws config files with fs.readFile, which Workers don't have ("[unenv] fs.readFile is not implemented").
 
 const accountId = process.env.R2_ACCOUNT_ID;
 const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -8,6 +10,8 @@ const bucketName = process.env.R2_BUCKET_NAME || 'itsfootball-assets';
 const publicDomain = process.env.R2_PUBLIC_DOMAIN;
 // Bucket with no public domain, for receipts and other private files
 const privateBucketName = process.env.R2_PRIVATE_BUCKET;
+// Leave unset in production; lets the R2 code be tested against a local S3-compatible server
+const endpoint = (process.env.R2_ENDPOINT || `https://${accountId}.r2.cloudflarestorage.com`).replace(/\/$/, '');
 
 export const isR2Configured = Boolean(
   accountId &&
@@ -16,71 +20,64 @@ export const isR2Configured = Boolean(
   !accountId.includes('your-cloudflare')
 );
 
-let r2Client: S3Client | null = null;
-
-export function getR2Client(): S3Client | null {
-  if (!isR2Configured) return null;
-  
-  if (!r2Client && accountId && accessKeyId && secretAccessKey) {
-    r2Client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
+/** An R2 error response: `name` is R2's code (NoSuchBucket, AccessDenied, ...), `status` the HTTP status */
+export class R2Error extends Error {
+  constructor(public name: string, message: string, public status: number) {
+    super(message);
   }
+}
+
+let r2Client: AwsClient | null = null;
+function client(): AwsClient | null {
+  if (!isR2Configured) return null;
+  r2Client ??= new AwsClient({ accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey!, service: 's3', region: 'auto' });
   return r2Client;
 }
 
-/**
- * Generate a pre-signed PUT URL for secure, direct-from-client uploads to Cloudflare R2
- */
-export async function getPresignedUploadUrl(key: string, contentType: string, expiresIn = 3600): Promise<{ uploadUrl: string; publicUrl: string } | null> {
-  const client = getR2Client();
-  if (!client) return null;
+function objectUrl(bucket: string, key = ''): URL {
+  const path = key.split('/').map(encodeURIComponent).join('/');
+  return new URL(`${endpoint}/${bucket}/${path}`);
+}
 
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    ContentType: contentType,
-  });
+function xmlText(xml: string, tag: string): string | undefined {
+  const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+  return m ? unescapeXml(m[1]) : undefined;
+}
 
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn });
-  const publicUrl = publicDomain 
-    ? `${publicDomain.replace(/\/$/, '')}/${key}` 
+function unescapeXml(s: string): string {
+  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+
+async function send(url: URL, init: RequestInit): Promise<Response> {
+  const c = client();
+  if (!c) throw new R2Error('NotConfigured', 'R2 is not configured', 0);
+  const res = await c.fetch(url.toString(), init);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new R2Error(xmlText(body, 'Code') || `HTTP${res.status}`, xmlText(body, 'Message') || res.statusText, res.status);
+  }
+  return res;
+}
+
+function publicUrlFor(key: string): string {
+  return publicDomain
+    ? `${publicDomain.replace(/\/$/, '')}/${key}`
     : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${key}`;
-
-  return { uploadUrl, publicUrl };
 }
 
 /**
  * Direct server-side upload of a buffer to Cloudflare R2
  */
-export async function uploadBufferToR2(key: string, buffer: Buffer, contentType: string): Promise<string | null> {
-  const client = getR2Client();
-  if (!client) return null;
-
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-  });
-
-  await client.send(command);
-
-  return publicDomain 
-    ? `${publicDomain.replace(/\/$/, '')}/${key}` 
-    : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${key}`;
+export async function uploadBufferToR2(key: string, buffer: Buffer | Uint8Array, contentType: string): Promise<string | null> {
+  if (!client()) return null;
+  await send(objectUrl(bucketName, key), { method: 'PUT', body: buffer as BodyInit, headers: { 'Content-Type': contentType } });
+  return publicUrlFor(key);
 }
 
 /** Delete an object from the public bucket; false when R2 isn't configured */
 export async function deleteR2Object(key: string): Promise<boolean> {
-  const client = getR2Client();
-  if (!client) return false;
-  await client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: key }));
+  if (!client()) return false;
+  await send(objectUrl(bucketName, key), { method: 'DELETE' });
   return true;
 }
 
@@ -95,57 +92,68 @@ export const isR2PrivateConfigured = isR2Configured && Boolean(privateBucketName
 
 /** Upload to the private bucket; returns the key, or null when it isn't configured */
 export async function putPrivateObject(key: string, body: Uint8Array, contentType: string): Promise<string | null> {
-  const client = getR2Client();
-  if (!client || !privateBucketName) return null;
-  await client.send(new PutObjectCommand({ Bucket: privateBucketName, Key: key, Body: body, ContentType: contentType }));
+  if (!client() || !privateBucketName) return null;
+  await send(objectUrl(privateBucketName, key), { method: 'PUT', body: body as BodyInit, headers: { 'Content-Type': contentType } });
   return key;
 }
 
 /** Whether the private bucket holds `key` (false when it isn't configured or the object is missing) */
 export async function privateObjectExists(key: string): Promise<boolean> {
-  const client = getR2Client();
-  if (!client || !privateBucketName) return false;
+  if (!client() || !privateBucketName) return false;
   try {
-    await client.send(new HeadObjectCommand({ Bucket: privateBucketName, Key: key }));
+    await send(objectUrl(privateBucketName, key), { method: 'HEAD' });
     return true;
   } catch (e) {
-    const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
-    if (status === 404) return false;
+    if (e instanceof R2Error && e.status === 404) return false;
     throw e;
   }
 }
 
 /** Short-lived download link for a private object */
 export async function getPrivateObjectUrl(key: string, expiresIn = 300): Promise<string | null> {
-  const client = getR2Client();
-  if (!client || !privateBucketName) return null;
-  return getSignedUrl(client, new GetObjectCommand({ Bucket: privateBucketName, Key: key }), { expiresIn });
+  const c = client();
+  if (!c || !privateBucketName) return null;
+  const url = objectUrl(privateBucketName, key);
+  url.searchParams.set('X-Amz-Expires', String(expiresIn));
+  const signed = await c.sign(url.toString(), { method: 'GET', aws: { signQuery: true } });
+  return signed.url;
+}
+
+/** The parts of a ListObjectsV2 reply we use */
+export function parseListXml(xml: string): { prefixes: string[]; files: { key: string; size: number }[]; next?: string } {
+  const prefixes = [...xml.matchAll(/<CommonPrefixes>([\s\S]*?)<\/CommonPrefixes>/g)]
+    .map(m => xmlText(m[1], 'Prefix') || '').filter(Boolean);
+  const files = [...xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)]
+    .map(m => ({ key: xmlText(m[1], 'Key') || '', size: Number(xmlText(m[1], 'Size') || 0) }))
+    .filter(f => f.key);
+  const next = xmlText(xml, 'IsTruncated') === 'true' ? xmlText(xml, 'NextContinuationToken') : undefined;
+  return { prefixes, files, next };
+}
+
+async function listPages(prefix: string, delimiter?: string) {
+  const out: ReturnType<typeof parseListXml>[] = [];
+  let token: string | undefined;
+  do {
+    const url = objectUrl(bucketName);
+    url.searchParams.set('list-type', '2');
+    url.searchParams.set('prefix', prefix);
+    if (delimiter) url.searchParams.set('delimiter', delimiter);
+    if (token) url.searchParams.set('continuation-token', token);
+    const page = parseListXml(await (await send(url, { method: 'GET' })).text());
+    out.push(page);
+    token = page.next;
+  } while (token);
+  return out;
 }
 
 /** The "folders" directly under `prefix` in the public bucket ('clubs/' -> ['clubs/<id>/', ...]) */
 export async function listR2Folders(prefix: string): Promise<string[]> {
-  const client = getR2Client();
-  if (!client) return [];
-  const out: string[] = [];
-  let token: string | undefined;
-  do {
-    const res = await client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, Delimiter: '/', ContinuationToken: token }));
-    out.push(...(res.CommonPrefixes || []).map(p => p.Prefix || '').filter(Boolean));
-    token = res.IsTruncated ? res.NextContinuationToken : undefined;
-  } while (token);
-  return out;
+  if (!client()) return [];
+  return (await listPages(prefix, '/')).flatMap(p => p.prefixes);
 }
 
 /** Every file under `prefix` in the public bucket, with its size in bytes */
 export async function listR2Files(prefix: string): Promise<{ key: string; size: number }[]> {
-  const client = getR2Client();
-  if (!client) return [];
-  const out: { key: string; size: number }[] = [];
-  let token: string | undefined;
-  do {
-    const res = await client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, ContinuationToken: token }));
-    out.push(...(res.Contents || []).filter(o => o.Key).map(o => ({ key: o.Key!, size: o.Size || 0 })));
-    token = res.IsTruncated ? res.NextContinuationToken : undefined;
-  } while (token);
-  return out;
+  if (!client()) return [];
+  return (await listPages(prefix)).flatMap(p => p.files);
 }
