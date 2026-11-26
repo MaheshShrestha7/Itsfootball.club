@@ -135,8 +135,8 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
   };
 
   // Straight to the club's Page and Instagram; the server marks it, this screen catches up
-  const postNow = async (p: SocialPost, image: Blob) => {
-    const r = await publishSocial({ clubId: club.id, key: p.key, caption: captionOf(p), by: name, image });
+  const postNow = async (key: string, caption: string, image: Blob) => {
+    const r = await publishSocial({ clubId: club.id, key, caption, by: name, image });
     return { note: publishSummary(r), ok: r.status === 'shared' };
   };
 
@@ -146,7 +146,7 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
     );
     const common = {
       caption: captionOf(p), onCaption: (c: string) => setEdits(e => ({ ...e, [p.key]: c })), onShared: () => void setMark(p, 'shared'), trigger,
-      post: connected ? { to: postTo, onPost: (image: Blob) => postNow(p, image), onDone: () => void setMark(p, 'shared') } : undefined,
+      post: connected ? { to: postTo, onPost: (image: Blob) => postNow(p.key, captionOf(p), image), onDone: () => void setMark(p, 'shared') } : undefined,
     };
     if (p.birthday) return <BirthdayShareButton player={p.birthday} club={club} {...common} />;
     if (p.event) return <EventShareButton event={p.event} club={club} {...common} />;
@@ -222,6 +222,11 @@ export default function AdminSocialPage({ params }: { params: Promise<{ clubSlug
               club={club}
               caption={pickedCaption ?? defaultPickedCaption}
               onCaption={setPickedCaption}
+              post={connected ? {
+                to: postTo,
+                onPost: image => postNow(`birthday:${pickedBirthday.memberId}:${pickedBirthday.year}`, pickedCaption ?? defaultPickedCaption, image),
+                onDone: () => void mark(`birthday:${pickedBirthday.memberId}:${pickedBirthday.year}`, 'shared', pickedCaption ?? defaultPickedCaption),
+              } : undefined}
               trigger={open => (
                 <button type="button" className="btn btn-primary btn-sm" onClick={open}>
                   <Cake size={14} aria-hidden="true" /> Make birthday card
