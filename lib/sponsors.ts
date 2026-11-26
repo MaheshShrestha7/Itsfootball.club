@@ -504,3 +504,10 @@ export function groundPlacesFor<
     return one ? oneSponsorFor(list, config?.[one.configKey])?.id === sponsor.id : list.some(s => s.id === sponsor.id);
   });
 }
+
+/** The sponsor strip on a club's match graphics: on-site club sponsors (not event ones), biggest tier
+ *  first, up to 9; Platinum and Gold get the bigger tiles */
+export function matchCardSponsors(sponsors: Sponsor[], clubId: string): { src?: string; name: string; top: boolean }[] {
+  return sortSponsorsByTier(sponsors.filter(s => s.club_id === clubId && !s.event_id && isSponsorOnSite(s)))
+    .slice(0, 9).map(s => ({ src: s.logo_url || undefined, name: s.name, top: s.tier === 'platinum' || s.tier === 'gold' }));
+}

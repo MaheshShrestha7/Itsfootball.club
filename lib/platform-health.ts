@@ -103,6 +103,7 @@ export const MIGRATION_PROBES: { file: string; table: string; column?: string }[
   { file: '20261176_event_writeup.sql', table: 'events', column: 'writeup_note' },
   { file: '20261177_mission_control_features.sql', table: 'platform_support_access' },
   { file: '20261187_social_posts.sql', table: 'social_post_marks' },
+  { file: '20261188_social_accounts.sql', table: 'social_post_marks', column: 'results' },
 ];
 
 /** Postgres and PostgREST codes for "no such table / column"; anything else is a hiccup, not a missing migration */

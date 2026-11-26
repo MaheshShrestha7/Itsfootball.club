@@ -7,8 +7,9 @@ import type { Club, Match, MatchEvent } from '@/lib/supabase/types';
 import { matchPath } from '@/lib/slugs';
 import { tagLink } from '@/lib/visit-source';
 import { useClub } from '@/lib/club-context';
-import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
+import { matchCardSponsors } from '@/lib/sponsors';
 import { useOneSponsor } from './GroundSponsors';
+import SocialPostButton, { type SocialPostProps } from './admin/SocialPostButton';
 import { Kaushan_Script } from 'next/font/google';
 
 // The Player of the Match name in the same brush script as the free Player of the Match maker
@@ -23,7 +24,7 @@ const motmFont = Kaushan_Script({ subsets: ['latin'], weight: '400', display: 's
 // motm: the Player of the Match, as the public site names them: adds a Player of the Match card
 // subs: the substitutes under the starters on the Team list card, as the match page lists them
 // caption (Admin > Social media): the post's words, editable here, copied and handed to the share sheet
-export default function MatchShareButton({ match, club, hideScore = false, events, photos, subs, motm, trigger, autoOpen, caption, onCaption, initialKind, headline, onShared }: {
+export default function MatchShareButton({ match, club, hideScore = false, events, photos, subs, motm, trigger, autoOpen, caption, onCaption, initialKind, headline, onShared, post }: {
   match: Match;
   club: Club;
   hideScore?: boolean;
@@ -44,6 +45,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   headline?: [string, string];
   /** The share sheet finished (the person picked an app) */
   onShared?: () => void;
+  /** Posting straight to the club's connected Facebook Page and Instagram (Admin > Social media) */
+  post?: SocialPostProps;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<CardKind>(initialKind || 'score');
@@ -56,11 +59,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
   // The club's sponsors on the site, biggest tier first, up to 9 (SP-F2); "Show sponsors" leaves them off
   const { sponsors } = useClub();
   const [showSponsors, setShowSponsors] = useState(true);
-  const sponsorKey = JSON.stringify(sortSponsorsByTier(sponsors.filter(s => s.club_id === club.id && !s.event_id && isSponsorOnSite(s)))
-    .slice(0, 9).map(s => [s.logo_url || '', s.name, s.tier === 'platinum' || s.tier === 'gold']));
-  // Platinum and Gold get the bigger tiles
-  const cardSponsors = useMemo(() => (JSON.parse(sponsorKey) as [string, string, boolean][])
-    .map(([src, name, top]) => ({ src: src || undefined, name, top })), [sponsorKey]);
+  const sponsorKey = JSON.stringify(matchCardSponsors(sponsors, club.id));
+  const cardSponsors = useMemo(() => JSON.parse(sponsorKey) as ReturnType<typeof matchCardSponsors>, [sponsorKey]);
   // One sponsor on the Player of the Match card (a package with the "Player of the Match graphic" tick),
   // looked up once the dialog opens: Admin, Matches has a Share button on every fixture
   const potmSponsor = useOneSponsor(open ? club : undefined, 'potm_graphic');
@@ -229,6 +229,8 @@ export default function MatchShareButton({ match, club, hideScore = false, event
             <p className="text-note" style={{ margin: '0.3rem 0 0', fontSize: '0.78rem' }}>Share copies the caption too. Paste it in when the app opens.</p>
           </div>
         )}
+
+        {post && <SocialPostButton image={image?.blob ?? null} {...post} />}
 
         <div className="confirm-dialog-actions">
           <button type="button" className="btn btn-secondary" onClick={download} disabled={!image}>

@@ -1500,3 +1500,16 @@ a.admin-tab { text-decoration: none; }
   .bday-row-2 { grid-template-columns: 1fr; }
   .bday-preview-stage { max-height: 360px; }
 }
+/* Social media > Accounts (phase 2) */
+.social-accs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-md); }
+.social-acc { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-sm); padding: var(--space-md); }
+.social-acc-top { display: flex; align-items: center; gap: var(--space-sm); }
+.social-acc-top h3 { margin: 0; font-size: var(--text-md); font-weight: 600; color: var(--color-ink); }
+.social-acc-top p, .social-acc-sub { margin: 0; font-size: var(--text-xs); color: var(--color-muted); overflow-wrap: anywhere; }
+.social-acc-mark { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: var(--radius-control); font-weight: 800; color: #fff; }
+.social-acc-mark.is-fb { background: #1877F2; }
+.social-acc-mark.is-ig { background: linear-gradient(45deg, #F58529, #DD2A7B 50%, #8134AF); }
+.social-acc ul { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--space-3xs); font-size: var(--text-sm); color: var(--color-ink-2); }
+.social-acc-pick { display: grid; gap: var(--space-xs); width: 100%; margin: 0; padding: 0; border: 0; }
+.social-acc-pick legend { margin-bottom: var(--space-2xs); font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.social-acc-foot { display: flex; flex-wrap: wrap; gap: var(--space-xs); width: 100%; margin-top: auto; padding-top: var(--space-sm); border-top: 1px solid var(--color-rule); }

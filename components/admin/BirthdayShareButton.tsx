@@ -16,6 +16,7 @@ import { useClub } from '@/lib/club-context';
 import { isSponsorOnSite, sortSponsorsByTier } from '@/lib/sponsors';
 import type { CardFormat } from '@/lib/share-card';
 import type { Club } from '@/lib/supabase/types';
+import SocialPostButton, { type SocialPostProps } from './SocialPostButton';
 
 // "Share from my phone" for a player birthday card in Admin > Social media:
 // 7 pro-level club-branded variations, 4:5 / 9:16 / 1:1 formats, club colour palette switcher,
@@ -27,6 +28,7 @@ export default function BirthdayShareButton({
   onCaption,
   onShared,
   trigger,
+  post,
 }: {
   player: BirthdayCardInput;
   club: Pick<Club, 'id' | 'slug' | 'name' | 'logo_url' | 'primary_color' | 'secondary_color'>;
@@ -34,6 +36,7 @@ export default function BirthdayShareButton({
   onCaption: (caption: string) => void;
   onShared?: () => void;
   trigger: (open: () => void) => React.ReactNode;
+  post?: SocialPostProps;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -408,6 +411,7 @@ export default function BirthdayShareButton({
               />
             </div>
 
+            {post && <SocialPostButton image={image?.blob ?? null} {...post} />}
             <div className="confirm-dialog-actions" style={{ marginTop: '0.5rem' }}>
               <button type="button" className="btn btn-secondary" onClick={download} disabled={!image}>
                 <Download size={16} aria-hidden="true" /> Download PNG
