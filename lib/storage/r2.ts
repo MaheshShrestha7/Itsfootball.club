@@ -129,11 +129,11 @@ export function parseListXml(xml: string): { prefixes: string[]; files: { key: s
   return { prefixes, files, next };
 }
 
-async function listPages(prefix: string, delimiter?: string) {
+async function listPages(prefix: string, delimiter?: string, bucket = bucketName) {
   const out: ReturnType<typeof parseListXml>[] = [];
   let token: string | undefined;
   do {
-    const url = objectUrl(bucketName);
+    const url = objectUrl(bucket);
     url.searchParams.set('list-type', '2');
     url.searchParams.set('prefix', prefix);
     if (delimiter) url.searchParams.set('delimiter', delimiter);
@@ -151,8 +151,31 @@ export async function listR2Folders(prefix: string): Promise<string[]> {
   return (await listPages(prefix, '/')).flatMap(p => p.prefixes);
 }
 
-/** Every file under `prefix` in the public bucket, with its size in bytes */
-export async function listR2Files(prefix: string): Promise<{ key: string; size: number }[]> {
-  if (!client()) return [];
-  return (await listPages(prefix)).flatMap(p => p.files);
+/** Every file under `prefix` in the public bucket (or the private one), with its size in bytes */
+export async function listR2Files(prefix: string, priv = false): Promise<{ key: string; size: number }[]> {
+  if (!client() || (priv && !privateBucketName)) return [];
+  return (await listPages(prefix, undefined, priv ? privateBucketName : bucketName)).flatMap(p => p.files);
+}
+
+/** Size in bytes of an object in the public (or private) bucket; null when it isn't there */
+export async function r2ObjectSize(key: string, priv = false): Promise<number | null> {
+  const bucket = priv ? privateBucketName : bucketName;
+  if (!client() || !bucket) return null;
+  try {
+    const res = await send(objectUrl(bucket, key), { method: 'HEAD' });
+    return Number(res.headers.get('content-length') || 0);
+  } catch (e) {
+    if (e instanceof R2Error && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/** Where public files are served from ('https://media.example.com/'); null when R2_PUBLIC_DOMAIN isn't set */
+export function r2PublicBase(): string | null {
+  return publicDomain ? `${publicDomain.replace(/\/$/, '')}/` : null;
+}
+
+/** The bucket's API address, which browsers can't open: links saved with it (before R2_PUBLIC_DOMAIN was set) need fixing */
+export function r2ApiBase(): string {
+  return `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/`;
 }
