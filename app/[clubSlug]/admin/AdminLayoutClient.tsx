@@ -48,6 +48,7 @@ import AdminSearch from '@/components/AdminSearch';
 import ThemeToggle from '@/components/ThemeToggle';
 import AdminSaveStatus from '@/components/admin/AdminSaveStatus';
 import { useMatchAlerts } from '@/lib/use-match-alerts';
+import { useSocialAuto } from '@/lib/use-social-auto';
 import { useChatBoards } from '@/lib/use-chat-boards';
 import SupportModal from '@/components/SupportModal';
 import { areaFromLocation, ADMIN_HASH_EVENT } from '@/lib/permissions';
@@ -103,6 +104,8 @@ export default function AdminLayout({
   const pack = useWelcomePack(club);
   // Followers' kick-off, goal and full-time alerts, from whichever admin screen the result is entered on
   useMatchAlerts(club?.id);
+  // Kick-off, half time and full time posts the club set to go to Facebook and Instagram by themselves
+  useSocialAuto(club);
   // Live scoreboards in scorers' chats follow changes made here too
   useChatBoards(club?.id);
 

@@ -138,6 +138,17 @@ const sections: LegalSection[] = [
     ),
   },
   {
+    id: 'facebook',
+    heading: 'Facebook and Instagram',
+    body: (
+      <>
+        <p><strong>What we keep.</strong> When a club admin connects the club&rsquo;s Facebook Page, Facebook gives us a key that lets us post on that Page and on the Instagram account linked to it. We keep that key encrypted, with the Page&rsquo;s name and id, the Instagram username, and the admin&rsquo;s Facebook user id. We don&rsquo;t get their password or messages, and we don&rsquo;t read anything from their personal profile.</p>
+        <p><strong>What we post.</strong> Only the club&rsquo;s own posts: match graphics, event flyers and birthday cards with their captions, when an admin presses Post or turns on a post that goes out by itself. The graphics are stored with the club&rsquo;s photos so Facebook and Instagram can fetch them.</p>
+        <p><strong>Deleting it.</strong> An admin can disconnect the Page in Admin, Social media, Accounts, which deletes the key. Removing our app in your Facebook settings (Settings, Business integrations) does the same, automatically. You can also ask us at {mail}.</p>
+      </>
+    ),
+  },
+  {
     id: 'retention',
     heading: 'How long we keep it',
     body: (
