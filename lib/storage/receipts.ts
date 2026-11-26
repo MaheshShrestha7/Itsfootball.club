@@ -1,4 +1,4 @@
-import { isR2PrivateConfigured, putPrivateObject, getPrivateObjectUrl } from './r2';
+import { isR2PrivateConfigured, putPrivateObject, getPrivateObjectUrl, privateObjectExists } from './r2';
 import { getServiceClient } from '@/lib/supabase/service';
 import { matchesFileSignature } from '@/lib/file-signature';
 
@@ -39,7 +39,8 @@ export async function storeReceipt(
 }
 
 export async function receiptUrl(key: string): Promise<string | null> {
-  if (isR2PrivateConfigured) return getPrivateObjectUrl(key);
+  // Receipts saved before R2 was switched on stay in Supabase, so look in R2 first, then Supabase
+  if (isR2PrivateConfigured && await privateObjectExists(key)) return getPrivateObjectUrl(key);
   const db = getServiceClient();
   if (!db) return null;
   const { data } = await db.storage.from('receipts').createSignedUrl(key, 300);
