@@ -67,7 +67,9 @@ export async function POST(req: NextRequest) {
 
   // Stored where the club's other photos go: R2 when it's set up, else Supabase Storage (as /api/upload)
   const path = `clubs/${clubId}/social/${key.replace(/:/g, '-')}-${Date.now()}.jpg`;
-  let url = isR2Configured ? await uploadBufferToR2(path, Buffer.from(bytes), 'image/jpeg').catch(() => null) : null;
+  let url = isR2Configured
+    ? await uploadBufferToR2(path, Buffer.from(bytes), 'image/jpeg').catch(e => { console.error('Social post picture not stored in R2:', (e as Error).message); return null; })
+    : null;
   if (!url) {
     const { error } = await db.storage.from('club-assets').upload(path, bytes, { contentType: 'image/jpeg', upsert: false });
     if (error) console.error('Social post picture not stored:', error.message);
