@@ -92,7 +92,9 @@ async function graph<T = Record<string, unknown>>(cfg: MetaConfig, path: string,
     // Proves the call comes from our server, should the app require it
     p.set('appsecret_proof', Buffer.from(await hmac(cfg.secret, opts.token)).toString('hex'));
   }
-  const res = await fetch(opts.post ? `${GRAPH}${path}` : `${GRAPH}${path}?${p}`, opts.post ? { method: 'POST', body: p } : undefined);
+  // Facebook can be slow to fetch a picture; never leave the admin waiting for ever
+  const res = await fetch(opts.post ? `${GRAPH}${path}` : `${GRAPH}${path}?${p}`, { ...(opts.post ? { method: 'POST', body: p } : {}), signal: AbortSignal.timeout(30000) })
+    .catch(e => { throw new MetaError((e as Error).name === 'TimeoutError' ? 'Facebook took too long to answer.' : "Couldn't reach Facebook."); });
   const data = await res.json().catch(() => ({})) as { error?: { message?: string } };
   if (!res.ok || data.error) throw new MetaError(data.error?.message || `Facebook didn't answer (${res.status}).`);
   return data as T;

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         : null,
     ]);
   }
-  if (errors.length) results.errors = errors.map(e => e.slice(0, 300));
+  if (errors.length) { results.errors = errors.map(e => e.slice(0, 300)); console.error('Social post problems:', clubId, key, errors); }
   const status = results.facebook || results.instagram ? 'shared' : 'failed';
   await db.from('social_post_marks').update({ status, results, at: new Date().toISOString() }).eq('club_id', clubId).eq('post_key', key);
   return NextResponse.json({ status, facebook: !!results.facebook, instagram: !!results.instagram, story, errors });

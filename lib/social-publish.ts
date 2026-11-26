@@ -75,10 +75,11 @@ export async function publishSocial(p: { clubId: string; key: string; caption: s
     form.set('image', jpeg, 'post.jpg');
     if (story) form.set('story', '1');
     if (p.auto) form.set('auto', '1');
-    const res = await authed('/api/social/publish', { method: 'POST', body: form });
+    const res = await authed('/api/social/publish', { method: 'POST', body: form, signal: AbortSignal.timeout(100000) });
     const data = await res.json().catch(() => ({}));
-    return res.ok ? data : { error: data.error || 'Posting didn’t work. Please try again.' };
+    return res.ok ? data : { error: data.error || `Posting didn’t work (${res.status}). Please try again.` };
   } catch (e) {
+    if ((e as Error).name === 'TimeoutError') return { error: 'No answer after 100 seconds. Check the Page before trying again: it may have posted.' };
     return { error: (e as Error).message || 'Check your connection and try again.' };
   }
 }
