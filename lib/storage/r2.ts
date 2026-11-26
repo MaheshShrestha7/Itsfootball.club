@@ -59,19 +59,18 @@ async function send(url: URL, init: RequestInit): Promise<Response> {
   return res;
 }
 
-function publicUrlFor(key: string): string {
-  return publicDomain
-    ? `${publicDomain.replace(/\/$/, '')}/${key}`
-    : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${key}`;
-}
-
 /**
- * Direct server-side upload of a buffer to Cloudflare R2
+ * Direct server-side upload of a buffer to Cloudflare R2. Null (callers then use Supabase Storage) when R2
+ * or its public address isn't set: the bucket's own r2.cloudflarestorage.com address never loads in a browser.
  */
 export async function uploadBufferToR2(key: string, buffer: Buffer | Uint8Array, contentType: string): Promise<string | null> {
   if (!client()) return null;
+  if (!publicDomain) {
+    console.error('R2_PUBLIC_DOMAIN is not set; storing in Supabase instead of R2');
+    return null;
+  }
   await send(objectUrl(bucketName, key), { method: 'PUT', body: buffer as BodyInit, headers: { 'Content-Type': contentType } });
-  return publicUrlFor(key);
+  return `${publicDomain.replace(/\/$/, '')}/${key}`;
 }
 
 /** Delete an object from the public bucket; false when R2 isn't configured */
