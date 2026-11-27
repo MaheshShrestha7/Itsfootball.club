@@ -355,7 +355,8 @@ export function matchNode(club: ClubMetadataRow, match: MatchMetadataRow, ground
   const away = team(match.away_team_name, match.away_team_logo, !clubIsHome);
   const played = ['completed', 'full_time', 'live', 'halftime'].includes(match.status);
   const isLive = match.status === 'live' || match.status === 'halftime';
-  const venue = match.venue || club.stadium_name;
+  // Only a home game falls back to the club's ground
+  const venue = match.venue || (clubIsHome ? club.stadium_name : null);
 
   const { startDate, endDate } = matchIsoDates(match.match_date, match.match_time, clubTimeZone(club));
 

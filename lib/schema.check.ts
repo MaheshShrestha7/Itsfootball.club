@@ -127,6 +127,10 @@ const juniorNode = matchNode(mockClub, mockJuniorMatch);
 const desc = String(juniorNode.description || '');
 assert.ok(!desc.includes('2-1'), 'Hidden score must not leak score into description');
 
+// An away or cup game with no venue must not claim the club's home ground
+const awayNode = matchNode(mockClub, { ...mockLiveMatch, id: 'match-away-1', venue: '', is_club_home: false });
+assert.ok(!JSON.stringify(awayNode).includes('Pratten Park'), 'Away game without a venue must not fall back to the home ground');
+
 // 6. Competitor comparison routes & data validation
 import { COMPETITORS, competitorBySlugOrAlternative, ALL_COMPARE_SLUGS } from './competitors';
 assert.ok(ALL_COMPARE_SLUGS.includes('pitchero-alternative'), 'pitchero-alternative slug must exist');
