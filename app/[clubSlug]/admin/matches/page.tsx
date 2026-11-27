@@ -244,7 +244,8 @@ export default function AdminMatchesPage({
       is_club_home: true,
       match_date: prefill?.date || todayIso(new Date(Date.now() + 3 * 86400000)),
       match_time: prefill?.time || '15:00',
-      venue: lastCupGame?.venue || club.stadium_name || '',
+      // A cup game is at the cup's venue, not our home ground
+      venue: lastCupGame?.venue || prefillEvent?.location || club.stadium_name || '',
       match_flyer_url: '',
       description: '',
       meet_time: '',
@@ -431,7 +432,8 @@ export default function AdminMatchesPage({
       is_club_home: m.is_club_home,
       match_date: parsedDate,
       match_time: parsedTime,
-      venue: m.venue || club.stadium_name,
+      // A blank venue stays blank, so saving doesn't move an away or cup game to our ground
+      venue: m.venue || '',
       match_flyer_url: m.match_flyer_url || '',
       description: m.description || '',
       meet_time: m.meet_time || '',
@@ -458,7 +460,7 @@ export default function AdminMatchesPage({
       tournament_stage: m.event_id ? m.tournament_stage || '' : '',
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
-    setEditOpenedAt({ match_date: parsedDate, match_time: parsedTime, venue: m.venue || club.stadium_name || '', status: m.status || 'upcoming' });
+    setEditOpenedAt({ match_date: parsedDate, match_time: parsedTime, venue: m.venue || '', status: m.status || 'upcoming' });
     setEmailVisitor(true);
     setIsFormModalOpen(true);
   };
@@ -536,8 +538,10 @@ export default function AdminMatchesPage({
     const cleanOpponentShort = (form.opponent_short_name.replace(/<[^>]*>?/gm, '').trim()
       || cleanOpponent.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 4)
       || cleanOpponent.slice(0, 3)).toUpperCase().slice(0, 8);
-    // An empty venue falls back to the home ground only for home games
-    const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim() || (form.is_club_home ? club.stadium_name : '');
+    // An empty venue falls back to the cup's venue for a cup game, else the home ground only for home games
+    const linkedEvent = form.event_id ? events.find(e => e.id === form.event_id) : undefined;
+    const cleanVenue = form.venue.replace(/<[^>]*>?/gm, '').trim()
+      || (linkedEvent ? linkedEvent.location || '' : form.is_club_home ? club.stadium_name : '');
     const cleanDescription = form.description.replace(/<[^>]*>?/gm, '').trim();
     const cleanKit = form.kit.replace(/<[^>]*>?/gm, '').trim().slice(0, 80);
     const cleanCompetition = form.competition.replace(/<[^>]*>?/gm, '').trim() || (form.match_type === 'internal' ? 'Intra-Squad Match' : form.match_type === 'tournament' ? 'Cup Tournament' : 'Club Friendly');
@@ -1506,7 +1510,10 @@ export default function AdminMatchesPage({
                     value={form.event_id}
                     onChange={e => {
                       const evt = linkableEvents.find(x => x.id === e.target.value);
-                      setForm(evt ? withCompetition({ ...form, event_id: evt.id }, evt.title) : { ...form, event_id: '' });
+                      // A new fixture still on our home ground moves to the cup's venue
+                      const atCup = evt?.location && !editingMatchId && (!form.venue || form.venue === club.stadium_name)
+                        ? { venue: evt.location, ground_id: '', pitch_label: '' } : {};
+                      setForm(evt ? withCompetition({ ...form, event_id: evt.id, ...atCup }, evt.title) : { ...form, event_id: '' });
                     }}
                     className="form-input"
                   >
