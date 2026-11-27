@@ -31,9 +31,12 @@ import {
   FileText,
   Check,
   RotateCcw,
+  ImageDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import EventFixturesModal from '@/components/admin/EventFixturesModal';
+import EventFixturesPoster from '@/components/admin/EventFixturesPoster';
+import { soonestFirst } from '@/lib/fixtures';
 import { useCupFormatReady, useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
 import { byDate, isPastEvent, type DateOrder } from '@/lib/club-lists';
@@ -78,9 +81,12 @@ export default function AdminEventsPage({
   // Fixtures linked to an event (an outside cup); hidden until migration 20261169 has run
   const eventFixturesReady = useEventFixturesReady();
   const [fixturesEventId, setFixturesEventId] = useState<string | null>(null);
+  const [posterEventId, setPosterEventId] = useState<string | null>(null);
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const fixturesEvent = clubEvents.find(e => e.id === fixturesEventId) || null;
   const canLinkFixtures = eventFixturesReady && can(club.id, 'matches', 'edit');
+  const gamesIn = (eventId: string) => clubMatches.filter(m => m.event_id === eventId).sort(soonestFirst);
+  const posterEvent = clubEvents.find(e => e.id === posterEventId) || null;
   // How an outside cup is played (migration 20261192): hidden and never sent until it has run
   const cupFormatReady = useCupFormatReady();
   // "No, we're out" from Match Centre (?complete=<event>): open Mark as completed once the event has loaded
@@ -546,6 +552,18 @@ export default function AdminEventsPage({
                 </button>
               )}
 
+              {canLinkFixtures && clubMatches.some(m => m.event_id === evt.id) && (
+                <button
+                  type="button"
+                  onClick={() => setPosterEventId(evt.id)}
+                  className="btn btn-secondary btn-sm row"
+                  title={`Make a poster of the games in ${evt.title}`}
+                >
+                  <ImageDown size={14} aria-hidden="true" />
+                  <span>Make fixtures poster</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => handleOpenEdit(evt)}
@@ -856,6 +874,10 @@ export default function AdminEventsPage({
           onConfirm={extra => markCompleted(completingEvent, extra)}
           onClose={() => setCompletingId(null)}
         />
+      )}
+
+      {posterEvent && (
+        <EventFixturesPoster club={club} event={posterEvent} games={gamesIn(posterEvent.id)} clubTeams={clubTeams} onClose={() => setPosterEventId(null)} />
       )}
 
       {fixturesEvent && (
