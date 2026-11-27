@@ -6,6 +6,7 @@ import { Check, X } from 'lucide-react';
 import PopupPanel from '@/components/PopupPanel';
 import { cupWriteupsFor } from '@/lib/cup-writeup';
 import { clubResult } from '@/lib/fixtures';
+import { guessFinish } from '@/lib/cup-progress';
 import { clubTeamsOf, teamLabel, teamOfMatch } from '@/lib/teams';
 import type { Club, ClubEvent, ClubTeam, CupFinish, Match, MatchEvent } from '@/lib/supabase/types';
 
@@ -34,7 +35,18 @@ export default function CompleteEventModal({ club, event, matches, matchEvents, 
     const t = teamOfMatch(m, clubTeams);
     return [t?.id || 'club', manyTeams && t ? `the ${teamLabel(t)}` : club.short_name || club.name] as const;
   })).entries()];
-  const [finish, setFinish] = useState<Record<string, CupFinish>>(() => ({ ...(event.cup_finish || {}) }));
+  // A cup with a format set: each team's finish is guessed from its last game ("No, we're out" after the groups)
+  const [finish, setFinish] = useState<Record<string, CupFinish>>(() => {
+    const saved = { ...(event.cup_finish || {}) };
+    if (!event.cup_format) return saved;
+    for (const [key] of teams) {
+      const last = linked.filter(m => (teamOfMatch(m, clubTeams)?.id || 'club') === key)
+        .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())[0];
+      const guess = !saved[key] && last ? guessFinish(last) : null;
+      if (guess) saved[key] = guess;
+    }
+    return saved;
+  });
   const [winner, setWinner] = useState(event.cup_winner || '');
   const [note, setNote] = useState(event.writeup_note || '');
 

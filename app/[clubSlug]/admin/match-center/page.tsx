@@ -59,6 +59,8 @@ import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, fullMinutes, halfMinutes, maxMinute, periodStartMinute, splitMinute } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
+import CupAskPanel, { cupTeamName } from '@/components/admin/CupAskPanel';
+import { cupAsks } from '@/lib/cup-progress';
 import { clubLineupSide, clubSidePlayers, compareTournamentMatches, knockoutLockReason, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import '@/components/tournament/hosted.css';
@@ -143,6 +145,7 @@ export default function AdminMatchCenterControllerPage({
     saveDraftLineup,
     activityLogs,
     syncStatus,
+    events: clubEventList,
   } = useClub();
   const { user, can } = useAuth();
   // The coach's match review (migration 20261173): its buttons stay hidden until the table exists
@@ -1190,6 +1193,17 @@ export default function AdminMatchCenterControllerPage({
                 <Lock size={15} aria-hidden="true" /><span>{koLock}</span>
               </p>
             )}
+
+            {/* Full time in an outside cup: did we go through? (only after its last game so far) */}
+            {match.status === 'completed' && match.event_id && (() => {
+              const cup = clubEventList.find(e => e.id === match.event_id);
+              const ask = cup ? cupAsks(cup, matches.filter(m => m.club_id === club.id)).find(a => a.last.id === match.id) : undefined;
+              return cup && ask ? (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <CupAskPanel clubSlug={club.slug} event={cup} ask={ask} teamName={cupTeamName(club, clubTeams, ask)} />
+                </div>
+              ) : null;
+            })()}
 
             <div className="mc-score">
               {(['home', 'away'] as const).map((side, i) => {

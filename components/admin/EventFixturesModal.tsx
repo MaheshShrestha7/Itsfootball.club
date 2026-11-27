@@ -10,6 +10,8 @@ import { formatClock, formatShortDay } from '@/lib/dates';
 import { hasKickoffTime, soonestFirst } from '@/lib/fixtures';
 import type { Club, ClubEvent, ClubTeam, Match } from '@/lib/supabase/types';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
+import CupAskPanel, { cupTeamName } from '@/components/admin/CupAskPanel';
+import { cupAsks, roundName } from '@/lib/cup-progress';
 
 /** How far back "Link a fixture" looks: a cup's earlier rounds may already be played */
 const RECENT_DAYS = 60;
@@ -39,7 +41,7 @@ function GameLine({ m }: { m: Match }) {
 }
 
 /** Admin > Events > Fixtures: the games of one event (an outside cup), to link, unlink or add */
-export default function EventFixturesModal({ event, club, clubTeams, matches, onLink, onUnlink, onClose }: {
+export default function EventFixturesModal({ event, club, clubTeams, matches, onLink, onUnlink, onOut, onClose }: {
   event: ClubEvent;
   club: Club;
   clubTeams: ClubTeam[];
@@ -47,6 +49,8 @@ export default function EventFixturesModal({ event, club, clubTeams, matches, on
   matches: Match[];
   onLink: (m: Match) => void;
   onUnlink: (m: Match) => void;
+  /** "No, we're out": Mark as completed */
+  onOut: () => void;
   onClose: () => void;
 }) {
   const linked = useMemo(() => matches.filter(m => m.event_id === event.id).sort(soonestFirst), [matches, event.id]);
@@ -87,6 +91,9 @@ export default function EventFixturesModal({ event, club, clubTeams, matches, on
             {linked.map(m => (
               <li key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <GameLine m={m} />
+                {event.cup_format && event.cup_format !== 'league' && (
+                  <span className="admin-pill">{roundName(m.tournament_stage) || (event.cup_format === 'group_ko' ? 'Group' : 'Knockout')}</span>
+                )}
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUnlink(m)} aria-label={`Unlink ${opponentOf(m)} on ${formatShortDay(m.match_date)}`}>
                   <Unlink size={14} aria-hidden="true" /> Unlink
                 </button>
@@ -94,6 +101,10 @@ export default function EventFixturesModal({ event, club, clubTeams, matches, on
             ))}
           </ul>
         )}
+
+        {cupAsks(event, matches).map(ask => (
+          <CupAskPanel key={ask.last.id} clubSlug={clubSlug} event={event} ask={ask} teamName={cupTeamName(club, clubTeams, ask)} onOut={onOut} />
+        ))}
 
         {linkable.length > 0 && picked && (
           <div className="form-group" style={{ marginTop: '1.25rem' }}>
