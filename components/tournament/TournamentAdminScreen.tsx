@@ -17,6 +17,8 @@ import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
+import { useTournamentEntries } from '@/lib/use-tournament-entries';
+import { juniorPublicName } from '@/lib/teams';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 import { useHostedTournamentsReady, useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import { ageGroupFamily, ageGroupLabel } from '@/lib/hosted-tournaments';
@@ -71,6 +73,12 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const [newTeamCode, setNewTeamCode] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
+  // Guest clubs' entered players, offered for Player of the Tournament (hidden players left out)
+  const { squads: guestSquads } = useTournamentEntries(tournamentId, hosted && !isEventClub(club));
+  const guestPlayers = guestSquads.filter(p => !p.hide_public).flatMap(p => {
+    const team = tournamentParticipants.find(t => t.id === p.participant_id);
+    return team ? [{ team: team.name, name: tournament?.is_junior || p.is_junior ? juniorPublicName(p.name) : p.name }] : [];
+  });
 
   if (!tournament) {
     return (
@@ -91,6 +99,9 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const participants = tournamentParticipants.filter(p => p.tournament_id === tournament.id);
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
 
+  // Games under way or finished: once there are any, the draw buttons move into a menu
+  const playedCount = tourneyMatches.filter(m => m.status !== 'upcoming').length;
+
   const handleGenerateTiesheet = async (shuffle = false, keepGroups = false) => {
     if (participants.length < 2) {
       setFeedbackTone('error');
@@ -99,7 +110,10 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       return;
     }
     if (tourneyMatches.length > 0) {
-      if (!(await confirmAction({ title: 'Regenerate the tiesheet?', message: 'Current tournament fixtures and scores will be reset.', confirmLabel: 'Regenerate', danger: true }))) {
+      const message = playedCount > 0
+        ? `All ${tourneyMatches.length} games are made again and the ${playedCount} result${playedCount === 1 ? '' : 's'} already in (scores, scorers and cards) are deleted. This can't be undone.`
+        : `The ${tourneyMatches.length} games are made again. No results are in yet.`;
+      if (!(await confirmAction({ title: playedCount > 0 ? `Delete ${playedCount} result${playedCount === 1 ? '' : 's'} and redo the draw?` : 'Redo the draw?', message, confirmLabel: playedCount > 0 ? 'Delete results and redo' : 'Redo the draw', danger: true }))) {
         return;
       }
     }
@@ -235,18 +249,37 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
             <Pencil size={14} aria-hidden="true" />
             <span>Edit</span>
           </button>
-          <button type="button" onClick={handleProgressStage} className="btn btn-sm btn-secondary" style={actionBtn} title="Advance knockout round winners">
-            <Sparkles size={14} aria-hidden="true" />
-            <span>Progress bracket</span>
-          </button>
-          <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Randomise the draw and make the fixtures again">
-            <Shuffle size={14} aria-hidden="true" />
-            <span>Shuffle draw</span>
-          </button>
-          <button type="button" onClick={() => handleGenerateTiesheet(false)} className="btn btn-sm btn-primary" style={actionBtn}>
-            <RefreshCw size={14} aria-hidden="true" />
-            <span>Generate tiesheet</span>
-          </button>
+          {/* Winners move through the bracket by themselves; this is only for a bracket that didn't */}
+          {tourneyMatches.some(m => m.status === 'completed' && m.tournament_stage && m.tournament_stage !== 'group' && m.next_match_id) && playedCount === 0 && (
+            <button type="button" onClick={handleProgressStage} className="btn btn-sm btn-secondary" style={actionBtn} title="Advance knockout round winners">
+              <Sparkles size={14} aria-hidden="true" />
+              <span>Progress bracket</span>
+            </button>
+          )}
+          {playedCount > 0 ? (
+            <details className="ht-redo">
+              <summary className="btn btn-sm btn-secondary" style={actionBtn}>
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>Redo the draw</span>
+              </summary>
+              <div className="ht-redo-menu">
+                <p>{playedCount} game{playedCount === 1 ? ' has' : 's have'} started or finished. Redoing the draw deletes {playedCount === 1 ? 'its result' : 'their results'}.</p>
+                <button type="button" onClick={() => handleGenerateTiesheet(false)} className="btn btn-sm btn-danger">Make the fixtures again</button>
+                <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-danger">Shuffle and make them again</button>
+              </div>
+            </details>
+          ) : (
+            <>
+              <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Randomise the draw and make the fixtures again">
+                <Shuffle size={14} aria-hidden="true" />
+                <span>Shuffle draw</span>
+              </button>
+              <button type="button" onClick={() => handleGenerateTiesheet(false)} className="btn btn-sm btn-primary" style={actionBtn}>
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>Generate tiesheet</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -323,6 +356,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
         <PlayerOfTournament
           tournament={tournament}
           members={members.filter(m => m.club_id === club.id)}
+          guests={guestPlayers}
           isAdmin
           onSaved={updates => updateTournament(tournament.id, updates)}
         />

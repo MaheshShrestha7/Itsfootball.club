@@ -45,6 +45,8 @@ import { periodLabel } from '@/lib/match-clock';
 import { GOAL_EVENT_TYPES, isJuniorFixture, juniorMemberIds, juniorPublicName, playerIdsByName, publicMember, publicPlayerIds, publicScoreHidden, teamLabel, teamOfMatch, withTeamSide } from '@/lib/teams';
 import { OPPONENT_COLOR, clubLineupSide, clubSidePlayers, sideColor, sideShortName } from '@/lib/tournament-engine';
 import { matchForParam, matchPath } from '@/lib/slugs';
+import { kickoffIso } from '@/lib/fixtures';
+import { clubTimeZone } from '@/lib/dates';
 import { subPlayers } from '@/lib/match-subs';
 
 // Only needed once the lineups tab opens
@@ -171,7 +173,7 @@ export default function MatchCenterPage({
   const [settling, setSettling] = useState<Side | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   useGoalSequence(boardRef, goalAlert);
-  const kickoff = useKickoffParts(foundMatch?.match_date);
+  const kickoff = useKickoffParts(foundMatch ? kickoffIso(foundMatch, clubTimeZone(club)) : undefined);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const goalQueueRef = useRef<{ side: Side; teamName: string }[]>([]);
@@ -542,8 +544,8 @@ export default function MatchCenterPage({
               {ownTitle && <span>{competition || reportCup ? ', ' : ''}{ownTitle}</span>}
             </span>
             <span>
-              <LocalTime value={match.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} />
-              {match.match_time && <>, <LocalTime value={match.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
+              <LocalTime value={kickoffIso(match, clubTimeZone(club))} options={{ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }} />
+              {match.match_time && <>, <LocalTime value={kickoffIso(match, clubTimeZone(club))} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></>}
             </span>
           </div>
 

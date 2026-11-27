@@ -26,29 +26,47 @@ export interface PackResult {
 /**
  * The day's timetable: games fill the pitches slot by slot (a slot is one game plus changeover), a
  * new round starts in a fresh slot so nobody plays twice at once, and when a slot would finish after
- * the day's finish time the games carry on the next day from the same start time. Changes the
- * matches in place.
+ * the day's finish time the games carry on the next day from the same start time. Knockout games can
+ * have their own (longer) slot and a break before the first one, so a 2 x 15 semi-final isn't booked
+ * into a 25-minute slot straight after the last group game. Changes the matches in place.
  */
 export function packKickoffs(
   matches: Match[],
-  { start, end, matchMinutes, pitches = 1, dayEnd }: { start: Date; end?: Date | null; matchMinutes: number; pitches?: number; dayEnd?: string | null },
+  { start, end, matchMinutes, pitches = 1, dayEnd, koMatchMinutes, koBreakMinutes = 0 }: {
+    start: Date; end?: Date | null; matchMinutes: number; pitches?: number; dayEnd?: string | null;
+    /** Slot length for knockout games (default: matchMinutes) */
+    koMatchMinutes?: number | null;
+    /** Minutes between the last group game and the first knockout game */
+    koBreakMinutes?: number | null;
+  },
 ): PackResult {
   if (!(matchMinutes > 0) || !matches.length) return { days: 0, overflow: false, finish: null };
   const lanes = Math.max(1, Math.floor(pitches));
   const startMin = start.getHours() * 60 + start.getMinutes();
   const endMin = dayEnd && /^\d{2}:\d{2}$/.test(dayEnd) ? toMinutes(dayEnd) : 24 * 60;
+  const isKo = (m: Match) => !!m.tournament_stage && m.tournament_stage !== 'group';
+  const koLen = koMatchMinutes && koMatchMinutes > 0 ? koMatchMinutes : matchMinutes;
+  const koBreak = Math.max(0, koBreakMinutes || 0);
   let day = 0;
   let cursor = startMin;
   let key: string | null = null;
   let inSlot = 0;
+  let slotLen = matchMinutes;
+  let sawGroup = false;
+  let sawKo = false;
   for (const m of [...matches].sort(compareTournamentMatches)) {
     const k = `${m.tournament_stage || 'group'}-${m.tournament_round ?? 0}`;
     if (k !== key || inSlot === lanes) {
-      if (key !== null && inSlot > 0) cursor += matchMinutes;
+      if (key !== null && inSlot > 0) cursor += slotLen;
+      const ko = isKo(m);
+      // The break comes once, between the last group game and the first knockout game
+      if (ko && !sawKo && sawGroup) cursor += koBreak;
+      if (ko) sawKo = true; else sawGroup = true;
+      slotLen = ko ? koLen : matchMinutes;
       key = k;
       inSlot = 0;
       // The slot would run past the day's finish: start the next day (a day always gets one slot)
-      if (cursor + matchMinutes > endMin && cursor > startMin) {
+      if (cursor + slotLen > endMin && cursor > startMin) {
         day++;
         cursor = startMin;
       }
@@ -63,7 +81,7 @@ export function packKickoffs(
   const last = new Date(start);
   last.setDate(last.getDate() + day);
   const overflow = !!end && localDate(last) > localDate(end);
-  return { days: day + 1, overflow, finish: minutesToTime(cursor + matchMinutes) };
+  return { days: day + 1, overflow, finish: minutesToTime(cursor + slotLen) };
 }
 
 /** "Bayside FC, sam@bayside.com" per line (or a tab, from a spreadsheet) -> name and email */
@@ -185,7 +203,8 @@ export function teamSummary(team: string, matches: Match[], events: MatchEvent[]
     const m = games.find(g => g.id === e.match_id && g.status !== 'upcoming');
     if (!m) continue;
     const side = sideOf(m, team)!;
-    if (goalScoringSide(e) === side && e.event_type !== 'own_goal' && e.player_name?.trim()) {
+    // "<Team> Player" is the one-tap goal's stand-in name, not a scorer
+    if (goalScoringSide(e) === side && e.event_type !== 'own_goal' && e.player_name?.trim() && e.player_name.trim() !== `${team} Player`) {
       const n = e.player_name.trim();
       goals.set(n, (goals.get(n) || 0) + 1);
     }

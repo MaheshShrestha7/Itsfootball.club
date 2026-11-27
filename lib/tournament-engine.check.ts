@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted } from './tournament-engine';
+import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted, tournamentHalfMinutes } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -281,3 +281,27 @@ assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unch
   // A game already under way is never locked
   assert.equal(knockoutLockReason({ ...final(), status: 'live' }, tour, ms.map(m => m.tournament_stage === 'semi_final' ? { ...m, status: 'upcoming' } : m)), null);
 }
+
+// Game length per stage: group games 2 x 10, knockout 2 x 15; knockout empty = the group length
+{
+  const tour = {
+    id: 't-len', club_id: 'c', name: 'Cup', slug: 'cup', season: '2026', format: 'group_knockout', status: 'draft',
+    points_win: 3, points_draw: 1, points_loss: 0, group_count: 2, teams_advancing_per_group: 2, has_third_place_match: false,
+    start_date: '2026-11-28T08:00:00', half_minutes: 10, ko_half_minutes: 15,
+  } as Tournament;
+  const teams: TournamentParticipant[] = Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, tournament_id: 't-len', team_type: 'external' as const, name: `T${i}`, short_name: `T${i}`, logo_url: '' }));
+  const ms = buildTiesheet(tour, teams).matches;
+  assert.ok(ms.filter(m => m.tournament_stage === 'group').every(m => m.half_minutes === 10), 'group games 2 x 10');
+  assert.ok(ms.filter(m => m.tournament_stage !== 'group').every(m => m.half_minutes === 15), 'knockout games 2 x 15');
+  assert.ok(buildTiesheet({ ...tour, ko_half_minutes: null }, teams).matches.every(m => m.half_minutes === 10), 'knockout empty = group length');
+  assert.ok(buildTiesheet({ ...tour, half_minutes: null, ko_half_minutes: null }, teams).matches.every(m => m.half_minutes === undefined), 'nothing set: the usual 2 x 45');
+  assert.equal(tournamentHalfMinutes({ half_minutes: null, ko_half_minutes: 20 }, 'final'), 20, 'knockout-only cup');
+
+  // Form column in play order: same date, the kick-off time decides (round 2 played first here)
+  const g = (id: string, home: string, away: string, time: string, round: number, hs: number, as: number) =>
+    ({ id, tournament_id: 't-len', tournament_stage: 'group', tournament_group: 'Group A', tournament_round: round, match_date: '2026-11-28', match_time: time, home_team_name: home, away_team_name: away, status: 'completed', home_score: hs, away_score: as } as Match);
+  const parts = ['A', 'B', 'C'].map(n => ({ id: n, tournament_id: 't-len', team_type: 'external' as const, name: n, group: 'A' }));
+  const table = computeStandings([g('1', 'A', 'B', '10:30', 1, 0, 1), g('2', 'A', 'C', '08:00', 2, 2, 0)], parts as TournamentParticipant[], { group: 'A' });
+  assert.deepEqual(table.find(r => r.name === 'A')!.form, ['W', 'L'], 'form follows kick-off time');
+}
+console.log('tournament engine: game length + form order OK');

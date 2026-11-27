@@ -13,6 +13,8 @@ interface PlayerOfTournamentProps {
   /** Club members to pick from (and to show the winner's photo) */
   members: ClubMember[];
   isAdmin?: boolean;
+  /** Guest clubs' entered players (hosted cups), offered after the members */
+  guests?: { team: string; name: string }[];
   /** Mirrors a saved award into local state (e.g. the club context's updateTournament) */
   onSaved?: (updates: Partial<Tournament>) => void;
 }
@@ -21,7 +23,7 @@ interface PlayerOfTournamentProps {
  * Player of the Tournament: a highlight card for everyone, plus a small editor for admins.
  * Saved straight to the tournaments row (not through the background sync).
  */
-export default function PlayerOfTournament({ tournament, members, isAdmin = false, onSaved }: PlayerOfTournamentProps) {
+export default function PlayerOfTournament({ tournament, members, guests = [], isAdmin = false, onSaved }: PlayerOfTournamentProps) {
   const { clubTeams, clubTeamMembers } = useClub();
   const [editing, setEditing] = useState(false);
   const [memberId, setMemberId] = useState('');
@@ -46,12 +48,13 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
   if (!winnerName && !isAdmin) return null;
 
   const save = async (clear = false) => {
-    const chosen = members.find(m => m.id === memberId);
+    const guest = memberId.startsWith('guest:') ? guests[Number(memberId.slice(6))] : undefined;
+    const chosen = guest ? undefined : members.find(m => m.id === memberId);
     const updates: Partial<Tournament> = clear
       ? { player_of_tournament_member_id: null, player_of_tournament_name: null, player_of_tournament_note: null }
       : {
           player_of_tournament_member_id: chosen?.id ?? null,
-          player_of_tournament_name: (chosen?.full_name || name).trim() || null,
+          player_of_tournament_name: (chosen?.full_name || guest?.name || name).trim() || null,
           player_of_tournament_note: note.trim() || null,
         };
     if (!clear && !updates.player_of_tournament_name) return setError('Choose a member or type the player’s name.');
@@ -79,10 +82,15 @@ export default function PlayerOfTournament({ tournament, members, isAdmin = fals
       {editing ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem', width: '100%' }}>
           <div className="form-group m-0">
-            <label className="form-label" htmlFor="potm-member">Club member</label>
+            <label className="form-label" htmlFor="potm-member">{guests.length ? 'Player' : 'Club member'}</label>
             <select id="potm-member" className="form-select" value={memberId} onChange={e => setMemberId(e.target.value)}>
-              <option value="">Not a club member (type name)</option>
+              <option value="">{guests.length ? 'Someone else (type name)' : 'Not a club member (type name)'}</option>
               {sortedMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              {guests.length > 0 && (
+                <optgroup label="Guest clubs' players">
+                  {guests.map((g, i) => <option key={i} value={`guest:${i}`}>{g.name} ({g.team})</option>)}
+                </optgroup>
+              )}
             </select>
           </div>
           {!memberId && (

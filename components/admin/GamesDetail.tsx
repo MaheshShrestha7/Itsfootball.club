@@ -6,6 +6,7 @@ import { CalendarPlus, ChevronRight } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import LocalTime from '@/components/LocalTime';
 import { DATE_LOCALE } from '@/lib/dates';
+import { kickoffIso } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import {
   byDay, formSummary, opponentLine, playedGames, playersNeeded, pct, topCleanSheets, topScorers, unsavedCleanSheets,
@@ -295,7 +296,7 @@ function NextGame({ m, r, known, byMember, href }: { m: Match; r?: Reply; known:
       </span>
       <div className="gv-next-body">
         <div className="name">{opponentLine(m)}<span className="gv-tag">{home ? 'Home' : 'Away'}</span></div>
-        <div className="sub"><LocalTime value={m.match_date} options={{ weekday: 'long', day: 'numeric', month: 'short' }} /> · <LocalTime value={m.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />{m.venue ? ` · ${m.venue}` : ''}</div>
+        <div className="sub"><LocalTime value={m.match_date} options={{ weekday: 'long', day: 'numeric', month: 'short' }} /> · <LocalTime value={kickoffIso(m)} format="time" options={{ hour: 'numeric', minute: '2-digit' }} />{m.venue ? ` · ${m.venue}` : ''}</div>
         {!known ? null : !r || total === 0 ? (
           <p className="gv-note">Nobody has been asked yet.{href && <> <Link href={href}>Ask the squad</Link></>}</p>
         ) : (

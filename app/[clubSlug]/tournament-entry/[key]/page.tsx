@@ -286,10 +286,11 @@ export default function TeamEntryPage({ params }: { params: Promise<{ clubSlug: 
                 <h2><CreditCard size={18} aria-hidden="true" /> Entry fee</h2>
                 <p className="te-fee-row">
                   <b>{money(view.fee.amount_cents, view.fee.currency)}</b>
-                  <span className="te-state" data-tone={view.fee.status === 'paid' ? 'ok' : view.fee.status === 'awaiting_review' ? 'warn' : 'due'}>
-                    {view.fee.status === 'paid' ? 'Paid, thank you' : view.fee.status === 'awaiting_review' ? 'Receipt with the club' : 'To pay'}
+                  <span className="te-state" data-tone={view.fee.status === 'paid' ? 'ok' : view.fee.status === 'awaiting_review' || view.fee.status === 'not_billed' ? 'warn' : 'due'}>
+                    {view.fee.status === 'paid' ? 'Paid, thank you' : view.fee.status === 'awaiting_review' ? 'Receipt with the club' : view.fee.status === 'not_billed' ? 'Per team' : 'To pay'}
                   </span>
                 </p>
+                {view.fee.status === 'not_billed' && <p className="te-info">{view.club.name} will send you a link to pay it.</p>}
                 {view.fee.payPath && view.fee.status === 'pending' && (
                   <Link href={view.fee.payPath} className="btn btn-primary btn-sm">Pay by card or bank transfer</Link>
                 )}

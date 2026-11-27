@@ -2473,7 +2473,7 @@ textarea {
 .stb-name { font: 800 0.82rem/1.15 var(--font-heading); text-transform: uppercase; letter-spacing: 0.02em; overflow-wrap: break-word; min-width: 0; max-width: 100%; }
 /* Phones: shrink so the longest word (--longest letters, set in the match page) fits the column whole.
    The kick-off clock leaves the names less room than a score does, so a fixed letter limit wasn't enough. */
-.stb-team .stb-name { font-size: clamp(0.56rem, 100cqi / (var(--longest, 9) * 0.8), 0.82rem); hyphens: auto; }
+.stb-team .stb-name { font-size: clamp(0.56rem, 100cqi / (var(--longest, 9) * 0.95), 0.82rem); hyphens: auto; }
 .stb-bar { width: 36px; height: 4px; background: var(--side); }
 .stb-centre { display: grid; justify-items: center; gap: 0.65rem; }
 .stb-lamps { display: flex; align-items: center; gap: calc(var(--lamp) * 1.5); padding: calc(var(--lamp) * 0.8); background: #0C1015; border: 1px solid var(--stb-rule); border-radius: 6px; }

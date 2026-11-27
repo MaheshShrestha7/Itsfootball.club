@@ -16,6 +16,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
 import { DATE_LOCALE } from './dates';
 import { packKickoffs } from './hosted-tournaments';
+import { validHalfMinutes } from './match-length';
 
 // Human-readable stage titles
 export const STAGE_TITLES: Record<string, string> = {
@@ -165,7 +166,15 @@ function scheduler(tournament: Tournament, totalRounds: number) {
   };
 }
 
+/** The half length the host set for this stage (group games or knockout games; knockout empty =
+ *  the group length), or null for the usual 45 */
+export function tournamentHalfMinutes(tournament: Pick<Tournament, 'half_minutes' | 'ko_half_minutes'>, stage?: Match['tournament_stage'] | null): number | null {
+  const ko = !!stage && stage !== 'group';
+  return validHalfMinutes(ko ? tournament.ko_half_minutes ?? tournament.half_minutes : tournament.half_minutes);
+}
+
 function baseMatch(tournament: Tournament, fields: Partial<Match>): Match {
+  const half = tournamentHalfMinutes(tournament, fields.tournament_stage);
   return {
     club_id: tournament.club_id,
     tournament_id: tournament.id,
@@ -185,8 +194,15 @@ function baseMatch(tournament: Tournament, fields: Partial<Match>): Match {
     match_format: '11v11',
     door_qr_checkin_enabled: true,
     checkin_count: 0,
+    ...(half ? { half_minutes: half } : {}),
     ...fields,
   } as Match;
+}
+
+/** A group + knockout cup's own knockout slot length and the break before the knockouts, for packKickoffs */
+export function knockoutTiming(t: Pick<Tournament, 'format' | 'ko_match_minutes' | 'ko_break_minutes'>): { koMatchMinutes?: number; koBreakMinutes?: number } {
+  if (t.format !== 'group_knockout') return {};
+  return { koMatchMinutes: t.ko_match_minutes || undefined, koBreakMinutes: t.ko_break_minutes || undefined };
 }
 
 /**
@@ -409,7 +425,7 @@ export function buildTiesheet(
   const timed = (matches: Match[]) => {
     if (options?.matchMinutes) return spreadKickoffs(matches, { matchMinutes: options.matchMinutes, pitches: options.pitches });
     if (tournament.match_minutes && start) {
-      packKickoffs(matches, { start, end: parseTournamentDate(tournament.end_date), matchMinutes: tournament.match_minutes, pitches: tournament.pitches || 1, dayEnd: tournament.day_end_time });
+      packKickoffs(matches, { start, end: parseTournamentDate(tournament.end_date), matchMinutes: tournament.match_minutes, pitches: tournament.pitches || 1, dayEnd: tournament.day_end_time, ...knockoutTiming(tournament) });
     }
     return matches;
   };
@@ -568,10 +584,10 @@ export function computeStandings(
     return m.status === 'completed' || m.status === 'live' || m.status === 'halftime';
   });
 
-  // Sort matches chronologically for form calculation
-  const sortedMatches = [...groupMatches].sort(
-    (a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime()
-  );
+  // Sort matches in the order they were played for the Form column: a one-day cup has every game on
+  // the same date, so the kick-off time decides
+  const playedAt = (m: Match) => (m.match_time ? `${(m.match_date || '').slice(0, 10)}T${m.match_time}` : m.match_date || '');
+  const sortedMatches = [...groupMatches].sort((a, b) => playedAt(a).localeCompare(playedAt(b)) || compareTournamentMatches(a, b));
 
   sortedMatches.forEach(m => {
     const homeStanding = standingsMap.get(m.home_team_name);

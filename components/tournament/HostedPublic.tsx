@@ -9,6 +9,9 @@ import { Share2, X } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { ageGroupFamily, ageGroupLabel, teamSummary, kickoffLabel } from '@/lib/hosted-tournaments';
 import { drawTeamCard } from '@/lib/team-card';
+import LiveMinute from '@/components/LiveMinute';
+import { matchPath } from '@/lib/slugs';
+import { formatClock } from '@/lib/dates';
 import type { Match, MatchEvent, Tournament, TournamentParticipant, TournamentSquadPlayer } from '@/lib/supabase/types';
 import '@/components/tournament/hosted.css';
 
@@ -137,6 +140,89 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
           <Share2 size={16} aria-hidden="true" /> {busy ? 'Making the graphic…' : 'Share how we did'}
         </button>
       )}
+    </section>
+  );
+}
+
+const playOrder = (m: Match) => (m.match_time ? `${(m.match_date || '').slice(0, 10)}T${m.match_time}` : m.match_date || '');
+const isOn = (m: Match) => m.status === 'live' || m.status === 'halftime';
+
+/** "On now": every game being played (two pitches at once on a cup day), else the next kick-off's games */
+export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; clubSlug: string; showName: (n: string) => string }) {
+  const live = matches.filter(isOn);
+  const upcoming = matches.filter(m => m.status === 'upcoming' && m.home_team_name !== 'TBD' && m.away_team_name !== 'TBD')
+    .sort((a, b) => playOrder(a).localeCompare(playOrder(b)));
+  const games = (live.length ? live : upcoming.filter(m => playOrder(m) === playOrder(upcoming[0] ?? m)))
+    .sort((a, b) => (a.pitch_label || '').localeCompare(b.pitch_label || '', undefined, { numeric: true }));
+  if (!games.length) return null;
+  return (
+    <section className="ht-onnow" aria-label={live.length ? 'On now' : 'Next up'}>
+      <h2 className="ht-onnow-title">{live.length ? <><span className="ht-onnow-dot" aria-hidden="true" />On now</> : 'Next up'}</h2>
+      <div className="ht-onnow-list">
+        {games.map(m => (
+          <Link key={m.id} href={matchPath(clubSlug, m)} className="ht-onnow-game">
+            <span className="ht-onnow-meta">
+              {m.pitch_label && <span>{m.pitch_label}</span>}
+              <span className={isOn(m) ? 'is-live' : undefined}>
+                {m.status === 'halftime' || m.period === 'halftime' ? 'Half time' : isOn(m) ? <><LiveMinute match={m} />&prime;</> : formatClock(m.match_time || '') || kickoffLabel(m)}
+              </span>
+            </span>
+            <span className="ht-onnow-team">{showName(m.home_team_name)}</span>
+            <span className="ht-onnow-score">{isOn(m) ? `${m.home_score ?? 0}–${m.away_score ?? 0}` : 'v'}</span>
+            <span className="ht-onnow-team">{showName(m.away_team_name)}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Who won it, once the final (or the last league game) is played: the page people share at the end of the day */
+export function ChampionBanner({ tournament, matches, events, standingsLeader, showName }: {
+  tournament: Tournament;
+  matches: Match[];
+  events: MatchEvent[];
+  /** A league's top team */
+  standingsLeader?: string;
+  showName: (n: string) => string;
+}) {
+  const final = matches.find(m => m.tournament_stage === 'final' && m.status === 'completed');
+  const over = tournament.status === 'completed' || (!!final && matches.every(m => m.status === 'completed' || m.status === 'cancelled'));
+  if (!over) return null;
+  let champion = tournament.format === 'league' ? standingsLeader : undefined;
+  let finalLine: string | null = null;
+  if (final) {
+    const homeWon = final.winner_side ? final.winner_side === 'home'
+      : final.home_score !== final.away_score ? final.home_score > final.away_score
+      : (final.home_penalty_score ?? 0) > (final.away_penalty_score ?? 0);
+    champion = homeWon ? final.home_team_name : final.away_team_name;
+    const [w, l] = homeWon ? [final.home_score, final.away_score] : [final.away_score, final.home_score];
+    const pens = final.home_score === final.away_score && (final.home_penalty_score || final.away_penalty_score)
+      ? ` (${homeWon ? final.home_penalty_score : final.away_penalty_score}–${homeWon ? final.away_penalty_score : final.home_penalty_score} on penalties)` : '';
+    finalLine = `Beat ${showName(homeWon ? final.away_team_name : final.home_team_name)} ${w}–${l}${pens} in the final.`;
+  }
+  if (!champion) return null;
+
+  // Top scorer: real names only ("<Team> Player" is a one-tap goal with nobody named)
+  const goals = new Map<string, { team: string; n: number }>();
+  for (const e of events) {
+    const m = matches.find(x => x.id === e.match_id);
+    if (!m || (e.event_type !== 'goal' && e.event_type !== 'penalty')) continue;
+    const team = e.team_side === 'away' ? m.away_team_name : m.home_team_name;
+    const name = e.player_name?.trim();
+    if (!name || name === `${team} Player`) continue;
+    const key = `${name}|${team}`;
+    goals.set(key, { team, n: (goals.get(key)?.n || 0) + 1 });
+  }
+  const best = Math.max(0, ...[...goals.values()].map(g => g.n));
+  const top = best > 0 ? [...goals].filter(([, g]) => g.n === best).map(([k, g]) => `${showName(k.split('|')[0])} (${showName(g.team)})`) : [];
+
+  return (
+    <section className="ht-champion" aria-label="Champions">
+      <p className="ht-champion-kicker">Champions</p>
+      <h2>{showName(champion)} win the {tournament.name}</h2>
+      {finalLine && <p>{finalLine}</p>}
+      {top.length > 0 && <p className="ht-champion-scorer">Top scorer: {top.join(', ')}, {best} goal{best === 1 ? '' : 's'}</p>}
     </section>
   );
 }

@@ -382,3 +382,41 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
   .ht-tb-example .ht-table :is(th, td) { padding: 0.4rem 0.3rem; }
   .ht-tb-example .ht-table tr > :first-child { display: none; }
 }
+
+/* "Redo the draw" once results are in: the draw buttons fold away behind it */
+.ht-redo { position: relative; }
+.ht-redo > summary { list-style: none; cursor: pointer; }
+.ht-redo > summary::-webkit-details-marker { display: none; }
+.ht-redo-menu {
+  position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 20; width: min(18rem, 80vw);
+  display: grid; gap: 0.5rem; padding: 0.85rem; border-radius: var(--radius-md, 12px);
+  background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.ht-redo-menu p { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
+
+/* Public cup page: the games on now (or next up), and the champions once it's over */
+.ht-onnow { margin: 0 0 1.5rem; }
+.ht-onnow-title { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.6rem; font: 800 0.8rem var(--font-heading); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.ht-onnow-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-red, #DC2626); box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2); }
+.ht-onnow-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 0.75rem; }
+.ht-onnow-game {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 0.35rem 0.75rem;
+  padding: 0.85rem 1rem; border-radius: 14px; text-decoration: none; color: var(--text-primary);
+  background: rgba(var(--tint-rgb), 0.04); border: 1px solid var(--border-subtle); transition: border-color 0.15s, background-color 0.15s;
+}
+.ht-onnow-game:hover { border-color: rgba(var(--club-primary-rgb), 0.55); background: rgba(var(--club-primary-rgb), 0.06); }
+.ht-onnow-meta { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 0.5rem; font: 700 0.72rem var(--font-body); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ht-onnow-meta .is-live { color: var(--c-red, #DC2626); }
+.ht-onnow-team { font: 800 0.95rem/1.2 var(--font-heading); overflow-wrap: break-word; min-width: 0; }
+.ht-onnow-team:last-child { text-align: right; }
+.ht-onnow-score { font: 900 1.35rem var(--font-heading); font-variant-numeric: tabular-nums; }
+
+.ht-champion {
+  margin: 0 0 1.5rem; padding: 1.25rem 1.4rem; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(var(--club-primary-rgb), 0.18), rgba(var(--club-primary-rgb), 0.04));
+  border: 1px solid rgba(var(--club-primary-rgb), 0.5);
+}
+.ht-champion-kicker { margin: 0 0 0.25rem; font: 800 0.75rem var(--font-heading); letter-spacing: 0.1em; text-transform: uppercase; color: var(--club-ink); }
+.ht-champion h2 { margin: 0 0 0.35rem; font: 900 clamp(1.35rem, 4vw, 2rem)/1.15 var(--font-heading); color: var(--text-primary); text-wrap: balance; }
+.ht-champion p { margin: 0; color: var(--text-secondary); }
+.ht-champion .ht-champion-scorer { margin-top: 0.35rem; font-weight: 700; color: var(--text-primary); }

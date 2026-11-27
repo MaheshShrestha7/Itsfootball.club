@@ -55,7 +55,7 @@ import {
   computeStandings,
   cardPointsByTeam,
   resolveTournament,
-  upgradeLegacyMatches, knockoutLockReason, type TiesheetOptions } from './tournament-engine';
+  upgradeLegacyMatches, knockoutLockReason, tournamentHalfMinutes, type TiesheetOptions } from './tournament-engine';
 
 /** Tiesheet options, plus noDraw: save the teams only and make the draw later */
 type DrawOptions = TiesheetOptions & { noDraw?: boolean };
@@ -785,55 +785,36 @@ export function ClubProvider({
     };
 
     let closing = false;
-    const channel = client
-      .channel('live-matchday')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clubs', filter: filterOn('id') }, payload =>
-        apply<Club>('clubs', setClubs, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_members', filter: filterOn('club_id') }, payload =>
-        apply<ClubMember>('members', setMembers, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_seasons', filter: filterOn('club_id') }, payload =>
-        apply<ClubSeason>('seasons', setSeasons, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_teams', filter: filterOn('club_id') }, payload =>
-        apply<ClubTeam>('clubTeams', setClubTeams, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'club_team_members', filter: filterOn('club_id') }, payload =>
-        apply<ClubTeamMember>('clubTeamMembers', setClubTeamMembers, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: filterOn('club_id') }, payload =>
-        apply<ClubEvent>('events', setEvents, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sponsors', filter: filterOn('club_id') }, payload =>
-        apply<Sponsor>('sponsors', setSponsors, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'news_articles', filter: filterOn('club_id') }, payload =>
-        apply<NewsArticle>('news', setNews, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_gallery', filter: filterOn('club_id') }, payload =>
-        apply<MediaGalleryItem>('gallery', setGallery, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: filterOn('club_id') }, payload =>
-        apply<Match>('matches', setMatches, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_events', filter: filterOn('club_id') }, payload =>
-        apply<MatchEvent>('matchEvents', setMatchEvents, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'member_messages', filter: filterOn('club_id') }, payload =>
-        apply<MemberMessage>('memberMessages', setMemberMessages, payload)
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_inquiries', filter: filterOn('club_id') }, payload =>
-        apply<ContactInquiry>('inquiries', setInquiries, payload)
-      );
+    // One channel per table: Supabase sends nothing at all on a channel if any one of its tables
+    // isn't in the supabase_realtime publication, so a missing table (sponsors, say) used to silence
+    // live scores too. Each table now stands alone.
+    const feeds: [string, string, (payload: any) => void][] = [
+      ['clubs', 'id', p => apply<Club>('clubs', setClubs, p)],
+      ['club_members', 'club_id', p => apply<ClubMember>('members', setMembers, p)],
+      ['club_seasons', 'club_id', p => apply<ClubSeason>('seasons', setSeasons, p)],
+      ['club_teams', 'club_id', p => apply<ClubTeam>('clubTeams', setClubTeams, p)],
+      ['club_team_members', 'club_id', p => apply<ClubTeamMember>('clubTeamMembers', setClubTeamMembers, p)],
+      ['events', 'club_id', p => apply<ClubEvent>('events', setEvents, p)],
+      ['sponsors', 'club_id', p => apply<Sponsor>('sponsors', setSponsors, p)],
+      ['news_articles', 'club_id', p => apply<NewsArticle>('news', setNews, p)],
+      ['media_gallery', 'club_id', p => apply<MediaGalleryItem>('gallery', setGallery, p)],
+      ['matches', 'club_id', p => apply<Match>('matches', setMatches, p)],
+      ['match_events', 'club_id', p => apply<MatchEvent>('matchEvents', setMatchEvents, p)],
+      ['member_messages', 'club_id', p => apply<MemberMessage>('memberMessages', setMemberMessages, p)],
+      ['contact_inquiries', 'club_id', p => apply<ContactInquiry>('inquiries', setInquiries, p)],
+    ];
+    const channels = feeds.map(([table, column, handle]) => client
+      .channel(`live-${table}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table, filter: filterOn(column) }, handle));
 
     // Say when the live feed drops (a phone on the sideline losing signal) and catch up when it's back:
-    // changes made while it was down never arrive on their own.
+    // changes made while it was down never arrive on their own. The matches channel speaks for all of
+    // them: they share one connection, so they drop and come back together.
     // Some browsers (in-app browsers, privacy add-ons) refuse to open a WebSocket and subscribe() throws.
     // The page still works from the normal data load, so treat it as "no live feed" instead of crashing.
     try {
-      channel.subscribe(status => {
-        if (closing) return;
+      channels.forEach((channel, i) => channel.subscribe(status => {
+        if (closing || feeds[i][0] !== 'matches') return;
         if (status === 'SUBSCRIBED') {
           if (droppedRef.current) setLoadNonce(n => n + 1);
           droppedRef.current = false;
@@ -842,7 +823,7 @@ export function ClubProvider({
           droppedRef.current = true;
           setLiveFeed('off');
         }
-      });
+      }));
     } catch (err) {
       console.warn('Live updates unavailable in this browser:', err);
       setLiveFeed('off');
@@ -852,7 +833,7 @@ export function ClubProvider({
       // Leaving on purpose (the page changing clubs or closing) isn't a dropped feed
       closing = true;
       droppedRef.current = false;
-      client.removeChannel(channel).catch(() => {});
+      channels.forEach(channel => client.removeChannel(channel).catch(() => {}));
     };
   }, [syncReady, clubIdsKey]);
 
@@ -3498,7 +3479,10 @@ export function ClubProvider({
 
     // Otherwise keep results; carry the new name / season / venue / dates onto unplayed fixtures
     const datesChanged = merged.start_date !== current.start_date || merged.end_date !== current.end_date
-      || merged.match_minutes !== current.match_minutes || merged.pitches !== current.pitches || merged.day_end_time !== current.day_end_time;
+      || merged.match_minutes !== current.match_minutes || merged.pitches !== current.pitches || merged.day_end_time !== current.day_end_time
+      || merged.ko_match_minutes !== current.ko_match_minutes || merged.ko_break_minutes !== current.ko_break_minutes;
+    // New game lengths go onto the games not played yet (a game already on keeps its clock)
+    const lengthChanged = merged.half_minutes !== current.half_minutes || merged.ko_half_minutes !== current.ko_half_minutes;
     const fresh = datesChanged
       ? new Map(buildTiesheet(merged, tournamentParticipants.filter(p => p.tournament_id === tournamentId)).matches.map(m => [m.id, m]))
       : null;
@@ -3509,6 +3493,7 @@ export function ClubProvider({
         if (merged.venue && m.venue === current.venue) next.venue = merged.venue;
         const f = fresh?.get(m.id);
         if (f) Object.assign(next, { match_date: f.match_date, match_time: f.match_time, ...(merged.match_minutes ? { pitch_label: f.pitch_label } : {}) });
+        if (lengthChanged) next.half_minutes = tournamentHalfMinutes(merged, m.tournament_stage);
       }
       return next;
     }));
