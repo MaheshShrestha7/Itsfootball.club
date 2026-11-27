@@ -149,7 +149,7 @@ export default function AdminMatchCenterControllerPage({
   const koStartReady = useKnockoutStartReady();
 
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
-  // Score by chat's switch is for whoever runs Match Centre in full (Club Admins, Managers)
+  // Score by chat's links and asks are for whoever runs Match Centre in full; its switch is on Features
   const canChatScoring = can(club.id, 'match-center', 'full');
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const clubSeasons = seasons.filter(s => s.club_id === club.id);
@@ -1429,7 +1429,7 @@ export default function AdminMatchCenterControllerPage({
       {/* ========================================================================= */}
       {/* TAB 2: TACTICAL PITCH & FREE-FORM FORMATIONS */}
       {/* ========================================================================= */}
-      {adminTab === 'events' && canChatScoring && <ChatScoringPanel clubId={club.id} />}
+      {adminTab === 'events' && canChatScoring && <ChatScoringPanel clubId={club.id} featuresHref={`/${club.slug}/admin/features`} />}
 
       {adminTab === 'tactics' && (
         <div className="admin-stack">

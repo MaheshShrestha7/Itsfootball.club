@@ -19,6 +19,7 @@ import { stableId } from '@/lib/ids';
 //   POST { action: 'feature', clubId, feature, on }   a switch in the club panel's Features: sets clubs.config.features_off,
 //                              the same setting as the club's own Admin -> Features page (lib/club-features.ts)
 //   POST { action: 'clubscore', clubId, on }   the ClubScore switch there: clubscore_rules.is_active
+//   POST { action: 'chat', clubId, on }   the Score by chat switch there: club_chat_settings.scoring_enabled
 
 export async function POST(req: NextRequest) {
   const auth = await requirePlatformAdmin(req, true);
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   if (body.action === 'hidden') return setHidden(auth, body);
   if (body.action === 'feature') return setFeature(auth, body);
   if (body.action === 'clubscore') return setClubScore(auth, body);
+  if (body.action === 'chat') return setChatScoring(auth, body);
 
   const made = newClubRow(body, { id: newId(), ownerId: auth.userId });
   if ('error' in made) return NextResponse.json({ error: made.error }, { status: 400 });
@@ -132,6 +134,31 @@ async function setClubScore(auth: Extract<AuthCheck, { ok: true }>, body: { club
     table: 'clubscore_rules',
     targetId: clubId,
     summary: `Switched ClubScore ${body.on ? 'on' : 'off'} for ${club.name} (/${club.slug})`,
+  });
+  return NextResponse.json({ ok: true, on: body.on });
+}
+
+async function setChatScoring(auth: Extract<AuthCheck, { ok: true }>, body: { clubId?: unknown; on?: unknown }) {
+  const clubId = body?.clubId;
+  if (!isUuid(clubId) || typeof body?.on !== 'boolean') return NextResponse.json({ error: 'Send a club and on true or false.' }, { status: 400 });
+  const db = getServiceClient();
+  if (!db) return NextResponse.json({ error: 'Not configured on the server.' }, { status: 503 });
+
+  const { data: club, error: readErr } = await db.from('clubs').select('name, slug').eq('id', clubId).maybeSingle();
+  if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
+  if (!club) return NextResponse.json({ error: 'Club not found.' }, { status: 404 });
+  const { error } = await db.from('club_chat_settings').upsert(
+    { club_id: clubId, scoring_enabled: body.on, updated_at: new Date().toISOString() },
+    { onConflict: 'club_id' },
+  );
+  if (error) return NextResponse.json({ error: 'Run the score by chat migration (20261183_score_by_chat.sql) first.' }, { status: 503 });
+
+  await logPlatformAction(db, auth, {
+    clubId,
+    action: body.on ? 'club_feature_on' : 'club_feature_off',
+    table: 'club_chat_settings',
+    targetId: clubId,
+    summary: `Switched Score by chat ${body.on ? 'on' : 'off'} for ${club.name} (/${club.slug})`,
   });
   return NextResponse.json({ ok: true, on: body.on });
 }

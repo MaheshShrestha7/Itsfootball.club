@@ -599,13 +599,13 @@ export default function ClubPublicPage({
                 )}
                 {currentSlide.category === 'stadium' && (
                   <>
-                    <a href="#stadium" className="btn btn-primary"><MapPin size={16} aria-hidden="true" /> Map &amp; directions</a>
-                    <a href="#squad" className="btn btn-secondary">Squad</a>
+                    {featureOn(club, 'home_ground') && <a href="#stadium" className="btn btn-primary"><MapPin size={16} aria-hidden="true" /> Map &amp; directions</a>}
+                    {featureOn(club, 'home_top_players') ? <a href="#squad" className="btn btn-secondary">Squad</a> : <Link href={`/${club.slug}/squad`} className="btn btn-secondary">Squad</Link>}
                   </>
                 )}
                 {currentSlide.category === 'club' && (
                   <>
-                    <Link href={`/${club.slug}/member?join=1`} className="btn btn-primary" style={heroIsFlat ? { background: '#FFFFFF', color: 'var(--club-ink-light, #0E141E)', boxShadow: 'none' } : undefined}>Join the club</Link>
+                    {featureOn(club, 'joining') && <Link href={`/${club.slug}/member?join=1`} className="btn btn-primary" style={heroIsFlat ? { background: '#FFFFFF', color: 'var(--club-ink-light, #0E141E)', boxShadow: 'none' } : undefined}>Join the club</Link>}
                     <a href="#contact" className="btn btn-secondary" style={heroIsFlat ? { background: 'transparent', color: '#FFFFFF', borderColor: 'rgba(255, 255, 255, 0.6)' } : undefined}>Contact us</a>
                   </>
                 )}
@@ -883,8 +883,9 @@ export default function ClubPublicPage({
       {/* 4.15 MATCHDAY STRIP: the live or next match, always in view under the hero */}
       <MatchdayStrip club={club} live={liveMatch} next={stripNextMatch} hideScore={!!liveMatch && publicScoreHidden(liveMatch, clubTeams)} />
 
-      {/* 4.2 DEDICATED CLUB IDENTITY SECTION (DYNAMIC SUM COUNTS FROM RAW DATASET) */}
-      <ClubIdentitySection
+      {/* 4.2 DEDICATED CLUB IDENTITY SECTION (DYNAMIC SUM COUNTS FROM RAW DATASET); home page sections can be
+          switched off on Admin -> Features (lib/club-features.ts) */}
+      {featureOn(club, 'home_numbers') && <ClubIdentitySection
         club={club}
         members={members}
         matches={matches}
@@ -892,7 +893,7 @@ export default function ClubPublicPage({
         sponsors={sponsors}
         playerStats={playerStats}
         onOpenContactModal={() => setContactModalOpen(true)}
-      />
+      />}
 
       {/* 4.3 FIXTURES & RESULTS: plain rows; each whole row opens the match */}
       <section id="fixtures" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -1091,7 +1092,7 @@ export default function ClubPublicPage({
       </section>
 
       {/* 4.35 SPONSORS SHOWCASE (after the fixtures: fans come for the games first) */}
-      {clubSponsors.length > 0 && (
+      {clubSponsors.length > 0 && featureOn(club, 'home_sponsors') && (
         <section className="club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
           <div className="container">
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -1256,7 +1257,7 @@ export default function ClubPublicPage({
       )}
 
       {/* 4.6 COMMITTEE: left out until the club lists someone */}
-      {executiveStaff.length > 0 && (
+      {executiveStaff.length > 0 && featureOn(club, 'home_committee') && (
       <section className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1.5rem' }}>Committee</h2>
@@ -1279,6 +1280,7 @@ export default function ClubPublicPage({
       )}
 
       {/* 4.7 TOP PLAYERS: the leader in club colours, then a standings table (Hallmark redesign) */}
+      {featureOn(club, 'home_top_players') && (
       <section id="squad" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div className="tp-head">
@@ -1385,7 +1387,10 @@ export default function ClubPublicPage({
         </div>
       </section>
 
+      )}
+
       {/* 4.8 HOME GROUND DETAILS & MAP */}
+      {featureOn(club, 'home_ground') && (
       <section id="stadium" className="club-reveal club-section" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
           <div style={{
@@ -1444,6 +1449,7 @@ export default function ClubPublicPage({
           </div>
         </div>
       </section>
+      )}
 
       {/* 4.85 GET IN TOUCH: a contact form anyone can find (the Sponsor page and #contact links point here) */}
       <div className="club-reveal club-section">

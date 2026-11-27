@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { MessageCircle, Link2, Copy, QrCode, RefreshCw } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import Link from 'next/link';
 import { getAccessToken } from '@/lib/supabase/client';
 
 // Score by chat for club admins (Match Centre at "full"): the club's switch, its scoring link, asks
@@ -45,7 +46,7 @@ function useChatStatus(clubId: string) {
 const when = (iso: string) => new Date(iso).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
 /** Match Centre: the club's Score by chat switch, its scoring link, asks waiting for a yes, and who can score */
-export function ChatScoringPanel({ clubId }: { clubId: string }) {
+export function ChatScoringPanel({ clubId, featuresHref }: { clubId: string; featuresHref: string }) {
   const { status, load } = useChatStatus(clubId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -81,8 +82,10 @@ export function ChatScoringPanel({ clubId }: { clubId: string }) {
             People you allow can send goals, cards and the score from Itsfootball.club Bot on Telegram. Junior teams use the short format only.
           </p>
         </div>
-        <input type="checkbox" className="mc-switch" role="switch" aria-label="Score by chat" checked={status.scoringEnabled} disabled={busy} onChange={() => run({ action: 'toggle', on: !status.scoringEnabled })} />
+        <span className={`admin-pill ${status.scoringEnabled ? 'is-ok' : ''}`}>{status.scoringEnabled ? 'On' : 'Off'}</span>
       </div>
+      {/* The on/off switch lives with the club's other features, for the Owner and Club Admins */}
+      <p style={note}>The Owner or a Club Admin switches it {status.scoringEnabled ? 'off' : 'on'} in <Link href={featuresHref} style={{ color: 'var(--color-accent, inherit)', fontWeight: 600 }}>Features</Link>.</p>
       <p style={note}>
         {status.aiAllowed ? 'AI reading is on for your club.' : 'AI reading is off for your club, so scorers use the short format (g sam 23).'}
       </p>

@@ -9,6 +9,7 @@ import { Shield, CheckCircle2, XCircle, AlertTriangle, ArrowLeft, CreditCard, Re
 import PlayerAvatar from '@/components/PlayerAvatar';
 import MemberPerks from '@/components/MemberPerks';
 import { useClubPerks } from '@/lib/use-club-perks';
+import { featureOn } from '@/lib/club-features';
 
 export default function VerifyPassPage({
   params,
@@ -34,7 +35,7 @@ export default function VerifyPassPage({
     : rawResult;
 
   const [checking, setChecking] = useState(false);
-  const { perks } = useClubPerks(club?.id || '');
+  const { perks } = useClubPerks(featureOn(club, 'perks') ? club?.id || '' : '');
   const redeem = async (perkId: string) => {
     const db = getSupabaseClient();
     if (!db) return { success: false, message: 'Not saved. Please try again.' };

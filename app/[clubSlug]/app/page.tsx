@@ -27,6 +27,7 @@ import { useMyChildren } from '@/lib/use-my-children';
 import MyTickets from '@/components/MyTickets';
 import PushToggle from '@/components/PushToggle';
 import { featureClosingPath } from '@/lib/club-features';
+import { featureOn } from '@/lib/club-features';
 
 type Icon = React.ComponentType<{ size?: number }>;
 interface Tile { label: string; href: string; icon: Icon; note?: string }
@@ -340,7 +341,7 @@ export default function ClubAppHome({ params }: { params: Promise<{ clubSlug: st
         // A parent's family page (passes, fees, messages) rather than Join
         children.length
           ? { label: 'My family', href: `${base}/member`, icon: Users }
-          : { label: me ? 'My application' : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
+          : { label: me ? 'My application' : !featureOn(club, 'joining') ? (user ? 'Member area' : 'Sign in') : user ? 'Join the club' : 'Join or sign in', href: `${base}/member`, icon: UserPlus },
         { label: 'Fixtures', href: `${base}/fixtures`, icon: CalendarDays },
         ...(sections.events ? [{ label: 'Events & tickets', href: `${base}/events`, icon: Ticket }] : []),
         ...(sections.news ? [{ label: 'News', href: `${base}/news`, icon: Newspaper }] : []),

@@ -25,6 +25,7 @@ import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { formatMoney, parseMoneyToCents } from '@/lib/finance';
 import { DATE_LOCALE, formatShortDay } from '@/lib/dates';
 import PopupPanel from '@/components/PopupPanel';
+import { featureOn } from '@/lib/club-features';
 
 const PACKAGE_STATUS_LABEL: Record<SponsorPackageStatus, string> = {
   prospect: 'Prospect (In Talks)',
@@ -578,14 +579,14 @@ export default function AdminSponsorsPage({
       {thanksPosterOpen && <SponsorThanksPoster club={club} onClose={() => setThanksPosterOpen(false)} />}
 
       <div className="admin-tabs" role="tablist" aria-label="Sponsors">
-        {([['list', 'Sponsors', Shield], ['packages', 'Packages', Package], ['perks', 'Member perks', Gift]] as const).map(([id, label, Icon]) => (
+        {([['list', 'Sponsors', Shield], ['packages', 'Packages', Package], ['perks', 'Member perks', Gift]] as const).filter(([id]) => id !== 'perks' || featureOn(club, 'perks')).map(([id, label, Icon]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} data-view-ok onClick={() => setTab(id)} className="admin-tab">
             <Icon size={14} aria-hidden="true" /> {label}
           </button>
         ))}
       </div>
 
-      {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : tab === 'perks' ? <PerksPanel club={club} sponsors={clubSponsors} /> : (<>
+      {tab === 'packages' ? <SponsorPackagesPanel club={club} /> : tab === 'perks' && featureOn(club, 'perks') ? <PerksPanel club={club} sponsors={clubSponsors} /> : (<>
 
       <OneSponsorSpots club={club} />
 

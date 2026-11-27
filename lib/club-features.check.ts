@@ -32,4 +32,14 @@ assert.equal(featureClosingPath(club, ''), null);
 assert.equal(featureClosingPath({ config: { features_off: ['news'] } }, '/admin/content')?.key, 'news');
 assert.equal(featureClosingPath({ config: { features_off: ['events'] } }, '/admin/events'), null, 'training stays in admin');
 
+// The latest switches
+const more = { config: { features_off: ['scanner', 'joining', 'perks', 'home_ground'] } };
+assert.equal(featureClosingPath(more, '/verify')?.key, 'scanner');
+assert.equal(featureClosingPath(more, '/admin/scanner')?.key, 'scanner');
+assert.equal(featureClosingPath(more, '/member'), null, 'members still sign in with joining off');
+assert.equal(featureClosingPath(more, '/admin/sponsors'), null, 'perks off keeps the Sponsors page');
+assert.equal(featureOn(more, 'home_ground'), false);
+assert.equal(featureOn(more, 'home_numbers'), true);
+assert.deepEqual(configWithFeaturesOff({}, ['home_ground', 'scanner']), { features_off: ['scanner', 'home_ground'] }, 'saved in list order');
+
 console.log('club-features: all checks passed');

@@ -17,6 +17,7 @@ import { hasMultipleTeams } from '@/lib/teams';
 import { Shield, Radio, CreditCard, Users, Calendar, CalendarDays, ChevronDown, Trophy, Settings, Menu, X, User, LogOut, UserCog, ShoppingBag, Images, UserPlus, Handshake, BookOpen, Newspaper, Award } from 'lucide-react';
 import { matchPath } from '@/lib/slugs';
 import { useClubSections } from '@/lib/use-club-sections';
+import { featureOn } from '@/lib/club-features';
 
 interface ClubNavbarProps {
   club: Club;
@@ -229,9 +230,11 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
     ] },
   ];
 
-  const passLabel = isClubMember ? 'My member pass' : isParent ? 'My family' : 'Join the club';
+  // Online joining switched off (Admin -> Features): the member area, without the application form
+  const joiningOn = featureOn(club, 'joining');
+  const passLabel = isClubMember ? 'My member pass' : isParent ? 'My family' : joiningOn ? 'Join the club' : 'Member area';
   const PassIcon = isClubMember ? CreditCard : isParent ? Users : UserPlus;
-  const passHref = isClubMember || isParent ? `/${club.slug}/member` : `/${club.slug}/member?join=1`;
+  const passHref = isClubMember || isParent || !joiningOn ? `/${club.slug}/member` : `/${club.slug}/member?join=1`;
 
   const avatar = (size: number) => user && (user.avatar_url ? (
     <img loading="lazy" decoding="async" width={size} height={size} src={user.avatar_url} alt=""
@@ -377,7 +380,7 @@ export default function ClubNavbar({ club }: ClubNavbarProps) {
           {!isAuthenticated && (
             <Link href={`/${club.slug}/member`} className="club-nav-desk club-nav-text">Sign in</Link>
           )}
-          {!isClubMember && !isParent && (
+          {!isClubMember && !isParent && joiningOn && (
             <Link href={`/${club.slug}/member?join=1`} className="club-nav-desk btn btn-primary btn-sm row">
               <UserPlus size={14} aria-hidden="true" />
               <span>Join</span>

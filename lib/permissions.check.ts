@@ -19,6 +19,7 @@ assert.equal(areaFromPath('/fc-united/admin/tournaments/abc'), 'tournaments');
 assert.equal(areaFromLocation('/fc-united/admin/people', null), 'squad');
 assert.equal(areaFromLocation('/fc-united/admin/people', 'applications'), 'members');
 assert.equal(areaFromLocation('/fc-united/admin/social', null), 'content', 'social media posts go with News');
+assert.equal(areaFromLocation('/fc-united/admin/features', null), 'features', 'feature switches are for the Owner and Club Admins only');
 assert.equal(areaFromLocation('/fc-united/admin/people', 'rejected'), 'members');
 assert.equal(areaFromLocation('/fc-united/admin/finance', 'income'), 'finance');
 

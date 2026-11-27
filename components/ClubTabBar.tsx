@@ -8,6 +8,7 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { matchPath } from '@/lib/slugs';
 import { useMyChildren } from '@/lib/use-my-children';
+import { featureOn } from '@/lib/club-features';
 
 /**
  * Phone tab bar for the club site (shown under 769px, and at any width in the installed app, by
@@ -32,7 +33,9 @@ export default function ClubTabBar({ club }: { club: Club }) {
     { label: 'My Club', href: `${base}/app`, icon: LayoutGrid },
     member ? { label: 'Pass', href: `${base}/member`, icon: CreditCard }
       : parent ? { label: 'Family', href: `${base}/member`, icon: Users }
-      : { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus },
+      // Online joining switched off (Admin -> Features): members still sign in here
+      : featureOn(club, 'joining') ? { label: 'Join', href: `${base}/member?join=1`, icon: UserPlus }
+      : { label: 'Sign in', href: `${base}/member`, icon: CreditCard },
     ...(user && hasClubAdminAccess(club.id) ? [{ label: 'Admin', href: `${base}/admin`, icon: Shield }] : []),
   ];
 
