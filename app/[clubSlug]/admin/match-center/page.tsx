@@ -135,6 +135,7 @@ export default function AdminMatchCenterControllerPage({
     clubTeams,
     clubTeamMembers,
     updateTournamentMatchScore,
+    updateTournament,
     tournaments,
     loadMatchStatLines,
     fixMatchStats,
@@ -484,6 +485,9 @@ export default function AdminMatchCenterControllerPage({
       updates.current_minute = defaultMin;
     }
     updateMatch(match.id, updates);
+    // The first cup game to kick off puts its tournament in progress
+    const cup = match.tournament_id ? tournaments.find(t => t.id === match.tournament_id) : undefined;
+    if (cup?.status === 'draft' && (status === 'live' || status === 'halftime')) updateTournament(cup.id, { status: 'ongoing' });
     showFeedback(PERIOD_LABEL[period] || 'Match updated');
   };
 
