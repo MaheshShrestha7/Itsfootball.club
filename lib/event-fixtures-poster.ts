@@ -93,11 +93,11 @@ export async function drawFixturesPoster(
     crest(club.logo_url),
     loadSponsors(opts.sponsors, MAX_SPONSORS),
     Promise.all(list.map(async ({ match: m }) => {
-      // Our side falls back to the club crest when the fixture has none of its own
-      const ours = m.is_club_home ?? true;
+      // [our crest, theirs]: our side falls back to the club crest when the fixture has none of its own
+      const home = m.is_club_home ?? true;
       return Promise.all([
-        crest(m.home_team_logo || (ours ? club.logo_url : undefined)),
-        crest(m.away_team_logo || (!ours ? club.logo_url : undefined)),
+        crest((home ? m.home_team_logo : m.away_team_logo) || club.logo_url),
+        crest((home ? m.away_team_logo : m.home_team_logo) || undefined),
       ]);
     })),
   ]);
@@ -218,10 +218,11 @@ export async function drawFixturesPoster(
     drawContain(ctx, crests[i][1], W - M - 28 - crestS / 2, midY, crestS);
     const vsR = Math.min(44, rowH * 0.2);
     const nameMax = (W - M * 2) / 2 - crestS - 28 - vsR - 40;
-    const ours = m.is_club_home ?? true;
+    // The club's own side always on the left, home or away (as the club's posters read), the score in the same order
+    const home = m.is_club_home ?? true;
     const sides: [string, number, CanvasTextAlign, boolean][] = [
-      [m.home_team_name || '', M + 28 + crestS + 20, 'left', ours],
-      [m.away_team_name || '', W - M - 28 - crestS - 20, 'right', !ours],
+      [(home ? m.home_team_name : m.away_team_name) || '', M + 28 + crestS + 20, 'left', true],
+      [(home ? m.away_team_name : m.home_team_name) || '', W - M - 28 - crestS - 20, 'right', false],
     ];
     for (const [name, x, align, us] of sides) {
       ctx.textAlign = align;
@@ -247,7 +248,8 @@ export async function drawFixturesPoster(
       ctx.fill();
       ctx.fillStyle = BASE;
       ctx.font = `900 ${Math.round(44 * k)}px ${heading}`;
-      ctx.fillText(`${m.home_score ?? 0} – ${m.away_score ?? 0}`, W / 2, midY + 2);
+      const [ourGoals, theirGoals] = home ? [m.home_score, m.away_score] : [m.away_score, m.home_score];
+      ctx.fillText(`${ourGoals ?? 0} – ${theirGoals ?? 0}`, W / 2, midY + 2);
     } else {
       ctx.beginPath();
       ctx.arc(W / 2, midY, vsR, 0, Math.PI * 2);
