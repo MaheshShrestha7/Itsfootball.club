@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ImageDown, Link2, NotebookPen, Plus, Unlink, X } from 'lucide-react';
+import { ImageDown, Link2, MapPin, NotebookPen, Plus, Unlink, X } from 'lucide-react';
 import EventFixturesPoster from '@/components/admin/EventFixturesPoster';
+import { posterPlaces } from '@/lib/event-fixtures-poster';
 import PopupPanel from '@/components/PopupPanel';
 import { newItemHref } from '@/lib/admin-calendar';
 import { formatClock, formatShortDay } from '@/lib/dates';
@@ -19,21 +20,47 @@ const RECENT_DAYS = 60;
 const opponentOf = (m: Match) =>
   m.match_type === 'internal' ? `${m.home_team_name} v ${m.away_team_name}` : `vs ${m.opponent_name || (m.is_club_home ? m.away_team_name : m.home_team_name)}`;
 
-/** The day tile and "vs Opponent" of a fixture, as on the public fixture rows */
-function GameLine({ m }: { m: Match }) {
+/** Their crest: the logo on the opponent's side of the fixture */
+const crestOf = (m: Match) => (m.is_club_home ? m.away_team_logo : m.home_team_logo) || '';
+/** "HC" for Hamro Club when there's no crest: the short name, else the first letters */
+const initialsOf = (m: Match) =>
+  (m.opponent_short_name || (m.opponent_name || '').split(/\s+/).map(w => w[0]).join('')).slice(0, 3).toUpperCase();
+
+/** Won 3-1 / Drew 1-1 / Lost 0-2, our score first */
+function ResultPill({ m }: { m: Match }) {
+  if (m.match_type === 'internal') return <span className="admin-pill">{m.home_score}-{m.away_score}</span>;
+  const [us, them] = m.is_club_home ? [m.home_score, m.away_score] : [m.away_score, m.home_score];
+  const [word, tone] = us > them ? ['Won', 'is-ok'] : us < them ? ['Lost', 'is-danger'] : ['Drew', 'is-warn'];
+  return <span className={`admin-pill ${tone}`}>{word} {us}-{them}</span>;
+}
+
+/** The day tile, their crest and "vs Opponent", and the time, place and tags under it */
+function GameLine({ m, place, stage }: { m: Match; place: string; stage: string | null }) {
   const d = new Date(hasKickoffTime(m) ? m.match_date : `${m.match_date.slice(0, 10)}T12:00:00`);
+  const crest = crestOf(m);
+  const internal = m.match_type === 'internal';
   return (
     <>
-      <div className="fixture-row-date" aria-hidden="true" style={{ width: 52 }}>
+      <div className="fixture-row-date" aria-hidden="true">
         <span className="fixture-row-dow">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
         <span className="fixture-row-day">{d.getDate()}</span>
         <span className="fixture-row-month">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
       </div>
-      <div className="min-w-0" style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{opponentOf(m)}</div>
-        <div className="text-meta">
-          {[m.match_time ? formatClock(m.match_time) : null, m.pitch_label, m.venue].filter(Boolean).join(' · ')}
-          {m.status === 'completed' ? ` · ${m.home_score}-${m.away_score}` : ''}
+      <div className="min-w-0">
+        <div className="efx-team">
+          {!internal && (
+            <span className="efx-crest" aria-hidden="true">
+              {crest ? <img src={crest} alt="" loading="lazy" /> : <b>{initialsOf(m)}</b>}
+            </span>
+          )}
+          <span className="efx-name">
+            {internal ? opponentOf(m) : <><small>vs</small> {opponentOf(m).slice(3)}</>}
+          </span>
+        </div>
+        <div className={`efx-meta${internal ? '' : ' has-crest'}`}>
+          {[m.match_time ? formatClock(m.match_time) : null, place].filter(Boolean).join(' · ')}
+          {stage && <span className="admin-pill">{stage}</span>}
+          {m.status === 'completed' && <ResultPill m={m} />}
         </div>
       </div>
     </>
@@ -54,6 +81,8 @@ export default function EventFixturesModal({ event, club, clubTeams, matches, on
   onClose: () => void;
 }) {
   const linked = useMemo(() => matches.filter(m => m.event_id === event.id).sort(soonestFirst), [matches, event.id]);
+  // The ground once when every game shares it (as the poster does), so rows show just the pitch
+  const places = useMemo(() => posterPlaces(linked), [linked]);
   // Club games not in an event yet: upcoming ones and those of the last couple of months
   const linkable = useMemo(() => {
     const since = Date.now() - RECENT_DAYS * 86400000;
@@ -72,30 +101,34 @@ export default function EventFixturesModal({ event, club, clubTeams, matches, on
   const addHref = newItemHref(`/${clubSlug}/admin/matches`, start, time, undefined, event.id);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', overscrollBehavior: 'contain', zIndex: 999, background: 'var(--color-scrim)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <PopupPanel onClose={onClose} label={`Fixtures in ${event.title}`} className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '560px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)', padding: '1.5rem' }}>
+    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', overscrollBehavior: 'contain', zIndex: 999, background: 'var(--color-scrim)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(0.5rem, 2.5vw, 1rem)' }}>
+      <PopupPanel onClose={onClose} label={`Fixtures in ${event.title}`} className="glass-panel" style={{ margin: 'auto', width: '100%', maxWidth: '560px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-xl)', padding: 'clamp(1rem, 4vw, 1.5rem)' }}>
         <div className="section-head">
           <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', overflowWrap: 'anywhere' }}>Fixtures in {event.title}</h3>
           <button type="button" onClick={onClose} className="admin-icon-btn" aria-label="Close">
             <X size={20} aria-hidden="true" />
           </button>
         </div>
-        <p className="text-meta" style={{ margin: '0 0 1rem' }}>
+        <p className="text-meta" style={{ margin: '0 0 0.75rem' }}>
           These games show on the event page, with their scores once played. Players answer once for all of them.
         </p>
 
+        {places.shared && (
+          <div className="efx-ground"><MapPin size={15} aria-hidden="true" /> All games at {places.shared}</div>
+        )}
         {linked.length === 0 ? (
           <p className="text-meta" style={{ margin: '0 0 1rem' }}>No games linked yet.</p>
         ) : (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {linked.map(m => (
-              <li key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                <GameLine m={m} />
-                {event.cup_format && event.cup_format !== 'league' && (
-                  <span className="admin-pill">{roundName(m.tournament_stage) || (event.cup_format === 'group_ko' ? 'Group' : 'Knockout')}</span>
-                )}
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUnlink(m)} aria-label={`Unlink ${opponentOf(m)} on ${formatShortDay(m.match_date)}`}>
-                  <Unlink size={14} aria-hidden="true" /> Unlink
+          <ul className="efx-list">
+            {linked.map((m, i) => (
+              <li key={m.id} className="efx-row">
+                <GameLine
+                  m={m}
+                  place={places.rows[i]}
+                  stage={event.cup_format && event.cup_format !== 'league' ? roundName(m.tournament_stage) || (event.cup_format === 'group_ko' ? 'Group' : 'Knockout') : null}
+                />
+                <button type="button" className="btn btn-secondary btn-sm efx-unlink" onClick={() => onUnlink(m)} aria-label={`Unlink ${opponentOf(m)} on ${formatShortDay(m.match_date)}`}>
+                  <Unlink size={14} aria-hidden="true" /> <span className="efx-unlink-label">Unlink</span>
                 </button>
               </li>
             ))}
