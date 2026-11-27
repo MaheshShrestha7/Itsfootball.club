@@ -3489,7 +3489,8 @@ export function ClubProvider({
       || merged.match_minutes !== current.match_minutes || merged.pitches !== current.pitches || merged.day_end_time !== current.day_end_time
       || merged.ko_match_minutes !== current.ko_match_minutes || merged.ko_break_minutes !== current.ko_break_minutes;
     // New game lengths go onto the games not played yet (a game already on keeps its clock)
-    const lengthChanged = merged.half_minutes !== current.half_minutes || merged.ko_half_minutes !== current.ko_half_minutes;
+    const lengthChanged = merged.half_minutes !== current.half_minutes || merged.ko_half_minutes !== current.ko_half_minutes
+      || merged.final_half_minutes !== current.final_half_minutes;
     const fresh = datesChanged
       ? new Map(buildTiesheet(merged, tournamentParticipants.filter(p => p.tournament_id === tournamentId)).matches.map(m => [m.id, m]))
       : null;

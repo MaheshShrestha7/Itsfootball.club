@@ -29,7 +29,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     // Migration 20261185: only set once the app has seen the column (useKnockoutStartReady)
     'knockout_started_at',
     // Migration 20261194: only sent once the app has seen the columns (useTournamentLengthReady)
-    'half_minutes', 'ko_half_minutes', 'ko_match_minutes', 'ko_break_minutes'],
+    'half_minutes', 'ko_half_minutes', 'final_half_minutes', 'ko_match_minutes', 'ko_break_minutes'],
   tournament_participants: ['id', 'tournament_id', 'team_type', 'internal_team_id', 'name', 'short_name', 'logo_url', 'color', 'seed', 'group', 'secondary_color', 'manager_name', 'coach_name'],
   gate_scans: ['id', 'club_id', 'scan_type', 'token', 'member_id', 'member_name', 'event_id', 'event_title', 'match_id', 'match_title', 'valid', 'scanned_at'],
   contact_inquiries: ['id', 'club_id', 'sender_name', 'sender_email', 'sender_phone', 'inquiry_type', 'message', 'status', 'details', 'team_id', 'match_id', 'created_at'],

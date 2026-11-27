@@ -9,6 +9,7 @@
 --
 --   half_minutes      half length of group (or league) games
 --   ko_half_minutes   half length of knockout games (empty = same as half_minutes)
+--   final_half_minutes half length of the final (empty = same as ko_half_minutes)
 --   ko_match_minutes  timetable slot for a knockout game, game plus changeover (empty = match_minutes)
 --   ko_break_minutes  minutes between the last group game and the first knockout game
 --
@@ -20,6 +21,7 @@
 
 ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS half_minutes INTEGER;
 ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS ko_half_minutes INTEGER;
+ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS final_half_minutes INTEGER;
 ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS ko_match_minutes INTEGER;
 ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS ko_break_minutes INTEGER;
 
@@ -29,6 +31,7 @@ BEGIN
         ALTER TABLE tournaments ADD CONSTRAINT tournaments_game_length_check CHECK (
             (half_minutes IS NULL OR half_minutes BETWEEN 1 AND 60)
             AND (ko_half_minutes IS NULL OR ko_half_minutes BETWEEN 1 AND 60)
+            AND (final_half_minutes IS NULL OR final_half_minutes BETWEEN 1 AND 60)
             AND (ko_match_minutes IS NULL OR ko_match_minutes BETWEEN 5 AND 180)
             AND (ko_break_minutes IS NULL OR ko_break_minutes BETWEEN 0 AND 240)
         );

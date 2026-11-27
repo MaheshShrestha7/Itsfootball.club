@@ -166,11 +166,12 @@ function scheduler(tournament: Tournament, totalRounds: number) {
   };
 }
 
-/** The half length the host set for this stage (group games or knockout games; knockout empty =
- *  the group length), or null for the usual 45 */
-export function tournamentHalfMinutes(tournament: Pick<Tournament, 'half_minutes' | 'ko_half_minutes'>, stage?: Match['tournament_stage'] | null): number | null {
-  const ko = !!stage && stage !== 'group';
-  return validHalfMinutes(ko ? tournament.ko_half_minutes ?? tournament.half_minutes : tournament.half_minutes);
+/** The half length the host set for this stage (group games, knockout games or the final; an empty
+ *  one falls back to the stage before), or null for the usual 45 */
+export function tournamentHalfMinutes(tournament: Pick<Tournament, 'half_minutes' | 'ko_half_minutes' | 'final_half_minutes'>, stage?: Match['tournament_stage'] | null): number | null {
+  const group = tournament.half_minutes;
+  const ko = tournament.ko_half_minutes ?? group;
+  return validHalfMinutes(stage === 'final' ? tournament.final_half_minutes ?? ko : stage && stage !== 'group' ? ko : group);
 }
 
 function baseMatch(tournament: Tournament, fields: Partial<Match>): Match {

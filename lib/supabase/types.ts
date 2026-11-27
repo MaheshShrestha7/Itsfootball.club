@@ -893,6 +893,7 @@ export interface Tournament {
    *  before them on the timetable */
   half_minutes?: number | null;
   ko_half_minutes?: number | null;
+  final_half_minutes?: number | null;
   ko_match_minutes?: number | null;
   ko_break_minutes?: number | null;
   created_at?: string;

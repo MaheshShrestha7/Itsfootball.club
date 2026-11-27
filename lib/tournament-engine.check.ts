@@ -296,6 +296,9 @@ assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unch
   assert.ok(buildTiesheet({ ...tour, ko_half_minutes: null }, teams).matches.every(m => m.half_minutes === 10), 'knockout empty = group length');
   assert.ok(buildTiesheet({ ...tour, half_minutes: null, ko_half_minutes: null }, teams).matches.every(m => m.half_minutes === undefined), 'nothing set: the usual 2 x 45');
   assert.equal(tournamentHalfMinutes({ half_minutes: null, ko_half_minutes: 20 }, 'final'), 20, 'knockout-only cup');
+  const withFinal = buildTiesheet({ ...tour, final_half_minutes: 20 }, teams).matches;
+  assert.ok(withFinal.find(m => m.tournament_stage === 'final')!.half_minutes === 20, 'final 2 x 20');
+  assert.ok(withFinal.filter(m => m.tournament_stage === 'semi_final').every(m => m.half_minutes === 15), 'semis stay 2 x 15');
 
   // Form column in play order: same date, the kick-off time decides (round 2 played first here)
   const g = (id: string, home: string, away: string, time: string, round: number, hs: number, as: number) =>

@@ -76,6 +76,7 @@ export default function TournamentFormModal({
   // Game length per stage (migration 20261194); empty = the usual 2 x 45
   const [groupHalf, setGroupHalf] = useState(base?.half_minutes ? String(base.half_minutes) : '');
   const [koHalf, setKoHalf] = useState(base?.ko_half_minutes ? String(base.ko_half_minutes) : '');
+  const [finalHalf, setFinalHalf] = useState(base?.final_half_minutes ? String(base.final_half_minutes) : '');
   const [koSlot, setKoSlot] = useState(base?.ko_match_minutes ? String(base.ko_match_minutes) : '');
   const [koBreak, setKoBreak] = useState(base?.ko_break_minutes ? String(base.ko_break_minutes) : '');
   const [entryFee, setEntryFee] = useState(base?.entry_fee_cents ? (base.entry_fee_cents / 100).toFixed(2) : '');
@@ -143,6 +144,7 @@ export default function TournamentFormModal({
   const lengthFields = (): Partial<Tournament> => ({
     half_minutes: format === 'knockout' ? null : halfOf(groupHalf),
     ko_half_minutes: format === 'league' ? null : halfOf(koHalf),
+    final_half_minutes: format === 'league' ? null : halfOf(finalHalf),
     ko_match_minutes: timed && format === 'group_knockout' ? minutesOf(koSlot, 5, 180) : null,
     ko_break_minutes: timed && format === 'group_knockout' ? minutesOf(koBreak, 0, 240) : null,
   });
@@ -165,9 +167,12 @@ export default function TournamentFormModal({
     const tooLong = (half: number | null | undefined, slot: number) => (half ?? 45) * 2 > slot ? `A 2 x ${half ?? 45} game doesn't fit a ${slot}-minute slot.` : null;
     const groupHalfMin = lengths.half_minutes;
     const koHalfMin = lengths.ko_half_minutes ?? groupHalfMin;
+    const finalHalfMin = lengths.final_half_minutes ?? koHalfMin;
     const clash = !lengthReady ? null
       : format === 'knockout' ? tooLong(koHalfMin, matchMinutes)
-      : tooLong(groupHalfMin, matchMinutes) ?? (format === 'group_knockout' ? tooLong(koHalfMin, lengths.ko_match_minutes || matchMinutes)?.replace('A 2', 'A knockout 2') ?? null : null);
+      : tooLong(groupHalfMin, matchMinutes) ?? (format === 'group_knockout'
+        ? tooLong(koHalfMin, lengths.ko_match_minutes || matchMinutes)?.replace('A 2', 'A knockout 2') ?? tooLong(finalHalfMin, lengths.ko_match_minutes || matchMinutes)?.replace('A 2', 'A final of 2') ?? null
+        : null);
     return { games: games.length, clash, ...res };
   })();
 
@@ -217,7 +222,7 @@ export default function TournamentFormModal({
     const end = endAt ? new Date(endAt) : null;
     if (isNaN(start.getTime())) return setError('Set a valid start date & time.');
     if (end && end < start) return setError('End date must be after the start date.');
-    if (lengthReady && (halfInvalid(groupHalf) || halfInvalid(koHalf))) return setError('A half can be 1 to 60 minutes. For a 2 x 10 game, enter 10.');
+    if (lengthReady && (halfInvalid(groupHalf) || halfInvalid(koHalf) || halfInvalid(finalHalf))) return setError('A half can be 1 to 60 minutes. For a 2 x 10 game, enter 10.');
 
     const names = [
       ...ownIds.map(id => clubInternalTeams.find(t => t.id === id)?.name),
@@ -421,11 +426,21 @@ export default function TournamentFormModal({
                   {format !== 'league' && (
                     <HalfLengthField
                       id="tfm-kohalf"
-                      label={format === 'knockout' ? 'Half length' : 'Knockout games: half length'}
+                      label="Knockout games: half length"
                       value={koHalf}
                       onChange={setKoHalf}
                       placeholder={halfOf(groupHalf) ?? 45}
-                      helper={format === 'knockout' ? (koHalf ? `Every game is 2 x ${koHalf} minutes.` : 'Empty = 2 x 45.') : koHalf ? `Semi-finals and final are 2 x ${koHalf} minutes.` : 'Empty = the same as group games.'}
+                      helper={format === 'knockout' ? (koHalf ? `Every round before the final is 2 x ${koHalf} minutes.` : 'Empty = 2 x 45.') : koHalf ? `Knockout games are 2 x ${koHalf} minutes.` : 'Empty = the same as group games.'}
+                    />
+                  )}
+                  {format !== 'league' && (
+                    <HalfLengthField
+                      id="tfm-finalhalf"
+                      label="Final: half length"
+                      value={finalHalf}
+                      onChange={setFinalHalf}
+                      placeholder={halfOf(koHalf) ?? halfOf(groupHalf) ?? 45}
+                      helper={finalHalf ? `The final is 2 x ${finalHalf} minutes.` : 'Empty = the same as the other knockout games.'}
                     />
                   )}
                 </div>
