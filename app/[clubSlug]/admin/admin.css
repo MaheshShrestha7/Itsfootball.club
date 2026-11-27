@@ -1513,3 +1513,22 @@ a.admin-tab { text-decoration: none; }
 .social-acc-pick { display: grid; gap: var(--space-xs); width: 100%; margin: 0; padding: 0; border: 0; }
 .social-acc-pick legend { margin-bottom: var(--space-2xs); font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
 .social-acc-foot { display: flex; flex-wrap: wrap; gap: var(--space-xs); width: 100%; margin-top: auto; padding-top: var(--space-sm); border-top: 1px solid var(--color-rule); }
+
+/* Admin > Events > Fixtures popup: date tile | crest + "vs Opponent" (wraps by word) | Unlink */
+.efx-ground { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.5rem; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); }
+.efx-ground svg { flex: none; color: var(--club-ink); }
+.efx-list { list-style: none; margin: 0; padding: 0; }
+.efx-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; column-gap: 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border-subtle); }
+.efx-team { display: flex; align-items: center; gap: 0.55rem; min-width: 0; }
+.efx-crest { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: var(--color-paper-3); border: 1px solid var(--border-subtle); }
+.efx-crest img { width: 26px; height: 26px; object-fit: contain; }
+.efx-crest b { font: 800 0.62rem/1 var(--font-heading); letter-spacing: 0.02em; color: var(--text-secondary); }
+.efx-name { min-width: 0; font-weight: 700; font-size: 0.95rem; line-height: 1.25; color: var(--text-primary); overflow-wrap: break-word; }
+.efx-name small { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+.efx-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; margin-top: 0.35rem; font-size: 0.8rem; color: var(--text-muted); }
+.efx-meta.has-crest { padding-left: calc(34px + 0.55rem); }
+/* Icon-only on phones, so the name keeps the width */
+@media (max-width: 599px) {
+  .efx-unlink { width: 40px; height: 40px; padding: 0; justify-content: center; }
+  .efx-unlink-label { display: none; }
+}
