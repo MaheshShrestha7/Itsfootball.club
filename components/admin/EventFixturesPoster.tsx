@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Share2, X } from 'lucide-react';
 import { useGroundSponsors } from '@/components/GroundSponsors';
-import { drawFixturesPoster, POSTER_MAX_GAMES, POSTER_STYLES, type PosterFormat, type PosterStyle } from '@/lib/event-fixtures-poster';
+import { drawFixturesPoster, posterColors, POSTER_MAX_GAMES, POSTER_STYLES, type PosterColors, type PosterFormat, type PosterStyle } from '@/lib/event-fixtures-poster';
 import { CARD_SIZES, shareLink } from '@/lib/share-card';
 import { publicScoreHidden } from '@/lib/teams';
 import type { Club, ClubEvent, ClubTeam, Match } from '@/lib/supabase/types';
@@ -35,6 +35,9 @@ export default function EventFixturesPoster({ club, event, games, clubTeams, onC
     setStyle(s);
     try { localStorage.setItem('fixtures-poster-style', s); } catch { /* private mode: not remembered */ }
   };
+  // Colours the admin changed; the rest stay the club's own (so they follow the style)
+  const [colors, setColors] = useState<Partial<PosterColors>>({});
+  const shown = { ...posterColors(club, style), ...colors };
   const [image, setImage] = useState<{ url: string; blob: Blob } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +50,7 @@ export default function EventFixturesPoster({ club, event, games, clubTeams, onC
     let stale = false;
     let url: string | null = null;
     const list = (JSON.parse(sponsorKey) as [string, string, boolean][]).map(([src, name, top]) => ({ src: src || undefined, name, top }));
-    drawFixturesPoster(games.map(match => ({ match, hideScore: publicScoreHidden(match, clubTeams) })), event, club, shareLink(club), { format, sponsors: list, style })
+    drawFixturesPoster(games.map(match => ({ match, hideScore: publicScoreHidden(match, clubTeams) })), event, club, shareLink(club), { format, sponsors: list, style, colors })
       .then(blob => {
         if (stale) return;
         url = URL.createObjectURL(blob);
@@ -56,7 +59,7 @@ export default function EventFixturesPoster({ club, event, games, clubTeams, onC
       })
       .catch(e => !stale && setError((e as Error).message));
     return () => { stale = true; if (url) URL.revokeObjectURL(url); };
-  }, [games, clubTeams, event, club, format, style, sponsorKey, sponsors]);
+  }, [games, clubTeams, event, club, format, style, colors, sponsorKey, sponsors]);
 
   const slug = event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'event';
   const fileName = `${club.slug}-${slug}-fixtures-${format}.png`;
@@ -109,6 +112,18 @@ export default function EventFixturesPoster({ club, event, games, clubTeams, onC
           <button key={key} type="button" role="radio" aria-checked={style === key} onClick={() => pickStyle(key)}
             className={`btn btn-sm ${style === key ? 'btn-primary' : 'btn-secondary'}`}>{POSTER_STYLES[key].label}</button>
         ))}
+      </div>
+      <div role="group" aria-label="Colours" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+        {([['primary', 'Main'], ['secondary', 'Second'], ['accent', 'Accent']] as const).map(([key, label]) => (
+          <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'pointer', minHeight: 36 }}>
+            <input type="color" value={shown[key]} onChange={e => setColors(c => ({ ...c, [key]: e.target.value.toUpperCase() }))}
+              style={{ width: 36, height: 36, padding: 0, border: '1px solid var(--border-medium)', borderRadius: 8, background: 'none', cursor: 'pointer' }} />
+            {label}
+          </label>
+        ))}
+        {Object.keys(colors).length > 0 && (
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setColors({})}>Club colours</button>
+        )}
       </div>
 
       <div style={{ aspectRatio: `${size.w} / ${size.h}`, height: format === 'story' ? 'min(56vh, 600px)' : undefined, maxWidth: '100%', margin: '0 auto', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'rgba(var(--shade-rgb), 0.4)', display: 'grid', placeItems: 'center' }}>

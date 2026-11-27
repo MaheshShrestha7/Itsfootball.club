@@ -28,6 +28,24 @@ export const POSTER_STYLES = {
 } satisfies Record<string, { label: string; look: CardLook }>;
 export type PosterStyle = keyof typeof POSTER_STYLES;
 
+/** The poster's background colours (main and second) and its accent (the headline's second word, the
+ *  pill, the pin and the VS ring). The admin can change each; these are the club's own */
+export interface PosterColors { primary: string; secondary: string; accent: string }
+
+export function posterColors(club: Pick<Club, 'primary_color' | 'secondary_color'>, style: PosterStyle = 'classic'): PosterColors {
+  const primary = hex(club.primary_color, '#10B981');
+  const second = hex(club.secondary_color, primary);
+  const shade = POSTER_STYLES[style].look.shade;
+  // On a background in the club colour the accent is lifted most of the way to white, as on the match graphics
+  const lifted = readableClubInk(primary, 'dark');
+  return {
+    primary,
+    // Two-tone with one club colour runs into navy rather than into itself
+    secondary: second === primary ? '#0F172A' : second,
+    accent: shade === 'club' || shade === 'duo' ? mixWhite(lifted, 0.6) : lifted,
+  };
+}
+
 export interface PosterGame {
   match: Match;
   /** The team hides its scores publicly (junior grassroots rules) */
@@ -61,7 +79,7 @@ export async function drawFixturesPoster(
   event: Pick<ClubEvent, 'title'>,
   club: Pick<Club, 'name' | 'logo_url' | 'primary_color' | 'secondary_color'>,
   link: string,
-  opts: { format?: PosterFormat; sponsors?: CardSponsor[]; style?: PosterStyle } = {},
+  opts: { format?: PosterFormat; sponsors?: CardSponsor[]; style?: PosterStyle; colors?: Partial<PosterColors> } = {},
 ): Promise<Blob> {
   const format = opts.format || 'story';
   const story = format === 'story';
@@ -82,13 +100,12 @@ export async function drawFixturesPoster(
     .map(f => document.fonts?.load(f).catch(() => null)));
 
   const list = [...games].sort((a, b) => posterOrder(a.match, b.match)).slice(0, POSTER_MAX_GAMES);
-  const primary = hex(club.primary_color, '#10B981');
-  const secondary = hex(club.secondary_color, primary);
   const look: CardLook = { ...POSTER_STYLES[opts.style || 'classic'].look };
-  if (look.shade === 'duo') look.second = secondary === primary ? '#0F172A' : secondary;
-  // On a background in the club colour the accent words are lifted most of the way to white, as on the match graphics
-  const lifted = readableClubInk(primary, 'dark');
-  const ink = look.shade === 'club' || look.shade === 'duo' ? mixWhite(lifted, 0.6) : lifted;
+  const club_ = posterColors(club, opts.style);
+  const primary = hex(opts.colors?.primary, club_.primary);
+  const secondary = hex(opts.colors?.secondary, club_.secondary);
+  const ink = hex(opts.colors?.accent, opts.colors?.primary ? posterColors({ ...club, primary_color: primary }, opts.style).accent : club_.accent);
+  if (look.shade === 'duo') look.second = secondary;
   const [clubCrest, sponsors, crests] = await Promise.all([
     crest(club.logo_url),
     loadSponsors(opts.sponsors, MAX_SPONSORS),
