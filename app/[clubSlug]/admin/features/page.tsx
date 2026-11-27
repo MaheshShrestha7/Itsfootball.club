@@ -1,7 +1,7 @@
 'use client';
 
 import React, { use, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Search } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { CLUB_FEATURES, CLUBSCORE_FEATURE, SCORE_BY_CHAT_FEATURE, configWithFeaturesOff, featuresOff, type ClubFeature, type ClubFeatureKey } from '@/lib/club-features';
@@ -35,6 +35,7 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
   const off = featuresOff(club);
   const [saving, setSaving] = useState<RowKey | null>(null);
   const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
+  const [query, setQuery] = useState('');
   const pending = useRef<{ key: ClubFeatureKey | 'clubscore'; on: boolean } | null>(null);
   // ClubScore's switch lives in its own rules (clubscore_rules.is_active): off also stops points being awarded
   const clubScoreOn = club ? (clubScoreRules[club.id] || getDefaultClubScoreRules(club.id)).is_active : true;
@@ -102,10 +103,15 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
     const n = rows.filter(r => r.on).length;
     return n === rows.length ? 'Everything is on.' : `${n} of ${rows.length} on.`;
   };
-  const section = (title: string, note: string, rows: typeof clubRows) => (
+  // Search by name or what it hides ('ticket' finds Events and tickets); every word must match
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = (r: (typeof clubRows)[number]) => words.every(w => `${r.label} ${r.hides}`.toLowerCase().includes(w));
+  const section = (title: string, note: string, all: typeof clubRows) => {
+    const rows = all.filter(matches);
+    return rows.length > 0 && (
     <section className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
       <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: '0.25rem' }}>{title}</h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{note} {count(rows)}</p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{note} {count(all)}</p>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {rows.map((f, i) => (
           <div key={f.key} style={{ padding: '0.9rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
@@ -121,7 +127,9 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
         ))}
       </div>
     </section>
-  );
+    );
+  };
+  const found = [...clubRows, ...homeRows].filter(matches).length;
 
   return (
     <div style={{ maxWidth: '960px' }}>
@@ -139,6 +147,16 @@ export default function AdminFeaturesPage({ params }: { params: Promise<{ clubSl
         </div>
       )}
 
+      <div style={{ position: 'relative', marginBottom: '1rem' }}>
+        <Search size={15} color="var(--text-muted)" aria-hidden="true" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+        <input type="search" className="form-input" aria-label="Search features" placeholder="Search features, e.g. shop, sponsors, join"
+          value={query} onChange={e => setQuery(e.target.value)} style={{ paddingLeft: '2.1rem' }} />
+      </div>
+      {found === 0 && (
+        <p className="glass-panel" style={{ padding: '1.5rem', color: 'var(--text-secondary)' }}>
+          No feature matches &ldquo;{query.trim()}&rdquo;. <button type="button" className="auth-link" onClick={() => setQuery('')}>Clear search</button>
+        </p>
+      )}
       {section('Club features', 'Pages and tools across the site and the admin area.', clubRows)}
       {section('Home page sections', 'The parts of your club home page under the hero.', homeRows)}
     </div>
