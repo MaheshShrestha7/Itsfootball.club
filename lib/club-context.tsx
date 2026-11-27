@@ -3424,6 +3424,13 @@ export function ClubProvider({
       queueDelete('matches', prev.filter(m => m.tournament_id === tournament.id && !keptMatches.has(m.id)).map(m => m.id));
       return [...prev.filter(m => m.tournament_id !== tournament.id), ...res.matches];
     });
+    // A new draw reuses the game ids, so the old games' goals and cards would carry over to the new ones
+    if (res.matches.length > 0) {
+      setMatchEvents(prev => {
+        queueDelete('matchEvents', prev.filter(e => keptMatches.has(e.match_id)).map(e => e.id));
+        return prev.filter(e => !keptMatches.has(e.match_id));
+      });
+    }
     setTournaments(prev => prev.map(t => t.id === tournament.id ? {
       ...t,
       ...res.tournamentUpdates,
