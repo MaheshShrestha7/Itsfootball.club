@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Link2, NotebookPen, Plus, Unlink, X } from 'lucide-react';
+import { ImageDown, Link2, NotebookPen, Plus, Unlink, X } from 'lucide-react';
+import EventFixturesPoster from '@/components/admin/EventFixturesPoster';
 import PopupPanel from '@/components/PopupPanel';
 import { newItemHref } from '@/lib/admin-calendar';
 import { formatClock, formatShortDay } from '@/lib/dates';
 import { hasKickoffTime, soonestFirst } from '@/lib/fixtures';
-import type { ClubEvent, Match } from '@/lib/supabase/types';
+import type { Club, ClubEvent, ClubTeam, Match } from '@/lib/supabase/types';
 import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 
 /** How far back "Link a fixture" looks: a cup's earlier rounds may already be played */
@@ -38,9 +39,10 @@ function GameLine({ m }: { m: Match }) {
 }
 
 /** Admin > Events > Fixtures: the games of one event (an outside cup), to link, unlink or add */
-export default function EventFixturesModal({ event, clubSlug, matches, onLink, onUnlink, onClose }: {
+export default function EventFixturesModal({ event, club, clubTeams, matches, onLink, onUnlink, onClose }: {
   event: ClubEvent;
-  clubSlug: string;
+  club: Club;
+  clubTeams: ClubTeam[];
   /** The club's own fixtures */
   matches: Match[];
   onLink: (m: Match) => void;
@@ -57,6 +59,8 @@ export default function EventFixturesModal({ event, clubSlug, matches, onLink, o
   }, [matches]);
   const reviewsReady = useMatchReviewsReady();
   const [pick, setPick] = useState('');
+  const [poster, setPoster] = useState(false);
+  const clubSlug = club.slug;
   const picked = linkable.find(m => m.id === pick) || linkable[0];
 
   const start = new Date(event.start_time);
@@ -108,6 +112,11 @@ export default function EventFixturesModal({ event, clubSlug, matches, onLink, o
           </div>
         )}
 
+        {linked.length > 0 && (
+          <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', justifyContent: 'center' }} onClick={() => setPoster(true)}>
+            <ImageDown size={14} aria-hidden="true" /> Make fixtures poster
+          </button>
+        )}
         <Link href={addHref} className="btn btn-secondary" style={{ width: '100%', marginTop: '0.75rem', justifyContent: 'center' }}>
           <Plus size={14} aria-hidden="true" /> Add new fixture to this event
         </Link>
@@ -118,6 +127,7 @@ export default function EventFixturesModal({ event, clubSlug, matches, onLink, o
           </Link>
         )}
       </PopupPanel>
+      {poster && <EventFixturesPoster club={club} event={event} games={linked} clubTeams={clubTeams} onClose={() => setPoster(false)} />}
     </div>
   );
 }

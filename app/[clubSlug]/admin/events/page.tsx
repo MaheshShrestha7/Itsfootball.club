@@ -815,7 +815,8 @@ export default function AdminEventsPage({
       {fixturesEvent && (
         <EventFixturesModal
           event={fixturesEvent}
-          clubSlug={club.slug}
+          club={club}
+          clubTeams={clubTeams}
           matches={clubMatches}
           onLink={m => {
             // The game's competition becomes the event's name (it can still be changed on the fixture)
