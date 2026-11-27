@@ -116,6 +116,8 @@ export interface ClubConfig {
   sponsors?: { name: string; url?: string }[];
   /** The club's time zone (lib/dates.ts CLUB_TIME_ZONES), picked in Admin -> Branding. Unset: Sydney */
   time_zone?: string;
+  /** The club's own social pages: full https links by platform, set in Admin -> Branding (lib/club-socials.ts) */
+  socials?: Partial<Record<string, string>>;
   [key: string]: unknown;
 }
 

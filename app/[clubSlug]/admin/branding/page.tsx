@@ -11,6 +11,7 @@ import KitDesignerPreview from '@/components/KitDesignerPreview';
 import RichTextEditor from '@/components/RichTextEditor';
 import { isArticleEmpty } from '@/lib/article-text';
 import { CLUB_TIME_ZONES, clubTimeZone } from '@/lib/dates';
+import { SOCIAL_PLATFORMS, normaliseSocial, socialLabel, type SocialKey } from '@/lib/club-socials';
 import { confirmAction } from '@/components/ConfirmDialog';
 import type { Club } from '@/lib/supabase/types';
 import { FOOTBALL_COLOR_PALETTES, evaluateColorContrast, clubInkVars } from '@/lib/theme-utils';
@@ -50,7 +51,14 @@ function formFromClub(club: Club | undefined) {
     contact_phone: club?.contact_phone || '',
     // Where the club plays (F10-1): match times in emails, page titles and Google's event data
     time_zone: clubTimeZone(club),
+    // The club's social pages, kept in config.socials (lib/club-socials.ts)
+    ...socialsFromClub(club),
   };
+}
+const socialField = (key: SocialKey) => `social_${key}` as const;
+function socialsFromClub(club: Club | undefined) {
+  const saved = (club?.config?.socials || {}) as Partial<Record<SocialKey, unknown>>;
+  return Object.fromEntries(SOCIAL_PLATFORMS.map(p => [socialField(p.key), typeof saved[p.key] === 'string' ? saved[p.key] as string : ''])) as Record<`social_${SocialKey}`, string>;
 }
 type BrandingForm = ReturnType<typeof formFromClub>;
 
@@ -60,6 +68,7 @@ const FORM_SECTIONS: [string, (keyof BrandingForm)[]][] = [
   ['Club colours', ['primary_color', 'secondary_color', 'accent_color']],
   ['Contact details', ['contact_email', 'contact_phone']],
   ['Time zone', ['time_zone']],
+  ['Social media', SOCIAL_PLATFORMS.map(p => socialField(p.key))],
 ];
 /** A field still as saved. Colours compare without case (a preset writes #10B981, the picker #10b981);
  *  everything else exactly, so renaming "Ancc" to "ANCC" still counts as a change */
@@ -160,6 +169,12 @@ export default function AdminBrandingPage({
     }
   };
 
+  // Each social box: its tidied link, or why it can't be used
+  const socialChecks = useMemo(
+    () => Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p.key, normaliseSocial(p.key, formData[socialField(p.key)])])) as Record<SocialKey, ReturnType<typeof normaliseSocial>>,
+    [formData],
+  );
+
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -173,6 +188,13 @@ export default function AdminBrandingPage({
       const slugInput = document.querySelector<HTMLInputElement>('input[name="slug"]');
       slugInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       slugInput?.focus({ preventScroll: true });
+      return;
+    }
+    const badSocial = SOCIAL_PLATFORMS.find(p => 'error' in socialChecks[p.key]);
+    if (badSocial) {
+      setSavedMessage(false);
+      setSaveError(`Not saved: check the ${badSocial.name} link.`);
+      document.getElementById(`branding-${socialField(badSocial.key)}`)?.focus();
       return;
     }
     setSaveError(null);
@@ -197,9 +219,15 @@ export default function AdminBrandingPage({
 
     // Kept in config, so it never depends on a new column; only sent when it changed
     const zoneChanged = formData.time_zone !== clubTimeZone(club);
+    // Saved tidied (full https links); empty boxes are left out
+    const socials = Object.fromEntries(SOCIAL_PLATFORMS.flatMap(p => {
+      const r = socialChecks[p.key];
+      return 'url' in r && r.url ? [[p.key, r.url]] : [];
+    }));
+    const socialsChanged = JSON.stringify(socials) !== JSON.stringify(club.config?.socials || {});
     updateClubBranding(club.id, {
       name, short_name, motto, primary_color, secondary_color, accent_color, logo_url, banner_url, contact_email, contact_phone,
-      ...(zoneChanged ? { config: { ...(club.config || {}), time_zone: formData.time_zone } } : {}),
+      ...(zoneChanged || socialsChanged ? { config: { ...(club.config || {}), time_zone: formData.time_zone, socials } } : {}),
       ...(founded_year ? { founded_year } : {}),
       slider_images: slides,
       slug: newSlug,
@@ -568,7 +596,7 @@ export default function AdminBrandingPage({
             <Mail size={20} aria-hidden="true" /> Contact details
           </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-            Your email and phone show in your club site&apos;s footer and in replies to people who contact the club.
+            Your email, phone and social pages show in your club site&apos;s footer and Get in touch section. Email is also used in replies to people who contact the club.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '1.25rem' }}>
@@ -590,6 +618,48 @@ export default function AdminBrandingPage({
               <p style={hintStyle}>Kick-off times in emails, reminders and search results use this.</p>
             </div>
           </div>
+
+          {/* The club's own social pages (lib/club-socials.ts) */}
+          <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)', margin: '2rem 0 0.35rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+            Social media
+          </h3>
+          <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+            Paste the link to your page, or type your @name. Leave a box empty and that icon won&apos;t show.
+          </p>
+          {SOCIAL_PLATFORMS.map((p, i) => {
+            const field = socialField(p.key);
+            const check = socialChecks[p.key];
+            const error = 'error' in check ? check.error : '';
+            const url = 'url' in check ? check.url : '';
+            return (
+              <div key={p.key} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0, 1fr)', gap: '0.35rem 0.85rem', padding: '0.85rem 0', borderTop: i ? '1px solid var(--border-subtle)' : 'none' }}>
+                <span aria-hidden="true" style={{
+                  gridRow: 'span 2', marginTop: '1.7rem', width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center',
+                  border: `1px solid ${url ? `color-mix(in oklab, ${p.color} 45%, transparent)` : 'var(--border-subtle)'}`,
+                  background: 'rgba(var(--tint-rgb), 0.04)', color: url ? p.color : 'var(--text-muted)',
+                }}>
+                  <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor"><path d={p.path} /></svg>
+                </span>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor={`branding-${field}`} className="form-label">{p.name}</label>
+                  <input id={`branding-${field}`} name={field} className="form-input" placeholder={p.placeholder} autoComplete="off" spellCheck={false}
+                    maxLength={300} value={formData[field]} onChange={handleChange}
+                    aria-invalid={!!error || undefined} aria-describedby={`branding-${field}-note`}
+                    style={error ? { borderColor: 'var(--c-red)' } : undefined} />
+                </div>
+                <p id={`branding-${field}-note`} style={{ ...hintStyle, marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, color: error ? 'var(--c-red)' : 'var(--text-muted)' }}>
+                  {error ? (
+                    <><AlertCircle size={14} aria-hidden="true" className="shrink-0" /> {error}</>
+                  ) : url ? (
+                    <>
+                      <CheckCircle2 size={14} aria-hidden="true" className="shrink-0" style={{ color: 'var(--c-green)' }} /> Opens{' '}
+                      <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--club-ink)', fontWeight: 600, overflowWrap: 'anywhere' }}>{socialLabel(url)}</a>
+                    </>
+                  ) : 'Not shown on your site.'}
+                </p>
+              </div>
+            );
+          })}
         </section>
 
         {/* The save bar: sticks to the bottom of the screen while there are unsaved changes, and

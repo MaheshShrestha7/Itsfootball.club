@@ -5,6 +5,7 @@ import { matchPath, newsPath } from './slugs';
 import { isPlayed } from './public-tournaments';
 import { groundPath, type GroundRow } from './grounds';
 import { clubTimeZone } from './dates';
+import { clubSocials } from './club-socials';
 import type {
   ClubMetadataRow,
   EventMetadataRow,
@@ -219,6 +220,7 @@ export function newsArticleSchema(club: ClubMetadataRow, article: NewsArticleRow
 /** Club homepage: the club (SportsClub / SportsOrganization) plus news postings and match fixtures */
 function clubNode(club: ClubMetadataRow) {
   const logo = absUrl(club.logo_url);
+  const sameAs = clubSocials(club.config).map(s => s.url);
   return {
     '@type': ['SportsClub', 'SportsOrganization', 'SportsTeam'],
     '@id': clubId(club),
@@ -233,6 +235,8 @@ function clubNode(club: ClubMetadataRow) {
     location: club.stadium_name
       ? { '@type': 'Place', name: club.stadium_name, address: club.stadium_address || club.stadium_name }
       : undefined,
+    // The club's own social pages (Admin -> Branding), so search engines tie them to this site
+    sameAs: sameAs.length ? sameAs : undefined,
   };
 }
 
