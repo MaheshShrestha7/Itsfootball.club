@@ -60,8 +60,8 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
 
-  // A league has no bracket tab, so it opens on its standings
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>(() => (tournament?.format === 'league' ? 'standings' : 'bracket'));
+  // Teams is the first tab, so the screen opens on it
+  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>('teams');
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [runSheet, setRunSheet] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -159,10 +159,10 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const status = STATUS[tournament.status] || { label: tournament.status, tone: 'var(--text-secondary)' };
   const liveCount = tourneyMatches.filter(m => m.status === 'live').length;
   const tabs = ([
+    { id: 'teams', label: `Teams (${participants.length})`, Icon: Users, show: true },
     { id: 'bracket', label: 'Knockout bracket', Icon: Trophy, show: tournament.format !== 'league' },
     { id: 'standings', label: 'Standings', Icon: Layers, show: tournament.format !== 'knockout' },
     { id: 'fixtures', label: `Fixtures and results (${tourneyMatches.length})`, Icon: Calendar, show: true },
-    { id: 'teams', label: `Teams (${participants.length})`, Icon: Users, show: true },
     { id: 'fairplay', label: 'Fair play', Icon: ShieldCheck, show: hosted },
   ] as const).filter(t => t.show);
   // Age groups of a hosted tournament (one tournament each); not on free public tournaments
