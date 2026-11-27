@@ -33,5 +33,8 @@ export const useTieBreakersReady = () => useColumnReady('tournaments', 'tie_brea
  *  Until then knockout games open by themselves once every group game is played. */
 export const useKnockoutStartReady = () => useColumnReady('tournaments', 'knockout_started_at');
 
-/** True once a tournament can keep its game lengths and knockout timing (tournaments.half_minutes, migration 20261192) */
+/** True once an outside cup's format can be saved (events.cup_format, migration 20261192) */
+export const useCupFormatReady = () => useColumnReady('events', 'cup_format');
+
+/** True once a tournament can keep its game lengths and knockout timing (tournaments.half_minutes, migration 20261194) */
 export const useTournamentLengthReady = () => useColumnReady('tournaments', 'half_minutes');

@@ -285,7 +285,7 @@ export interface Match {
   tournament_id?: string;
   /** The club event this fixture belongs to (an outside cup); migration 20261169 */
   event_id?: string | null;
-  tournament_stage?: 'group' | 'round_of_32' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | 'third_place';
+  tournament_stage?: 'group' | 'round_of_32' | 'round_of_16' | 'quarter_final' | 'semi_final' | 'final' | 'third_place' | null;
   tournament_group?: string;
   tournament_round?: number;
   tournament_match_number?: number;
@@ -362,8 +362,12 @@ export interface ClubEvent {
   cup_winner?: string | null;
   /** The club's own words printed at the end of the write-up */
   writeup_note?: string | null;
+  /** How an outside cup is played (migration 20261192); null = not set */
+  cup_format?: CupFormat | null;
   created_at?: string;
 }
+
+export type CupFormat = 'group_ko' | 'league' | 'knockout';
 
 export interface CupFinish {
   stage: 'won' | 'final' | 'semi' | 'quarter' | 'group';
@@ -884,7 +888,7 @@ export interface Tournament {
   tie_breakers?: TieBreaker[] | null;
   /** Migration 20261185: when the host confirmed every group game was played and opened the knockout games */
   knockout_started_at?: string | null;
-  /** Migration 20261192: half length for group (or league) games and for knockout games, copied onto
+  /** Migration 20261194: half length for group (or league) games and for knockout games, copied onto
    *  each fixture's half_minutes when the draw is made; the knockouts' own slot length and the break
    *  before them on the timetable */
   half_minutes?: number | null;

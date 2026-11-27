@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
 import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
+import { KO_ROUNDS, isKoStage } from '@/lib/cup-progress';
 import { Match, MatchType, MatchStatus, MatchFormat, type ClubEvent, type ContactInquiry } from '@/lib/supabase/types';
 import { clubTeamsOf, defaultTeamOf, isTeamFixture, matchTypeForCompetition, publicScoreHidden, teamLabel, teamOfMatch } from '@/lib/teams';
 import ImageUploadZone, { uploadImage } from '@/components/ImageUploadZone';
@@ -185,6 +186,8 @@ export default function AdminMatchesPage({
     opponent_logo: string;
     /** The club event this game is part of, e.g. an outside cup ('' = none) */
     event_id: string;
+    /** Its knockout round in that cup ('' = a group or league game) */
+    tournament_stage: string;
   }>({
     title: '',
     match_type: 'friendly',
@@ -214,6 +217,7 @@ export default function AdminMatchesPage({
     half_custom: false,
     opponent_logo: '',
     event_id: '',
+    tournament_stage: '',
   });
 
   const showToast = (msg: string) => {
@@ -227,6 +231,9 @@ export default function AdminMatchesPage({
     const prefillTeam = prefill?.team && (!teams.length || teams.some(t => t.id === prefill.team)) ? prefill.team : undefined;
     // "Add new fixture" on an event (an outside cup): its day, name and link come with it
     const prefillEvent = prefill?.event ? events.find(e => e.id === prefill.event && e.club_id === club.id) : undefined;
+    // The cup's next game is usually where its last one was played
+    const lastCupGame = prefillEvent ? clubMatches.filter(m => m.event_id === prefillEvent.id && (!prefillTeam || m.team_id === prefillTeam))
+      .sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())[0] : undefined;
     setEditingMatchId(null);
     setFromInvitation(null);
     setForm({
@@ -237,7 +244,7 @@ export default function AdminMatchesPage({
       is_club_home: true,
       match_date: prefill?.date || todayIso(new Date(Date.now() + 3 * 86400000)),
       match_time: prefill?.time || '15:00',
-      venue: club.stadium_name || '',
+      venue: lastCupGame?.venue || club.stadium_name || '',
       match_flyer_url: '',
       description: '',
       meet_time: '',
@@ -252,12 +259,13 @@ export default function AdminMatchesPage({
       home_score: 0,
       away_score: 0,
       team_id: prefillTeam || (teamFilter !== 'ALL' && teams.some(t => t.id === teamFilter) ? teamFilter : mainTeamId),
-      ground_id: '',
+      ground_id: lastCupGame?.ground_id || '',
       pitch_label: '',
       half_text: '',
       half_custom: false,
       opponent_logo: '',
       event_id: prefillEvent?.id || '',
+      tournament_stage: prefillEvent && isKoStage(prefill?.stage) ? prefill.stage : '',
     });
     setEmailVisitor(true);
     setOfferToThem(true);
@@ -447,6 +455,7 @@ export default function AdminMatchesPage({
       // Keep the crest the opponent already has (it used to go back to the plain shield on every edit)
       opponent_logo: opponentLogoOf(m),
       event_id: m.event_id || '',
+      tournament_stage: m.event_id ? m.tournament_stage || '' : '',
     });
     editOpenedWithRef.current = { status: m.status || 'upcoming', home_score: m.home_score ?? 0, away_score: m.away_score ?? 0 };
     setEditOpenedAt({ match_date: parsedDate, match_time: parsedTime, venue: m.venue || club.stadium_name || '', status: m.status || 'upcoming' });
@@ -588,6 +597,7 @@ export default function AdminMatchesPage({
     // Changed for this game: its own length (empty = the usual one); otherwise the team's
     const halfMinutes = form.half_custom ? (halfTyped.empty ? null : halfTyped.minutes) : teamHalfOf(teamId);
 
+    const cupStage = form.event_id && isKoStage(form.tournament_stage) ? form.tournament_stage : null;
     if (editingMatchId) {
       // Update existing fixture - PRESERVE status & scores
       const opened = editOpenedWithRef.current || { status: resolvedStatus, home_score: homeScore, away_score: awayScore };
@@ -619,6 +629,8 @@ export default function AdminMatchesPage({
         ...(detailsReady && form.meet_time !== (editingMatch?.meet_time || '') ? { meet_time: form.meet_time } : {}),
         ...(detailsReady && cleanKit !== (editingMatch?.kit || '') ? { kit: cleanKit } : {}),
         ...(eventsReady && (form.event_id || null) !== (editingMatch?.event_id || null) ? { event_id: form.event_id || null } : {}),
+        // A cup game's round; never touches a hosted tournament's games
+        ...(eventsReady && !editingMatch?.tournament_id && cupStage !== (editingMatch?.tournament_stage || null) ? { tournament_stage: cupStage } : {}),
         // Only what the admin actually changed: the live match centre may have moved the score or
         // status on since this form was opened, and re-sending the old values would undo that
         ...(resolvedStatus !== opened.status ? { status: resolvedStatus } : {}),
@@ -671,6 +683,7 @@ export default function AdminMatchesPage({
         ...(detailsReady && form.meet_time ? { meet_time: form.meet_time } : {}),
         ...(detailsReady && cleanKit ? { kit: cleanKit } : {}),
         ...(eventsReady && form.event_id ? { event_id: form.event_id } : {}),
+        ...(eventsReady && cupStage ? { tournament_stage: cupStage } : {}),
       });
       if (fromInvitation) {
         // A return fixture leaves the invitation linked to the first game
@@ -1505,6 +1518,18 @@ export default function AdminMatchesPage({
                   <div className="text-meta" style={{ marginTop: '0.35rem' }}>
                     The game shows on the event&apos;s page. Picking an event fills in the competition name.
                   </div>
+                </div>
+              )}
+
+              {/* Its round in that cup: knockout games, so admin can ask "Did we go through?" after each */}
+              {eventsReady && form.event_id && form.match_type !== 'internal' && (
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label" htmlFor="form-cup-round">Round in the cup</label>
+                  <select id="form-cup-round" className="form-input" value={form.tournament_stage}
+                    onChange={e => setForm({ ...form, tournament_stage: e.target.value })}>
+                    <option value="">Group or league game</option>
+                    {KO_ROUNDS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                  </select>
                 </div>
               )}
 

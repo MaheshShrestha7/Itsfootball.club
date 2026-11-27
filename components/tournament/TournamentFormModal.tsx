@@ -73,7 +73,7 @@ export default function TournamentFormModal({
   const [matchMinutes, setMatchMinutes] = useState(base?.match_minutes ?? 25);
   const [pitches, setPitches] = useState(base?.pitches ?? 2);
   const [dayEnd, setDayEnd] = useState(base?.day_end_time ?? '17:00');
-  // Game length per stage (migration 20261192); empty = the usual 2 x 45
+  // Game length per stage (migration 20261194); empty = the usual 2 x 45
   const [groupHalf, setGroupHalf] = useState(base?.half_minutes ? String(base.half_minutes) : '');
   const [koHalf, setKoHalf] = useState(base?.ko_half_minutes ? String(base.ko_half_minutes) : '');
   const [koSlot, setKoSlot] = useState(base?.ko_match_minutes ? String(base.ko_match_minutes) : '');
@@ -251,7 +251,7 @@ export default function TournamentFormModal({
       banner_url: bannerUrl.trim() || COVER_PRESETS[0].url,
       // Only once the database has these columns: sending them before would fail the whole save
       ...(hosted ? hostedFields() : {}),
-      // Migration 20261192
+      // Migration 20261194
       ...(lengthReady ? lengthFields() : {}),
       // Migration 20261181; a knockout has no table to split
       ...(tieReady && format !== 'knockout' ? { tie_breakers: tieBreakers } : {}),

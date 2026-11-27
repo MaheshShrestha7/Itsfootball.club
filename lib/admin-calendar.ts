@@ -339,14 +339,17 @@ export interface NewItemRequest {
   team?: string;
   /** The club event the new fixture belongs to (an outside cup) */
   event?: string;
+  /** The cup round of the new fixture (an outside cup's knockout game) */
+  stage?: string;
 }
 
 /** Link to a page's add form, prefilled from a calendar day ('?new=2026-10-17&time=15:00&team=…') */
-export function newItemHref(pagePath: string, day: Date, time?: string, team?: string, event?: string): string {
+export function newItemHref(pagePath: string, day: Date, time?: string, team?: string, event?: string, stage?: string): string {
   const q = new URLSearchParams({ new: dayKey(day) });
   if (time) q.set('time', time);
   if (team && team !== 'ALL') q.set('team', team);
   if (event) q.set('event', event);
+  if (stage) q.set('stage', stage);
   return `${pagePath}?${q.toString()}`;
 }
 
@@ -359,7 +362,7 @@ export function parseNewItemRequest(search: string): NewItemRequest | null {
   const time = q.get('time') || '';
   const tm = /^(\d{2}):(\d{2})$/.exec(time);
   const validTime = tm && Number(tm[1]) < 24 && Number(tm[2]) < 60 ? time : undefined;
-  return { date, time: validTime, team: q.get('team') || undefined, event: q.get('event') || undefined };
+  return { date, time: validTime, team: q.get('team') || undefined, event: q.get('event') || undefined, stage: q.get('stage') || undefined };
 }
 
 /**
@@ -370,7 +373,7 @@ export function takeNewItemRequest(): NewItemRequest | null {
   const req = parseNewItemRequest(window.location.search);
   if (!req) return null;
   const q = new URLSearchParams(window.location.search);
-  ['new', 'time', 'team', 'event'].forEach(k => q.delete(k));
+  ['new', 'time', 'team', 'event', 'stage'].forEach(k => q.delete(k));
   const search = q.toString();
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`);
   return req;

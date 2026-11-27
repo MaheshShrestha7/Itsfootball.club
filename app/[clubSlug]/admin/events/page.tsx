@@ -5,7 +5,9 @@ import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { takeNewItemRequest, type NewItemRequest } from '@/lib/admin-calendar';
 import { useOpenItem } from '@/lib/use-open-item';
-import { ClubEvent, EventCategory } from '@/lib/supabase/types';
+import { ClubEvent, EventCategory, type CupFormat } from '@/lib/supabase/types';
+import CupAskPanel, { cupTeamName } from '@/components/admin/CupAskPanel';
+import { CUP_FORMATS, cupAsks } from '@/lib/cup-progress';
 import { getDefaultHeroPinnedItems } from '@/lib/hero-slider-utils';
 import QRScannerModal from '@/components/QRScannerModal';
 import DoorCheckinQrModal from '@/components/DoorCheckinQrModal';
@@ -32,7 +34,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import EventFixturesModal from '@/components/admin/EventFixturesModal';
-import { useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
+import { useCupFormatReady, useEventFixturesReady } from '@/lib/use-event-fixtures-ready';
 import { defaultSeasonLabel } from '@/lib/season';
 import { byDate, isPastEvent, type DateOrder } from '@/lib/club-lists';
 import { EVENT_TYPES } from '@/lib/event-report';
@@ -79,6 +81,18 @@ export default function AdminEventsPage({
   const clubMatches = matches.filter(m => m.club_id === club.id);
   const fixturesEvent = clubEvents.find(e => e.id === fixturesEventId) || null;
   const canLinkFixtures = eventFixturesReady && can(club.id, 'matches', 'edit');
+  // How an outside cup is played (migration 20261192): hidden and never sent until it has run
+  const cupFormatReady = useCupFormatReady();
+  // "No, we're out" from Match Centre (?complete=<event>): open Mark as completed once the event has loaded
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('complete');
+    if (!id || !clubEvents.some(e => e.id === id)) return;
+    setCompletingId(id);
+    const q = new URLSearchParams(window.location.search);
+    q.delete('complete');
+    const rest = q.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+  }, [clubEvents]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -195,6 +209,7 @@ export default function AdminEventsPage({
     ticket_member_price: '',
     flyer_url: '',
     repeat_weeks: 1,
+    cup_format: '' as CupFormat | '',
   });
 
   // The calendar can prefill the day and start time (training evenings by default)
@@ -214,6 +229,7 @@ export default function AdminEventsPage({
       ticket_member_price: '',
       flyer_url: '',
       repeat_weeks: 1,
+      cup_format: '',
     });
     setModalOpen(true);
   };
@@ -245,6 +261,7 @@ export default function AdminEventsPage({
       ticket_member_price: evt.ticket_member_price_cents ? (evt.ticket_member_price_cents / 100).toFixed(2) : '',
       flyer_url: evt.flyer_url || '',
       repeat_weeks: 1,
+      cup_format: evt.cup_format || '',
     });
     setModalOpen(true);
   };
@@ -255,7 +272,9 @@ export default function AdminEventsPage({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title) return;
-    const { ticket_price, ticket_member_price, repeat_weeks, flyer_url, ...fields } = form;
+    const { ticket_price, ticket_member_price, repeat_weeks, flyer_url, cup_format, ...fields } = form;
+    // Only tournaments have a format; sent once the column exists
+    const cupFormat = cupFormatReady ? { cup_format: form.category === 'tournament' && cup_format ? cup_format : null } : {};
     const ticket_price_cents = Math.max(0, Math.round((Number(ticket_price) || 0) * 100));
     // Blank = members pay the full price. Only sent once the column exists (migration 20261143)
     const memberCents = ticket_member_price.trim() && ticket_price_cents > 0 ? Math.round((Number(ticket_member_price) || 0) * 100) : null;
@@ -283,6 +302,7 @@ export default function AdminEventsPage({
         start_time: new Date(start).toISOString(),
         ticket_price_cents,
         ...memberPrice,
+        ...cupFormat,
       });
     } else {
       // Weekly sessions are separate events, so one can be moved or cancelled without touching the rest
@@ -302,6 +322,7 @@ export default function AdminEventsPage({
           ticket_price_cents,
           ...memberPrice,
           ...flyer,
+          ...cupFormat,
         });
       }
       if (repeat_weeks > 1) {
@@ -383,6 +404,9 @@ export default function AdminEventsPage({
                   <span className="admin-pill" style={{ textTransform: 'capitalize' }}>
                     {evt.category}
                   </span>
+                  {evt.category === 'tournament' && evt.cup_format && (
+                    <span className="admin-pill">{CUP_FORMATS.find(([v]) => v === evt.cup_format)?.[1]}</span>
+                  )}
                   <span className="admin-pill">
                     {evt.season || activeSeason?.name || defaultSeasonLabel()} Season
                   </span>
@@ -430,6 +454,13 @@ export default function AdminEventsPage({
                 </span>
               </div>
             </div>
+
+            {/* An outside cup whose games are all played: did we go through? (full width, under the buttons) */}
+            {canLinkFixtures && cupAsks(evt, clubMatches).map(ask => (
+              <div key={ask.last.id} style={{ order: 1, flexBasis: '100%' }}>
+                <CupAskPanel clubSlug={club.slug} event={evt} ask={ask} teamName={cupTeamName(club, clubTeams, ask)} onOut={() => setCompletingId(evt.id)} />
+              </div>
+            ))}
 
             {/* Action Buttons */}
             <div className="row row-wrap">
@@ -635,6 +666,21 @@ export default function AdminEventsPage({
                 </div>
               </div>
 
+              {cupFormatReady && form.category === 'tournament' && (
+                <fieldset className="form-group" style={{ border: 0, padding: 0, minWidth: 0 }}>
+                  <legend className="form-label">How is the cup played?</legend>
+                  <div className="admin-chips" style={{ flexWrap: 'wrap', overflow: 'visible' }}>
+                    {CUP_FORMATS.map(([value, label]) => (
+                      <button key={value} type="button" className="admin-chip" aria-pressed={form.cup_format === value} onClick={() => setForm({ ...form, cup_format: value })}>{label}</button>
+                    ))}
+                    <button type="button" className="admin-chip" aria-pressed={!form.cup_format} onClick={() => setForm({ ...form, cup_format: '' })}>Not sure</button>
+                  </div>
+                  <div className="text-meta" style={{ marginTop: '0.45rem' }}>
+                    For a cup you enter. After your last group game we&apos;ll ask if you went through, then help you add the next game.
+                  </div>
+                </fieldset>
+              )}
+
               <div className="form-row-2" style={{ gap: '1rem' }}>
                 <div className="form-group">
                   <label htmlFor="events-start-date-time" className="form-label">Start Date & Time</label>
@@ -829,6 +875,7 @@ export default function AdminEventsPage({
             setToastMessage(`Unlinked from ${fixturesEvent.title}`);
             setTimeout(() => setToastMessage(null), 3500);
           }}
+          onOut={() => { setFixturesEventId(null); setCompletingId(fixturesEvent.id); }}
           onClose={() => setFixturesEventId(null)}
         />
       )}
