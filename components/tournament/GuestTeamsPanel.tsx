@@ -49,7 +49,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
   /** Redo the draw keeping the groups set here */
   onRedraw: () => void;
 }) {
-  const { addTournamentParticipant, updateTournamentParticipant, deleteTournamentParticipant, saveNow } = useClub();
+  const { addTournamentParticipant, updateTournamentParticipant, deleteTournamentParticipant, deleteMatch, saveTournament, saveNow } = useClub();
   const hosted = useTournamentEntries(tournament.id, !isEvent);
   const [editing, setEditing] = useState<TournamentParticipant | 'new' | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -119,14 +119,34 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
   });
 
   const remove = async (p: TournamentParticipant) => {
-    const played = matches.some(m => m.status !== 'upcoming' && (m.home_team_name === p.name || m.away_team_name === p.name));
+    const isPlayed = (m: Match) => m.status === 'completed' || m.status === 'live' || m.status === 'halftime';
+    const theirs = matches.filter(m => m.home_team_name === p.name || m.away_team_name === p.name);
+    const anyPlayed = matches.some(isPlayed);
+    // Their unplayed group / league games go with them; a knockout game can't just vanish from the bracket
+    const dropGames = theirs.filter(m => !isPlayed(m) && (m.tournament_stage || 'group') === 'group');
+    const koLeft = theirs.filter(m => !isPlayed(m) && (m.tournament_stage || 'group') !== 'group');
+    const koNote = koLeft.length
+      ? ` They are still in knockout ${koLeft.length === 1 ? 'game' : 'games'} ${koLeft.map(m => `M#${m.tournament_match_number ?? '?'}`).join(', ')}: enter a result there for the other team.`
+      : '';
     if (!(await confirmAction({
       title: `Remove ${p.name}?`,
-      message: `Their entry, players and link go too.${played ? ' They have played already: generate the tiesheet again afterwards to redo the draw.' : ' Generate the tiesheet again to redo the draw without them.'}`,
+      message: `Their entry, players and link go too.${
+        !theirs.length ? ''
+        : !anyPlayed ? ' No games are played yet, so the draw is made again without them.'
+        : ` Their ${dropGames.length} unplayed ${dropGames.length === 1 ? 'game is' : 'games are'} taken out of the fixtures. Results already in stay.${koNote}`}`,
       confirmLabel: 'Remove team', danger: true,
     }))) return;
+    if (theirs.length && !anyPlayed) {
+      // Nothing to lose yet: one redraw without them, so no game is left pointing at a team that has gone
+      saveTournament(tournament.id, {}, participants.filter(x => x.id !== p.id));
+      onFeedback('success', `Removed ${p.name} and made the draw again without them.`);
+      return;
+    }
     deleteTournamentParticipant(p.id);
-    onFeedback('success', `Removed ${p.name}. Generate the tiesheet again to redo the draw.`);
+    dropGames.forEach(m => deleteMatch(m.id));
+    onFeedback('success', theirs.length
+      ? `Removed ${p.name} and ${dropGames.length} unplayed ${dropGames.length === 1 ? 'game' : 'games'}.${koNote}`
+      : `Removed ${p.name}.`);
   };
 
   return (
@@ -418,6 +438,8 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
   onClose: () => void;
   onSave: (fields: TeamFields, contact: ContactFields) => void;
 }) {
+  // A new team is only in the fixtures once the draw is made again
+  const drawn = useClub().matches.some(m => m.tournament_id === tournament?.id);
   const [name, setName] = useState(team?.name ?? '');
   const [code, setCode] = useState(team?.short_name ?? '');
   const [logo, setLogo] = useState(team?.logo_url && team.logo_url !== DEFAULT_CREST ? team.logo_url : '');
@@ -504,7 +526,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
             </div>
           </fieldset>
         )}
-        {!team && tournament && tournament.status !== 'draft' && <p className="ht-hint"><RefreshCw size={14} aria-hidden="true" /> Generate the tiesheet again afterwards to put them in the draw.</p>}
+        {!team && tournament && drawn && <p className="ht-hint"><RefreshCw size={14} aria-hidden="true" /> Generate the tiesheet again afterwards to put them in the draw.</p>}
         {error && <p role="alert" className="ht-error">{error}</p>}
         <div className="ht-foot">
           <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>

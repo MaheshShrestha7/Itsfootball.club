@@ -194,7 +194,7 @@ export default function AdminTournamentsPage({
                 No tournaments yet
               </h3>
               <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem' }}>
-                Set up a knockout cup, a league or a group stage, and the fixtures are drawn for you.
+                Set up a knockout cup, a league or a group stage, add your teams, then make the draw when they&apos;re all in.
               </p>
               <button
                 type="button"

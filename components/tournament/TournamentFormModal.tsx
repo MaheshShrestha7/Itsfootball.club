@@ -56,7 +56,8 @@ export default function TournamentFormModal({
   const [bannerUrl, setBannerUrl] = useState(base?.banner_url ?? COVER_PRESETS[0].url);
   const [startAt, setStartAt] = useState(toDateTimeLocal(base?.start_date ?? startDefault.toISOString()));
   const [endAt, setEndAt] = useState(
-    toDateTimeLocal(base ? base.end_date : new Date(startDefault.getTime() + 30 * 86400000).toISOString())
+    // A new cup ends the same day: most hosted cups are one day
+    toDateTimeLocal(base ? base.end_date : new Date(startDefault.getTime() + 3 * 3600000).toISOString())
   );
   const [description, setDescription] = useState(base?.description ?? '');
   const [groupCount, setGroupCount] = useState(base?.group_count ?? 2);
@@ -354,7 +355,8 @@ export default function TournamentFormModal({
             </div>
           </div>
           <p style={{ margin: '0 0 1rem 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Rounds are spread evenly from the start to the end date at the start kick-off time. Set the same day for a one-day cup.
+            {/* With per-game kick-offs the timetable below decides the times instead */}
+            {!(hosted && timed) && 'Rounds are spread evenly from the start to the end date at the start kick-off time. For a cup over several days, move the end date. '}
             Each fixture&apos;s date & time can be changed afterwards from its match card.
           </p>
 

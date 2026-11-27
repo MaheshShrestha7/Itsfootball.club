@@ -3446,7 +3446,8 @@ export function ClubProvider({
     setTournaments(prev => prev.map(t => t.id === tournament.id ? {
       ...t,
       ...res.tournamentUpdates,
-      status: res.matches.length > 0 ? 'ongoing' : t.status,
+      // A fresh draw has nothing played: it shows as Draft until a game kicks off or gets a result
+      status: res.matches.length > 0 ? 'draft' : t.status,
       // A new draw starts the groups again, so the knockout stage waits for the host's tap again
       ...(res.matches.length > 0 && t.knockout_started_at ? { knockout_started_at: null } : {}),
       updated_at: new Date().toISOString(),
