@@ -112,10 +112,10 @@ function markerPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: nu
   ctx.closePath();
 }
 
-const BASE = '#070B12';
-const INK = '#F8FAFC';
-const MUTED = 'rgba(248, 250, 252, 0.68)';
-const FAINT = 'rgba(248, 250, 252, 0.42)';
+export const BASE = '#070B12';
+export const INK = '#F8FAFC';
+export const MUTED = 'rgba(248, 250, 252, 0.68)';
+export const FAINT = 'rgba(248, 250, 252, 0.42)';
 
 /** A colour taken `k` of the way to white */
 export const mixWhite = (c: string, k: number) => {
@@ -126,7 +126,7 @@ export const mixWhite = (c: string, k: number) => {
   return `#${[ch((n >> 16) & 255), ch((n >> 8) & 255), ch(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('')}`;
 };
 export const hex = (c: string | undefined, fallback: string) => (c && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback);
-const rgba = (c: string, a: number) => {
+export const rgba = (c: string, a: number) => {
   const n = parseInt(c.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 };
@@ -476,7 +476,7 @@ export function spaced(ctx: CanvasRenderingContext2D, px: number) {
 }
 
 /** "Sat 4 Oct" and "14:30". Date-only fixtures (tournaments) keep their own date and local kick-off time */
-function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale: string = DATE_LOCALE): { day: string; time: string } {
+export function kickoff(m: Pick<Match, 'match_date' | 'match_time'>, locale: string = DATE_LOCALE): { day: string; time: string } {
   const d = new Date(m.match_date);
   if (isNaN(d.getTime())) return { day: '', time: m.match_time || '' };
   const dateOnly = !!m.match_time && d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
@@ -515,6 +515,107 @@ function scorerLines(events: NonNullable<CardOptions['events']>, side: 'home' | 
     const untimed = minutes.length - times.length;
     return [name, times.join(', '), untimed > 1 && !times.length ? `×${untimed}` : ''].filter(Boolean).join(' ');
   });
+}
+
+/** The card's background shade (CardLook): midnight, the club colour deepened, or the club colour into a second one. Dark is the plain base */
+export function paintShade(ctx: CanvasRenderingContext2D, W: number, H: number, primary: string, look: CardLook) {
+  if (!look.shade || look.shade === 'dark') return;
+  const deep = (c: string, k: number) => {
+    const n = parseInt(c.slice(1), 16);
+    return `rgb(${Math.round(((n >> 16) & 255) * k)}, ${Math.round(((n >> 8) & 255) * k)}, ${Math.round((n & 255) * k)})`;
+  };
+  const g = ctx.createLinearGradient(0, 0, W * 0.4, H);
+  if (look.shade === 'midnight') {
+    g.addColorStop(0, '#13234A');
+    g.addColorStop(1, '#060B1A');
+  } else if (look.shade === 'club') {
+    g.addColorStop(0, deep(primary, 0.62));
+    g.addColorStop(0.55, deep(primary, 0.32));
+    g.addColorStop(1, deep(primary, 0.14));
+  } else {
+    const two = hex(look.second, '#0F172A');
+    g.addColorStop(0, deep(primary, 0.6));
+    g.addColorStop(1, deep(two, 0.55));
+  }
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/** The soft streak across, the pattern (CardLook, dots by default) and the light shine, over the background */
+export function paintPattern(ctx: CanvasRenderingContext2D, W: number, H: number, primary: string, look: CardLook) {
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(-0.42);
+  const streak = ctx.createLinearGradient(-90, 0, 90, 0);
+  streak.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  streak.addColorStop(0.5, rgba(primary, 0.16));
+  streak.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = streak;
+  ctx.fillRect(-90, -H, 180, H * 2);
+  ctx.restore();
+  const pattern = look.pattern || 'dots';
+  ctx.save();
+  if (pattern === 'dots') {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+    for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
+  } else if (pattern === 'stripes') {
+    // Broad diagonal kit stripes
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(-0.5);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    for (let x = -H * 1.5; x < H * 1.5; x += 140) ctx.fillRect(x, -H * 1.5, 70, H * 3);
+  } else if (pattern === 'hoops') {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+    for (let y = 0; y < H; y += 120) ctx.fillRect(0, y, W, 60);
+  } else if (pattern === 'chevron') {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.075)';
+    ctx.lineWidth = 28;
+    for (let y = -200; y < H + 200; y += 150) {
+      ctx.beginPath();
+      ctx.moveTo(-40, y + 220);
+      ctx.lineTo(W / 2, y);
+      ctx.lineTo(W + 40, y + 220);
+      ctx.stroke();
+    }
+  } else if (pattern === 'halftone') {
+    // Dots that grow towards the bottom corner
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+    for (let y = 18; y < H; y += 28) for (let x = 18; x < W; x += 28) {
+      const t = Math.max(0, (x / W + y / H) / 2 - 0.35) / 0.65;
+      if (t > 0) { ctx.beginPath(); ctx.arc(x, y, 1 + t * 8, 0, Math.PI * 2); ctx.fill(); }
+    }
+  }
+  ctx.restore();
+  if (look.shine) {
+    // Rays of light fanning down from the top left, then a soft glossy sweep across the card
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const ox = W * 0.12;
+    const oy = -H * 0.08;
+    for (let i = 0; i < 7; i++) {
+      const a = 0.35 + i * 0.16;
+      const spread = 0.035 + (i % 3) * 0.015;
+      const len = H * 1.4;
+      const ray = ctx.createRadialGradient(ox, oy, 0, ox, oy, len);
+      ray.addColorStop(0, `rgba(255, 255, 255, ${0.13 - i * 0.008})`);
+      ray.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = ray;
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + Math.cos(a - spread) * len, oy + Math.sin(a - spread) * len);
+      ctx.lineTo(ox + Math.cos(a + spread) * len, oy + Math.sin(a + spread) * len);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    const sheen = ctx.createLinearGradient(0, H * 0.15, W, H * 0.55);
+    sheen.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    sheen.addColorStop(0.48, 'rgba(255, 255, 255, 0)');
+    sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0.07)');
+    sheen.addColorStop(0.56, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 export async function drawMatchCard(match: Match, club: Club, kind: CardKind, link: string, opts: CardOptions = {}): Promise<Blob> {
@@ -565,27 +666,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.fillStyle = BASE;
   ctx.fillRect(0, 0, W, H);
   const look = opts.look || {};
-  if (!photo && look.shade && look.shade !== 'dark') {
-    const deep = (c: string, k: number) => {
-      const n = parseInt(c.slice(1), 16);
-      return `rgb(${Math.round(((n >> 16) & 255) * k)}, ${Math.round(((n >> 8) & 255) * k)}, ${Math.round((n & 255) * k)})`;
-    };
-    const g = ctx.createLinearGradient(0, 0, W * 0.4, H);
-    if (look.shade === 'midnight') {
-      g.addColorStop(0, '#13234A');
-      g.addColorStop(1, '#060B1A');
-    } else if (look.shade === 'club') {
-      g.addColorStop(0, deep(primary, 0.62));
-      g.addColorStop(0.55, deep(primary, 0.32));
-      g.addColorStop(1, deep(primary, 0.14));
-    } else {
-      const two = hex(look.second, '#0F172A');
-      g.addColorStop(0, deep(primary, 0.6));
-      g.addColorStop(1, deep(two, 0.55));
-    }
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
+  if (!photo) paintShade(ctx, W, H, primary, look);
   if (photo) {
     drawCover(ctx, photo, 0, 0, W, H, opts.background?.focusY ?? 0.5);
     const dim = Math.min(0.9, Math.max(0.15, opts.background?.dim ?? 0.55));
@@ -621,79 +702,7 @@ export async function drawMatchCard(match: Match, club: Club, kind: CardKind, li
   ctx.fillStyle = low;
   ctx.fillRect(0, 0, W, H);
   if (!overPhoto) {
-    ctx.save();
-    ctx.translate(W / 2, H / 2);
-    ctx.rotate(-0.42);
-    const streak = ctx.createLinearGradient(-90, 0, 90, 0);
-    streak.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    streak.addColorStop(0.5, rgba(primary, 0.16));
-    streak.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = streak;
-    ctx.fillRect(-90, -H, 180, H * 2);
-    ctx.restore();
-    const pattern = look.pattern || 'dots';
-    ctx.save();
-    if (pattern === 'dots') {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-      for (let y = 24; y < H; y += 36) for (let x = 24; x < W; x += 36) ctx.fillRect(x, y, 3, 3);
-    } else if (pattern === 'stripes') {
-      // Broad diagonal kit stripes
-      ctx.translate(W / 2, H / 2);
-      ctx.rotate(-0.5);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      for (let x = -H * 1.5; x < H * 1.5; x += 140) ctx.fillRect(x, -H * 1.5, 70, H * 3);
-    } else if (pattern === 'hoops') {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
-      for (let y = 0; y < H; y += 120) ctx.fillRect(0, y, W, 60);
-    } else if (pattern === 'chevron') {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.075)';
-      ctx.lineWidth = 28;
-      for (let y = -200; y < H + 200; y += 150) {
-        ctx.beginPath();
-        ctx.moveTo(-40, y + 220);
-        ctx.lineTo(W / 2, y);
-        ctx.lineTo(W + 40, y + 220);
-        ctx.stroke();
-      }
-    } else if (pattern === 'halftone') {
-      // Dots that grow towards the bottom corner
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-      for (let y = 18; y < H; y += 28) for (let x = 18; x < W; x += 28) {
-        const t = Math.max(0, (x / W + y / H) / 2 - 0.35) / 0.65;
-        if (t > 0) { ctx.beginPath(); ctx.arc(x, y, 1 + t * 8, 0, Math.PI * 2); ctx.fill(); }
-      }
-    }
-    ctx.restore();
-    if (look.shine) {
-      // Rays of light fanning down from the top left, then a soft glossy sweep across the card
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      const ox = W * 0.12;
-      const oy = -H * 0.08;
-      for (let i = 0; i < 7; i++) {
-        const a = 0.35 + i * 0.16;
-        const spread = 0.035 + (i % 3) * 0.015;
-        const len = H * 1.4;
-        const ray = ctx.createRadialGradient(ox, oy, 0, ox, oy, len);
-        ray.addColorStop(0, `rgba(255, 255, 255, ${0.13 - i * 0.008})`);
-        ray.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = ray;
-        ctx.beginPath();
-        ctx.moveTo(ox, oy);
-        ctx.lineTo(ox + Math.cos(a - spread) * len, oy + Math.sin(a - spread) * len);
-        ctx.lineTo(ox + Math.cos(a + spread) * len, oy + Math.sin(a + spread) * len);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-      const sheen = ctx.createLinearGradient(0, H * 0.15, W, H * 0.55);
-      sheen.addColorStop(0, 'rgba(255, 255, 255, 0)');
-      sheen.addColorStop(0.48, 'rgba(255, 255, 255, 0)');
-      sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0.07)');
-      sheen.addColorStop(0.56, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = sheen;
-      ctx.fillRect(0, 0, W, H);
-    }
+    paintPattern(ctx, W, H, primary, look);
     if (clubCrest) {
       ctx.save();
       ctx.globalAlpha = 0.07;
