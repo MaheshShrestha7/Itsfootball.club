@@ -12,7 +12,7 @@ import { Crest } from '@/components/admin/platform/McArt';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { platformApi, useCanChange } from '@/components/admin/platform/api';
 import { isHiddenClub } from '@/lib/public-tournaments';
-import { CLUB_FEATURES, CLUBSCORE_FEATURE, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
+import { CLUB_FEATURES, CLUBSCORE_FEATURE, SCORE_BY_CHAT_FEATURE, featuresOff, type ClubFeatureKey } from '@/lib/club-features';
 import { notify } from '@/components/ConfirmDialog';
 import { X, Mail, Users, ExternalLink, Shield, Link2, Check } from 'lucide-react';
 
@@ -59,9 +59,11 @@ export default function ClubDetailDrawer({
   const [hiddenSaving, setHiddenSaving] = React.useState(false);
   // The club's Features switches: clubs.config.features_off, the same list as its Admin -> Features page
   const [offFor, setOffFor] = React.useState<{ id: string; off: ClubFeatureKey[] } | null>(null);
-  const [featureSaving, setFeatureSaving] = React.useState<ClubFeatureKey | 'clubscore' | null>(null);
+  const [featureSaving, setFeatureSaving] = React.useState<ClubFeatureKey | 'clubscore' | 'chat' | null>(null);
   // ClubScore's own switch (clubscore_rules.is_active; no row = the default rules, which are on)
   const [scoreFor, setScoreFor] = React.useState<{ id: string; on: boolean } | null>(null);
+  // Score by chat's own switch (club_chat_settings.scoring_enabled, off until turned on); left out until its migration runs
+  const [chatFor, setChatFor] = React.useState<{ id: string; on: boolean } | null>(null);
   React.useEffect(() => {
     const client = getSupabaseClient();
     if (!client || !club) return;
@@ -72,10 +74,13 @@ export default function ClubDetailDrawer({
       });
     client.from('clubscore_rules').select('is_active').eq('club_id', club.id).limit(1).maybeSingle()
       .then(({ data }) => setScoreFor({ id: club.id, on: data?.is_active !== false }));
+    platformApi<{ clubs?: { club_id: string; scoring_enabled: boolean }[] }>('chat')
+      .then(res => { if (!res.error) setChatFor({ id: club.id, on: !!res.clubs?.find(c => c.club_id === club.id)?.scoring_enabled }); });
   }, [club]);
   const hidden = club && hiddenFor?.id === club.id ? hiddenFor.hidden : undefined;
   const off = club && offFor?.id === club.id ? offFor.off : undefined;
   const scoreOn = club && scoreFor?.id === club.id ? scoreFor.on : undefined;
+  const chatOn = club && chatFor?.id === club.id ? chatFor.on : undefined;
 
   if (!club) return null;
 
@@ -125,6 +130,23 @@ export default function ClubDetailDrawer({
     setScoreFor({ id: club.id, on });
     showToast(`ClubScore is ${on ? 'on' : 'off'} for ${club.name}.`);
   };
+
+  const toggleChat = async (on: boolean) => {
+    setFeatureSaving('chat');
+    const res = await platformApi<{ on?: boolean }>('clubs', { action: 'chat', clubId: club.id, on });
+    setFeatureSaving(null);
+    if (res.error) return showToast(res.error);
+    setChatFor({ id: club.id, on });
+    showToast(`Score by chat is ${on ? 'on' : 'off'} for ${club.name}.`);
+  };
+
+  const featureRow = (key: string, label: string, on: boolean, flip: () => void) => (
+    <li key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <span>{label}{!on && <span className="mc-muted"> (off)</span>}</span>
+      <button type="button" className="mc-switch" role="switch" aria-checked={on} aria-label={`${label} for ${club.name}`}
+        disabled={featureSaving !== null} onClick={flip} />
+    </li>
+  );
 
   // The web address already names this club (?tab=…&club=<id>), so the link opens it again
   const copyLink = () => {
@@ -203,23 +225,13 @@ export default function ClubDetailDrawer({
                   On by default. Off hides it from the club&apos;s site and admin menu; nothing is deleted. The club&apos;s admins see the same switches under Admin, Features.
                 </p>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-                  {CLUB_FEATURES.map(f => {
-                    const on = !off.includes(f.key);
-                    return (
-                      <li key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <span>{f.label}{!on && <span className="mc-muted"> (off)</span>}</span>
-                        <button type="button" className="mc-switch" role="switch" aria-checked={on} aria-label={`${f.label} for ${club.name}`}
-                          disabled={featureSaving !== null} onClick={() => toggleFeature(f.key, !on)} />
-                      </li>
-                    );
-                  })}
-                  {scoreOn !== undefined && (
-                    <li style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <span>{CLUBSCORE_FEATURE.label}{!scoreOn && <span className="mc-muted"> (off)</span>}</span>
-                      <button type="button" className="mc-switch" role="switch" aria-checked={scoreOn} aria-label={`ClubScore for ${club.name}`}
-                        disabled={featureSaving !== null} onClick={() => toggleClubScore(!scoreOn)} />
-                    </li>
-                  )}
+                  {CLUB_FEATURES.filter(f => !f.home).map(f => featureRow(f.key, f.label, !off.includes(f.key), () => toggleFeature(f.key, off.includes(f.key))))}
+                  {scoreOn !== undefined && featureRow('clubscore', CLUBSCORE_FEATURE.label, scoreOn, () => toggleClubScore(!scoreOn))}
+                  {chatOn !== undefined && featureRow('chat', SCORE_BY_CHAT_FEATURE.label, chatOn, () => toggleChat(!chatOn))}
+                </ul>
+                <h4 style={{ margin: '14px 0 8px', fontSize: 13 }}>Home page sections</h4>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                  {CLUB_FEATURES.filter(f => f.home).map(f => featureRow(f.key, f.label, !off.includes(f.key), () => toggleFeature(f.key, off.includes(f.key))))}
                 </ul>
               </section>
             )}

@@ -154,6 +154,8 @@ export default function MemberPortalPage({
   const [childSignupPaid, setChildSignupPaid] = useState<Set<string>>(new Set());
   // A guardian adding another child through the application form
   const [addingChild, setAddingChild] = useState(false);
+  // Online joining switched off (Admin -> Features): sign in only; parents adding a child and re-applying still work
+  const joiningOn = featureOn(club, 'joining');
 
   // Gateway View Tabs & Sub-Modes
   const [gatewayTab, setGatewayTab] = useState<'signin' | 'signup'>('signin');
@@ -295,7 +297,7 @@ export default function MemberPortalPage({
   const [statsSeason, setStatsSeason] = useState('');
   const shopOpen = useShopOpen(club.id);
   // Perks tab: only when the club has live perks; codes come back only for an active member
-  const { perks } = useClubPerks(club.id, true);
+  const { perks } = useClubPerks(featureOn(club, 'perks') ? club.id : '', true);
   const perksOpen = perks.length > 0;
 
   // Messaging Form State
@@ -410,7 +412,7 @@ export default function MemberPortalPage({
     const payment = search.get('payment');
     if (payment === 'success' || payment === 'cancelled') setPaymentNotice(payment);
     // "Join the Club" links open straight on the membership application
-    if (search.has('join')) setGatewayTab('signup');
+    if (search.has('join') && featureOn(club, 'joining')) setGatewayTab('signup');
     setRenewFor(search.get('renew'));
     const tab = search.get('tab');
     if (tab && (CLUBHOUSE_TABS as readonly string[]).includes(tab)) setActiveClubhouseTab(tab as ClubhouseTab);
@@ -938,7 +940,7 @@ export default function MemberPortalPage({
                   : 'Apply in three quick steps. The committee reviews every application and emails you the outcome.'}</p>
               </header>
 
-              {!addingChild && !reapplying && !submittedApplication && (
+              {!addingChild && !reapplying && !submittedApplication && joiningOn && (
                 <AuthTabs idPrefix="gateway" label="Sign in or join" value={gatewayTab}
                   onChange={tab => { setGatewayTab(tab); setSubmittedApplication(null); setLoginError(null); setLoginNotice(null); }}
                   options={[['signin', 'Sign in'], ['signup', 'Join the club']] as const} />
@@ -993,7 +995,7 @@ export default function MemberPortalPage({
                     Signed in as {signedInEmail}.{' '}
                     <button type="button" className="auth-link" onClick={handleLogout} style={{ minHeight: '44px', padding: '0 0.4rem' }}>Use a different email</button>
                   </div>
-                ) : (
+                ) : joiningOn && (
                   <div className="auth-foot">
                     New to {club.name}?{' '}
                     <button type="button" className="auth-link" onClick={() => setGatewayTab('signup')} style={{ minHeight: '44px', padding: '0 0.4rem' }}>Apply to join</button>

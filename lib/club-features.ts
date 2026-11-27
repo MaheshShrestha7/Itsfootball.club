@@ -5,7 +5,8 @@
 
 export type ClubFeatureKey =
   | 'shop' | 'sponsor_page' | 'tournaments' | 'events' | 'gallery' | 'news'
-  | 'friendlies' | 'expense_claims' | 'committee';
+  | 'friendlies' | 'expense_claims' | 'committee' | 'joining' | 'scanner' | 'perks'
+  | 'home_numbers' | 'home_sponsors' | 'home_committee' | 'home_top_players' | 'home_ground';
 
 export interface ClubFeature {
   key: ClubFeatureKey;
@@ -16,6 +17,8 @@ export interface ClubFeature {
   publicPaths?: string[];
   /** Admin pages under /{club}/admin/ that close, and leave the admin menu, while it's off */
   adminPaths?: string[];
+  /** Shown under "Home page sections" on the Features page */
+  home?: boolean;
 }
 
 export const CLUB_FEATURES: ClubFeature[] = [
@@ -28,6 +31,14 @@ export const CLUB_FEATURES: ClubFeature[] = [
   { key: 'friendlies', label: 'Friendly match invites', hides: 'The "Invite us to a friendly" choice on the contact form.' },
   { key: 'expense_claims', label: 'Expense claims', hides: 'Claiming money back from the member area, and the Expense claims tab in Finance.' },
   { key: 'committee', label: 'Committee meetings', hides: 'Admin → Committee (meetings, agendas and minutes).', adminPaths: ['committee'] },
+  { key: 'joining', label: 'Online joining', hides: 'The "Join the club" buttons and the membership application form. Members still sign in, and parents can still add a child.' },
+  { key: 'scanner', label: 'Gate scanner', hides: 'Admin → Gate scanner and the pass check page. Member passes still show.', publicPaths: ['verify'], adminPaths: ['scanner'] },
+  { key: 'perks', label: 'Member perks', hides: 'Sponsor perks in the member area, on the join page and on the pass check page, and the Member perks tab under Sponsors. Your perks are kept.' },
+  { key: 'home_numbers', label: 'Club in numbers', hides: 'The club numbers under the hero.', home: true },
+  { key: 'home_sponsors', label: 'Sponsors', hides: '"Thank you to our sponsors" on the home page. Sponsors still show in the footer and on match pages.', home: true },
+  { key: 'home_committee', label: 'Committee', hides: 'The committee members on the home page. The Leadership page stays.', home: true },
+  { key: 'home_top_players', label: 'Top players', hides: 'The top players table on the home page. Player pages stay.', home: true },
+  { key: 'home_ground', label: 'Home ground and map', hides: 'The home ground details and map on the home page.', home: true },
 ];
 
 /** ClubScore has had its own on/off since migration 20261105 (clubscore_rules.is_active, which also stops the
@@ -35,6 +46,13 @@ export const CLUB_FEATURES: ClubFeature[] = [
 export const CLUBSCORE_FEATURE = {
   label: 'ClubScore (points and badges)',
   hides: 'While it’s off, players earn no points from check-ins, matches or coach bonuses. Points already earned stay.',
+};
+
+/** Score by chat keeps its own switch too (club_chat_settings.scoring_enabled, migration 20261183), off until
+ *  turned on; the Features page and Mission Control show it beside the others */
+export const SCORE_BY_CHAT_FEATURE = {
+  label: 'Score by chat',
+  hides: 'Lets the people you allow send goals, cards and the score from Telegram. Set up the club link in Match Centre.',
 };
 
 type WithConfig = { config?: unknown } | null | undefined;

@@ -401,7 +401,7 @@ export default function AdminLayout({
       title: 'Club settings',
       items: [
         { area: 'branding', label: 'Club profile and branding', href: `/${club.slug}/admin/branding`, icon: Palette },
-        { area: 'branding', label: 'Features', href: `/${club.slug}/admin/features`, icon: ToggleRight },
+        { area: 'features', label: 'Features', href: `/${club.slug}/admin/features`, icon: ToggleRight },
         { area: 'seasons', label: 'Seasons', href: `/${club.slug}/admin/seasons`, icon: Flag, note: activeSeason?.name },
         // Opens the junior settings (U18 rule, welfare officer) on Club Teams; only once the club has a junior team
         ...(hasJuniorTeam ? [{ area: 'teams', label: 'Junior and safeguarding', href: `/${club.slug}/admin/teams#junior-settings`, icon: ShieldCheck }] : []),
@@ -795,7 +795,9 @@ export default function AdminLayout({
                 <p>
                   {club.name} has turned this feature off, so it&apos;s hidden from the site and this menu. Nothing was deleted.
                 </p>
-                <Link href={`/${club.slug}/admin/features`} className="btn btn-primary btn-sm">Open Features</Link>
+                {can(club.id, 'features')
+                  ? <Link href={`/${club.slug}/admin/features`} className="btn btn-primary btn-sm">Open Features</Link>
+                  : <p>Ask the club&apos;s Owner or a Club Admin to switch it back on.</p>}
               </div>
             ) : canViewPage ? <div ref={pageRef} className={viewOnly ? 'admin-view-only' : noDelete ? 'admin-no-delete' : undefined}>{children}</div> : (
               <div className="admin-locked">

@@ -14,6 +14,7 @@ import { clubTeamsOf, teamsOfMember, nextFixtureOf } from '@/lib/teams';
 import { defaultSeasonLabel } from '@/lib/season';
 import { useMemberHealth } from '@/lib/use-member-health';
 import { useClubPerks } from '@/lib/use-club-perks';
+import { featureOn } from '@/lib/club-features';
 import MemberPerks from '@/components/MemberPerks';
 
 // A parent or guardian's view of the children they look after at this club (my_children RPC,
@@ -81,7 +82,7 @@ export default function GuardianPortal({ club, childMembers, guardianEmail, plan
   const paidPlans = plans.filter(p => p.price_cents > 0);
   // Member perks, once a child is an active member (my_perk_codes checks the same on the server)
   const hasActiveChild = childMembers.some(c => c.status !== 'suspended' && statusOf(c).label === 'Active member');
-  const { perks } = useClubPerks(club.id, hasActiveChild);
+  const { perks } = useClubPerks(featureOn(club, 'perks') ? club.id : '', hasActiveChild);
 
   // Arriving from a child's renewal email: open that child's renewal once the plans are in
   const renewLinkOpened = useRef(false);

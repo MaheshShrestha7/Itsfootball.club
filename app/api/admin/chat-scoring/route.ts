@@ -8,7 +8,7 @@ import { answerJoin } from '@/lib/chat-join';
 
 // Score by chat for one club (club admins: Match Centre at "full").
 //   GET  ?clubId=                                   -> the switch, whether AI reading is allowed, who is linked
-//   POST { clubId, action: 'toggle', on }          -> turn score by chat on or off
+//   POST { clubId, action: 'toggle', on }          -> turn score by chat on or off (Owner and Club Admin only, from Features)
 //   POST { clubId, action: 'unlink', memberId }    -> unlink every chat of that member
 //   POST { clubId, action: 'join-link' }           -> a new club scoring link (the old one stops working)
 //   POST { clubId, action: 'answer', requestId, allow } -> Allow / No for someone who asked through the club link
@@ -22,7 +22,7 @@ async function guard(req: NextRequest, clubId: unknown) {
   if (!auth.ok) return { error: NextResponse.json({ error: auth.error }, { status: auth.status }) };
   const db = getServiceClient();
   if (!db) return { error: NextResponse.json({ error: 'The database is not configured on the server.' }, { status: 503 }) };
-  return { db, clubId: clubId as string, userId: auth.userId };
+  return { db, clubId: clubId as string, userId: auth.userId, supabase: auth.supabase };
 }
 
 export async function GET(req: NextRequest) {
@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
   const { db, clubId } = g;
 
   if (body.action === 'toggle') {
+    // Feature switches are for the club's Owner and Club Admins, like the rest of Admin -> Features
+    const { data: admin } = await g.supabase.rpc('is_club_admin', { p_club_id: clubId });
+    if (admin !== true) return NextResponse.json({ error: 'Only the club Owner or a Club Admin can switch features on or off.' }, { status: 403 });
     const { error } = await db.from('club_chat_settings').upsert(
       { club_id: clubId, scoring_enabled: body.on === true, updated_at: new Date().toISOString() },
       { onConflict: 'club_id' },
