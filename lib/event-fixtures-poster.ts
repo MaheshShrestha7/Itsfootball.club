@@ -245,16 +245,29 @@ export async function drawFixturesPoster(
     for (const [name, x, align, us] of sides) {
       ctx.textAlign = align;
       ctx.fillStyle = us ? INK : 'rgba(248, 250, 252, 0.86)';
-      const size = fit(ctx, name, us ? 800 : 700, Math.round(38 * k), nameMax * 1.6, heading, 22);
-      const words = name.split(/\s+/);
-      if (ctx.measureText(name).width > nameMax && words.length > 1) {
-        // A long name over two lines rather than shrunk to nothing
-        let line = words[0];
-        let j = 1;
-        while (j < words.length && ctx.measureText(`${line} ${words[j]}`).width <= nameMax) line += ` ${words[j++]}`;
-        ctx.fillText(ellipsize(ctx, line, nameMax), x, midY - size * 0.55);
-        ctx.fillText(ellipsize(ctx, words.slice(j).join(' '), nameMax), x, midY + size * 0.55);
-      } else ctx.fillText(ellipsize(ctx, name, nameMax), x, midY);
+      // The whole name, never cut: one line, else two, at the largest size that fits (three lines at the smallest)
+      const weight = us ? 800 : 700;
+      const words = name.split(/\s+/).filter(Boolean);
+      const wrap = () => words.reduce<string[]>((lines, w) => {
+        const last = lines[lines.length - 1];
+        if (last && ctx.measureText(`${last} ${w}`).width <= nameMax) lines[lines.length - 1] = `${last} ${w}`;
+        else lines.push(w);
+        return lines;
+      }, []);
+      let size = Math.round(38 * k);
+      let lines: string[] = [];
+      for (; size >= 18; size -= 2) {
+        ctx.font = `${weight} ${size}px ${heading}`;
+        lines = wrap();
+        if (lines.length <= 2 && lines.every(l => ctx.measureText(l).width <= nameMax)) break;
+      }
+      if (size < 18) {
+        size = 18;
+        ctx.font = `${weight} ${size}px ${heading}`;
+        lines = wrap().slice(0, 3);
+      }
+      // A single word too long even at the smallest size is the only thing still shortened
+      lines.forEach((line, n) => ctx.fillText(ellipsize(ctx, line, nameMax), x, midY + (n - (lines.length - 1) / 2) * size * 1.1));
     }
     ctx.textAlign = 'center';
     const done = m.status === 'completed';
