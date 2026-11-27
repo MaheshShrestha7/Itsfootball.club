@@ -53,7 +53,8 @@ export interface PosterGame {
 }
 
 /** "Field 2" at the end of a venue typed as "Norford Park, Field 2" */
-const PITCH_IN_VENUE = /,?\s*((?:field|pitch|court|oval)\s*[\w-]+)\s*$/i;
+// Needs a number or one letter after the word, so a ground named "... Playing Fields" is left whole
+const PITCH_IN_VENUE = /,?\s*\b((?:field|pitch|court|oval)\s+(?:\d+[a-z]?|[a-z]))\s*$/i;
 
 /** The ground every game shares (shown once, with a pin) and what each row shows: just the pitch
  *  when the ground is shared, else its own ground and pitch */
