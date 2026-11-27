@@ -406,10 +406,8 @@ export default function SquadWorkspace({
       setFormError(`Someone at the club already uses ${email}.`);
       return;
     }
-    if (!email && !form.guardian_email.trim() && !form.phone.trim() && !form.guardian_phone.trim()) {
-      setFormError('Add an email or phone number, or a parent or guardian\'s contact, so the club can reach them.');
-      return;
-    }
+    // No contact details is allowed (a name is enough to put a player in the squad, as the bulk import does);
+    // they just get no emails or texts and can't sign in to claim their profile until an email is added
     const isPlayer = form.roles.includes('Player');
     const isExec = form.roles.includes('Executive Committee');
     const roleString = form.roles.join(', ');
@@ -717,11 +715,11 @@ export default function SquadWorkspace({
                   <label htmlFor="squad-email-address" className="form-label row">
                     <Mail size={13} /> Email Address
                   </label>
-                  {/* Optional: many juniors have no email (their parent goes in the guardian fields) */}
+                  {/* Optional: without one the player gets no club emails and can't sign in to their profile (a junior's parent goes in the guardian fields) */}
                   <input id="squad-email-address"
                     type="email"
                     className="form-input"
-                    placeholder="Optional for juniors"
+                    placeholder="Optional"
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                   />
