@@ -9,7 +9,7 @@ import NeedsYouCard from '@/components/admin/NeedsYouCard';
 import FixtureOffersCard from '@/components/admin/FixtureOffersCard';
 import { clubTeamsOf } from '@/lib/teams';
 import { useAdminAttention } from '@/lib/use-admin-attention';
-import { defaultFixture } from '@/lib/fixtures';
+import { defaultFixture, kickoffIso } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
 import LocalTime from '@/components/LocalTime';
 import { countsTowardClubRecord, isPlayerMember } from '@/lib/supabase/types';
@@ -17,7 +17,7 @@ import { Calendar, QrCode } from 'lucide-react';
 import { getLiveMinuteLabel } from '@/lib/match-clock';
 import LiveMinute from '@/components/LiveMinute';
 import { defaultSeasonLabel } from '@/lib/season';
-import { DATE_LOCALE } from '@/lib/dates';
+import { DATE_LOCALE, clubTimeZone } from '@/lib/dates';
 import { isCountedMember } from '@/lib/people';
 import ClubOverview, { OVERVIEW_VIEWS } from '@/components/admin/ClubOverview';
 import { comingEvents, lastResult, opponentLine, sameDayGames } from '@/lib/club-overview';
@@ -153,7 +153,7 @@ export default function AdminDashboardPage({
                   </div>
                   <dl className="admin-facts">
                     <div><dt>Date</dt><dd><LocalTime value={nextMatch.match_date} options={{ weekday: 'short', day: 'numeric', month: 'short' }} /></dd></div>
-                    <div><dt>Kick-off</dt><dd><LocalTime value={nextMatch.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>
+                    <div><dt>Kick-off</dt><dd><LocalTime value={kickoffIso(nextMatch, clubTimeZone(club))} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></dd></div>
                     {nextMatch.venue && <div><dt>Venue</dt><dd>{nextMatch.venue}</dd></div>}
                   </dl>
                   <div className="admin-match-actions">
@@ -167,7 +167,7 @@ export default function AdminDashboardPage({
                       <p className="admin-kicker">Also that day</p>
                       <ul className="admin-also">
                         {alsoThatDay.map(m => (
-                          <li key={m.id}><Link href={gameHref(m)}><span>{m.home_team_name} <span className="admin-vs">vs</span> {m.away_team_name}</span><b><LocalTime value={m.match_date} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></b></Link></li>
+                          <li key={m.id}><Link href={gameHref(m)}><span>{m.home_team_name} <span className="admin-vs">vs</span> {m.away_team_name}</span><b><LocalTime value={kickoffIso(m, clubTimeZone(club))} format="time" options={{ hour: 'numeric', minute: '2-digit' }} /></b></Link></li>
                         ))}
                       </ul>
                     </div>

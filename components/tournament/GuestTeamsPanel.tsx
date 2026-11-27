@@ -278,7 +278,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                             <Users size={14} aria-hidden="true" />
                             {desk ? `${players.filter(x => x.present).length} of ${players.length} here` : `${players.length} player${players.length === 1 ? '' : 's'}`}
                           </button>
-                        ) : <span className="ht-sub">From Club teams</span>}
+                        ) : <span className="ht-sub">From Tournament sides</span>}
                       </td>
                     )}
                     {!isEvent && fee > 0 && (
@@ -379,7 +379,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
           onClose={() => setBulkOpen(false)}
           onAdd={list => {
             const created = list.map((t, i) => ({
-              team: addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', name: t.name, short_name: shortCode(t.name), logo_url: DEFAULT_CREST, color: '#2563EB', seed: participants.length + i + 1 }),
+              team: addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', name: t.name, short_name: shortCode(t.name), logo_url: DEFAULT_CREST, seed: participants.length + i + 1 }),
               email: t.email,
             }));
             const withEmail = created.filter(c => c.email);

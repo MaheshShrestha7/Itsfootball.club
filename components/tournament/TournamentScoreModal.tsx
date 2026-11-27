@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import HalfLengthField, { HALF_LENGTH_ERROR, parseHalfMinutes, useHalfLengthReady } from '@/components/HalfLengthField';
+import { halfMinutes } from '@/lib/match-length';
 import Link from 'next/link';
 import { Match, TournamentParticipant } from '@/lib/supabase/types';
 import { X, Radio, CheckCircle2, AlertTriangle, ArrowLeftRight, Lock } from 'lucide-react';
@@ -61,6 +63,9 @@ export default function TournamentScoreModal({
   const [matchTime, setMatchTime] = useState(match.match_time || '');
   const [venue, setVenue] = useState(match.venue || '');
   const [pitch, setPitch] = useState(match.pitch_label || '');
+  // This game's half length: a game already kicked off keeps its clock
+  const halfReady = useHalfLengthReady() && match.status === 'upcoming';
+  const [half, setHalf] = useState(String(halfMinutes(match)));
   const [homeName, setHomeName] = useState(match.home_team_name);
   const [awayName, setAwayName] = useState(match.away_team_name);
   // Knockout slots fill themselves from results, so only group and league games swap teams
@@ -83,9 +88,16 @@ export default function TournamentScoreModal({
       setError('A team can\'t play itself: pick two different teams.');
       return;
     }
+    const halfParsed = parseHalfMinutes(half);
+    if (halfReady && !halfParsed.empty && halfParsed.minutes === null) {
+      setError(HALF_LENGTH_ERROR);
+      return;
+    }
+    const newHalf = halfReady && !halfParsed.empty && halfParsed.minutes !== halfMinutes(match) ? halfParsed.minutes : null;
     if (onSaveSchedule && (matchDate !== (match.match_date?.slice(0, 10) || '') || matchTime !== (match.match_time || '') || venue !== (match.venue || '')
-      || pitch !== (match.pitch_label || '') || homeName !== match.home_team_name || awayName !== match.away_team_name)) {
+      || pitch !== (match.pitch_label || '') || homeName !== match.home_team_name || awayName !== match.away_team_name || newHalf)) {
       onSaveSchedule(match.id, {
+        ...(newHalf ? { half_minutes: newHalf } : {}),
         match_date: matchDate, match_time: matchTime, venue, pitch_label: pitch || undefined,
         home_team_name: homeName, away_team_name: awayName, home_team_logo: logoOf(homeName), away_team_logo: logoOf(awayName),
       });
@@ -224,6 +236,9 @@ export default function TournamentScoreModal({
                   </div>
                 ))}
               </div>
+              {halfReady && (
+                <HalfLengthField id="score-half" value={half} onChange={setHalf} helper={`This game only: 2 x ${parseHalfMinutes(half).empty ? halfMinutes(match) : half} minutes.`} />
+              )}
             </fieldset>
           )}
 

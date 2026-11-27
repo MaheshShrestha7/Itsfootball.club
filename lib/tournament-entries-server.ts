@@ -75,6 +75,10 @@ export async function loadEntryView(db: SupabaseClient, f: FoundEntry): Promise<
     teamGames(db, t.id, team.name),
     entry.payment_id ? db.from('payments').select('id, amount_cents, currency, status').eq('id', entry.payment_id).maybeSingle().then(r => r.data) : Promise.resolve(null),
   ]);
+  // A fee the host set but hasn't billed yet: the team still sees what it will be
+  const unbilledCurrency = !payment && t.entry_fee_cents
+    ? ((await db.from('club_payment_settings').select('currency').eq('club_id', club.id).maybeSingle()).data?.currency || 'AUD')
+    : null;
   const done = games.length > 0 && games.every(g => g.status === 'completed');
   let report: TeamSummary | null = null;
   if (done) {
@@ -103,7 +107,7 @@ export async function loadEntryView(db: SupabaseClient, f: FoundEntry): Promise<
     fee: payment && t.entry_fee_cents ? {
       amount_cents: payment.amount_cents, currency: payment.currency, status: payment.status,
       payPath: payment.status === 'pending' || payment.status === 'awaiting_review' ? `/${club.slug}/pay/${payment.id}` : null,
-    } : null,
+    } : unbilledCurrency && t.entry_fee_cents ? { amount_cents: t.entry_fee_cents, currency: unbilledCurrency, status: 'not_billed', payPath: null } : null,
     games: games.map(g => {
       const home = g.home_team_name === team.name;
       return {

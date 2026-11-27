@@ -22,6 +22,19 @@ assert.equal(r.overflow, false);
 assert.equal(r.finish, '09:25');
 assert.equal(packKickoffs([m('x', 'A', 'B'), m('y', 'A', 'C', { tournament_round: 2 })], { start: new Date(2026, 10, 21, 9), end: new Date(2026, 10, 21), matchMinutes: 60, dayEnd: '10:00' }).overflow, true, 'runs past the end date');
 
+// Knockout slot + break: last group game 9:25-9:50, 15-minute break, semis 10:05 in 40-minute slots, final 10:45
+const day = [
+  m('g1', 'A', 'B'), m('g2', 'C', 'D', { tournament_round: 2 }),
+  m('s1', 'W1', 'W2', { tournament_stage: 'semi_final', tournament_round: 1 }), m('s2', 'W3', 'W4', { tournament_stage: 'semi_final', tournament_round: 1 }),
+  m('f', 'S1', 'S2', { tournament_stage: 'final', tournament_round: 2 }),
+];
+const ko = packKickoffs(day, { start: new Date(2026, 10, 28, 9, 0), matchMinutes: 25, pitches: 2, koMatchMinutes: 40, koBreakMinutes: 15 });
+assert.deepEqual(day.map(g => g.match_time), ['09:00', '09:25', '10:05', '10:05', '10:45']);
+assert.equal(ko.finish, '11:25');
+// Without the knockout settings nothing changes
+packKickoffs(day, { start: new Date(2026, 10, 28, 9, 0), matchMinutes: 25, pitches: 2 });
+assert.deepEqual(day.map(g => g.match_time), ['09:00', '09:25', '09:50', '09:50', '10:15']);
+
 // Team list paste
 assert.deepEqual(parseTeamList('Bayside FC, sam@bayside.com\nHills Rovers\tjo@hills.org\n\nbayside fc\nNorth; x'), [
   { name: 'Bayside FC', email: 'sam@bayside.com' }, { name: 'Hills Rovers', email: 'jo@hills.org' }, { name: 'North x', email: null },

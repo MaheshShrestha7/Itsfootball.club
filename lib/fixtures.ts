@@ -1,14 +1,24 @@
 import { countsTowardClubRecord, type Match, type TournamentParticipant } from './supabase/types';
 import { compareTournamentMatches } from './tournament-engine';
+import { SITE_TIME_ZONE, zonedTimeToIso } from './dates';
+
+type When = Pick<Match, 'match_date'> & { match_time?: string | null };
+
+/** The real kick-off instant as ISO. Cup fixtures keep a bare date (midnight UTC) plus the venue's clock
+ *  in match_time; those are read as that time in the club's zone. Anything else is match_date as saved. */
+export function kickoffIso(m: When, zone: string = SITE_TIME_ZONE): string {
+  if (!m.match_date || !m.match_time || hasKickoffTime(m)) return m.match_date;
+  return zonedTimeToIso(m.match_date.slice(0, 10), m.match_time, zone) ?? m.match_date;
+}
 
 /** Kickoff as a timestamp, for sorting (0 when the date can't be read) */
-export function kickoff(m: Pick<Match, 'match_date'>): number {
-  const t = Date.parse(m.match_date);
+export function kickoff(m: When, zone?: string): number {
+  const t = Date.parse(kickoffIso(m, zone));
   return Number.isNaN(t) ? 0 : t;
 }
 
-export const soonestFirst = (a: Pick<Match, 'match_date'>, b: Pick<Match, 'match_date'>) => kickoff(a) - kickoff(b);
-export const latestFirst = (a: Pick<Match, 'match_date'>, b: Pick<Match, 'match_date'>) => kickoff(b) - kickoff(a);
+export const soonestFirst = (a: When, b: When) => kickoff(a) - kickoff(b);
+export const latestFirst = (a: When, b: When) => kickoff(b) - kickoff(a);
 
 type ResultRow = Pick<Match, 'status' | 'match_date' | 'is_club_home' | 'home_score' | 'away_score' | 'home_penalty_score' | 'away_penalty_score' | 'match_type' | 'tournament_id'>;
 
@@ -163,7 +173,7 @@ export const OUTCOME_LABEL: Record<ClubOutcome, string> = { W: 'Win', D: 'Draw',
 
 /** Whether match_date is the kickoff instant. Tournament fixtures store just the date (or midnight
  *  UTC) with the local time in match_time, the same rule as matchTimes() in lib/calendar.ts. */
-export function hasKickoffTime(m: Pick<Match, 'match_date' | 'match_time'>): boolean {
+export function hasKickoffTime(m: When): boolean {
   if (!m.match_date || /^\d{4}-\d{2}-\d{2}$/.test(m.match_date)) return false;
   const d = new Date(m.match_date);
   if (Number.isNaN(d.getTime())) return false;

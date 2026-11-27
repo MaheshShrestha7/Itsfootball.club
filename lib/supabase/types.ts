@@ -888,6 +888,14 @@ export interface Tournament {
   tie_breakers?: TieBreaker[] | null;
   /** Migration 20261185: when the host confirmed every group game was played and opened the knockout games */
   knockout_started_at?: string | null;
+  /** Migration 20261194: half length for group (or league) games and for knockout games, copied onto
+   *  each fixture's half_minutes when the draw is made; the knockouts' own slot length and the break
+   *  before them on the timetable */
+  half_minutes?: number | null;
+  ko_half_minutes?: number | null;
+  final_half_minutes?: number | null;
+  ko_match_minutes?: number | null;
+  ko_break_minutes?: number | null;
   created_at?: string;
   updated_at?: string;
 }

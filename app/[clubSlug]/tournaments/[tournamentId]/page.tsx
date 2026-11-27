@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
 import SupportedBy from '@/components/SupportedBy';
-import { AgeGroupTabs, TeamDetail } from '@/components/tournament/HostedPublic';
+import { AgeGroupTabs, ChampionBanner, OnNowStrip, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
 import { juniorPublicName } from '@/lib/teams';
 import { DEFAULT_CREST } from '@/lib/crest';
@@ -64,16 +64,16 @@ export default function PublicTournamentDetailPage({
   };
   const squads = usePublicSquads(tournament?.id, !!tournament);
 
-  // Open on the standings for a league, and for a group stage whose knockout rounds aren't drawn
-  // yet (an empty bracket isn't much to land on); otherwise the bracket
-  const hasKnockout = matches.some(m => m.tournament_id === tournament?.id && !!m.tournament_stage && m.tournament_stage !== 'group');
+  // Open on the standings for a league, and while group games are still to play (the bracket then
+  // holds only "1st Group A" placeholders); otherwise the bracket
+  const groupsLeft = matches.some(m => m.tournament_id === tournament?.id && (m.tournament_stage || 'group') === 'group' && m.status !== 'completed');
   const tournamentId = tournament?.id;
   const tournamentFormat = tournament?.format;
   useEffect(() => {
-    if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && !hasKnockout)) {
+    if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && groupsLeft)) {
       setActiveTab(t => (t === 'teams' ? t : 'standings'));
     }
-  }, [tournamentId, tournamentFormat, hasKnockout]);
+  }, [tournamentId, tournamentFormat, groupsLeft]);
 
   if (!tournament) {
     return (
@@ -231,6 +231,9 @@ export default function PublicTournamentDetailPage({
       {/* Main Tabs and Content */}
       <main style={{ maxWidth: '1300px', margin: '0 auto', padding: '2rem 1.5rem 4rem 1.5rem' }}>
         <AgeGroupTabs tournaments={tournaments} tournament={tournament} href={t => `/${club.slug}/tournaments/${t.id}`} />
+        <ChampionBanner tournament={tournament} matches={tourneyMatches} events={matchEvents} showName={showName}
+          standingsLeader={tournament.format === 'league' ? getTournamentStandings(tournament.id)[0]?.name : undefined} />
+        {tournament.status !== 'completed' && <OnNowStrip matches={tourneyMatches} clubSlug={club.slug} showName={showName} />}
         {/* Shown only once the club has awarded it */}
         <PlayerOfTournament tournament={tournament} members={members.filter(m => m.club_id === club.id)} />
 

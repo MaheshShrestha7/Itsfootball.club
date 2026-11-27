@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { useAuth } from '@/lib/auth-context';
 import { offerLineupAppearances } from '@/components/offerLineupAppearances';
-import { Match, MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
+import { type ClubMember, Match, MatchEventType, MatchFormat, MatchPeriod, PitchPosition, isPlayerMember } from '@/lib/supabase/types';
 import TacticalPitch from '@/components/TacticalPitch';
 import {
   Radio,
@@ -61,13 +61,16 @@ import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, ful
 import { defaultSeasonLabel } from '@/lib/season';
 import CupAskPanel, { cupTeamName } from '@/components/admin/CupAskPanel';
 import { cupAsks } from '@/lib/cup-progress';
-import { clubLineupSide, clubSidePlayers, compareTournamentMatches, knockoutLockReason, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers, compareTournamentMatches, groupGamesLeft, knockoutLockReason, knockoutStarted, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { confirmAction } from '@/components/ConfirmDialog';
 import { useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import '@/components/tournament/hosted.css';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { GOAL_EVENT_TYPES, goalScoringSide, publicScoreHidden, squadForMatch } from '@/lib/teams';
+import { GOAL_EVENT_TYPES, goalScoringSide, juniorPublicName, publicScoreHidden, squadForMatch } from '@/lib/teams';
+import { useTournamentEntries } from '@/lib/use-tournament-entries';
 import LocalTime from '@/components/LocalTime';
-import { defaultFixture, kickoff, matchKind, type MatchKind } from '@/lib/fixtures';
+import { defaultFixture, kickoff, kickoffIso, matchKind, type MatchKind } from '@/lib/fixtures';
+import { clubTimeZone } from '@/lib/dates';
 import { matchPath } from '@/lib/slugs';
 import PopupPanel from '@/components/PopupPanel';
 import { ChatScoringPanel } from '@/components/admin/ChatScoring';
@@ -227,6 +230,22 @@ export default function AdminMatchCenterControllerPage({
   // Each side's own club players (null = outside team); tournament sides come from their participants
   const homePlayers = match ? clubSidePlayers(match, 'home', squadPlayers, tournamentParticipants, internalTeams) : null;
   const awayPlayers = match ? clubSidePlayers(match, 'away', squadPlayers, tournamentParticipants, internalTeams) : null;
+  // A guest club's entered team sheet (hosted cups): its goals and cards are picked by name too.
+  // Players the club hid stay off; junior names are shortened as on the public pages.
+  const { squads: cupSquads } = useTournamentEntries(match?.tournament_id || '', !!match?.tournament_id);
+  const guestSquad = (side: 'home' | 'away'): ClubMember[] | null => {
+    if (!match?.tournament_id) return null;
+    const teamName = side === 'home' ? match.home_team_name : match.away_team_name;
+    const team = tournamentParticipants.find(p => p.tournament_id === match.tournament_id && p.name === teamName);
+    if (!team || team.team_type === 'internal') return null;
+    const list = cupSquads
+      .filter(p => p.participant_id === team.id && !p.hide_public)
+      .map(p => ({ id: `guest-${p.id}`, club_id: club.id, full_name: matchTournament?.is_junior || p.is_junior ? juniorPublicName(p.name) : p.name, jersey_number: p.shirt_number ?? undefined } as unknown as ClubMember));
+    return list.length ? list : null;
+  };
+  // Who the event popups offer: the club's own players, else the guest club's team sheet
+  const pickHome = homePlayers ?? guestSquad('home');
+  const pickAway = awayPlayers ?? guestSquad('away');
   // The club's lineup lives on its own side's columns (away when the club plays away), as the public page reads it
   const lineupSide = match ? clubLineupSide(match) : 'home';
 
@@ -525,7 +544,8 @@ export default function AdminMatchCenterControllerPage({
       handlePeriodTransition('full_time', 'completed', match.period === 'extra_time' || match.period === 'penalties'
         ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match));
     }
-    setIsAuditModalOpen(true);
+    // Player stats are for the club's own players: a cup game between two guest clubs has none
+    if (homePlayers || awayPlayers) setIsAuditModalOpen(true);
   };
 
   // Adjust match minute
@@ -596,7 +616,7 @@ export default function AdminMatchCenterControllerPage({
   const addGoal = (side: 'home' | 'away') => {
     if (koLock) return showFeedback(koLock, 'error');
     if (inShootout) return handleScoreAdjust(side, 1);
-    if ((side === 'home' ? homePlayers : awayPlayers) !== null) return openSheet('goal', 'goal', side, true);
+    if ((side === 'home' ? pickHome : pickAway) !== null) return openSheet('goal', 'goal', side, true);
     const name = side === 'home' ? match.home_team_name : match.away_team_name;
     handleSheetSave({ eventType: 'goal', side, minute: getLiveMinute(match), playerName: `${name} Player` }, `${name} goal,`);
   };
@@ -643,7 +663,7 @@ export default function AdminMatchCenterControllerPage({
   // time (more than two hours away, or more than six hours ago) it asks first, since Match Centre
   // opens on the next fixture and a stray tap would start it.
   const kickOff = () => handlePeriodTransition('first_half', 'live', periodStartMinute(match, 'first_half'));
-  const untilKickoff = kickoff(match) - Date.now();
+  const untilKickoff = kickoff(match, clubTimeZone(club)) - Date.now();
   const kickoffIsOffSchedule = untilKickoff > 2 * 3600000 || untilKickoff < -6 * 3600000;
 
   // The one big scoreboard button: the next whistle for where the game is (none once it's over)
@@ -656,8 +676,17 @@ export default function AdminMatchCenterControllerPage({
       ? { label: 'Start 2nd half', hint: `The clock restarts at ${periodStartMinute(match, 'second_half')}′`, go: () => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half')) }
     : match.period === 'first_half'
       ? { label: 'Half time', hint: `Stops the clock at ${halfMinutes(match)}′`, go: () => handlePeriodTransition('halftime', 'halftime', halfMinutes(match)) }
-      : { label: 'End match', hint: `Full time at ${scoreText}, then player stats`, go: () => setConfirmEnd(true) };
-  const endMinute = match.period === 'extra_time' || match.period === 'penalties' ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match);
+      : { label: 'End match', hint: homePlayers || awayPlayers ? `Full time at ${scoreText}, then player stats` : `Full time at ${scoreText}`, go: () => setConfirmEnd(true) };
+  // A shoot-out straight after normal time (most cup days have no extra time) keeps the full-time minute
+  const shootoutMinute = match.period === 'extra_time' ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match);
+  const endMinute = match.period === 'penalties' ? Math.max(fullMinutes(match), match.current_minute ?? 0)
+    : match.period === 'extra_time' ? fullMinutes(match) + 2 * extraHalfMinutes(match) : fullMinutes(match);
+  // A level knockout game can't end until the shoot-out has a winner
+  const pensEntered = (match.home_penalty_score ?? 0) > 0 || (match.away_penalty_score ?? 0) > 0;
+  const needsShootout = isCupGame && !!match.tournament_stage && match.tournament_stage !== 'group'
+    && match.home_score === match.away_score && (!pensEntered || match.home_penalty_score === match.away_penalty_score);
+  const finalScoreText = match.home_score === match.away_score && pensEntered
+    ? `${scoreText} (${match.home_penalty_score ?? 0}–${match.away_penalty_score ?? 0} pens)` : scoreText;
 
   // Tournament day, or several club games live at once: the games on now (plus the next on a pitch), one tap apart
   const liveBoardEl = liveBoard.length > 0 && (
@@ -1189,9 +1218,21 @@ export default function AdminMatchCenterControllerPage({
             )}
 
             {koLock && (
-              <p role="status" className="ht-lock" style={{ marginBottom: '0.75rem' }}>
+              <div role="status" className="ht-lock" style={{ marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                 <Lock size={15} aria-hidden="true" /><span>{koLock}</span>
-              </p>
+                {/* Groups done: the host starts the knockouts from the pitch instead of leaving Match Centre */}
+                {matchTournament && koStartReady && !knockoutStarted(matchTournament, matches) && groupGamesLeft(matchTournament.id, matches) === 0 && can(club.id, 'tournaments', 'full') && (
+                  <button type="button" className="btn btn-sm btn-primary" onClick={async () => {
+                    if (!(await confirmAction({
+                      title: 'Start the knockout stage?',
+                      message: 'All group games are played. The group tables are final and the qualified teams go into the knockout games. Check the group results first.',
+                      confirmLabel: 'Start knockout stage',
+                    }))) return;
+                    updateTournament(matchTournament.id, { knockout_started_at: new Date().toISOString() });
+                    showFeedback('Knockout stage started. This game can now kick off.');
+                  }}>Start knockout stage</button>
+                )}
+              </div>
             )}
 
             {/* Full time in an outside cup: did we go through? (only after its last game so far) */}
@@ -1248,7 +1289,7 @@ export default function AdminMatchCenterControllerPage({
                   <button type="button" className="mc-period" aria-pressed={match.period === 'halftime'} onClick={() => handlePeriodTransition('halftime', 'halftime', halfMinutes(match))}>Half time</button>
                   <button type="button" className="mc-period" aria-pressed={match.period === 'second_half'} onClick={() => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half'))}>2nd half</button>
                   <button type="button" className="mc-period" aria-pressed={match.period === 'extra_time'} onClick={() => handlePeriodTransition('extra_time', 'live', periodStartMinute(match, 'extra_time'))}>Extra time</button>
-                  <button type="button" className="mc-period" aria-pressed={match.period === 'penalties'} onClick={() => handlePeriodTransition('penalties', 'live', fullMinutes(match) + 2 * extraHalfMinutes(match))}>Penalties</button>
+                  <button type="button" className="mc-period" aria-pressed={match.period === 'penalties'} onClick={() => handlePeriodTransition('penalties', 'live', shootoutMinute)}>Penalties</button>
                   <button type="button" className="mc-period" aria-pressed={match.status === 'completed'} onClick={() => setConfirmEnd(true)}>Full time</button>
                 </div>
               )}
@@ -1521,7 +1562,7 @@ export default function AdminMatchCenterControllerPage({
                 { label: 'Half time whistle', mark: `${halfMinutes(match)}′`, go: () => handlePeriodTransition('halftime', 'halftime', halfMinutes(match)) },
                 { label: 'Kick-off, second half', mark: `${periodStartMinute(match, 'second_half')}′`, go: () => handlePeriodTransition('second_half', 'live', periodStartMinute(match, 'second_half')) },
                 { label: 'Extra time (cup or knockout)', mark: `${periodStartMinute(match, 'extra_time')}′`, go: () => handlePeriodTransition('extra_time', 'live', periodStartMinute(match, 'extra_time')) },
-                { label: 'Penalty shootout', mark: 'Pens', go: () => handlePeriodTransition('penalties', 'live', fullMinutes(match) + 2 * extraHalfMinutes(match)) },
+                { label: 'Penalty shootout', mark: 'Pens', go: () => handlePeriodTransition('penalties', 'live', shootoutMinute) },
               ]).map(p => (
                 <button key={p.label} type="button" className="btn btn-secondary mc-period-row" onClick={p.go}>
                   <span>{p.label}</span>
@@ -1602,7 +1643,7 @@ export default function AdminMatchCenterControllerPage({
           initialType={sheet.type}
           side={sheet.side}
           names={{ home: match.home_team_name, away: match.away_team_name }}
-          squads={{ home: homePlayers, away: awayPlayers }}
+          squads={{ home: pickHome, away: pickAway }}
           lineupIds={{
             home: (match.home_lineup_coords || []).map(p => p.member_id).filter((id): id is string => !!id),
             away: (match.away_lineup_coords || []).map(p => p.member_id).filter((id): id is string => !!id),
@@ -1627,19 +1668,33 @@ export default function AdminMatchCenterControllerPage({
             <p className="mc-sheet-lead">Check the score first. This is the result people will see.</p>
             <div className="mc-final">
               <span>{match.home_team_name}</span>
-              <b>{scoreText}</b>
+              <b>{finalScoreText}</b>
               <span>{match.away_team_name}</span>
             </div>
-            <ul className="mc-final-list">
-              <li><CheckCircle2 size={16} aria-hidden="true" />The clock stops at {endMinute}&prime; and the public page says Full time</li>
-              {!match.alerts_muted && <li><CheckCircle2 size={16} aria-hidden="true" />Followers get the full-time score alert</li>}
-              {isCupGame && <li><CheckCircle2 size={16} aria-hidden="true" />The result goes into the tournament</li>}
-              <li><CheckCircle2 size={16} aria-hidden="true" />Player stats open next, so you can save them</li>
-            </ul>
-            <div className="mc-sheet-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setConfirmEnd(false)}>Not yet</button>
-              <button type="button" className="btn btn-primary" onClick={() => { setConfirmEnd(false); handleFullTime(); }}>End match</button>
-            </div>
+            {needsShootout ? (
+              <>
+                <p className="mc-sheet-lead" role="alert">
+                  {pensEntered ? 'The shoot-out is level. Keep going until one side is ahead.' : 'It\'s level, and a knockout game needs a winner. Start the penalty shoot-out first.'}
+                </p>
+                <div className="mc-sheet-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setConfirmEnd(false)}>Back</button>
+                  {!inShootout && <button type="button" className="btn btn-primary" onClick={() => { setConfirmEnd(false); handlePeriodTransition('penalties', 'live', shootoutMinute); }}>Start shoot-out</button>}
+                </div>
+              </>
+            ) : (
+              <>
+                <ul className="mc-final-list">
+                  <li><CheckCircle2 size={16} aria-hidden="true" />The clock stops at {endMinute}&prime; and the public page says Full time</li>
+                  {!match.alerts_muted && <li><CheckCircle2 size={16} aria-hidden="true" />Followers get the full-time score alert</li>}
+                  {isCupGame && <li><CheckCircle2 size={16} aria-hidden="true" />The result goes into the tournament</li>}
+                  {(homePlayers || awayPlayers) && <li><CheckCircle2 size={16} aria-hidden="true" />Player stats open next, so you can save them</li>}
+                </ul>
+                <div className="mc-sheet-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setConfirmEnd(false)}>Not yet</button>
+                  <button type="button" className="btn btn-primary" onClick={() => { setConfirmEnd(false); handleFullTime(); }}>End match</button>
+                </div>
+              </>
+            )}
           </PopupPanel>
         </div>
       )}
@@ -1652,7 +1707,7 @@ export default function AdminMatchCenterControllerPage({
             <div className="mc-sheet-head"><h2>Kick off this game now?</h2></div>
             <p className="mc-sheet-lead">
               {match.home_team_name} v {match.away_team_name} is set for{' '}
-              <LocalTime value={match.match_date} format="both" options={{ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }} />.
+              <LocalTime value={kickoffIso(match, clubTimeZone(club))} format="both" options={{ weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }} />.
             </p>
             <ul className="mc-final-list">
               <li><CheckCircle2 size={16} aria-hidden="true" />The clock starts and the public page shows it as live</li>

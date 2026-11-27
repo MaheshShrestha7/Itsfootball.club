@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cupGames, latestResult, teamForm, teamRecord } from './fixtures';
+import { cupGames, kickoff, kickoffIso, latestResult, teamForm, teamRecord } from './fixtures';
 
 const game = (date: string, us: number, them: number, extra: Record<string, unknown> = {}) => ({
   status: 'completed', match_date: date, is_club_home: true, home_score: us, away_score: them,
@@ -38,4 +38,14 @@ console.log('fixtures: ok');
   assert.deepEqual(cupGames(all, all[0]).map(m => m.id), ['1', '2', '3']);
   assert.deepEqual(cupGames(all, all[4]).map(m => m.id), ['n']);
   assert.deepEqual(cupGames([], all[0]).map(m => m.id), ['3']);
+}
+
+// Cup fixtures: a bare date (midnight UTC) plus the venue clock in match_time is that time in the club's zone
+{
+  assert.equal(kickoffIso({ match_date: '2026-11-28T00:00:00+00:00', match_time: '08:00' }), '2026-11-27T21:00:00.000Z');
+  assert.equal(kickoffIso({ match_date: '2026-11-28', match_time: '12:35' }), '2026-11-28T01:35:00.000Z');
+  assert.equal(kickoffIso({ match_date: '2026-07-04', match_time: '15:00' }, 'Australia/Perth'), '2026-07-04T07:00:00.000Z');
+  // A real timestamp stays as saved
+  assert.equal(kickoffIso({ match_date: '2026-11-27T22:30:00.000Z', match_time: '09:30' }), '2026-11-27T22:30:00.000Z');
+  assert.ok(kickoff({ match_date: '2026-11-28', match_time: '08:00' }) < kickoff({ match_date: '2026-11-28', match_time: '12:35' }));
 }

@@ -35,3 +35,6 @@ export const useKnockoutStartReady = () => useColumnReady('tournaments', 'knocko
 
 /** True once an outside cup's format can be saved (events.cup_format, migration 20261192) */
 export const useCupFormatReady = () => useColumnReady('events', 'cup_format');
+
+/** True once a tournament can keep its game lengths and knockout timing (tournaments.half_minutes, migration 20261194) */
+export const useTournamentLengthReady = () => useColumnReady('tournaments', 'half_minutes');
