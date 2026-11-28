@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, shuffleUnseeded, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted, tournamentHalfMinutes } from './tournament-engine';
+import { buildTiesheet, shuffleUnseeded, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted, tournamentHalfMinutes, slotTime, addToTime, pitchDelays, pushBackPitch, teamBreaks } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -329,3 +329,27 @@ console.log('tournament engine: game length + form order OK');
   assert.deepEqual(mixed.map(t => t.name).sort(), ['A', 'B', 'C', 'D'], 'shuffle keeps every team');
 }
 console.log('tournament engine: optional seeds OK');
+
+{
+  // Run sheet on the day: late pitches, pushing a pitch back, rest between games
+  const g = (id: string, time: string, pitch: string, home: string, away: string, extra: Partial<Match> = {}) =>
+    ({ id, match_date: '2026-11-30', match_time: time, pitch_label: pitch, home_team_name: home, away_team_name: away, status: 'upcoming', half_minutes: 10, current_minute: 0, ...extra }) as Match;
+  const at = (hhmm: string) => slotTime({ match_date: '2026-11-30', match_time: hhmm });
+  assert.equal(addToTime('10:55:00', 8), '11:03');
+  assert.equal(addToTime('23:58', 5), '00:03');
+  const games = [
+    g('a', '10:30', 'Pitch 1', 'A', 'B', { status: 'live', period: 'first_half', current_minute: 13, period_started_at: new Date(at('10:30') + 12 * 60000).toISOString() }),
+    g('b', '10:30', 'Pitch 2', 'C', 'D', { status: 'live', period: 'first_half', current_minute: 1, period_started_at: new Date(at('10:38')).toISOString() }),
+    g('c', '10:30', 'Pitch 3', 'E', 'F'),
+    g('d', '10:55', 'Pitch 2', 'A', 'C'),
+    g('e', '11:20', 'Pitch 2', 'B', 'D'),
+    g('f', '10:55', 'Pitch 1', 'E', 'B'),
+  ];
+  const late = pitchDelays(games, at('10:42'));
+  assert.deepEqual(late.map(l => [l.pitch, l.minutes, l.started]), [['Pitch 2', 8, true], ['Pitch 3', 12, false]], 'on-time pitch 1 left out');
+  assert.deepEqual(pushBackPitch(games, games[1], 8), [{ id: 'd', match_time: '11:03' }, { id: 'e', match_time: '11:28' }], 'only later games on that pitch');
+  assert.deepEqual(pushBackPitch(games, games[2], 12).map(c => c.id), ['c'], 'a game not yet kicked off moves itself');
+  // A plays 10:30 (20 min) then 10:55: 5 minutes; B plays 10:30, 10:55, 11:20
+  assert.deepEqual(teamBreaks(games).slice(0, 2), [{ team: 'A', minutes: 5 }, { team: 'B', minutes: 5 }]);
+}
+console.log('tournament engine: run sheet on the day OK');

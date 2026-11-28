@@ -16,7 +16,7 @@ import { DEFAULT_CREST } from '@/lib/crest';
 import { stableId } from './ids';
 import { DATE_LOCALE } from './dates';
 import { packKickoffs } from './hosted-tournaments';
-import { validHalfMinutes } from './match-length';
+import { validHalfMinutes, fullMinutes } from './match-length';
 
 // Human-readable stage titles
 export const STAGE_TITLES: Record<string, string> = {
@@ -62,6 +62,73 @@ export function runSheetMove<T>(list: T[], from: number, to: number): T[] {
   const next = [...list];
   next.splice(to, 0, ...next.splice(from, 1));
   return next;
+}
+
+/** Run sheet: a game's slot as a local timestamp ("2026-11-30" + "10:30[:00]"); NaN without both */
+export function slotTime(m: Pick<Match, 'match_date' | 'match_time'>): number {
+  const day = m.match_date?.slice(0, 10), time = m.match_time?.slice(0, 5);
+  return day && time ? new Date(`${day}T${time}`).getTime() : NaN;
+}
+
+/** "HH:MM" a number of minutes after a match_time */
+export function addToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const t = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+
+export interface PitchDelay { pitch: string; minutes: number; game: Match; started: boolean }
+
+/** Pitches running behind: a live game that kicked off late, or a game past its time that hasn't
+ *  kicked off. Under 3 minutes doesn't count. */
+export function pitchDelays(matches: Match[], now: number): PitchDelay[] {
+  const out: PitchDelay[] = [];
+  for (const pitch of [...new Set(matches.map(m => m.pitch_label || ''))]) {
+    const games = matches.filter(m => (m.pitch_label || '') === pitch && !isNaN(slotTime(m))).sort((a, b) => slotTime(a) - slotTime(b));
+    const live = games.find(m => m.status === 'live');
+    let minutes = 0, game: Match | undefined, started = true;
+    // shortcut: only the first half shows the kick-off (after half time the break hides it); good enough for one-day cups
+    if (live?.period === 'first_half' && live.period_started_at) {
+      const kick = Date.parse(live.period_started_at) - Math.max(0, (live.current_minute || 1) - 1) * 60000;
+      minutes = Math.round((kick - slotTime(live)) / 60000);
+      game = live;
+    } else if (!live) {
+      game = games.find(m => m.status === 'upcoming' && slotTime(m) < now);
+      minutes = game ? Math.floor((now - slotTime(game)) / 60000) : 0;
+      started = false;
+    }
+    if (game && minutes >= 3) out.push({ pitch, minutes, game, started });
+  }
+  return out;
+}
+
+/** "Push Pitch 2 back": every game still to play on that pitch on that day, from `from` on, moved by the same minutes */
+export function pushBackPitch(matches: Match[], from: Match, minutes: number): { id: string; match_time: string }[] {
+  const pitch = from.pitch_label || '', day = from.match_date?.slice(0, 10), start = slotTime(from);
+  return matches
+    .filter(m => m.status === 'upcoming' && (m.pitch_label || '') === pitch && m.match_date?.slice(0, 10) === day && m.match_time && slotTime(m) >= start && (m.id !== from.id || from.status === 'upcoming'))
+    .map(m => ({ id: m.id, match_time: addToTime(m.match_time!, minutes) }));
+}
+
+/** Rest between a team's games on the same day: the next kick-off minus the last game's full time
+ *  (its two halves). Each team's shortest, shortest first. */
+export function teamBreaks(matches: Match[]): { team: string; minutes: number }[] {
+  const byTeam = new Map<string, Match[]>();
+  for (const m of matches) {
+    if (isNaN(slotTime(m)) || m.status === 'cancelled') continue;
+    for (const t of [m.home_team_name, m.away_team_name]) if (t && t !== 'TBD') byTeam.set(t, [...(byTeam.get(t) || []), m]);
+  }
+  const out: { team: string; minutes: number }[] = [];
+  for (const [team, games] of byTeam) {
+    games.sort((a, b) => slotTime(a) - slotTime(b));
+    let min = Infinity;
+    for (let i = 1; i < games.length; i++) {
+      if (games[i].match_date?.slice(0, 10) !== games[i - 1].match_date?.slice(0, 10)) continue;
+      min = Math.min(min, Math.round((slotTime(games[i]) - slotTime(games[i - 1])) / 60000) - fullMinutes(games[i - 1]));
+    }
+    if (min !== Infinity) out.push({ team, minutes: min });
+  }
+  return out.sort((a, b) => a.minutes - b.minutes || a.team.localeCompare(b.team));
 }
 
 /** The game after this one on the same pitch (or simply the tournament's next game when pitches

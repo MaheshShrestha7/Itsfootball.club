@@ -114,7 +114,6 @@
 .ht-age { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 40px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--border-medium); background: rgba(var(--tint-rgb), 0.04); color: var(--text-secondary); font: 700 0.88rem var(--font-body); text-decoration: none; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
 .ht-age:hover { color: var(--text-primary); border-color: var(--border-strong, var(--border-medium)); background: rgba(var(--tint-rgb), 0.08); }
 .ht-age[aria-current='page'] { background: rgba(var(--club-primary-rgb), 0.14); border-color: rgba(var(--club-primary-rgb), 0.55); color: var(--club-ink); }
-.ht-age-add { border-style: dashed; background: none; }
 .evp-box .ht-ages { margin: 0; }
 
 /* Fair play */
@@ -383,12 +382,127 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
   .ht-rs-flag-cell { grid-area: f; }
   .ht-rs-moves { grid-area: mv; flex-direction: column; }
 }
+/* Run sheet on the day: the pitch board (now, each pitch's live game, what's next), late pitches,
+ * the now line, played games folded, rest between games, a column per pitch, and print sheets.
+ * signature: the pitch board over the sheet */
+.ht-rs-bar .ht-hint { margin: 0; }
+.ht-rs > .ht-hint { margin: 0 0 0.6rem; max-width: 70ch; }
+.ht-rs-layout { display: inline-grid; grid-template-columns: repeat(2, minmax(0, auto)); }
+.ht-rs-layout button { padding: 0 0.9rem; }
+.ht-rs-printmenu .ht-redo-menu { width: min(20rem, 86vw); }
+.ht-rs-popt { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 0.5rem; padding: 0.55rem 0.6rem; border-radius: 10px; border: 1px solid var(--border-subtle); font-size: 0.86rem; font-weight: 600; color: var(--text-primary); cursor: pointer; }
+.ht-rs-popt small { display: block; font-weight: 500; font-size: 0.76rem; color: var(--text-muted); }
+.ht-rs-popt:has(input:checked) { border-color: rgba(var(--club-primary-rgb), 0.6); background: rgba(var(--club-primary-rgb), 0.07); }
+.ht-rs-popt input { accent-color: var(--club-primary); margin: 3px 0 0; }
+.ht-rs-popt input:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+
+.ht-rs-board { display: grid; grid-template-columns: 8.5rem repeat(var(--pitches, 1), minmax(0, 1fr)); margin-bottom: 1rem; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-card); overflow: hidden; }
+.ht-rs-now { display: grid; align-content: center; padding: 0.8rem 1rem; border-right: 1px solid var(--border-subtle); }
+.ht-rs-now small { color: var(--text-muted); font-size: 0.78rem; }
+.ht-rs-now b { font: 700 1.35rem/1.1 var(--font-heading); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-primary); }
+.ht-rs-pitch-now { display: grid; gap: 0.3rem; align-content: start; min-width: 0; padding: 0.75rem 0.9rem; }
+.ht-rs-pitch-now + .ht-rs-pitch-now { border-left: 1px solid var(--border-subtle); }
+.ht-rs-pitch-now[data-late] { background: color-mix(in oklab, var(--c-amber) 7%, transparent); }
+.ht-rs-pitch-now header { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
+.ht-rs-min { color: var(--c-red); font-variant-numeric: tabular-nums; }
+.ht-rs-now-game { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.1rem 0.5rem; padding: 0; border: 0; background: none; color: var(--text-primary); font: inherit; font-size: 0.88rem; text-align: left; cursor: pointer; }
+.ht-rs-now-game span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ht-rs-now-game em { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ht-rs-now-game:hover span { color: var(--club-ink); }
+.ht-rs-now-game:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 6px; }
+.ht-rs-idle { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+.ht-rs-next { margin: 0; padding-top: 0.35rem; border-top: 1px dashed var(--border-subtle); color: var(--text-muted); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-rs-next b { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+[data-late] .ht-rs-next b { color: var(--c-amber); }
+.ht-rs-push { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--club-ink); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.ht-rs-push:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+
+.ht-rs-fold { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.4rem 0.9rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 0.85rem; background: rgba(var(--tint-rgb), 0.03); }
+.ht-rs-fold button { min-height: 32px; padding: 0 0.5rem; border: 0; border-radius: 8px; background: none; color: var(--club-ink); font: 700 0.85rem var(--font-body); cursor: pointer; }
+.ht-rs-fold button:hover { background: rgba(var(--tint-rgb), 0.06); }
+.ht-rs-fold button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.ht-rs-grid .ht-rs-fold { grid-column: 1 / -1; border-top: 0; }
+.ht-rs-nowline { position: relative; height: 0; border-top: 2px solid var(--c-red); grid-column: 1 / -1; }
+.ht-rs-nowline span { position: absolute; left: 0.6rem; top: -0.7rem; padding: 0 0.45rem; border-radius: 999px; background: var(--c-red); color: var(--club-primary-contrast, #fff); font: 700 0.74rem/1.35rem var(--font-body); font-variant-numeric: tabular-nums; }
+.ht-rs-row.is-live { background: color-mix(in oklab, var(--c-red) 6%, transparent); }
+.ht-rs-likely { display: block; font-size: 0.76rem; font-weight: 600; line-height: 1.2; white-space: normal; color: var(--c-amber); }
+.ht-rs-gap { display: flex; align-items: center; gap: 0.5rem; min-height: 28px; padding: 0.2rem 0.9rem 0.2rem 2.4rem; border-top: 1px solid var(--border-subtle); font-size: 0.78rem; color: var(--text-muted); background: color-mix(in oklab, var(--club-primary) 5%, transparent); }
+.ht-rs-gap::before { content: ''; width: 2px; align-self: stretch; background: rgba(var(--club-primary-rgb), 0.5); }
+.ht-rs-gap[data-tone='warn'] { color: var(--c-amber); font-weight: 700; }
+
+.ht-rs-breaks { margin-top: 1rem; padding: 0.8rem 0.9rem; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-card); }
+.ht-rs-breaks h3 { margin: 0 0 0.15rem; font: 700 0.95rem var(--font-heading); color: var(--text-primary); }
+.ht-rs-breaks p { margin: 0 0 0.5rem; color: var(--text-muted); font-size: 0.8rem; }
+.ht-rs-breaks ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); column-gap: 1.5rem; }
+.ht-rs-breaks button { display: flex; justify-content: space-between; gap: 0.5rem; width: 100%; min-height: 40px; padding: 0 0.25rem; border: 0; border-top: 1px solid var(--border-subtle); background: none; color: var(--text-primary); font: inherit; font-size: 0.86rem; text-align: left; cursor: pointer; }
+.ht-rs-breaks button:hover span { color: var(--club-ink); }
+.ht-rs-breaks button[aria-pressed='true'] span { color: var(--club-ink); font-weight: 700; }
+.ht-rs-breaks button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: -2px; }
+.ht-rs-breaks b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ht-rs-breaks b[data-tone='warn'] { color: var(--c-amber); font-weight: 700; }
+
+.ht-rs-chips { display: none; }
+.ht-rs-grid { display: grid; grid-template-columns: 6.75rem repeat(var(--pitches, 1), minmax(0, 1fr)); border: 1px solid var(--border-subtle); border-radius: 14px; background: rgba(var(--tint-rgb), 0.03); overflow: hidden; }
+.ht-rs-grid > * { min-width: 0; }
+.ht-rs-gh { display: flex; justify-content: space-between; align-items: center; gap: 0.4rem; padding: 0.55rem 0.7rem; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); background: rgba(var(--tint-rgb), 0.04); }
+.ht-rs-gday { grid-column: 1 / -1; padding: 0.45rem 0.9rem; border-top: 1px solid var(--border-subtle); font: 700 0.85rem var(--font-heading); color: var(--text-secondary); background: rgba(var(--tint-rgb), 0.03); }
+.ht-rs-gt { padding: 0.55rem 0.7rem; border-top: 1px solid var(--border-subtle); font-weight: 700; font-size: 0.88rem; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-primary); }
+.ht-rs-gt small { display: block; font-weight: 500; font-size: 0.74rem; color: var(--text-muted); }
+.ht-rs-cell { display: grid; gap: 0.3rem; padding: 0.4rem; border-top: 1px solid var(--border-subtle); border-left: 1px solid var(--border-subtle); }
+.ht-rs-card { display: grid; gap: 0.15rem; padding: 0.45rem 0.55rem; border-radius: 10px; border: 1px solid var(--border-subtle); background: var(--bg-card); font-size: 0.83rem; transition: opacity 0.15s, box-shadow 0.15s; }
+.ht-rs-card[draggable='true'] { cursor: grab; }
+.ht-rs-card button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.1rem 0.4rem; padding: 0; border: 0; background: none; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.ht-rs-card button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ht-rs-card button em { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ht-rs-card button:hover span { color: var(--club-ink); }
+.ht-rs-card button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 6px; }
+.ht-rs-card-state { min-height: 20px; font-size: 0.74rem; color: var(--text-muted); }
+.ht-rs-card-state .ht-state { line-height: 20px; font-size: 0.72rem; padding: 0 0.45rem; }
+.ht-rs-card.is-done { opacity: 0.62; }
+.ht-rs-card.is-live { border-color: color-mix(in oklab, var(--c-red) 55%, transparent); background: color-mix(in oklab, var(--c-red) 7%, var(--bg-card)); }
+.ht-rs-card.is-late { border-color: color-mix(in oklab, var(--c-amber) 55%, transparent); }
+.ht-rs-card.is-hi { box-shadow: inset 3px 0 0 var(--club-primary); }
+.ht-rs-card.is-dragging { opacity: 0.45; }
+.ht-rs-card.is-over { box-shadow: 0 0 0 2px var(--club-ink); }
+
+.ht-rs-printout { display: none; }
+@media (max-width: 760px) {
+  .ht-rs-board { grid-template-columns: minmax(0, 1fr); }
+  .ht-rs-now { display: flex; justify-content: space-between; align-items: baseline; padding: 0.6rem 0.9rem; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .ht-rs-pitch-now + .ht-rs-pitch-now { border-left: 0; border-top: 1px solid var(--border-subtle); }
+  .ht-rs-gap { padding-left: 1.6rem; }
+  .ht-rs-chips { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; overflow-x: auto; }
+  .ht-rs-grid { grid-template-columns: 5.4rem minmax(0, 1fr); }
+  .ht-rs-grid .is-off { display: none; }
+  .ht-rs-gt { padding: 0.55rem 0.5rem; font-size: 0.82rem; }
+}
 @media print {
   body * { visibility: hidden; }
-  .ht-rs-sheet, .ht-rs-sheet * { visibility: visible; }
-  .ht-rs-sheet { position: absolute; inset: 0 0 auto; border: 0; }
-  .ht-rs-moves, .ht-rs-handle { visibility: hidden !important; }
+  .ht-rs-printout, .ht-rs-printout * { visibility: visible; }
+  .ht-rs-printout { display: block; position: absolute; inset: 0 0 auto; --paper-ink: #111; --paper-rule: #c9ced6; --paper-muted: #5b6472; --paper-band: #f1f3f6; color: var(--paper-ink); background: #fff; font: 400 11pt/1.4 var(--font-body); }
+  .ht-rs-page { break-after: page; padding: 0 0 1rem; }
+  .ht-rs-page:last-child { break-after: auto; }
+  .ht-rs-page h2 { margin: 0 0 0.5rem; font: 800 16pt/1.15 var(--font-heading); color: var(--paper-ink); }
+  .ht-rs-page table { width: 100%; border-collapse: collapse; }
+  .ht-rs-page th, .ht-rs-page td { padding: 5px 6px; border-bottom: 1px solid var(--paper-rule); text-align: left; color: var(--paper-ink); }
+  .ht-rs-page thead th { font-size: 9pt; color: var(--paper-muted); }
+  .ht-rs-pday { background: var(--paper-band); }
+  .ht-rs-page tr { break-inside: avoid; }
+  .ht-rs-phead { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--paper-ink); }
+  .ht-rs-phead h2 { margin: 0; }
+  .ht-rs-phead p { margin: 0.15rem 0 0; color: var(--paper-muted); }
+  .ht-rs-phead > b { font: 800 22pt/1 var(--font-heading); white-space: nowrap; }
+  .ht-rs-pgame { margin-bottom: 0.6rem; border: 1px solid var(--paper-rule); border-radius: 4px; break-inside: avoid; }
+  .ht-rs-pgh { display: flex; justify-content: space-between; padding: 4px 8px; background: var(--paper-band); border-bottom: 1px solid var(--paper-rule); font-weight: 700; }
+  .ht-rs-pgt { display: grid; grid-template-columns: minmax(0, 1fr) 40px 14px 40px minmax(0, 1fr); align-items: center; gap: 6px; padding: 8px; font-weight: 700; }
+  .ht-rs-pgt i { height: 28px; border: 1.5px solid var(--paper-ink); border-radius: 3px; }
+  .ht-rs-pgt span:first-child { text-align: left; }
+  .ht-rs-pgt span:nth-child(3) { text-align: center; }
+  .ht-rs-pgt span:last-child { text-align: right; }
+  .ht-rs-pgl { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; padding: 0 8px 8px; color: var(--paper-muted); font-size: 9pt; }
+  .ht-rs-pgl div { padding: 10px 0 1px; border-bottom: 1px solid var(--paper-rule); }
 }
+
 
 /* ---- Admin: tie-breakers (tournament form) ------------------------------------------------------
  * signature: the rules as a numbered ladder under Points, with a worked example table that re-sorts */
@@ -440,6 +554,16 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
   background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 .ht-redo-menu p { margin: 0; font-size: 0.78rem; color: var(--text-secondary); }
+/* The header's More menu: rarely used actions (another age group, an early award, redo the draw) */
+.ht-more .ht-redo-menu { width: min(19rem, 86vw); }
+/* On a phone More wraps to the start of a row, so the menu opens rightwards */
+@media (max-width: 760px) { .ht-more .ht-redo-menu { left: 0; right: auto; } }
+.ht-more hr { width: 100%; margin: 0.1rem 0; border: 0; border-top: 1px solid var(--border-subtle); }
+.ht-more-item { display: flex; align-items: flex-start; gap: 0.6rem; width: 100%; padding: 0.55rem 0.6rem; border: 0; border-radius: 8px; background: none; color: var(--text-primary); font: 600 0.88rem var(--font-body); text-align: left; cursor: pointer; transition: background-color 0.15s; }
+.ht-more-item small { display: block; font-weight: 500; font-size: 0.78rem; color: var(--text-muted); }
+.ht-more-item svg { flex: none; margin-top: 3px; color: var(--text-secondary); }
+.ht-more-item:hover { background: rgba(var(--tint-rgb), 0.06); }
+.ht-more-item:focus-visible { outline: 2px solid var(--club-ink); outline-offset: -2px; transition: none; }
 
 /* Public cup page: the games on now (or next up), and the champions once it's over */
 .ht-onnow { margin: 0 0 1.5rem; }
