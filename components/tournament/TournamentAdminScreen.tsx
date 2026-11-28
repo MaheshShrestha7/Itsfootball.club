@@ -168,7 +168,6 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       short_name: newTeamCode.trim() || newTeamName.slice(0, 3).toUpperCase(),
       logo_url: DEFAULT_CREST,
       color: 'var(--c-blue)',
-      seed: participants.length + 1,
     });
 
     setNewTeamName('');

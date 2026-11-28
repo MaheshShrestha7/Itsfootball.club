@@ -267,12 +267,12 @@ export default function TournamentFormModal({
         const team = clubInternalTeams.find(t => t.id === id);
         const kept = existing.find(p => p.internal_team_id === id);
         return team
-          ? [{ ...(kept ? { id: kept.id } : {}), team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)' }]
+          ? [{ ...(kept ? { id: kept.id } : {}), team_type: 'internal' as const, internal_team_id: team.id, name: team.name, short_name: team.short_name, logo_url: team.logo_url || DEFAULT_CREST, color: team.color || 'var(--c-green)', seed: kept?.seed }]
           : [];
       }),
       // Kit second colour and staff are hosted-tournament columns (migration 20261180)
       ...externalTeams.map(t => (hosted ? t : { ...t, secondary_color: undefined, manager_name: undefined, coach_name: undefined })),
-    ].map((p, idx) => ({ ...p, seed: idx + 1 }));
+    ];
 
     const fields = {
       name: name.trim(),

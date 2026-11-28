@@ -51,6 +51,7 @@ import { eventMinuteLabel } from './match-length';
 import { inSeason } from './member-season-stats';
 import {
   buildTiesheet,
+  shuffleUnseeded,
   clubLineupSide,
   computeStandings,
   cardPointsByTeam,
@@ -3412,8 +3413,8 @@ export function ClubProvider({
   ) => {
     // noDraw: only the teams are saved; the host makes the draw later (Generate tiesheet)
     const res = options?.noDraw
-      ? { participants: participants.map((p, i) => ({ ...p, seed: p.seed ?? i + 1 })), matches: [] as Match[], tournamentUpdates: {} }
-      : buildTiesheet(tournament, participants, options);
+      ? { participants, matches: [] as Match[], tournamentUpdates: {} }
+      : buildTiesheet(tournament, shuffleUnseeded(participants), options);
     const keptParticipants = new Set(res.participants.map(p => p.id));
     const keptMatches = new Set(res.matches.map(m => m.id));
     setTournamentParticipants(prev => {

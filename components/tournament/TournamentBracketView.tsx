@@ -271,7 +271,7 @@ export default function TournamentBracketView({
                                 >
                                   {match.home_team_name}
                                 </div>
-                                {match.home_team_source && (
+                                {match.home_team_source && !match.home_team_source.startsWith('Seed #') && (
                                   <div className="text-meta">
                                     {match.home_team_source}
                                   </div>
@@ -329,7 +329,7 @@ export default function TournamentBracketView({
                                 >
                                   {match.away_team_name}
                                 </div>
-                                {match.away_team_source && (
+                                {match.away_team_source && !match.away_team_source.startsWith('Seed #') && (
                                   <div className="text-meta">
                                     {match.away_team_source}
                                   </div>
