@@ -214,7 +214,7 @@ const playOrder = (m: Match) => (m.match_time ? `${(m.match_date || '').slice(0,
 const isOn = (m: Match) => m.status === 'live' || m.status === 'halftime';
 
 /** "On now": every game being played (two pitches at once on a cup day), else the next kick-off's games */
-export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; clubSlug: string; showName: (n: string) => string }) {
+export function OnNowStrip({ matches, clubSlug, showName, title = 'Next up' }: { matches: Match[]; clubSlug: string; showName: (n: string) => string; title?: string }) {
   const live = matches.filter(isOn);
   const upcoming = matches.filter(m => m.status === 'upcoming' && m.home_team_name !== 'TBD' && m.away_team_name !== 'TBD')
     .sort((a, b) => playOrder(a).localeCompare(playOrder(b)));
@@ -222,8 +222,8 @@ export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; 
     .sort((a, b) => (a.pitch_label || '').localeCompare(b.pitch_label || '', undefined, { numeric: true }));
   if (!games.length) return null;
   return (
-    <section className="ht-onnow" aria-label={live.length ? 'On now' : 'Next up'}>
-      <h2 className="ht-onnow-title">{live.length ? <><span className="ht-onnow-dot" aria-hidden="true" />On now</> : 'Next up'}</h2>
+    <section className="ht-onnow" aria-label={live.length ? 'On now' : title}>
+      <h2 className="ht-onnow-title">{live.length ? <><span className="ht-onnow-dot" aria-hidden="true" />On now</> : title}</h2>
       <div className="ht-onnow-list">
         {games.map(m => (
           <Link key={m.id} href={matchPath(clubSlug, m)} className="ht-onnow-game">
@@ -243,6 +243,12 @@ export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; 
   );
 }
 
+/** The final (or every league game) is played, or the host marked the tournament completed */
+export function tournamentOver(tournament: Pick<Tournament, 'status' | 'format'>, matches: Match[]): boolean {
+  const done = matches.length > 0 && matches.every(m => m.status === 'completed' || m.status === 'cancelled');
+  return tournament.status === 'completed' || (done && (tournament.format === 'league' || matches.some(m => m.tournament_stage === 'final')));
+}
+
 /** Who won it, once the final (or the last league game) is played: the page people share at the end of the day */
 export function ChampionBanner({ tournament, matches, events, standingsLeader, showName }: {
   tournament: Tournament;
@@ -253,8 +259,7 @@ export function ChampionBanner({ tournament, matches, events, standingsLeader, s
   showName: (n: string) => string;
 }) {
   const final = matches.find(m => m.tournament_stage === 'final' && m.status === 'completed');
-  const over = tournament.status === 'completed' || (!!final && matches.every(m => m.status === 'completed' || m.status === 'cancelled'));
-  if (!over) return null;
+  if (!tournamentOver(tournament, matches)) return null;
   let champion = tournament.format === 'league' ? standingsLeader : undefined;
   let finalLine: string | null = null;
   if (final) {
