@@ -8,6 +8,7 @@ import TournamentBracketView from '@/components/tournament/TournamentBracketView
 import TournamentStandingsTable from '@/components/tournament/TournamentStandingsTable';
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
 import TournamentOverview from '@/components/tournament/TournamentOverview';
+import TournamentTeamsTab from '@/components/tournament/TournamentTeamsTab';
 import {
   Trophy,
   ArrowLeft,
@@ -26,7 +27,6 @@ import { useTournamentLinks } from '@/lib/tournament-links';
 import { AgeGroupTabs, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
 import { juniorPublicName } from '@/lib/teams';
-import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, knockoutStarted, parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function PublicTournamentDetailPage({
@@ -341,57 +341,9 @@ export default function PublicTournamentDetailPage({
 
         {/* Tab 4: Teams */}
         {tab === 'teams' && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
-              gap: '1rem',
-            }}
-          >
-            {participants.map(part => (
-              <button
-                type="button"
-                key={part.id}
-                onClick={() => { openTeam(part.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                aria-pressed={part.id === teamId}
-                className="ht-team-card"
-                style={{
-                  '--ht-c1': part.color || 'rgba(var(--tint-rgb), 0.08)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  color: 'inherit',
-                  width: '100%',
-                  background: 'rgba(var(--dk-15-23-42), 0.75)',
-                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                  borderLeft: '4px solid var(--ht-c1)',
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.85rem',
-                } as React.CSSProperties}
-              >
-                <img loading="lazy" decoding="async" width={42} height={42}
-                  src={part.logo_url || DEFAULT_CREST}
-                  alt=""
-                  style={{ width: '42px', height: '42px', objectFit: 'contain' }}
-                />
-                <div className="min-w-0">
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>
-                    {part.name}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
-                    {part.group && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
-                        Group {part.group}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+          <TournamentTeamsTab tournament={tournament} participants={participants} matches={tourneyMatches} events={matchEvents}
+            standings={g => getTournamentStandings(tournament.id, g)}
+            onOpen={id => { openTeam(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
         )}
         {/* The tournament's own sponsors; without any, the event's or club's top sponsors as before */}
         <div style={{ marginTop: '2.5rem' }}>
