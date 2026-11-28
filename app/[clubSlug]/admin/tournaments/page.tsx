@@ -7,11 +7,23 @@ import { Tournament } from '@/lib/supabase/types';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
 import { ADMIN_HASH_EVENT } from '@/lib/permissions';
-import { Trophy, Plus, Calendar, Layers, ArrowRight, Trash2, Pencil, CheckCircle2, ExternalLink } from 'lucide-react';
-import { parseTournamentDate } from '@/lib/tournament-engine';
+import { Trophy, Plus, ArrowRight, Trash2, Pencil, CheckCircle2, ExternalLink, Calendar, ChevronRight, MoreHorizontal, Flag, Shuffle, Users, Radio, PenLine, ListOrdered, type LucideIcon } from 'lucide-react';
+import { parseTournamentDate, groupGamesLeft, knockoutStarted, knockoutLockReason } from '@/lib/tournament-engine';
+import { tournamentOver } from '@/lib/tournament-overview';
+import { kickoff } from '@/lib/fixtures';
+import { useNowTick } from '@/lib/match-clock';
+import { useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
+import type { Match } from '@/lib/supabase/types';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { byDate, type DateOrder } from '@/lib/club-lists';
+
+// Same words as the tournament page itself
+const STATUS: Record<string, { label: string; tone: string }> = {
+  draft: { label: 'Draft', tone: '' },
+  ongoing: { label: 'In progress', tone: 'is-warn' },
+  completed: { label: 'Completed', tone: 'is-done' },
+};
 
 export default function AdminTournamentsPage({
   params,
@@ -81,6 +93,57 @@ export default function AdminTournamentsPage({
   };
   const [feedback, setFeedback] = useState<string | null>(null);
   const handleOpenWizard = () => setFormTarget('new');
+
+  // The card's "..." menu (edit, delete): one open at a time, closed by a tap elsewhere or Escape
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!menuFor) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as Element).closest?.('[data-tcard-menu]')) setMenuFor(null);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [menuFor]);
+
+  const koStartReady = useKnockoutStartReady();
+  const now = useNowTick(60000);
+  // The one thing to do next, shown on the card and linking to the right tab of the tournament page
+  const nextStep = (tourn: Tournament, ids: string[], games: Match[], teams: number):
+    { label: string; sub: string; tab?: string; warn?: boolean; Icon: LucideIcon } | null => {
+    if (teams === 0) return { label: 'Add the teams', sub: 'Then make the draw', tab: 'teams', Icon: Users };
+    if (games.length === 0) return { label: 'Make the draw', sub: `${teams} ${teams === 1 ? 'team' : 'teams'} in. Add any late teams first`, tab: 'teams', Icon: Shuffle };
+    const live = games.find(m => m.status === 'live' || m.status === 'halftime');
+    if (live) return { label: `Live now: ${live.home_team_name} v ${live.away_team_name}`, sub: 'Enter goals as they go in', tab: 'fixtures', warn: true, Icon: Radio };
+    const own = games.filter(m => m.tournament_id === tourn.id);
+    if (koStartReady && tourn.format === 'group_knockout' && groupGamesLeft(tourn.id, own) === 0
+      && own.some(m => m.tournament_stage && m.tournament_stage !== 'group') && !knockoutStarted(tourn, own))
+      return { label: 'Start the knockout stage', sub: 'All group games are in', warn: true, Icon: Flag };
+    // Past kick-off with no result, leaving out knockout games still locked behind earlier ones
+    const overdue = games.filter(m => m.status === 'upcoming' && kickoff(m) > 0 && kickoff(m) < now
+      && !knockoutLockReason(m, tournaments.find(t => t.id === m.tournament_id), games, koStartReady)).length;
+    if (overdue) return { label: `${overdue} ${overdue === 1 ? 'score' : 'scores'} to enter`, sub: 'Games past kick-off with no result', tab: 'fixtures', warn: true, Icon: PenLine };
+    if (ids.length === 1 && tournamentOver(tourn, own)) {
+      const final = own.find(m => m.tournament_stage === 'final' && m.status === 'completed');
+      if (final) {
+        const homeWon = final.winner_side ? final.winner_side === 'home'
+          : final.home_score !== final.away_score ? final.home_score > final.away_score
+          : (final.home_penalty_score ?? 0) > (final.away_penalty_score ?? 0);
+        return { label: `Winners: ${homeWon ? final.home_team_name : final.away_team_name}`, sub: 'See the knockout bracket', tab: 'bracket', Icon: Trophy };
+      }
+      return { label: 'All games played', sub: 'See the final table', tab: tourn.format === 'knockout' ? 'bracket' : 'standings', Icon: ListOrdered };
+    }
+    const next = games.filter(m => m.status === 'upcoming' && kickoff(m) >= now).sort((a, b) => kickoff(a) - kickoff(b))[0];
+    if (next) return {
+      label: `Next: ${next.home_team_name} v ${next.away_team_name}`,
+      sub: new Date(kickoff(next)).toLocaleString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }),
+      tab: 'fixtures', Icon: Calendar,
+    };
+    return null;
+  };
 
   const handleDeleteTourn = async (tournId: string, tournName: string) => {
     if (await confirmAction({ title: `Delete "${tournName}"?`, message: 'The tournament and all its fixtures will be removed.', confirmLabel: 'Delete tournament', danger: true })) {
@@ -152,7 +215,7 @@ export default function AdminTournamentsPage({
       {clubTournaments.length > 0 && (
         <div className="admin-toolbar">
           <div className="admin-chips" role="group" aria-label="Show">
-            {([['ALL', 'All'], ['draft', 'Draft'], ['ongoing', 'Ongoing'], ['completed', 'Completed']] as const).map(([key, label]) => (
+            {([['ALL', 'All'], ['draft', 'Draft'], ['ongoing', 'In progress'], ['completed', 'Completed']] as const).map(([key, label]) => (
               <button data-view-ok type="button" className="admin-chip" key={key} aria-pressed={statusFilter === key} onClick={() => setStatusFilter(key)}>
                 {label} <span className="num">{key === 'ALL' ? clubTournaments.length : clubTournaments.filter(t => t.status === key).length}</span>
               </button>
@@ -229,165 +292,79 @@ export default function AdminTournamentsPage({
                     ? 'League, everyone plays everyone'
                     : 'Groups, then a knockout';
 
+                const step = nextStep(tourn, ids, tourneyMatches, participants.length);
+                const status = STATUS[tourn.status] || { label: tourn.status, tone: '' };
+                const menuOpen = menuFor === tourn.id;
+
                 return (
-                  <div
-                    key={tourn.id}
-                    style={{
-                      background: 'var(--color-paper-2)',
-                      border: '1px solid var(--color-rule)',
-                      borderRadius: 'var(--radius-card)',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    {/* Banner Image or Graphic Header */}
-                    <div
-                      data-theme="dark" style={{
-                        height: '110px',
-                        background: `linear-gradient(color-mix(in oklab, var(--color-sidebar) 40%, transparent), color-mix(in oklab, var(--color-sidebar) 95%, transparent)), ${tourn.banner_url ? `url(${tourn.banner_url})` : 'var(--club-primary)'}`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        padding: '1rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className={tourn.status === 'ongoing' ? 'admin-pill is-ok' : 'admin-pill'} style={{ textTransform: 'capitalize' }}>
-                          {tourn.status}
-                        </span>
-
-                        <div style={{ display: 'flex', gap: '0.35rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => setFormTarget(tourn)}
-                          data-theme="dark" style={{
-                            background: 'var(--color-scrim)',
-                            border: 'none',
-                            color: 'var(--color-print)',
-                            padding: '0.35rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                          }}
-                          title="Edit the tournament"
-                          aria-label={`Edit ${tourn.name}`}
-                        >
-                          <Pencil size={14} aria-hidden="true" />
-                        </button>
-                        <button data-needs-full
-                          type="button"
-                          onClick={() => handleDeleteTourn(tourn.id, tourn.name)}
-                          data-theme="dark" style={{
-                            background: 'var(--color-scrim)',
-                            border: 'none',
-                            color: 'var(--c-red)',
-                            padding: '0.35rem',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                          }}
-                          title="Delete the tournament"
-                          aria-label={`Delete ${tourn.name}`}
-                        >
-                          <Trash2 size={14} aria-hidden="true" />
-                        </button>
-                        </div>
-                      </div>
-
-                      <div className="row">
-                        <Trophy size={16} aria-hidden="true" />
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: '1.05rem',
-                            fontWeight: 600,
-                            color: 'var(--text-primary)',
-                          }}
-                        >
-                          {tourn.name}
-                        </h3>
-                      </div>
+                  <article key={tourn.id} className="admin-tcard">
+                    <div className={tourn.banner_url ? 'admin-tcard-hero' : 'admin-tcard-hero is-plain'}
+                      style={tourn.banner_url ? { backgroundImage: `url(${tourn.banner_url})` } : undefined}>
+                      <h3><Trophy size={18} aria-hidden="true" />{tourn.name}</h3>
                     </div>
 
-                    {/* Details Body */}
-                    <div style={{ padding: '1rem 1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                        <Layers size={14} aria-hidden="true" />
+                    <div className="admin-tcard-body">
+                      <div className="admin-tcard-meta">
+                        <span className={`admin-pill ${status.tone}`}>{status.label}</span>
                         <span>{ids.length > 1 ? `${formatLabel}, ${ids.length} age groups` : formatLabel}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <div className="admin-tcard-date">
                         <Calendar size={13} aria-hidden="true" />
                         <span>{parseTournamentDate(tourn.start_date)?.toLocaleString(DATE_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }) || 'Date TBC'}</span>
                       </div>
 
-                      {tourn.description && (
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                          {tourn.description}
-                        </p>
-                      )}
+                      {tourn.description && <p className="admin-tcard-desc">{tourn.description}</p>}
 
-                      <div
-                        style={{
-                          background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
-                          borderRadius: '8px',
-                          padding: '0.65rem 0.85rem',
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(3, 1fr)',
-                          gap: '0.5rem',
-                          textAlign: 'center',
-                          fontSize: '0.75rem',
-                        }}
-                      >
+                      <div className="admin-tcard-prog">
                         <div>
-                          <div className="text-muted">Teams</div>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                            {participants.length}
-                          </div>
+                          <span>{tourneyMatches.length ? <><b>{completedMatches} of {tourneyMatches.length}</b> games played</> : 'No games yet'}</span>
+                          <span>{participants.length} {participants.length === 1 ? 'team' : 'teams'}</span>
                         </div>
-                        <div>
-                          <div className="text-muted">Fixtures</div>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                            {tourneyMatches.length}
+                        {tourneyMatches.length > 0 && (
+                          <div className={completedMatches === tourneyMatches.length ? 'admin-tcard-bar is-done' : 'admin-tcard-bar'}
+                            role="img" aria-label={`${completedMatches} of ${tourneyMatches.length} games played`}>
+                            <i style={{ width: `${Math.round((completedMatches / tourneyMatches.length) * 100)}%` }} />
                           </div>
-                        </div>
-                        <div>
-                          <div className="text-muted">Played</div>
-                          <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                            {completedMatches}
-                          </div>
-                        </div>
+                        )}
                       </div>
+
+                      {step && (
+                        <Link href={`/${club.slug}/admin/tournaments/${tourn.id}${step.tab ? `?tab=${step.tab}` : ''}`}
+                          className={step.warn ? 'admin-tcard-next is-warn' : 'admin-tcard-next'}>
+                          <step.Icon size={16} aria-hidden="true" />
+                          <span>{step.label}<small>{step.sub}</small></span>
+                          <ChevronRight size={16} aria-hidden="true" />
+                        </Link>
+                      )}
                     </div>
 
-                    {/* Actions Footer */}
-                    <div
-                      style={{
-                        padding: '0.75rem 1.25rem',
-                        background: 'color-mix(in oklab, var(--color-sidebar) 30%, transparent)',
-                        borderTop: '1px solid color-mix(in oklab, var(--color-ink) 6%, transparent)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <Link
-                        href={`/${club.slug}/tournaments/${tourn.id}`}
-                        target="_blank"
-                        style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                      >
+                    <div className="admin-tcard-foot">
+                      <Link href={`/${club.slug}/tournaments/${tourn.id}`} target="_blank" className="admin-tcard-pub">
                         Public page <ExternalLink size={12} aria-hidden="true" />
                       </Link>
-
-                      <Link
-                        href={`/${club.slug}/admin/tournaments/${tourn.id}`}
-                        className="btn btn-sm btn-primary"
-                      >
-                        <span>Manage the draw</span>
+                      <div className="admin-tcard-more" data-tcard-menu>
+                        <button type="button" className="admin-tcard-more-btn" aria-label={`More for ${tourn.name}`}
+                          aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuFor(menuOpen ? null : tourn.id)}>
+                          <MoreHorizontal size={16} aria-hidden="true" />
+                        </button>
+                        {menuOpen && (
+                          <div role="menu" className="admin-tcard-menu">
+                            <button type="button" role="menuitem" onClick={() => { setMenuFor(null); setFormTarget(tourn); }}>
+                              <Pencil size={14} aria-hidden="true" />Edit name, date and photo
+                            </button>
+                            <button data-needs-full type="button" role="menuitem" className="is-danger"
+                              onClick={() => { setMenuFor(null); handleDeleteTourn(tourn.id, tourn.name); }}>
+                              <Trash2 size={14} aria-hidden="true" />Delete tournament
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <Link href={`/${club.slug}/admin/tournaments/${tourn.id}`} className="btn btn-sm btn-primary">
+                        <span>Manage tournament</span>
                         <ArrowRight size={13} aria-hidden="true" />
                       </Link>
                     </div>
-                  </div>
+                  </article>
                 );
               })}
             </div>
