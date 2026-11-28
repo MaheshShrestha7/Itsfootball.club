@@ -17,15 +17,21 @@ interface PlayerOfTournamentProps {
   guests?: { team: string; name: string }[];
   /** Mirrors a saved award into local state (e.g. the club context's updateTournament) */
   onSaved?: (updates: Partial<Tournament>) => void;
+  /** Admin opened it from a menu: start on the form */
+  startEditing?: boolean;
+  /** The form was cancelled (the admin screen hides the card again if nothing is awarded) */
+  onCancel?: () => void;
+  /** A line under the prompt before anyone is awarded, e.g. the top scorer */
+  hint?: string;
 }
 
 /**
  * Player of the Tournament: a highlight card for everyone, plus a small editor for admins.
  * Saved straight to the tournaments row (not through the background sync).
  */
-export default function PlayerOfTournament({ tournament, members, guests = [], isAdmin = false, onSaved }: PlayerOfTournamentProps) {
+export default function PlayerOfTournament({ tournament, members, guests = [], isAdmin = false, onSaved, startEditing = false, onCancel, hint }: PlayerOfTournamentProps) {
   const { clubTeams, clubTeamMembers } = useClub();
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startEditing);
   const [memberId, setMemberId] = useState('');
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
@@ -106,7 +112,7 @@ export default function PlayerOfTournament({ tournament, members, guests = [], i
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'end', flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-primary btn-sm" disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save award'}</button>
             {winnerName && <button type="button" className="btn btn-danger btn-sm" disabled={saving} onClick={() => save(true)}>Remove</button>}
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setError(null); }} aria-label="Cancel"><X size={14} /></button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing(false); setError(null); onCancel?.(); }} aria-label="Cancel"><X size={14} /></button>
           </div>
           {error && <p role="alert" style={{ color: 'var(--c-red)', fontSize: '0.8rem', margin: 0, gridColumn: '1 / -1' }}>{error}</p>}
         </div>
@@ -122,13 +128,14 @@ export default function PlayerOfTournament({ tournament, members, guests = [], i
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--club-ink)' }}>
               Player of the Tournament
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{winnerName || 'Not awarded yet'}</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)' }}>{winnerName || 'The cup is over. Who was the best player?'}</div>
+            {!winnerName && hint && <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{hint}</div>}
             {tournament.player_of_tournament_note && (
               <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{tournament.player_of_tournament_note}</div>
             )}
           </div>
           {isAdmin && (
-            <button type="button" className="btn btn-secondary btn-sm row row-tight" onClick={() => setEditing(true)}>
+            <button type="button" className={`btn ${winnerName ? 'btn-secondary' : 'btn-primary'} btn-sm row row-tight`} onClick={() => setEditing(true)}>
               <Pencil size={14} /> {winnerName ? 'Change' : 'Award player'}
             </button>
           )}

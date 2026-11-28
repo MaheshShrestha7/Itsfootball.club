@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
@@ -12,7 +12,7 @@ import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import RunSheet from '@/components/tournament/RunSheet';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play, Handshake } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play, Handshake, MoreHorizontal, Award } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted, groupGamesLeft, START_KNOCKOUT_CONFIRM } from '@/lib/tournament-engine';
 import { useGroupStageFinishedPrompt } from '@/components/tournament/useGroupStageFinishedPrompt';
@@ -28,6 +28,7 @@ import GuestTeamsPanel from '@/components/tournament/GuestTeamsPanel';
 import { TournamentSponsorsAdmin } from '@/components/tournament/TournamentSponsors';
 import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
+import { topScorers } from '@/lib/tournament-stats';
 import '@/components/tournament/hosted.css';
 
 // Inline and on the app's own tokens, not the admin's classes: this screen also shows on
@@ -67,6 +68,10 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   // The tournament's own sponsors: the tab shows once migration 20261196 has run
   const sponsorApi = useTournamentSponsors(tournamentId);
   const [addAgeGroup, setAddAgeGroup] = useState(false);
+  // Player of the Tournament opened early from the More menu, before the final is played
+  const [awardEarly, setAwardEarly] = useState(false);
+  const moreRef = useRef<HTMLDetailsElement>(null);
+  const fromMenu = (fn: () => void) => () => { if (moreRef.current) moreRef.current.open = false; fn(); };
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
@@ -209,6 +214,14 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     && tourneyMatches.some(m => m.tournament_stage && m.tournament_stage !== 'group')
     && tourneyMatches.some(m => (m.tournament_stage || 'group') === 'group')
     && !knockoutStarted(tournament, tourneyMatches);
+  // Player of the Tournament waits for the final (or, with no knockout, the last game)
+  const finalGame = tourneyMatches.find(m => m.tournament_stage === 'final');
+  const cupOver = finalGame ? finalGame.status === 'completed' : tourneyMatches.length > 0 && tourneyMatches.every(m => m.status === 'completed' || m.status === 'cancelled');
+  const awarded = !!tournament.player_of_tournament_name;
+  const showAward = !isEvent && (awarded || cupOver || awardEarly);
+  const canAwardEarly = !isEvent && !awarded && !cupOver;
+  const top = showAward && !awarded ? topScorers(tourneyMatches, matchEvents)[0] : undefined;
+  const awardHint = top ? `Top scorer: ${top.name} (${top.team}), ${top.goals} goal${top.goals === 1 ? '' : 's'}.` : undefined;
   const handleStartKnockout = async () => {
     if (await confirmAction(START_KNOCKOUT_CONFIRM)) startKnockout(tournament);
   };
@@ -266,19 +279,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
               <span>Progress bracket</span>
             </button>
           )}
-          {playedCount > 0 ? (
-            <details className="ht-redo">
-              <summary className="btn btn-sm btn-secondary" style={actionBtn}>
-                <RefreshCw size={14} aria-hidden="true" />
-                <span>Redo the draw</span>
-              </summary>
-              <div className="ht-redo-menu">
-                <p>{playedCount} game{playedCount === 1 ? ' has' : 's have'} started or finished. Redoing the draw deletes {playedCount === 1 ? 'its result' : 'their results'}.</p>
-                <button type="button" onClick={() => handleGenerateTiesheet(false)} className="btn btn-sm btn-danger">Make the fixtures again</button>
-                <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-danger">Shuffle and make them again</button>
-              </div>
-            </details>
-          ) : (
+          {playedCount === 0 && (
             <>
               <button type="button" onClick={() => handleGenerateTiesheet(true)} className="btn btn-sm btn-secondary" style={actionBtn} title="Randomise the draw and make the fixtures again">
                 <Shuffle size={14} aria-hidden="true" />
@@ -290,19 +291,47 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
               </button>
             </>
           )}
+          {/* The rarely used actions, out of the way */}
+          {(family.length > 0 || canAwardEarly || playedCount > 0) && (
+            <details className="ht-redo ht-more" ref={moreRef}>
+              <summary className="btn btn-sm btn-secondary" style={actionBtn}>
+                <MoreHorizontal size={14} aria-hidden="true" />
+                <span>More</span>
+              </summary>
+              <div className="ht-redo-menu">
+                {family.length > 0 && (
+                  <button type="button" className="ht-more-item" onClick={fromMenu(() => setAddAgeGroup(true))}>
+                    <Plus size={14} aria-hidden="true" />
+                    <span>Add an age group<small>Same days, its own teams and draw</small></span>
+                  </button>
+                )}
+                {canAwardEarly && (
+                  <button type="button" className="ht-more-item" onClick={fromMenu(() => setAwardEarly(true))}>
+                    <Award size={14} aria-hidden="true" />
+                    <span>Award Player of the Tournament<small>Usually done after the final</small></span>
+                  </button>
+                )}
+                {playedCount > 0 && (
+                  <>
+                    {(family.length > 0 || canAwardEarly) && <hr />}
+                    <p>Redo the draw: {playedCount} game{playedCount === 1 ? ' has' : 's have'} started or finished, and redoing it deletes {playedCount === 1 ? 'its result' : 'their results'}.</p>
+                    <button type="button" onClick={fromMenu(() => handleGenerateTiesheet(false))} className="btn btn-sm btn-danger">Make the fixtures again</button>
+                    <button type="button" onClick={fromMenu(() => handleGenerateTiesheet(true))} className="btn btn-sm btn-danger">Shuffle and make them again</button>
+                  </>
+                )}
+              </div>
+            </details>
+          )}
         </div>
       </div>
 
-      {family.length > 0 && (
+      {family.length > 1 && (
         <nav className="ht-ages" aria-label="Age groups">
-          {family.length > 1 && family.map(t => (
+          {family.map(t => (
             <Link key={t.id} href={`/${club.slug}/admin/tournaments/${t.id}`} className="ht-age" aria-current={t.id === tournament.id ? 'page' : undefined}>
               {ageGroupLabel(t)}
             </Link>
           ))}
-          <button type="button" className="ht-age ht-age-add" onClick={() => setAddAgeGroup(true)} title="Another age group on the same days, with its own teams and draw">
-            <Plus size={14} aria-hidden="true" /> Add an age group
-          </button>
         </nav>
       )}
 
@@ -362,12 +391,15 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       ))}
 
       {/* Public tournaments show teams only, no player names */}
-      {!isEvent && (
+      {showAward && (
         <PlayerOfTournament
           tournament={tournament}
           members={members.filter(m => m.club_id === club.id)}
           guests={guestPlayers}
           isAdmin
+          startEditing={awardEarly && !awarded}
+          onCancel={() => setAwardEarly(false)}
+          hint={!awarded && cupOver ? awardHint : undefined}
           onSaved={updates => updateTournament(tournament.id, updates)}
         />
       )}
@@ -446,6 +478,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
           )}
           {runSheet && tourneyMatches.length > 0 ? (
             <RunSheet
+              title={tournament.name}
               matches={tourneyMatches}
               matchMinutes={tournament.match_minutes}
               onSelectMatch={m => setSelectedMatch(m)}
