@@ -21,7 +21,7 @@ function Linked({ text }: { text: string }) {
 export interface MatchFact { label: string; value: React.ReactNode }
 
 /** The full-time report under the scoreboard, laid out like the club's news articles */
-export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref, label = 'Match report', factsTitle = 'Match facts', note, bare }: {
+export default function MatchReport({ article, clubName, coverUrl, crestUrl, tags, publishedAt, shareUrl, facts, source, moreHref, moreText = 'See the timeline, line-ups and match stats', label = 'Match report', factsTitle = 'Match facts', note, bare }: {
   article: Pick<MatchArticle, 'headline' | 'lead' | 'paragraphs'>;
   clubName: string;
   coverUrl?: string;
@@ -33,6 +33,7 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
   source: string;
   /** Where the timeline, line-ups and stats sit on the page */
   moreHref?: string;
+  moreText?: string;
   label?: string;
   factsTitle?: string;
   /** The club's own words, printed as typed after the story */
@@ -68,7 +69,7 @@ export default function MatchReport({ article, clubName, coverUrl, crestUrl, tag
             </dl>
           </div>
         )}
-        {moreHref && <p className="match-article-more"><a href={moreHref}>See the timeline, line-ups and match stats</a></p>}
+        {moreHref && <p className="match-article-more"><a href={moreHref}>{moreText}</a></p>}
         <p className="text-meta" style={{ margin: '0.85rem 0 0' }}>{source}</p>
       </div>
     </article>

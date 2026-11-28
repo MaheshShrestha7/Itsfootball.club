@@ -594,7 +594,7 @@ async function fetchRows<T>(query: string, max = 5000): Promise<T[]> {
 
 export interface SitemapData {
   clubs: { id: string; slug: string; updated_at: string | null; config: { kind?: string } | null }[];
-  matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null; is_audited: boolean | null; audited_at: string | null }[];
+  matches: { id: string; slug?: string | null; club_id: string; status: string; match_date: string | null; created_at: string | null; is_audited: boolean | null; audited_at: string | null; tournament_id?: string | null; tournament_stage?: string | null }[];
   /** Matches with at least one goal scorer logged; empty when that couldn't be read */
   goalMatchIds: Set<string>;
   events: { id: string; club_id: string; start_time: string | null; created_at: string | null; completed_at?: string | null }[];
@@ -614,7 +614,7 @@ export async function listSitemapData(): Promise<SitemapData> {
   const matchSlug = (await matchSlugsReady()) ? 'slug,' : '';
   const [clubs, matches, events, tournaments, news, teams, products, photos, participants, packages, goalRows] = await Promise.all([
     fetchRows<SitemapData['clubs'][number]>('clubs?select=id,slug,updated_at,config&is_active=eq.true&order=id'),
-    fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at,is_audited,audited_at&order=match_date.desc,id`),
+    fetchRows<SitemapData['matches'][number]>(`matches?select=id,${matchSlug}club_id,status,match_date,created_at,is_audited,audited_at,tournament_id,tournament_stage&order=match_date.desc,id`),
     fetchRows<SitemapData['events'][number]>('events?select=id,club_id,start_time,created_at,completed_at&is_public=eq.true&order=start_time.desc,id'),
     fetchRows<SitemapData['tournaments'][number]>('tournaments?select=id,club_id,status,updated_at&order=id'),
     // Published only: a scheduled article joins the sitemap once its time comes

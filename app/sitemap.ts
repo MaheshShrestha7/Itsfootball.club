@@ -4,6 +4,8 @@ import { listSitemapData } from '@/lib/supabase/club-lookup';
 import { FORMAT_PAGES } from '@/lib/tool-pages';
 import { GUIDES, GUIDES_LAST_UPDATED, guideUpdated } from '@/lib/guides';
 import { matchPath, newsPath } from '@/lib/slugs';
+import { writeupKinds, writeupPath } from '@/lib/tournament-writeups';
+import type { Match } from '@/lib/supabase/types';
 import { CHECKED_COMPETITORS } from '@/lib/competitors';
 import { MIN_INDEXABLE_TEAMS, isEventClub, isListedClub, tournamentPagePath } from '@/lib/public-tournaments';
 import { groundSitemapEntries } from '@/lib/grounds';
@@ -131,6 +133,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: running ? 'daily' : 'monthly',
       priority: running ? 0.7 : 0.5,
     });
+    // Its write-ups, once their games are played (lib/tournament-writeups.ts)
+    const games = matches.filter(m => m.tournament_id === t.id) as Pick<Match, 'status' | 'tournament_stage' | 'match_date'>[];
+    for (const kind of writeupKinds(games)) {
+      entries.push({ url: url(writeupPath(slug, t.id, kind)), lastModified: date(...games.map(m => m.match_date)), changeFrequency: 'monthly', priority: 0.5 });
+    }
   }
 
   // Public tournament pages (/tournaments/{slug})
