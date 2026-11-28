@@ -863,7 +863,8 @@ export default function MatchCenterPage({
                 : [{ label: '', list: available }];
               return (
               <React.Fragment key={side}>
-                {/* The Tactical Pitch Component */}
+                {/* The pitch only once the coach saves a line-up: never a made-up formation from who said they're in */}
+                {hasLineup && (
                 <div>
                   <TacticalPitch
                     players={players}
@@ -878,11 +879,12 @@ export default function MatchCenterPage({
                     teamName={teamName}
                   />
                 </div>
+                )}
 
                 {/* Starting XI & Substitutes List */}
                 <div className="glass-panel" style={{ padding: '1.75rem' }}>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-primary)' }}>
-                    {teamName} Matchday Squad
+                    {hasLineup ? `${teamName} Matchday Squad` : `${teamName}: players who said they're in`}
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
