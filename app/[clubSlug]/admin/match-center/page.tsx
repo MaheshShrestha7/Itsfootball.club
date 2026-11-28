@@ -52,10 +52,10 @@ import {
 } from 'lucide-react';
 import StatsAuditModal from '@/components/StatsAuditModal';
 import MatchKindSwitch from '@/components/admin/MatchKindSwitch';
+import GamePicker from '@/components/admin/GamePicker';
 import StatsFixModal from '@/components/StatsFixModal';
 import QRScannerModal from '@/components/QRScannerModal';
 import LiveMinute from '@/components/LiveMinute';
-import { fixtureLabel } from '@/lib/fixture-label';
 import { getLiveMinute, RUNNING_PERIODS } from '@/lib/match-clock';
 import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, fullMinutes, halfMinutes, maxMinute, periodStartMinute, splitMinute } from '@/lib/match-length';
 import { defaultSeasonLabel } from '@/lib/season';
@@ -863,7 +863,7 @@ export default function AdminMatchCenterControllerPage({
 
       {/* Header (trimmed on phones so the scoreboard is near the top) */}
       <div className="admin-head mc-header">
-        <div>
+        <div className="mc-title">
           <h1>Match Centre</h1>
           <p className="mc-phone-hide">
             Update the live score, added time, substitutions and team formation while a match is on.
@@ -1043,103 +1043,39 @@ export default function AdminMatchCenterControllerPage({
       {/* Which kind of game: club games, tournaments or in-house (only when the club has more than one kind) */}
       <MatchKindSwitch games={filteredMatches} active={kind} onPick={k => pickGame(kindGames(k))} />
 
-      {/* Fixture Selector Dropdown & Season Controls */}
-      <div className="glass-panel mc-fixture-bar" style={{ padding: 'clamp(0.85rem, 2.5vw, 1.25rem)', marginBottom: '1.75rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
-            {/* Season Filter Dropdown */}
-            <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 'min(160px, 100%)' }}>
-              <span className="form-label m-0" style={{ flexShrink: 0 }}>Season</span>
-              <select data-view-ok aria-label="Season"
-                className="form-select"
-                style={{ width: '100%', maxWidth: '140px', padding: '0.4rem 0.65rem', fontSize: '0.82rem' }}
-                value={seasonFilter}
-                onChange={e => setSeasonFilter(e.target.value)}
-              >
-                <option value="ALL">All seasons</option>
-                {clubSeasons.map(s => (
-                  <option key={s.id} value={s.name}>
-                    {s.name}{s.is_current ? ' (current)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+      {/* Which game is being scored: both crests, kick-off and pitch, with the list to pick another */}
+      <GamePicker
+        match={match}
+        games={pickerGames}
+        kind={kind}
+        tournamentName={matchTournament?.name}
+        zone={clubTimeZone(club)}
+        listTitle={kind === 'tournament' ? `${matchTournament?.name || 'Tournament'}, ${pickerGames.length} games` : `${kind === 'inhouse' ? 'In-house games' : 'Club games'}, ${seasonFilter === 'ALL' ? 'all seasons' : seasonFilter}`}
+        onPick={setSelectedMatchId}
+        filters={
+          <div className="mc-gp-filters">
+            <select data-view-ok aria-label="Season" className="form-select" value={seasonFilter} onChange={e => setSeasonFilter(e.target.value)}>
+              <option value="ALL">All seasons</option>
+              {clubSeasons.map(s => (
+                <option key={s.id} value={s.name}>{s.name}{s.is_current ? ' (current)' : ''}</option>
+              ))}
+            </select>
             {kind === 'tournament' && kindTournaments.length > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
-                <span className="form-label m-0" style={{ flexShrink: 0 }}>Tournament</span>
-                <select data-view-ok aria-label="Tournament"
-                  className="form-select"
-                  style={{ width: '100%', maxWidth: '100%' }}
-                  value={match.tournament_id || ''}
-                  onChange={e => pickGame(filteredMatches.filter(m => m.tournament_id === e.target.value))}
-                >
-                  {kindTournaments.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 'min(200px, 100%)', maxWidth: '100%' }}>
-              <span className="form-label m-0" style={{ flexShrink: 0 }}>{kind === 'tournament' ? 'Game' : 'Fixture'}</span>
-              <select data-view-ok aria-label="Fixture"
-                className="form-select"
-                style={{ width: '100%', maxWidth: '100%' }}
-                value={match?.id || ''}
-                onChange={e => setSelectedMatchId(e.target.value)}
-              >
-                {pickerGames.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {kind === 'tournament'
-                      ? `${[tournamentMatchLabel(m), `${m.home_team_name} vs ${m.away_team_name}`, m.pitch_label].filter(Boolean).join(', ')} (${m.status})`
-                      : `${fixtureLabel(m, club.name)}, ${m.season} (${m.status})`}
-                  </option>
-                ))}
+              <select data-view-ok aria-label="Tournament" className="form-select" value={match.tournament_id || ''}
+                onChange={e => pickGame(filteredMatches.filter(m => m.tournament_id === e.target.value))}>
+                {kindTournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-            </div>
+            )}
           </div>
-
-          <div className="mc-phone-hide" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', width: 'auto' }}>
-            <span className="admin-pill">{match.season}</span>
-            <span className="admin-pill">Formation {match[`${lineupSide}_formation`] || '4-3-3'}</span>
-            {match.added_time > 0 && <span className="admin-pill is-warn">+{match.added_time}&prime; added time</span>}
-            <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm touch-target">
-              <CalendarDays size={14} aria-hidden="true" />
-              <span>Schedule a fixture</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* What kind of game this is, and where its result goes */}
-        <div className="mc-context">
-          {kind === 'tournament' ? (
-            <>
-              <span className="badge badge-gold">
-                <Trophy size={12} aria-hidden="true" />
-                {[matchTournament?.name, match.tournament_group && `Group ${match.tournament_group}`, tournamentMatchLabel(match)].filter(Boolean).join(', ')}
-              </span>
-              {match.pitch_label && <span className="badge mc-badge-muted">{match.pitch_label}</span>}
-            </>
-          ) : kind === 'inhouse' ? (
-            <span className="badge mc-badge-muted"><ArrowLeftRight size={12} aria-hidden="true" /> In-house game</span>
-          ) : (
-            <>
-              {match.competition && <span className="badge badge-primary">{match.competition}</span>}
-              <span className="badge mc-badge-muted">{match.is_club_home === false ? 'Away' : 'Home'}</span>
-            </>
-          )}
-          <span className="mc-context-note">
-            {kind === 'tournament'
-              ? "Saved to the tournament's table and bracket. Doesn't count toward the club's win/loss record."
-              : kind === 'inhouse'
-                ? "Your own teams against each other. Doesn't count toward the club's win/loss record."
-                : "Counts toward the club's win/loss record."}
-          </span>
-        </div>
-
-        {liveBoardEl}
-      </div>
+        }
+        footer={
+          <Link href={`/${club.slug}/admin/matches`} className="btn btn-secondary btn-sm touch-target mc-gp-schedule">
+            <CalendarDays size={14} aria-hidden="true" />
+            <span>Schedule a fixture</span>
+          </Link>
+        }
+      />
+      {liveBoardEl && <div className="glass-panel mc-gp-board">{liveBoardEl}</div>}
 
       {/* Sub-Tabs: Event Console vs Tactical Pitch vs Clock & Periods */}
       <div role="tablist" aria-label="Match Centre" className="admin-tabs mc-tabs">
