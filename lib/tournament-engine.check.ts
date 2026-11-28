@@ -269,6 +269,14 @@ assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unch
   assert.match(knockoutLockReason(semi(), tour, ms)!, /Start the knockout stage/, 'groups done: waits for the host');
   assert.equal(knockoutLockReason(semi(), tour, ms, false), null, 'before the migration: opens by itself');
   assert.equal(knockoutStarted(tour, ms), false);
+  // With the column: the group tables only fill the knockout games once the host confirms them
+  const waiting = { ...tour, knockout_started_at: null } as unknown as Tournament;
+  const held = resolveTournament(ms, waiting, res.participants);
+  const heldSemi = held.find(m => m.id === semi().id)!;
+  assert.equal(heldSemi.home_team_name, heldSemi.home_team_source, 'not confirmed: still "1st Group A"');
+  assert.match(knockoutLockReason(heldSemi, { ...waiting, knockout_started_at: '2026-10-04T00:00:00Z' }, held)!, /teams for this game are not set/, 'never scored with a placeholder side');
+  const named = resolveTournament(held, { ...waiting, knockout_started_at: '2026-10-04T00:00:00Z' }, res.participants).find(m => m.id === semi().id)!;
+  assert.notEqual(named.home_team_name, named.home_team_source, 'confirmed: the team name goes in');
   const started = { ...tour, knockout_started_at: '2026-10-04T00:00:00Z' };
   assert.equal(knockoutLockReason(semi(), started, ms), null, 'started: semi open');
   assert.match(knockoutLockReason(final(), started, ms)!, /Waiting for M#/, 'final waits for both semis');

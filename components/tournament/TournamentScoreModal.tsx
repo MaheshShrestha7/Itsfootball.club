@@ -11,6 +11,12 @@ import PopupPanel from '@/components/PopupPanel';
 import { tournamentMatchLabel } from '@/lib/tournament-engine';
 import '@/components/tournament/hosted.css';
 
+/** Digits only, no leading zeros, at most 2 digits; '' stays empty */
+const cleanScore = (raw: string) => {
+  const d = raw.replace(/\D/g, '').slice(0, 3);
+  return d === '' ? '' : String(Math.min(99, parseInt(d, 10)));
+};
+
 interface TournamentScoreModalProps {
   match: Match;
   clubSlug: string;
@@ -46,19 +52,21 @@ export default function TournamentScoreModal({
 }: TournamentScoreModalProps) {
   const isKnockout = Boolean(match.tournament_stage && match.tournament_stage !== 'group');
 
-  const [homeScore, setHomeScore] = useState<number>(match.home_score || 0);
-  const [awayScore, setAwayScore] = useState<number>(match.away_score || 0);
   const initialStatus: 'upcoming' | 'live' | 'completed' =
     match.status === 'live' || match.status === 'completed' ? match.status : 'upcoming';
   const [status, setStatus] = useState<'upcoming' | 'live' | 'completed'>(initialStatus);
+  // Scores are kept as typed text: a game not yet played starts empty (placeholder 0), so typing never leaves a leading 0
+  const startScore = (n?: number | null) => (initialStatus === 'upcoming' && !n ? '' : String(n ?? 0));
+  const [homeScore, setHomeScore] = useState(startScore(match.home_score));
+  const [awayScore, setAwayScore] = useState(startScore(match.away_score));
   const [isPensEnabled, setIsPensEnabled] = useState<boolean>(
     Boolean(
       match.home_penalty_score !== undefined ||
         (isKnockout && match.home_score === match.away_score && match.status === 'completed')
     )
   );
-  const [homePens, setHomePens] = useState<number>(match.home_penalty_score || 0);
-  const [awayPens, setAwayPens] = useState<number>(match.away_penalty_score || 0);
+  const [homePens, setHomePens] = useState(match.home_penalty_score == null ? '' : String(match.home_penalty_score));
+  const [awayPens, setAwayPens] = useState(match.away_penalty_score == null ? '' : String(match.away_penalty_score));
   const [matchDate, setMatchDate] = useState(match.match_date?.slice(0, 10) || '');
   const [matchTime, setMatchTime] = useState(match.match_time || '');
   const [venue, setVenue] = useState(match.venue || '');
@@ -119,10 +127,13 @@ export default function TournamentScoreModal({
   const isLevelScore = Number(homeScore) === Number(awayScore);
   // Typing a score on a match still marked Upcoming means it's been played: without this the score
   // was quietly not saved (the match stayed upcoming and showed "-")
-  const scoreTyped = (set: (n: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    set(Math.max(0, parseInt(e.target.value, 10) || 0));
-    if (status === 'upcoming') setStatus('completed');
+  const scoreTyped = (set: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = cleanScore(e.target.value);
+    set(v);
+    if (v !== '' && status === 'upcoming') setStatus('completed');
   };
+  // Tapping a score box selects what's there, so the first digit typed replaces it
+  const selectAll = (e: React.FocusEvent<HTMLInputElement>) => e.target.select();
 
   const STATUS_LABEL = { upcoming: 'Upcoming', live: 'Live', completed: 'Full time' } as const;
   const kit = (name: string) => {
@@ -136,7 +147,7 @@ export default function TournamentScoreModal({
     const score = which === 'home' ? homeScore : awayScore;
     return (
       <div className="ht-fx-side">
-        <span className="ht-crest" style={{ width: 60, height: 60, ...kit(name) }}>
+        <span className="ht-crest ht-fx-crest" style={kit(name)}>
           <img decoding="async" width={52} height={52} src={logoOf(name)} alt={`${name} crest`} />
         </span>
         {teamChoices ? (
@@ -150,8 +161,8 @@ export default function TournamentScoreModal({
           </>
         ) : <span className="ht-fx-name">{name}</span>}
         <span className="ht-sub">{which === 'home' ? 'Home' : 'Away'}</span>
-        <input aria-label={`${name} score`} type="number" min="0" max="99" inputMode="numeric"
-          value={score} disabled={!!lockReason} onChange={scoreTyped(which === 'home' ? setHomeScore : setAwayScore)} className="form-input ht-fx-score" />
+        <input aria-label={`${name} score`} type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" placeholder="0"
+          value={score} onFocus={selectAll} disabled={!!lockReason} onChange={scoreTyped(which === 'home' ? setHomeScore : setAwayScore)} className="form-input ht-fx-score" />
       </div>
     );
   };
@@ -210,9 +221,9 @@ export default function TournamentScoreModal({
                   {(['home', 'away'] as const).map(w => (
                     <div key={w} className="form-group" style={{ margin: 0 }}>
                       <label htmlFor={`pens-${w}`} className="form-label">{w === 'home' ? homeName : awayName} penalties</label>
-                      <input id={`pens-${w}`} aria-label={`${w === 'home' ? homeName : awayName} penalties`} type="number" min="0" className="form-input"
-                        value={w === 'home' ? homePens : awayPens}
-                        onChange={e => (w === 'home' ? setHomePens : setAwayPens)(parseInt(e.target.value, 10) || 0)} />
+                      <input id={`pens-${w}`} aria-label={`${w === 'home' ? homeName : awayName} penalties`} type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" placeholder="0" className="form-input"
+                        value={w === 'home' ? homePens : awayPens} onFocus={selectAll}
+                        onChange={e => (w === 'home' ? setHomePens : setAwayPens)(cleanScore(e.target.value))} />
                     </div>
                   ))}
                 </div>

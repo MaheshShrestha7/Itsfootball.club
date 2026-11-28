@@ -152,6 +152,7 @@
 .ht-fx-side { display: grid; justify-items: center; gap: 0.45rem; min-width: 0; text-align: center; }
 .ht-fx-name { font-weight: 700; color: var(--text-primary); overflow-wrap: break-word; min-width: 0; max-width: 100%; }
 .ht-fx-team { width: 100%; min-height: 40px; font-weight: 700; text-align: center; }
+.ht-fx-crest { width: 60px; height: 60px; }
 .ht-fx-score { width: 72px; height: 56px; padding: 0; text-align: center; font-family: var(--font-heading); font-size: 1.9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .ht-fx-v { font-weight: 700; color: var(--text-muted); }
 .ht-fx-swap { align-self: center; }
@@ -169,11 +170,13 @@
 .ht-fx-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; }
 .ht-fx-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
 @media (max-width: 480px) {
-  .ht-fx-board { padding: 0.9rem 0.5rem; gap: 0.4rem; }
   .ht-fx { padding: 1rem; }
-  .ht-fx-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ht-fx-swap, .ht-fx-v { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
-  .ht-fx .ht-fx-team { font-size: 0.85rem; text-align: left; padding: 0 1.4rem 0 0.5rem; background-position: right 0.35rem center; }
+  /* Phones keep the scoreboard shape: home | swap | away, with smaller crests and score boxes */
+  .ht-fx-board { padding: 0.85rem 0.5rem; gap: 0.35rem; }
+  .ht-fx-crest { width: 46px; height: 46px; padding: 3px; }
+  .ht-fx-crest img { padding: 3px; }
+  .ht-fx-score { width: 60px; height: 50px; font-size: 1.6rem; }
+  .ht-fx .ht-fx-team { font-size: 0.85rem; min-height: 38px; text-align: left; padding: 0 1.3rem 0 0.5rem; background-position: right 0.3rem center; text-overflow: ellipsis; }
   .ht-fx-actions .btn { flex: 1 1 100%; }
 }
 
@@ -420,3 +423,68 @@ fieldset.te-card:disabled :is(input, select, textarea, button) { color: var(--te
 .ht-champion h2 { margin: 0 0 0.35rem; font: 900 clamp(1.35rem, 4vw, 2rem)/1.15 var(--font-heading); color: var(--text-primary); text-wrap: balance; }
 .ht-champion p { margin: 0; color: var(--text-secondary); }
 .ht-champion .ht-champion-scorer { margin-top: 0.35rem; font-weight: 700; color: var(--text-primary); }
+
+/* ---- Tournament sponsors (migration 20261196): header strip, public list, admin tab ------------ */
+.ts-tile { display: inline-flex; align-items: center; justify-content: center; min-width: 96px; max-width: 200px; height: 52px; padding: 0.4rem 0.75rem; border-radius: 12px; background: #fff; border: 1px solid var(--border-subtle); text-decoration: none; transition: transform 0.15s, box-shadow 0.15s; }
+a.ts-tile:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); }
+a.ts-tile:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.ts-tile-name { color: #111827; font-weight: 800; font-size: 0.82rem; line-height: 1.15; text-align: center; overflow-wrap: anywhere; }
+.ts-group[data-size="xl"] .ts-tile-name, .ts-group[data-size="lg"] .ts-tile-name { font-size: 0.95rem; }
+.ts-tile-sm .ts-tile-name { font-size: 0.62rem; }
+.ts-tile-sm { min-width: 56px; height: 36px; padding: 0.25rem 0.4rem; border-radius: 8px; flex: none; }
+.ts-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 1.1rem; }
+.ts-strip-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.ts-strip-logos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ts-strip .ts-tile { height: 44px; min-width: 88px; }
+.ts-list { margin-bottom: 2rem; padding: 1.25rem; border-radius: var(--radius-xl); text-align: center; }
+.ts-list-title { margin: 0 0 1rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-muted); }
+.ts-group + .ts-group { margin-top: 1.1rem; }
+.ts-group h3 { margin: 0 0 0.55rem; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); }
+.ts-group-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+.ts-group[data-size='xl'] .ts-tile { height: 84px; min-width: 180px; max-width: 260px; }
+.ts-group[data-size='lg'] .ts-tile { height: 70px; min-width: 150px; max-width: 230px; }
+.ts-group[data-size='md'] .ts-tile { height: 60px; min-width: 128px; }
+.ts-group[data-size='sm'] .ts-tile { height: 48px; min-width: 104px; }
+.ts-admin-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.9rem; }
+.ts-admin-head .ht-lede { max-width: 62ch; }
+.ts-add { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ts-order { display: inline-flex; align-items: center; gap: 0.3rem; }
+.ts-order-num { width: 1.25rem; text-align: center; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.ts-order .ht-icon-btn { width: 32px; height: 32px; }
+.ts-order .ht-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ts-admin-name { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.ts-admin-name .ht-name, .ts-admin-name .ht-sub { display: block; overflow-wrap: anywhere; }
+.ts-site { display: inline-flex !important; align-items: center; gap: 0.25rem; }
+.ts-hidden { display: inline-flex; align-items: center; gap: 0.3rem; }
+.ts-actions { white-space: nowrap; text-align: right !important; }
+.ts-actions .ht-icon-btn + .ht-icon-btn { margin-left: 0.4rem; }
+.ts-form { max-width: 520px; }
+.ts-seg-wrap { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)) !important; }
+@media (max-width: 640px) {
+  .ts-admin-table thead { display: none; }
+  .ts-admin-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.75rem; padding: 0.75rem; border-top: 1px solid var(--border-subtle); }
+  .ts-admin-table td, .ts-admin-table tbody th { border: 0; padding: 0; }
+  .ts-admin-table tbody th { grid-column: 1 / -1; grid-row: 1; }
+  .ts-admin-table td[data-label='Order'] { grid-row: 3; }
+  .ts-admin-table .ts-actions { grid-row: 3; align-self: center; }
+  .ts-admin-table td[data-label='Category'], .ts-admin-table td[data-label='Shows in'] { grid-row: 2; }
+  .ts-admin-table td[data-label='Shows in'] { justify-self: end; }
+  .ts-strip .ts-tile { height: 40px; min-width: 80px; }
+  .ts-group[data-size='xl'] .ts-tile { height: 72px; min-width: 150px; }
+}
+
+/* Live table: a team name opens that team's games and results */
+.ht-standing-team { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px; padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--text-primary); white-space: nowrap; cursor: pointer; text-decoration: underline; text-decoration-color: var(--border-medium); text-underline-offset: 4px; }
+.ht-standing-team:hover { text-decoration-color: var(--club-ink); }
+.ht-standing-team:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 4px; }
+.ht-standing-arrow { color: var(--text-muted); font-size: 1.05rem; text-decoration: none; }
+/* The main sponsor above the tournament name */
+.ts-presenter { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; width: fit-content; max-width: 100%; margin: 0 auto 1.5rem; text-align: center; text-decoration: none; color: var(--text-primary); }
+.ts-presenter-logo { display: inline-flex; align-items: center; justify-content: center; height: 96px; min-width: 96px; max-width: 260px; padding: 0.6rem 0.9rem; border-radius: 18px; background: #fff; border: 1px solid var(--border-subtle); }
+.ts-presenter-name { font-family: var(--font-heading); font-weight: 800; font-size: clamp(1.05rem, 3.2vw, 1.4rem); letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; overflow-wrap: anywhere; }
+.ts-presenter-word { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.42em; text-transform: uppercase; color: var(--text-secondary); padding-left: 0.42em; }
+.ts-presenter-word::before, .ts-presenter-word::after { content: ''; width: 32px; height: 2px; border-radius: 2px; background: var(--club-primary); }
+a.ts-presenter:hover .ts-presenter-name { color: var(--club-ink); }
+a.ts-presenter:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 4px; border-radius: 12px; }
+.ts-main { color: var(--club-ink); background: color-mix(in oklab, var(--club-primary) 16%, transparent); }
+@media (max-width: 640px) { .ts-presenter-logo { height: 80px; } }

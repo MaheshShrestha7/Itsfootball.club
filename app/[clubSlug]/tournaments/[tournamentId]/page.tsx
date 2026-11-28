@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
 import SupportedBy from '@/components/SupportedBy';
+import { TournamentPresenter, TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
+import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import { AgeGroupTabs, ChampionBanner, OnNowStrip, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
 import { juniorPublicName } from '@/lib/teams';
@@ -62,7 +64,14 @@ export default function PublicTournamentDetailPage({
     if (id) u.searchParams.set('team', id); else u.searchParams.delete('team');
     window.history.replaceState(null, '', u);
   };
+  // A team tapped in the live table: its page on the Teams tab, with its games and results
+  const showTeamGames = (id: string) => {
+    openTeam(id);
+    setActiveTab('teams');
+    requestAnimationFrame(() => document.getElementById('tournament-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
   const squads = usePublicSquads(tournament?.id, !!tournament);
+  const { sponsors: tournamentSponsors } = useTournamentSponsors(tournament?.id);
 
   // Open on the standings for a league, and while group games are still to play (the bracket then
   // holds only "1st Group A" placeholders); otherwise the bracket
@@ -134,6 +143,9 @@ export default function PublicTournamentDetailPage({
             <ArrowLeft size={14} />
             <span>All Tournaments</span>
           </Link>
+
+          {/* The main sponsor, as on the poster: "<sponsor> presents" above the tournament name */}
+          <TournamentPresenter sponsors={tournamentSponsors} />
 
           <div
             style={{
@@ -221,6 +233,7 @@ export default function PublicTournamentDetailPage({
                     </Link>
                   )}
                 </div>
+                <TournamentSponsorStrip sponsors={tournamentSponsors} />
               </div>
             </div>
 
@@ -239,7 +252,9 @@ export default function PublicTournamentDetailPage({
 
         {/* Navigation Tabs */}
         <div
+          id="tournament-tabs"
           style={{
+            scrollMarginTop: '5rem',
             display: 'flex',
             flexWrap: 'wrap',
             gap: '0.5rem',
@@ -374,6 +389,7 @@ export default function PublicTournamentDetailPage({
                       standings={groupStandings}
                       groupTitle={tournament.group_count === 1 ? 'Group Stage Standings' : `Group ${groupLetter} Standings`}
                       advancingCount={tournament.teams_advancing_per_group ?? 2}
+                      onTeamClick={showTeamGames}
                     />
                   </div>
                 );
@@ -383,6 +399,7 @@ export default function PublicTournamentDetailPage({
                 standings={getTournamentStandings(tournament.id)}
                 groupTitle={`${tournament.name} Standings`}
                 advancingCount={0}
+                onTeamClick={showTeamGames}
               />
             )}
           </div>
@@ -449,21 +466,6 @@ export default function PublicTournamentDetailPage({
                     {part.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
-                    <span
-                      style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        background:
-                          part.team_type === 'internal'
-                            ? 'rgba(var(--club-primary-rgb), 0.15)'
-                            : 'rgba(59, 130, 246, 0.15)',
-                        color: part.team_type === 'internal' ? 'var(--club-ink)' : 'var(--c-sky)',
-                      }}
-                    >
-                      {part.team_type === 'internal' ? 'Internal Squad' : 'Guest Club'}
-                    </span>
                     {part.seed && (
                       <span className="text-meta">
                         Seed #{part.seed}
@@ -480,7 +482,12 @@ export default function PublicTournamentDetailPage({
             ))}
           </div>
         )}
-        <div style={{ marginTop: '2.5rem' }}><SupportedBy clubId={club.id} eventId={tournament.event_id || undefined} /></div>
+        {/* The tournament's own sponsors; without any, the event's or club's top sponsors as before */}
+        <div style={{ marginTop: '2.5rem' }}>
+          {tournamentSponsors.some(s => s.is_active)
+            ? <TournamentSponsorList sponsors={tournamentSponsors} />
+            : <SupportedBy clubId={club.id} eventId={tournament.event_id || undefined} />}
+        </div>
       </main>
     </div>
   );
