@@ -478,3 +478,13 @@ a.ts-tile:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2p
 .ht-standing-team:hover { text-decoration-color: var(--club-ink); }
 .ht-standing-team:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; border-radius: 4px; }
 .ht-standing-arrow { color: var(--text-muted); font-size: 1.05rem; text-decoration: none; }
+/* The main sponsor above the tournament name */
+.ts-presenter { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; width: fit-content; max-width: 100%; margin: 0 auto 1.5rem; text-align: center; text-decoration: none; color: var(--text-primary); }
+.ts-presenter-logo { display: inline-flex; align-items: center; justify-content: center; height: 96px; min-width: 96px; max-width: 260px; padding: 0.6rem 0.9rem; border-radius: 18px; background: #fff; border: 1px solid var(--border-subtle); }
+.ts-presenter-name { font-family: var(--font-heading); font-weight: 800; font-size: clamp(1.05rem, 3.2vw, 1.4rem); letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; overflow-wrap: anywhere; }
+.ts-presenter-word { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.42em; text-transform: uppercase; color: var(--text-secondary); padding-left: 0.42em; }
+.ts-presenter-word::before, .ts-presenter-word::after { content: ''; width: 32px; height: 2px; border-radius: 2px; background: var(--club-primary); }
+a.ts-presenter:hover .ts-presenter-name { color: var(--club-ink); }
+a.ts-presenter:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 4px; border-radius: 12px; }
+.ts-main { color: var(--club-ink); background: color-mix(in oklab, var(--club-primary) 16%, transparent); }
+@media (max-width: 640px) { .ts-presenter-logo { height: 80px; } }

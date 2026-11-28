@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { sponsorGroups, headerSponsors, moveSponsor, normaliseWebsite, defaultPlacement, categoryLabel, TournamentSponsor } from './tournament-sponsors';
+import { sponsorGroups, headerSponsors, titleSponsor, moveSponsor, normaliseWebsite, defaultPlacement, categoryLabel, TournamentSponsor } from './tournament-sponsors';
 
-const s = (id: string, category: string, display_order: number, placement: 'header' | 'list' = 'list', is_active = true): TournamentSponsor =>
+const s = (id: string, category: string, display_order: number, placement: 'title' | 'header' | 'list' = 'list', is_active = true): TournamentSponsor =>
   ({ id, tournament_id: 't', name: id, category, placement, display_order, is_active });
 const list = [s('food', 'Food partner', 0), s('radio', 'media', 1, 'header'), s('gold2', 'gold', 2, 'header'), s('plat', 'platinum', 3, 'header'), s('gold1', 'gold', 4), s('off', 'gold', 5, 'header', false)];
 
@@ -19,4 +19,9 @@ assert.equal(defaultPlacement('gold'), 'header');
 assert.equal(defaultPlacement('media'), 'list');
 assert.equal(categoryLabel('media'), 'Media partner');
 assert.equal(categoryLabel('Food partner'), 'Food partner');
+assert.equal(titleSponsor(list), undefined);
+const withTitle = [...list, s('main', 'platinum', 9, 'title')];
+assert.equal(titleSponsor(withTitle)!.id, 'main');
+assert.ok(!headerSponsors(withTitle).some(x => x.id === 'main'), 'the main sponsor is not repeated in the strip');
+assert.ok(sponsorGroups(withTitle)[0].sponsors.some(x => x.id === 'main'), 'but it is in the list');
 console.log('tournament-sponsors.check: ok');

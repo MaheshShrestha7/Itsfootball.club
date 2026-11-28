@@ -1,6 +1,8 @@
 // A tournament's own sponsors (migration 20261196): categories, their order and the header strip.
 // Pure helpers; the hook that reads and writes them is lib/use-tournament-sponsors.ts.
 
+export type SponsorPlacement = 'title' | 'header' | 'list';
+
 export interface TournamentSponsor {
   id: string;
   tournament_id: string;
@@ -10,8 +12,9 @@ export interface TournamentSponsor {
   website_url?: string | null;
   /** A preset key below, or the host's own words ("Food partner") */
   category: string;
-  /** 'header': the strip under the tournament header and the list; 'list': the list only */
-  placement: 'header' | 'list';
+  /** 'title': the one main sponsor ("<name> presents" above the tournament name); 'header': the strip
+   *  under the tournament header; 'list': the list only. Every shown sponsor is also in the list. */
+  placement: SponsorPlacement;
   display_order: number;
   is_active: boolean;
 }
@@ -63,6 +66,15 @@ export function sponsorGroups(list: TournamentSponsor[]): { category: string; ti
 
 /** The strip under the header: the sponsors placed there, in the host's order */
 export const headerSponsors = (list: TournamentSponsor[]) => inOrder(list.filter(s => s.is_active && s.placement === 'header'));
+
+/** The tournament's main sponsor ("<name> presents"), when it has a shown one */
+export const titleSponsor = (list: TournamentSponsor[]) => list.find(s => s.is_active && s.placement === 'title');
+
+export const PLACEMENT_LABEL: Record<SponsorPlacement, string> = {
+  title: 'Main sponsor',
+  header: 'Header strip and list',
+  list: 'List only',
+};
 
 /** Moves one sponsor up or down; returns the new display_order for every sponsor whose order changed */
 export function moveSponsor(list: TournamentSponsor[], id: string, dir: -1 | 1): { id: string; display_order: number }[] {

@@ -7,8 +7,8 @@ import PopupPanel from '@/components/PopupPanel';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import { confirmAction } from '@/components/ConfirmDialog';
 import {
-  SPONSOR_CATEGORIES, TournamentSponsor, categoryLabel, defaultPlacement, headerSponsors, inOrder, isPresetCategory,
-  moveSponsor, normaliseWebsite, sponsorGroups,
+  SPONSOR_CATEGORIES, TournamentSponsor, SponsorPlacement, PLACEMENT_LABEL, categoryLabel, defaultPlacement, headerSponsors, inOrder, isPresetCategory,
+  moveSponsor, normaliseWebsite, sponsorGroups, titleSponsor,
 } from '@/lib/tournament-sponsors';
 import type { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import '@/components/tournament/hosted.css';
@@ -22,6 +22,22 @@ function Tile({ s, height }: { s: TournamentSponsor; height: number }) {
   return s.website_url
     ? <a className="ts-tile" href={s.website_url} target="_blank" rel="noopener noreferrer sponsored" title={s.name}>{logo}</a>
     : <span className="ts-tile" title={s.name}>{logo}</span>;
+}
+
+/** The main sponsor above the tournament name, as on a poster: logo, name, "presents" */
+export function TournamentPresenter({ sponsors }: { sponsors: TournamentSponsor[] }) {
+  const s = titleSponsor(sponsors);
+  if (!s) return null;
+  const body = (
+    <>
+      {s.logo_url && <span className="ts-presenter-logo"><SponsorLogo src={s.logo_url} name={s.name} height={72} loading="eager" style={{ maxWidth: '100%' }} /></span>}
+      <span className="ts-presenter-name">{s.name}</span>
+      <span className="ts-presenter-word">presents</span>
+    </>
+  );
+  return s.website_url
+    ? <a className="ts-presenter" href={s.website_url} target="_blank" rel="noopener noreferrer sponsored">{body}</a>
+    : <div className="ts-presenter">{body}</div>;
 }
 
 /** The strip under the tournament header: the sponsors the host placed there */
@@ -105,8 +121,9 @@ export function TournamentSponsorsAdmin({ clubId, api }: { clubId: string; api: 
                   <td data-label="Category"><span className="ht-state">{categoryLabel(s.category)}</span></td>
                   <td data-label="Shows in">
                     {!s.is_active ? <span className="ht-sub ts-hidden"><EyeOff size={13} aria-hidden="true" />Hidden</span>
-                      : s.placement === 'header' ? <span className="ht-state" data-tone="ok">Header strip and list</span>
-                      : <span className="ht-sub">List only</span>}
+                      : s.placement === 'title' ? <span className="ht-state ts-main">Main sponsor (presents)</span>
+                      : s.placement === 'header' ? <span className="ht-state" data-tone="ok">{PLACEMENT_LABEL.header}</span>
+                      : <span className="ht-sub">{PLACEMENT_LABEL.list}</span>}
                   </td>
                   <td className="ts-actions">
                     <button type="button" className="ht-icon-btn" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil size={15} aria-hidden="true" /></button>
@@ -120,15 +137,17 @@ export function TournamentSponsorsAdmin({ clubId, api }: { clubId: string; api: 
       )}
 
       {editing && (
-        <SponsorForm clubId={clubId} sponsor={editing === 'new' ? null : editing} nextOrder={ordered.length ? ordered[ordered.length - 1].display_order + 1 : 0}
+        <SponsorForm clubId={clubId} sponsor={editing === 'new' ? null : editing} currentTitle={titleSponsor(sponsors) || sponsors.find(s => s.placement === 'title')} nextOrder={ordered.length ? ordered[ordered.length - 1].display_order + 1 : 0}
           onSave={(fields, id) => save(fields, id)} onClose={() => setEditing(null)} />
       )}
     </div>
   );
 }
 
-function SponsorForm({ clubId, sponsor, nextOrder, onSave, onClose }: {
+function SponsorForm({ clubId, sponsor, nextOrder, currentTitle, onSave, onClose }: {
   clubId: string;
+  /** The tournament's main sponsor now, if any: picking another one moves it to the header strip */
+  currentTitle?: TournamentSponsor;
   sponsor: TournamentSponsor | null;
   nextOrder: number;
   onSave: (fields: Partial<TournamentSponsor>, id?: string) => Promise<string | null>;
@@ -140,7 +159,7 @@ function SponsorForm({ clubId, sponsor, nextOrder, onSave, onClose }: {
   const startCat = sponsor?.category || 'gold';
   const [category, setCategory] = useState(isPresetCategory(startCat) ? startCat : 'other');
   const [ownCategory, setOwnCategory] = useState(isPresetCategory(startCat) ? '' : startCat);
-  const [placement, setPlacement] = useState<'header' | 'list'>(sponsor?.placement || defaultPlacement(startCat));
+  const [placement, setPlacement] = useState<SponsorPlacement>(sponsor?.placement || defaultPlacement(startCat));
   const [placementTouched, setPlacementTouched] = useState(!!sponsor);
   const [shown, setShown] = useState(sponsor?.is_active ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +177,11 @@ function SponsorForm({ clubId, sponsor, nextOrder, onSave, onClose }: {
     if (!name.trim()) return setError('Type the sponsor\'s name.');
     if (!cat) return setError('Type a category, for example Food partner.');
     setBusy(true);
+    // One main sponsor per tournament (the database insists): the old one moves to the header strip first
+    if (placement === 'title' && currentTitle && currentTitle.id !== sponsor?.id) {
+      const moved = await onSave({ placement: 'header' }, currentTitle.id);
+      if (moved) { setBusy(false); return setError(`Couldn't move ${currentTitle.name}: ${moved}`); }
+    }
     const err = await onSave({
       name: name.trim(), logo_url: logo || null, website_url: normaliseWebsite(website) || null, category: cat.slice(0, 40), placement, is_active: shown,
       ...(sponsor ? {} : { display_order: nextOrder }),
@@ -196,10 +220,16 @@ function SponsorForm({ clubId, sponsor, nextOrder, onSave, onClose }: {
           </fieldset>
           <fieldset className="ht-fx-status">
             <legend className="form-label">Where it shows</legend>
-            <div className="ht-fx-seg" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-              <button type="button" aria-pressed={placement === 'header'} onClick={() => { setPlacement('header'); setPlacementTouched(true); }}>Header strip and list</button>
-              <button type="button" aria-pressed={placement === 'list'} onClick={() => { setPlacement('list'); setPlacementTouched(true); }}>List only</button>
+            <div className="ht-fx-seg ts-seg-wrap">
+              {(['title', 'header', 'list'] as const).map(p => (
+                <button key={p} type="button" aria-pressed={placement === p} onClick={() => { setPlacement(p); setPlacementTouched(true); }}>{PLACEMENT_LABEL[p]}</button>
+              ))}
             </div>
+            <p className="ht-hint">
+              {placement === 'title'
+                ? `Shown above the tournament name: "${name.trim() || 'Sponsor'} presents". A tournament has one main sponsor${currentTitle && currentTitle.id !== sponsor?.id ? `, so ${currentTitle.name} moves to the header strip` : ''}.`
+                : 'Every sponsor is also in the list at the bottom of the page.'}
+            </p>
           </fieldset>
           <div className="form-group" style={{ margin: 0 }}>
             <label htmlFor="ts-site" className="form-label">Website</label>

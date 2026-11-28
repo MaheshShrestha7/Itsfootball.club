@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
 import SupportedBy from '@/components/SupportedBy';
-import { TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
+import { TournamentPresenter, TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
 import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import { AgeGroupTabs, ChampionBanner, OnNowStrip, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
@@ -143,6 +143,9 @@ export default function PublicTournamentDetailPage({
             <ArrowLeft size={14} />
             <span>All Tournaments</span>
           </Link>
+
+          {/* The main sponsor, as on the poster: "<sponsor> presents" above the tournament name */}
+          <TournamentPresenter sponsors={tournamentSponsors} />
 
           <div
             style={{

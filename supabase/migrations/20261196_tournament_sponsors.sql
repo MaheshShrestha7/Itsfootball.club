@@ -4,7 +4,8 @@
 --
 -- A hosted tournament keeps its own list of sponsors, separate from the club's sponsors: each has a
 -- category (platinum, gold, silver, bronze, media, partner, or the host's own words), a placement
--- (the strip under the tournament header and the list, or the list only) and an order.
+-- ('title': the one main sponsor, "<sponsor> presents" above the tournament name; 'header': the strip
+-- under the tournament header; 'list': the list only; every shown sponsor is also in the list) and an order.
 -- Everything in a row is shown on the public tournament page, so anyone can read the active ones;
 -- only the club's Tournaments editors can add, change or remove them.
 -- Until this runs the Sponsors tab stays hidden and nothing changes.
@@ -20,12 +21,14 @@ CREATE TABLE IF NOT EXISTS tournament_sponsors (
     logo_url TEXT,
     website_url TEXT CHECK (website_url IS NULL OR website_url ~* '^https?://'),
     category VARCHAR(40) NOT NULL DEFAULT 'partner' CHECK (char_length(trim(category)) BETWEEN 1 AND 40),
-    placement VARCHAR(10) NOT NULL DEFAULT 'list' CHECK (placement IN ('header', 'list')),
+    placement VARCHAR(10) NOT NULL DEFAULT 'list' CHECK (placement IN ('title', 'header', 'list')),
     display_order INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_tournament_sponsors_tournament ON tournament_sponsors (tournament_id, display_order);
+-- One main sponsor per tournament
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tournament_sponsors_title ON tournament_sponsors (tournament_id) WHERE placement = 'title';
 
 -- club_id always comes from the tournament, so a row can't be filed under another club
 CREATE OR REPLACE FUNCTION tournament_sponsor_fill()
