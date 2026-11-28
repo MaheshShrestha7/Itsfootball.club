@@ -2,11 +2,10 @@
 
 import React, { useState, use, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useClub } from '@/lib/club-context';
 import { Tournament } from '@/lib/supabase/types';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
-import InternalTeamsManager from '@/components/tournament/InternalTeamsManager';
-import { ADMIN_HASH_EVENT } from '@/lib/permissions';
 import { Trophy, Plus, ArrowRight, Trash2, Pencil, CheckCircle2, ExternalLink, Calendar, ChevronRight, MoreHorizontal, Flag, Shuffle, Users, Radio, PenLine, ListOrdered, type LucideIcon } from 'lucide-react';
 import { parseTournamentDate, groupGamesLeft, knockoutStarted, knockoutLockReason } from '@/lib/tournament-engine';
 import { tournamentOver } from '@/lib/tournament-overview';
@@ -35,7 +34,6 @@ export default function AdminTournamentsPage({
     clubs,
     selectClubBySlug,
     tournaments,
-    internalTeams,
     tournamentParticipants,
     deleteTournament,
     matches,
@@ -49,7 +47,6 @@ export default function AdminTournamentsPage({
   // An age group is listed under its tournament (it opens from there), not as a tournament of its own
   const clubTournaments = tournaments.filter(t => t.club_id === club.id && !t.parent_id);
   const familyIds = (t: { id: string }) => [t.id, ...tournaments.filter(x => x.parent_id === t.id).map(x => x.id)];
-  const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
 
   const [seasonFilter, setSeasonFilter] = useState('ALL');
   const [formatFilter, setFormatFilter] = useState('ALL');
@@ -66,31 +63,11 @@ export default function AdminTournamentsPage({
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
 
   const [formTarget, setFormTarget] = useState<Tournament | 'new' | null>(null);
-  // Tournaments, or the club's own sides picked from members (#tournament-sides, linked from the menu)
-  const [tab, setTab] = useState<'list' | 'sides'>('list');
+  // The sides tab moved to its own page (Players and teams > In-house sides): old links go there
+  const router = useRouter();
   useEffect(() => {
-    const show = (hash: string) => {
-      const sides = hash === '#tournament-sides';
-      setTab(sides ? 'sides' : 'list');
-      if (sides) setFormTarget(null); // the form's "create sides" link closes it
-    };
-    const read = () => show(window.location.hash);
-    const fromMenu = (e: Event) => show((e as CustomEvent<string>).detail);
-    read();
-    window.addEventListener('hashchange', read);
-    window.addEventListener(ADMIN_HASH_EVENT, fromMenu);
-    return () => {
-      window.removeEventListener('hashchange', read);
-      window.removeEventListener(ADMIN_HASH_EVENT, fromMenu);
-    };
-  }, []);
-  // Switching tab updates the hash, so the admin menu highlights the matching item
-  const selectTab = (key: 'list' | 'sides') => {
-    setTab(key);
-    const { pathname, search } = window.location;
-    window.history.replaceState(window.history.state, '', `${pathname}${search}${key === 'sides' ? '#tournament-sides' : ''}`);
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
-  };
+    if (window.location.hash === '#tournament-sides') router.replace(`/${club.slug}/admin/sides`);
+  }, [club.slug, router]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const handleOpenWizard = () => setFormTarget('new');
 
@@ -181,33 +158,9 @@ export default function AdminTournamentsPage({
         </div>
       )}
 
-      <div data-view-ok role="tablist" aria-label="Tournaments" className="admin-tabs">
-        {([['list', 'Tournaments'], ['sides', 'Tournament sides']] as const).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => selectTab(key)}
-            className="admin-tab"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'sides' ? <InternalTeamsManager clubSlug={club.slug} /> : (
-      <>
-
       <div className="admin-panel admin-dash-figures-wrap" style={{ marginBottom: 'var(--space-lg)' }}>
         <dl className="admin-dash-figures">
           <div><dt>Tournaments</dt><dd>{totalTournaments}</dd><span className="admin-note">{activeTournaments} running now</span></div>
-          <div>
-            <dt>Tournament sides</dt><dd>{clubInternalTeams.length}</dd>
-            {/* Says what's counted: the club's own sides, not the teams entered in a cup */}
-            <span className="admin-note">Picked from your members</span>
-            <button type="button" onClick={() => selectTab('sides')} className="admin-dash-link" style={{ marginTop: 'auto' }}>Manage sides</button>
-          </div>
           <div><dt>Tournament fixtures</dt><dd>{totalMatchesInTourneys}</dd></div>
         </dl>
       </div>
@@ -370,8 +323,6 @@ export default function AdminTournamentsPage({
             </div>
           )}
       </div>
-      </>
-      )}
 
       {formTarget && (
         <TournamentFormModal

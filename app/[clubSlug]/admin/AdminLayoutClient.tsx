@@ -21,6 +21,7 @@ import {
   QrCode,
   ExternalLink,
   Shield,
+  Split,
   LogOut,
   Trophy,
   Layers,
@@ -304,11 +305,7 @@ export default function AdminLayout({
         // Everything dated, by month or week; shown to anyone who sees fixtures, tournaments or events
         ...(canSeeCalendar ? [{ label: 'Calendar', href: `/${club.slug}/admin/calendar`, icon: CalendarRange }] : []),
         { area: 'matches', label: 'Fixtures and results', href: `/${club.slug}/admin/matches`, icon: CalendarDays },
-        {
-          area: 'tournaments', label: 'Tournaments and cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy,
-          // The club's own sides for tournaments, a tab of the Tournaments screen (kept apart from club teams)
-          children: [{ area: 'tournaments', label: 'Tournament sides', href: `/${club.slug}/admin/tournaments#tournament-sides` }],
-        },
+        { area: 'tournaments', label: 'Tournaments and cups', href: `/${club.slug}/admin/tournaments`, icon: Trophy },
         // The club calendar: training sessions, socials and match-day events, with tickets and check-in
         { area: 'events', label: 'Events and training', href: `/${club.slug}/admin/events`, icon: Calendar },
       ],
@@ -331,6 +328,8 @@ export default function AdminLayout({
           ],
         }] : []),
         { area: 'teams', label: 'Club teams', href: `/${club.slug}/admin/teams`, icon: Shield },
+        // The club's own members split into sides for club cups (the Tournaments area: only cups use them)
+        { area: 'tournaments', label: 'In-house sides', href: `/${club.slug}/admin/sides`, icon: Split },
         { area: 'committee', label: 'Committee', href: `/${club.slug}/admin/committee`, icon: Award },
       ],
     },
@@ -462,7 +461,7 @@ export default function AdminLayout({
 
   const allNavItems = navSections.flatMap(s => s.items);
 
-  // The URL hash picks a tab or section on some pages (Tournaments: #tournament-sides), and a menu item may
+  // The URL hash picks a tab or section on some pages (Club teams: #junior-settings), and a menu item may
   // point at it. Next's links don't fire hashchange, so a menu click announces its hash to the open page
   // itself (ADMIN_HASH_EVENT); the page's own tab switches update the URL and fire hashchange.
   const [locationHash, setLocationHash] = useState('');
@@ -490,7 +489,7 @@ export default function AdminLayout({
       // A plain sub-item is the page's default tab, so it only matches while no other tab is open
       return isChild && currentTab ? 0 : 2;
     }
-    // A link to one tab or section of a page (Tournament sides) isn't the page's parent: the plain link is
+    // A link to one tab or section of a page (Junior and safeguarding) isn't the page's parent: the plain link is
     return !tab && !hash && path !== dashboardHref && pathname.startsWith(`${path}/`) ? 1 : 0;
   };
   // The one highlighted link: the best match, a sub-item winning a tie with its parent
