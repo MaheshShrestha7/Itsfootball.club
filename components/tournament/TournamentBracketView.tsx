@@ -154,8 +154,9 @@ export default function TournamentBracketView({
                   {roundMatches.map(match => {
                     const isLive = match.status === 'live';
                     const isCompleted = match.status === 'completed';
-                    const isHomeWinner = match.winner_side === 'home';
-                    const isAwayWinner = match.winner_side === 'away';
+                    // A winner only counts once the game is finished (a reset game can keep an old winner_side)
+                    const isHomeWinner = isCompleted && match.winner_side === 'home';
+                    const isAwayWinner = isCompleted && match.winner_side === 'away';
 
                     return (
                       <div
@@ -263,7 +264,7 @@ export default function TournamentBracketView({
                                   style={{
                                     fontSize: '0.8rem',
                                     fontWeight: isHomeWinner ? 800 : 600,
-                                    color: isHomeWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : '#FFFFFF',
+                                    color: isHomeWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : 'var(--text-primary)',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -323,7 +324,7 @@ export default function TournamentBracketView({
                                   style={{
                                     fontSize: '0.8rem',
                                     fontWeight: isAwayWinner ? 800 : 600,
-                                    color: isAwayWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : '#FFFFFF',
+                                    color: isAwayWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : 'var(--text-primary)',
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
