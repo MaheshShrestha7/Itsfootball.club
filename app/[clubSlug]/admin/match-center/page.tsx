@@ -61,7 +61,8 @@ import { clockLabel, compareEventMinute, eventMinuteLabel, extraHalfMinutes, ful
 import { defaultSeasonLabel } from '@/lib/season';
 import CupAskPanel, { cupTeamName } from '@/components/admin/CupAskPanel';
 import { cupAsks } from '@/lib/cup-progress';
-import { clubLineupSide, clubSidePlayers, compareTournamentMatches, groupGamesLeft, knockoutLockReason, knockoutStarted, nextOnPitch, tournamentMatchLabel } from '@/lib/tournament-engine';
+import { clubLineupSide, clubSidePlayers, compareTournamentMatches, groupGamesLeft, knockoutLockReason, knockoutStarted, nextOnPitch, tournamentMatchLabel, START_KNOCKOUT_CONFIRM } from '@/lib/tournament-engine';
+import { useGroupStageFinishedPrompt } from '@/components/tournament/useGroupStageFinishedPrompt';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import '@/components/tournament/hosted.css';
@@ -141,6 +142,7 @@ export default function AdminMatchCenterControllerPage({
     clubTeamMembers,
     updateTournamentMatchScore,
     updateTournament,
+    repairTournaments,
     tournaments,
     loadMatchStatLines,
     fixMatchStats,
@@ -372,6 +374,15 @@ export default function AdminMatchCenterControllerPage({
   const showFeedback = (text: string, type: 'success' | 'info' | 'error' = 'success', undoId?: string) => {
     setFeedback({ text, type, undoId });
   };
+  const startKnockout = (t: { id: string }) => {
+    updateTournament(t.id, { knockout_started_at: new Date().toISOString() });
+    showFeedback('Group tables are final. The knockout games now have their teams and can kick off.');
+  };
+  // Once the host confirms the group tables, the knockout games here get their team names without a trip to the tournament page
+  const koStartedAt = matchTournament?.knockout_started_at;
+  useEffect(() => { if (koStartedAt) repairTournaments(club.id); }, [koStartedAt, repairTournaments, club.id]);
+  // Ending the last group game here asks for the host's confirm straight away
+  useGroupStageFinishedPrompt(matchTournament, matches, koStartReady && can(club.id, 'tournaments', 'full'), startKnockout);
 
   const handleCreateFixture = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1223,13 +1234,7 @@ export default function AdminMatchCenterControllerPage({
                 {/* Groups done: the host starts the knockouts from the pitch instead of leaving Match Centre */}
                 {matchTournament && koStartReady && !knockoutStarted(matchTournament, matches) && groupGamesLeft(matchTournament.id, matches) === 0 && can(club.id, 'tournaments', 'full') && (
                   <button type="button" className="btn btn-sm btn-primary" onClick={async () => {
-                    if (!(await confirmAction({
-                      title: 'Start the knockout stage?',
-                      message: 'All group games are played. The group tables are final and the qualified teams go into the knockout games. Check the group results first.',
-                      confirmLabel: 'Start knockout stage',
-                    }))) return;
-                    updateTournament(matchTournament.id, { knockout_started_at: new Date().toISOString() });
-                    showFeedback('Knockout stage started. This game can now kick off.');
+                    if (await confirmAction(START_KNOCKOUT_CONFIRM)) startKnockout(matchTournament);
                   }}>Start knockout stage</button>
                 )}
               </div>

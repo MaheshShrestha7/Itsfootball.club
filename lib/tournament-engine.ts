@@ -779,7 +779,10 @@ export function resolveTournament(
     return copy;
   });
 
-  if (tournament.format === 'group_knockout') {
+  // Teams go into the knockout slots once the host confirms the group tables are final ("Start the
+  // knockout stage"). Without the knockout_started_at column (migration 20261185) a finished group is enough.
+  const tablesFinal = !('knockout_started_at' in tournament) || knockoutStarted(tournament, own(allMatches));
+  if (tournament.format === 'group_knockout' && tablesFinal) {
     const standingsByGroup: Record<string, TournamentStanding[]> = {};
     for (const letter of GROUP_LETTERS.slice(0, tournament.group_count ?? 1)) {
       const groupMatches = own(result).filter(m => m.tournament_group === `Group ${letter}`);
@@ -815,6 +818,14 @@ export function knockoutStarted(tournament: Pick<Tournament, 'id' | 'knockout_st
     && !!m.tournament_stage && m.tournament_stage !== 'group' && m.status !== 'upcoming');
 }
 
+/** The host's confirm that the group stage is over: shown by the Start button and by itself after the last group game */
+export const START_KNOCKOUT_CONFIRM = {
+  title: 'Group stage finished?',
+  message: 'Every group game has a full-time result. Confirm the group tables are final: the qualified teams then go into the knockout games by name and the knockout games open. Check the group results first.',
+  confirmLabel: 'Tables are final, start knockouts',
+  cancelLabel: 'Not yet',
+};
+
 /** Group games of this tournament not yet at full time */
 export const groupGamesLeft = (tournamentId: string, matches: Match[]) =>
   matches.filter(m => m.tournament_id === tournamentId && (m.tournament_stage || 'group') === 'group' && m.status !== 'completed').length;
@@ -845,6 +856,10 @@ export function knockoutLockReason(
     const left = groupGamesLeft(tournament.id, matches);
     if (left > 0) return `Knockout games open once every group game is played. ${left} group ${left === 1 ? 'game' : 'games'} still to finish.`;
     if (needsStart && !knockoutStarted(tournament, matches)) return 'All group games are played. Start the knockout stage on the tournament page to open this game.';
+    // A side still showing "1st Group A" has no team yet: never let it get a result
+    if (needsStart && (match.home_team_name === match.home_team_source && !!parseGroupSource(match.home_team_source || '')
+      || match.away_team_name === match.away_team_source && !!parseGroupSource(match.away_team_source || '')))
+      return 'The teams for this game are not set yet. Open the tournament page so the group tables can fill the knockout games.';
   }
   return null;
 }

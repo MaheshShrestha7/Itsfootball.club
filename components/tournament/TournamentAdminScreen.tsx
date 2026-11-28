@@ -13,7 +13,8 @@ import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
 import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted, groupGamesLeft } from '@/lib/tournament-engine';
+import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted, groupGamesLeft, START_KNOCKOUT_CONFIRM } from '@/lib/tournament-engine';
+import { useGroupStageFinishedPrompt } from '@/components/tournament/useGroupStageFinishedPrompt';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { DATE_LOCALE } from '@/lib/dates';
 import { isEventClub, tournamentPagePath } from '@/lib/public-tournaments';
@@ -72,7 +73,18 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamCode, setNewTeamCode] = useState('');
   const [editOpen, setEditOpen] = useState(false);
+  const showFeedback = (tone: 'success' | 'error', message: string) => {
+    setFeedbackTone(tone);
+    setFeedback(message);
+    setTimeout(() => setFeedback(null), 5000);
+  };
   useEffect(() => repairTournaments(club.id), [repairTournaments, club.id]);
+  const startKnockout = (t: { id: string }) => {
+    updateTournament(t.id, { knockout_started_at: new Date().toISOString() });
+    showFeedback('success', 'Group tables are final. The qualified teams are in the knockout games, which can now be played and scored.');
+  };
+  // Last group game at full time: ask straight away instead of waiting for the host to find the button
+  useGroupStageFinishedPrompt(tournament, matches, koStartReady, startKnockout);
   // Guest clubs' entered players, offered for Player of the Tournament (hidden players left out)
   const { squads: guestSquads } = useTournamentEntries(tournamentId, hosted && !isEventClub(club));
   const guestPlayers = guestSquads.filter(p => !p.hide_public).flatMap(p => {
@@ -181,11 +193,6 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   ] as const).filter(t => t.show);
   // Age groups of a hosted tournament (one tournament each); not on free public tournaments
   const family = hosted && !isEvent ? ageGroupFamily(tournaments, tournament) : [];
-  const showFeedback = (tone: 'success' | 'error', message: string) => {
-    setFeedbackTone(tone);
-    setFeedback(message);
-    setTimeout(() => setFeedback(null), 5000);
-  };
 
   // Group stage + knockout: the knockout games wait for every group game, then for the host's confirm
   const groupsLeft = groupGamesLeft(tournament.id, tourneyMatches);
@@ -194,13 +201,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     && tourneyMatches.some(m => (m.tournament_stage || 'group') === 'group')
     && !knockoutStarted(tournament, tourneyMatches);
   const handleStartKnockout = async () => {
-    if (!(await confirmAction({
-      title: 'Start the knockout stage?',
-      message: 'All group games are played. The group tables are final and the qualified teams go into the knockout games. Check the group results first.',
-      confirmLabel: 'Start knockout stage',
-    }))) return;
-    updateTournament(tournament.id, { knockout_started_at: new Date().toISOString() });
-    showFeedback('success', 'Knockout stage started. The knockout games can now be played and scored.');
+    if (await confirmAction(START_KNOCKOUT_CONFIRM)) startKnockout(tournament);
   };
 
   return (
