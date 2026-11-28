@@ -738,13 +738,12 @@ export default function TournamentFormModal({
           <div className="ht-setup-own">
             <label className="form-check">
               <input type="checkbox" checked={withOwn} onChange={e => setWithOwn(e.target.checked)} />
-              Our own club teams play in it too
+              Our own in-house sides play in it too
             </label>
             {withOwn && (clubInternalTeams.length === 0 ? (
               <p className="ht-hint">
-                No club teams yet. Create them in{' '}
-                {/* A plain link: on the Tournaments screen it switches tab (hashchange) and closes this form */}
-                <a href={`/${club.slug}/admin/tournaments#tournament-sides`} className="te-link">Tournament sides</a>.
+                No in-house sides yet. Make them in{' '}
+                <a href={`/${club.slug}/admin/sides`} className="te-link">In-house sides</a>.
               </p>
             ) : (
               <div className="ht-setup-own-grid">

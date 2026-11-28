@@ -24,7 +24,7 @@ export interface ClubFeature {
 export const CLUB_FEATURES: ClubFeature[] = [
   { key: 'shop', label: 'Club shop', hides: 'The Shop page, its menu links and Admin → Club shop.', publicPaths: ['shop'], adminPaths: ['shop'] },
   { key: 'sponsor_page', label: 'Become a sponsor page', hides: 'The public sponsor sign-up page and its menu links. Your sponsors still show on the site, and their invoice and sponsorship links keep working.', publicPaths: ['sponsor'] },
-  { key: 'tournaments', label: 'Tournaments and cups', hides: 'The Tournaments pages, tournament entry links and Admin → Tournaments and cups.', publicPaths: ['tournaments', 'tournament-entry'], adminPaths: ['tournaments'] },
+  { key: 'tournaments', label: 'Tournaments and cups', hides: 'The Tournaments pages, tournament entry links, and Admin → Tournaments and cups and In-house sides.', publicPaths: ['tournaments', 'tournament-entry'], adminPaths: ['tournaments', 'sides'] },
   { key: 'events', label: 'Events and tickets', hides: 'The public Events pages, the events on the club home page and ticket sales. Training and events stay in Admin.', publicPaths: ['events'] },
   { key: 'gallery', label: 'Photo gallery', hides: 'The Gallery page, its menu links and Admin → Photo gallery.', publicPaths: ['gallery'], adminPaths: ['gallery'] },
   { key: 'news', label: 'News', hides: 'The News pages, the news on the club home page and Admin → News.', publicPaths: ['news'], adminPaths: ['content'] },

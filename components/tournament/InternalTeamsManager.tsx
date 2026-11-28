@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { InternalTeam } from '@/lib/supabase/types';
-import { Plus, Edit2, Trash2, Shield, Check, X, Image as ImageIcon, Search } from 'lucide-react';
+import { Plus, Trash2, Shield, Check, X, Image as ImageIcon, Search, Split, CheckCircle2 } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
 import PlayerSearchSelect from '@/components/PlayerSearchSelect';
@@ -34,6 +35,9 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
     createInternalTeam,
     updateInternalTeam,
     deleteInternalTeam,
+    tournaments,
+    tournamentParticipants,
+    matches,
   } = useClub();
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
@@ -108,7 +112,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         captain_id: captainId || undefined,
         player_ids: selectedPlayerIds,
       });
-      setFeedback(`✓ Updated ${name.trim()} successfully!`);
+      setFeedback(`Saved ${name.trim()}`);
     } else {
       createInternalTeam({
         club_id: club.id,
@@ -121,7 +125,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
         captain_id: captainId || undefined,
         player_ids: selectedPlayerIds,
       });
-      setFeedback(`✓ Created internal team "${name.trim()}"!`);
+      setFeedback(`Added ${name.trim()}`);
     }
 
     setModalOpen(false);
@@ -129,304 +133,140 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
   };
 
   const handleDelete = async (teamId: string, teamName: string) => {
-    if (await confirmAction({ title: `Delete team "${teamName}"?`, message: 'The internal team will be removed.', confirmLabel: 'Delete team', danger: true })) {
+    if (await confirmAction({ title: `Delete "${teamName}"?`, message: 'The side will be removed. Its players stay members of the club.', confirmLabel: 'Delete side', danger: true })) {
       deleteInternalTeam(teamId);
-      setFeedback(`✓ Removed ${teamName}`);
+      setFeedback(`Removed ${teamName}`);
       setTimeout(() => setFeedback(null), 3000);
     }
   };
 
+  // Each side with its captain, players and the cups it is entered in (and how many games it has there)
+  const sides = clubInternalTeams.map(team => {
+    const cups = tournamentParticipants
+      .filter(p => p.internal_team_id === team.id)
+      .flatMap(p => {
+        const t = tournaments.find(x => x.id === p.tournament_id);
+        if (!t) return [];
+        const games = matches.filter(m => m.tournament_id === t.id && (m.home_team_name === p.name || m.away_team_name === p.name)).length;
+        return [{ id: t.id, name: t.name, status: t.status, games }];
+      });
+    return {
+      team,
+      captain: clubMembers.find(m => m.id === team.captain_id),
+      players: clubMembers.filter(m => (team.player_ids || []).includes(m.id)),
+      cups,
+    };
+  });
+
   return (
-    <div>
-      {/* Action Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '1.5rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}
-      >
+    <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
+      <div className="admin-head">
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 0.25rem 0' }}>
-            Internal Teams & Squads
-          </h2>
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            Sides picked from your members, for club tournaments and in-house matches. Your league teams are under Club Teams.
+          <h1 className="ihs-title"><Split size={24} aria-hidden="true" /> In-house sides</h1>
+          <p>
+            Your own members split into sides, for club cups and fun days. Registered teams like First team and Reserves stay on{' '}
+            <Link href={`/${club.slug}/admin/teams`} className="ihs-link">Club teams</Link>.
           </p>
         </div>
-
-        <button
-          onClick={handleOpenAdd}
-          className="btn btn-primary"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.65rem 1.1rem',
-            fontWeight: 700,
-            borderRadius: '8px',
-          }}
-        >
-          <Plus size={16} />
-          <span>Create Internal Team</span>
-        </button>
+        {clubInternalTeams.length > 0 && (
+          <div className="admin-head-actions">
+            <button type="button" onClick={handleOpenAdd} className="btn btn-primary btn-sm">
+              <Plus size={16} aria-hidden="true" />
+              <span>New side</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {feedback && (
-        <div
-          style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
-            color: 'var(--c-green)',
-            padding: '0.75rem 1rem',
-            borderRadius: '8px',
-            marginBottom: '1.25rem',
-            fontWeight: 700,
-            fontSize: '0.85rem',
-          }}
-        >
-          {feedback}
+        <div role="status" className="admin-flash">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>{feedback}</span>
         </div>
       )}
 
-      {/* Teams Grid */}
       {clubInternalTeams.length === 0 ? (
-        <div
-          style={{
-            background: 'rgba(var(--tint-rgb), 0.02)',
-            border: '1px solid rgba(var(--tint-rgb), 0.08)',
-            borderRadius: '14px',
-            padding: '3rem',
-            textAlign: 'center',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          <Shield size={36} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
-          <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)', fontWeight: 800 }}>
-            No Internal Teams Created
-          </h3>
-          <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem' }}>
-            Pick members into sides to run an in-house cup or a friendly tournament.
-          </p>
-          <button onClick={handleOpenAdd} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Plus size={15} />
-            <span>Create First Internal Team</span>
+        <div className="admin-panel admin-empty">
+          <b className="ihs-strong">No sides yet</b>
+          <ol className="ihs-steps">
+            <li>Make two or more sides, like Reds and Blues, and pick their players.</li>
+            <li>Set up a cup in <Link href={`/${club.slug}/admin/tournaments`} className="ihs-link">Tournaments and cups</Link> and tick your sides.</li>
+            <li>Score their games in Match Centre, under Tournaments.</li>
+          </ol>
+          <button type="button" onClick={handleOpenAdd} className="btn btn-primary btn-sm">
+            <Plus size={16} aria-hidden="true" />
+            <span>New side</span>
           </button>
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {clubInternalTeams.map(team => {
-            const captain = clubMembers.find(m => m.id === team.captain_id);
-            const teamPlayers = clubMembers.filter(m => (team.player_ids || []).includes(m.id));
-
-            return (
-              <div
-                key={team.id}
-                style={{
-                  background: 'rgba(var(--dk-15-23-42), 0.85)',
-                  border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-                  transition: 'transform 0.2s ease, border-color 0.2s ease',
-                }}
-              >
-                {/* Team Accent Color Bar */}
-                <div style={{ height: '4px', background: team.color || '#10B981', zIndex: 3 }} />
-
-                {/* Team Cover Photo Banner with Action Buttons */}
-                <div
-                  style={{
-                    height: '110px',
-                    width: '100%',
-                    background: team.cover_url
-                      ? `linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(var(--dk-15-23-42), 0.95) 100%), url(${team.cover_url})`
-                      : `linear-gradient(135deg, ${team.color || '#10B981'}40 0%, rgb(var(--dk-15-23-42)) 100%)`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    position: 'relative',
-                    padding: '0.75rem 1rem',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <span
-                    data-theme="dark" style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: 'rgba(0, 0, 0, 0.65)',
-                      backdropFilter: 'blur(8px)',
-                      color: team.color || 'var(--c-green)',
-                      border: `1px solid ${team.color || '#10B981'}50`,
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {team.short_name}
-                  </span>
-
-                  <div data-theme="dark" style={{ display: 'flex', gap: '0.35rem', background: 'rgba(0,0,0,0.5)', padding: '3px', borderRadius: '8px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <button
-                      onClick={() => handleOpenEdit(team)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-primary)',
-                        padding: '0.4rem',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                      title="Edit Team"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    <button data-needs-full
-                      onClick={() => handleDelete(team.id, team.name)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--c-red)',
-                        padding: '0.4rem',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                      title="Delete Team"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Team Info Header with Overlaid Crest */}
-                <div style={{ padding: '0 1.25rem 1.25rem 1.25rem', flex: 1, marginTop: '-26px', position: 'relative', zIndex: 2 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.85rem', marginBottom: '0.75rem' }}>
-                    <div
-                      style={{
-                        width: '52px',
-                        height: '52px',
-                        borderRadius: '12px',
-                        background: 'rgb(var(--dk-8-12-18))',
-                        border: `2px solid ${team.color || '#10B981'}`,
-                        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.7)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        padding: '4px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img loading="lazy" decoding="async"
-                        src={team.logo_url || DEFAULT_CREST}
-                        alt={`${team.name} crest`}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                      />
-                    </div>
-                    <div style={{ paddingBottom: '2px', minWidth: 0 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {team.name}
-                      </h3>
-                      {team.coach_name && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          Coach: {team.coach_name}
+        <>
+          {/* Wide screens: a table. Phones: one row per side (admin.css swaps them) */}
+          <div className="admin-panel admin-table-wrap ihs-table">
+            <table className="admin-table">
+              <thead>
+                <tr><th>Side</th><th>Captain</th><th className="is-num">Players</th><th>Players on it</th><th>Played in</th><th className="is-actions"><span className="sr-only">Actions</span></th></tr>
+              </thead>
+              <tbody>
+                {sides.map(({ team, captain, players, cups }) => (
+                  <tr key={team.id}>
+                    <td>
+                      <div className="ihs-side">
+                        <Crest team={team} />
+                        <div><b className="ihs-strong">{team.name}</b><small>{team.coach_name ? `Coach: ${team.coach_name}` : 'No coach yet'}</small></div>
+                      </div>
+                    </td>
+                    <td className={captain ? 'is-strong' : undefined}>{captain ? captain.full_name : 'Not picked'}</td>
+                    <td className="is-num">{players.length}</td>
+                    <td>
+                      <div className="ihs-roster">
+                        {players.slice(0, 4).map(p => <span key={p.id}>{p.full_name.split(' ')[0]}</span>)}
+                        {players.length > 4 && <span className="is-more">+{players.length - 4} more</span>}
+                        {players.length === 0 && <span className="is-more">No players yet</span>}
+                      </div>
+                    </td>
+                    <td>
+                      {cups.length === 0 ? 'Not in a cup yet' : cups.map(c => (
+                        <div key={c.id}>
+                          <Link href={`/${club.slug}/admin/tournaments/${c.id}`} className="ihs-link">{c.name}</Link>
+                          <small>{STATUS_WORD[c.status] || c.status}, {c.games} {c.games === 1 ? 'game' : 'games'}</small>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Captain & Stats Row */}
-                  <div
-                    style={{
-                      background: 'rgba(var(--shade-rgb), 0.3)',
-                      borderRadius: '8px',
-                      padding: '0.65rem 0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      fontSize: '0.75rem',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <div>
-                      <span className="text-muted">Captain: </span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
-                        {captain ? captain.full_name : 'Unassigned'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted">Squad Size: </span>
-                      <span style={{ color: 'var(--c-green)', fontWeight: 800 }}>
-                        {teamPlayers.length} Athletes
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Assigned Roster Preview */}
-                  <div>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Assigned Athletes ({teamPlayers.length})
-                    </span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.4rem' }}>
-                      {teamPlayers.slice(0, 8).map(player => (
-                        <span
-                          key={player.id}
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 600,
-                            padding: '2px 7px',
-                            background: 'rgba(var(--tint-rgb), 0.05)',
-                            border: '1px solid rgba(var(--tint-rgb), 0.08)',
-                            borderRadius: '12px',
-                            color: 'var(--text-primary)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                          }}
-                        >
-                          {player.player_position && (
-                            <span style={{ color: team.color || 'var(--c-green)', fontWeight: 800, fontSize: '0.7rem' }}>
-                              {player.player_position}
-                            </span>
-                          )}
-                          {player.full_name.split(' ')[0]}
-                        </span>
                       ))}
-                      {teamPlayers.length > 8 && (
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
-                          +{teamPlayers.length - 8} more
-                        </span>
-                      )}
-                      {teamPlayers.length === 0 && (
-                        <span className="text-meta">No players assigned yet.</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    </td>
+                    <td className="is-actions">
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(team)} aria-label={`Edit ${team.name}`}>Edit</button>
+                      <button type="button" data-needs-full className="admin-icon-btn is-danger" onClick={() => handleDelete(team.id, team.name)} aria-label={`Delete ${team.name}`}>
+                        <Trash2 size={16} aria-hidden="true" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
+          <ul className="admin-panel ihs-list">
+            {sides.map(({ team, captain, players, cups }) => (
+              <li key={team.id}>
+                <Crest team={team} />
+                <div className="ihs-list-body">
+                  <b className="ihs-strong">{team.name}</b>
+                  <p>{players.length} {players.length === 1 ? 'player' : 'players'}, {captain ? `captain ${captain.full_name}` : 'no captain yet'}</p>
+                  <p className="is-muted">{cups.length === 0 ? 'Not in a cup yet' : cups.map(c => `${c.name}, ${(STATUS_WORD[c.status] || c.status).toLowerCase()}`).join('; ')}</p>
+                </div>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(team)} aria-label={`Edit ${team.name}`}>Edit</button>
+                <button type="button" data-needs-full className="admin-icon-btn is-danger" onClick={() => handleDelete(team.id, team.name)} aria-label={`Delete ${team.name}`}>
+                  <Trash2 size={16} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <p className="ihs-tip">
+            A player can be on more than one side. To put a side in a cup, open the cup in{' '}
+            <Link href={`/${club.slug}/admin/tournaments`} className="ihs-link">Tournaments and cups</Link> and tick it under your own sides.
+          </p>
+        </>
+      )}
       {/* Create / Edit Team Modal */}
       {modalOpen && (
         <div
@@ -470,7 +310,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
               <div className="row">
                 <Shield size={18} color="var(--c-green)" />
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
-                  {editingTeam ? 'Edit Internal Team' : 'Create Internal Team'}
+                  {editingTeam ? `Edit ${editingTeam.name}` : 'New side'}
                 </h3>
               </div>
               <button type="button" aria-label="Close" className="icon-close" onClick={() => setModalOpen(false)}>
@@ -750,7 +590,7 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
                   className="btn btn-primary"
                   style={{ padding: '0.65rem 1.5rem', borderRadius: '8px', fontWeight: 800 }}
                 >
-                  {editingTeam ? 'Save Changes' : 'Create Team'}
+                  {editingTeam ? 'Save changes' : 'Add side'}
                 </button>
               </div>
             </form>
@@ -759,4 +599,12 @@ export default function InternalTeamsManager({ clubSlug }: InternalTeamsManagerP
       )}
     </div>
   );
+}
+
+// Same words as the Tournaments list
+const STATUS_WORD: Record<string, string> = { draft: 'Draft', ongoing: 'In progress', completed: 'Completed' };
+
+/** The side's short name in a frame of its colour (sides usually share the club crest, so the name tells them apart) */
+function Crest({ team }: { team: InternalTeam }) {
+  return <span className="ihs-crest" style={{ '--side': team.color || '#10B981' } as React.CSSProperties}>{team.short_name}</span>;
 }

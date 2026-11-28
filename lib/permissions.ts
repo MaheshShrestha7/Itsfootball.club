@@ -29,7 +29,7 @@ export const ACCESS_AREAS: AccessArea[] = [
   { key: 'match-center', label: 'Match Centre', group: 'Matchday' },
   { key: 'scanner', label: 'Gate Scanner', group: 'Matchday' },
   { key: 'matches', label: 'Fixtures & Results', group: 'Fixtures & Events' },
-  { key: 'tournaments', label: 'Tournaments & Cups, incl. Tournament Sides', group: 'Fixtures & Events' },
+  { key: 'tournaments', label: 'Tournaments & Cups, incl. In-house Sides', group: 'Fixtures & Events' },
   { key: 'events', label: 'Events & Training', group: 'Fixtures & Events' },
   { key: 'squad', label: 'People: everyone, incl. contact details (was Squad & Players)', group: 'Players & Teams' },
   { key: 'teams', label: 'Club Teams', group: 'Players & Teams' },
@@ -80,11 +80,13 @@ export function areaFromLocation(pathname: string, tab: string | null): string |
   if (area && (OPEN_ADMIN_PAGES as readonly string[]).includes(area)) return null;
   // Social media posts belong to whoever runs the News
   if (area === 'social') return 'content';
+  // In-house sides are only used in cups, so whoever runs Tournaments manages them (the database agrees)
+  if (area === 'sides') return 'tournaments';
   if (area !== 'people') return area;
   return (PEOPLE_MEMBER_TABS as readonly string[]).includes(tab || '') ? 'members' : 'squad';
 }
 
-/** Sent with the target hash ('#tournament-sides' or '') when an admin menu item is clicked; pages with hash tabs listen */
+/** Sent with the target hash (like '#junior-settings', or '') when an admin menu item is clicked; pages with hash sections listen */
 export const ADMIN_HASH_EVENT = 'admin-menu-hash';
 
 /** A member's squad labels ('Player, Treasurer' and/or ['Player', 'Treasurer']) */

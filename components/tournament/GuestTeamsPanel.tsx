@@ -306,7 +306,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                             {players.length || desk ? <Users size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
                             {desk ? `${players.filter(x => x.present).length} of ${players.length} here` : players.length ? `${players.length} player${players.length === 1 ? '' : 's'}` : 'Add players'}
                           </button>
-                        ) : <span className="ht-sub">From Tournament sides</span>}
+                        ) : <span className="ht-sub">From In-house sides</span>}
                       </td>
                     )}
                     {!isEvent && fee > 0 && (
