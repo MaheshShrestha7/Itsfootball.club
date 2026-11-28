@@ -274,6 +274,15 @@ export interface EntryPlayer {
   hide_public: boolean;
 }
 
+/** "7 Sam Patel", "Sam Patel, 7" or "Sam Patel" per line */
+export function parsePlayers(text: string): EntryPlayer[] {
+  return text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const m = /^(\d{1,2})[\s.,)-]+(.+)$/.exec(line) || /^(.+?)[\s,]+#?(\d{1,2})$/.exec(line);
+    const [name, num] = m ? (/^\d/.test(line) ? [m[2], m[1]] : [m[1], m[2]]) : [line, ''];
+    return { name: name.replace(/[,\t]+/g, ' ').trim().slice(0, 80), shirt_number: num ? Number(num) : null, position: null, is_junior: false, hide_public: false };
+  }).filter(p => p.name);
+}
+
 export interface EntryInput {
   manager_name: string | null;
   coach_name: string | null;

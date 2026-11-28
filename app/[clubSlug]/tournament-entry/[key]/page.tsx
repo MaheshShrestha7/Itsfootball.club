@@ -5,19 +5,10 @@ import Link from 'next/link';
 import { ArrowLeft, Check, CreditCard, Info, Lock, Plus, Shirt, Trash2, Trophy, Upload, Users, CalendarDays, ClipboardList } from 'lucide-react';
 import { DATE_LOCALE } from '@/lib/dates';
 import { DEFAULT_CREST, crestOnError } from '@/lib/crest';
-import { ENTRY_POSITIONS, money, type EntryPlayer } from '@/lib/hosted-tournaments';
+import { ENTRY_POSITIONS, money, parsePlayers, type EntryPlayer } from '@/lib/hosted-tournaments';
 import { juniorPublicName } from '@/lib/teams';
 import type { EntryView } from '@/lib/tournament-entries-server';
 import '@/components/tournament/hosted.css';
-
-/** "7 Sam Patel", "Sam Patel, 7" or "Sam Patel" per line */
-function parsePlayers(text: string): EntryPlayer[] {
-  return text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
-    const m = /^(\d{1,2})[\s.,)-]+(.+)$/.exec(line) || /^(.+?)[\s,]+#?(\d{1,2})$/.exec(line);
-    const [name, num] = m ? (/^\d/.test(line) ? [m[2], m[1]] : [m[1], m[2]]) : [line, ''];
-    return { name: name.replace(/[,\t]+/g, ' ').trim().slice(0, 80), shirt_number: num ? Number(num) : null, position: null, is_junior: false, hide_public: false };
-  }).filter(p => p.name);
-}
 
 const when = (iso: string) => new Date(iso).toLocaleString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
@@ -242,7 +233,7 @@ export default function TeamEntryPage({ params }: { params: Promise<{ clubSlug: 
               {!open ? <Lock size={18} aria-hidden="true" /> : submitted ? <Check size={18} aria-hidden="true" /> : <ClipboardList size={18} aria-hidden="true" />}
               <p>
                 {!open ? 'Entries have closed. Contact the host club to change anything.'
-                  : submitted ? `Sent ${view.entry.submitted_at ? when(view.entry.submitted_at) : ''}. You can still make changes${t.deadline ? ` until ${when(t.deadline)}` : ''}.`
+                  : submitted ? `${view.entry.submitted_at ? `Sent ${when(view.entry.submitted_at)}` : `${view.club.name} entered your team`}. You can still make changes${t.deadline ? ` until ${when(t.deadline)}` : ''}.`
                   : `Send it by ${t.deadline ? when(t.deadline) : 'the first game'}. Save as you go and come back to this link.`}
               </p>
             </section>

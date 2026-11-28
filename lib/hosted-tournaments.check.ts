@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { colorsClash, entryOpen, fairPlay, kitClashes, packKickoffs, parseEntry, parseTeamList, teamSummary } from './hosted-tournaments';
+import { colorsClash, entryOpen, fairPlay, kitClashes, packKickoffs, parseEntry, parsePlayers, parseTeamList, teamSummary } from './hosted-tournaments';
 import type { Match, MatchEvent, TournamentParticipant } from './supabase/types';
 
 const m = (id: string, home: string, away: string, over: Partial<Match> = {}): Match => ({
@@ -85,3 +85,10 @@ assert.equal(entryOpen({ entry_deadline: null, start_date: '' }), true);
 
 assert.equal(teamSummary('A', [m('g1', 'A', 'B', { status: 'completed', home_score: 1 })], []).finish, null, 'league: no "Group stage" claim');
 console.log('hosted-tournaments.check: ok');
+
+// parsePlayers: the "Paste a list" box on the entry page and in tournament admin
+{
+  const list = parsePlayers('7 Sam Patel\nLeo Brooks, 10\n\nAri Haddad');
+  assert.deepEqual(list.map(p => [p.shirt_number, p.name]), [[7, 'Sam Patel'], [10, 'Leo Brooks'], [null, 'Ari Haddad']]);
+  assert.equal(list.every(p => p.position === null && !p.is_junior && !p.hide_public), true);
+}
