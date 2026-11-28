@@ -1,7 +1,7 @@
 // Self-check for the tournament engine: plays every format end to end.
 // Run: npx esbuild lib/tournament-engine.check.ts --bundle --platform=node --log-level=warning | node
 import assert from 'node:assert/strict';
-import { buildTiesheet, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted, tournamentHalfMinutes } from './tournament-engine';
+import { buildTiesheet, shuffleUnseeded, resolveTournament, effectiveGroupRules, upgradeLegacyMatches, parseTournamentDate, compareTournamentMatches, clubLineupSide, fixtureWhenLabel, clubSidePlayers, sideShortName, sideColor, OPPONENT_COLOR, tournamentMatchLabel, runSheetMove, computeStandings, tieBreakerLine, knockoutLockReason, knockoutStarted, tournamentHalfMinutes } from './tournament-engine';
 import type { ClubMember, InternalTeam, Match, Tournament, TournamentFormat, TournamentParticipant } from './supabase/types';
 
 function play(format: TournamentFormat, teams: number, groupCount = 2, advancing = 2, thirdPlace = true) {
@@ -316,3 +316,16 @@ assert.deepEqual(runSheetMove(['a', 'b'], 0, 5), ['a', 'b'], 'out of range: unch
   assert.deepEqual(table.find(r => r.name === 'A')!.form, ['W', 'L'], 'form follows kick-off time');
 }
 console.log('tournament engine: game length + form order OK');
+
+// Seeds are optional: hand-set seeds lead the draw, nobody gets a made-up seed, no "Seed #N" on the bracket
+{
+  const cup = { id: 't-seed', club_id: 'c', name: 'Cup', season: '2026', format: 'knockout', status: 'draft', points_win: 3, points_draw: 1, points_loss: 0, start_date: '2026-12-01T09:00:00Z', end_date: '2026-12-01T17:00:00Z' } as Tournament;
+  const teams = ['A', 'B', 'C', 'D'].map((n, i) => ({ id: n, tournament_id: 't-seed', team_type: 'external' as const, name: n, short_name: n, logo_url: '', seed: n === 'C' ? 1 : undefined, _i: i }));
+  const sheet = buildTiesheet(cup, teams);
+  assert.equal(sheet.participants[0].name, 'C', 'seed 1 goes first');
+  assert.deepEqual(sheet.participants.map(p => p.seed ?? null), [1, null, null, null], 'no invented seeds');
+  assert.ok(sheet.matches.every(m => !m.home_team_source?.startsWith('Seed') && !m.away_team_source?.startsWith('Seed')), 'no seed labels');
+  const mixed = shuffleUnseeded(teams);
+  assert.deepEqual(mixed.map(t => t.name).sort(), ['A', 'B', 'C', 'D'], 'shuffle keeps every team');
+}
+console.log('tournament engine: optional seeds OK');

@@ -382,11 +382,6 @@ export default function PublicTournamentDetailPage({
                     {part.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
-                    {part.seed && (
-                      <span className="text-meta">
-                        Seed #{part.seed}
-                      </span>
-                    )}
                     {part.group && (
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
                         Group {part.group}

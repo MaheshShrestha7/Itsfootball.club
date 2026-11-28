@@ -392,6 +392,16 @@ export function effectiveGroupRules(tournament: Pick<Tournament, 'group_count' |
   return { groupCount, advancing };
 }
 
+/** Random order for teams with no seed (an open draw); seeded teams are placed by buildTiesheet's sort */
+export function shuffleUnseeded<T extends { seed?: number | null }>(participants: T[]): T[] {
+  const out = [...participants];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /**
  * Builds the complete fixture list for a tournament. Pure: returns new participants
  * (with seeds / groups) and any rule corrections instead of mutating the inputs.
@@ -414,10 +424,8 @@ export function buildTiesheet(
       .sort((a, b) => (a.p.seed ?? 999) - (b.p.seed ?? 999) || a.idx - b.idx)
       .map(x => x.p);
   }
-  participants.forEach((p, idx) => {
-    p.seed = idx + 1;
-    p.group = undefined;
-  });
+  // Seeds are optional and only set by the host: the draw order is not written back as seeds
+  participants.forEach(p => { p.group = undefined; });
 
   if (participants.length < 2) return { matches: [], participants, tournamentUpdates: {} };
   // The free maker passes its own slot length; a club tournament with a match length gets the
@@ -432,7 +440,7 @@ export function buildTiesheet(
   };
 
   if (tournament.format === 'knockout') {
-    const entries = participants.map(p => ({ name: p.name, logo: p.logo_url || DEFAULT_CREST, source: `Seed #${p.seed}` }));
+    const entries = participants.map(p => ({ name: p.name, logo: p.logo_url || DEFAULT_CREST, source: '' }));
     const when = scheduler(tournament, knockoutRoundCount(entries.length));
     return { matches: timed(buildBracket(tournament, entries, when, 0, 1)), participants, tournamentUpdates: {} };
   }

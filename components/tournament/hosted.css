@@ -711,3 +711,4 @@ button.tp-team { background: none; border: 0; padding: 0; cursor: pointer; }
 .ht-row-note { display: flex; align-items: flex-start; gap: 0.35rem; flex-basis: 100%; margin: 0.5rem 0 0 !important; white-space: normal; text-align: left; font-size: 0.8125rem; font-weight: 600; line-height: 1.4; color: var(--c-green); }
 .ht-row-note[data-tone='error'] { color: var(--c-red); }
 .ht-row-note > svg { flex: none; margin-top: 0.15rem; }
+.ht-seed-input { width: 5.5rem; }

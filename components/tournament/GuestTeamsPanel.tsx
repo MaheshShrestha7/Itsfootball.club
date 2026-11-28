@@ -249,6 +249,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
               <tr>
                 <th scope="col">Team</th>
                 {grouped && <th scope="col">Group</th>}
+                <th scope="col" title="Optional. Keeps top teams apart in the draw. Leave blank for a random draw.">Seed (optional)</th>
                 {!isEvent && <th scope="col">Entry</th>}
                 {!isEvent && <th scope="col">Players</th>}
                 {!isEvent && fee > 0 && <th scope="col">Entry fee</th>}
@@ -292,6 +293,11 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                         </select>
                       </td>
                     )}
+                      <td data-label="Seed (optional)">
+                        <input type="number" inputMode="numeric" min={1} max={participants.length} className="ht-group-select ht-seed-input"
+                          value={p.seed ?? ''} placeholder="None" aria-label={`Seed for ${p.name} (optional)`}
+                          onChange={ev => { const n = parseInt(ev.target.value, 10); updateTournamentParticipant(p.id, { seed: n > 0 ? n : undefined }); }} />
+                      </td>
                     {!isEvent && <td data-label="Entry">{guest ? <span className="ht-state" data-tone={status.tone}>{e?.status === 'submitted' && !e.submitted_at ? 'Entered by you' : status.label}</span> : <span className="ht-sub">Club squad</span>}</td>}
                     {!isEvent && (
                       <td data-label="Players">
@@ -372,6 +378,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
               })}
             </tbody>
           </table>
+          <p className="ht-hint">Seeds are optional. They keep the top teams apart in the draw, so seeds 1 and 2 start in different groups. Leave them blank and the draw is random. Seeds only show here, never on the public page.</p>
         </div>
       )}
       {!participants.length && <p className="ht-empty">No teams yet. Add the clubs coming to your tournament, then generate the tiesheet.</p>}
@@ -389,7 +396,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
           onClose={() => setEditing(null)}
           onSave={async (fields, contact, pick) => {
             if (editing === 'new') {
-              const created = addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', seed: participants.length + 1, ...fields });
+              const created = addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', ...fields });
               if (pick) {
                 saveAfterTeam(async () => {
                   const err = await saveLink(created.id, pick);
@@ -428,7 +435,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
           onClose={() => setBulkOpen(false)}
           onAdd={list => {
             const created = list.map((t, i) => ({
-              team: addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', name: t.name, short_name: shortCode(t.name), logo_url: DEFAULT_CREST, seed: participants.length + i + 1 }),
+              team: addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', name: t.name, short_name: shortCode(t.name), logo_url: DEFAULT_CREST }),
               email: t.email,
             }));
             const withEmail = created.filter(c => c.email);
