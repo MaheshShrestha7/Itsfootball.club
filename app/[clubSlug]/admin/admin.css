@@ -1532,3 +1532,47 @@ a.admin-tab { text-decoration: none; }
   .efx-unlink { width: 40px; height: 40px; padding: 0; justify-content: center; }
   .efx-unlink-label { display: none; }
 }
+
+/* Tournament cards (admin Tournaments list). The photo keeps a fixed dark shade at the bottom only:
+   the admin's own tokens flip per theme, which washed the photo white in light mode. */
+.admin-shell .admin-tcard { position: relative; display: flex; flex-direction: column; min-width: 0; background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: var(--radius-card); }
+.admin-shell .admin-tcard-hero { position: relative; height: 120px; display: flex; align-items: flex-end; padding: 0.85rem 1.1rem; overflow: hidden; border-radius: var(--radius-card) var(--radius-card) 0 0; background: var(--club-secondary) center / cover no-repeat; }
+.admin-shell .admin-tcard-hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, oklch(12% 0.01 250 / 0.85), oklch(12% 0.01 250 / 0.15) 65%, transparent); }
+.admin-shell .admin-tcard-hero.is-plain { background: linear-gradient(135deg, var(--club-primary), color-mix(in oklab, var(--club-primary) 55%, var(--club-secondary))); }
+.admin-shell .admin-tcard-hero.is-plain::before { display: none; }
+.admin-shell .admin-tcard-hero h3 { position: relative; display: flex; align-items: center; gap: 0.45rem; min-width: 0; margin: 0; overflow-wrap: break-word; color: #fff; font-family: var(--font-heading); font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+.admin-shell .admin-tcard-hero h3 svg { flex: none; }
+.admin-tcard-body { flex: 1; display: flex; flex-direction: column; gap: 0.7rem; padding: 0.95rem 1.1rem 1rem; }
+.admin-tcard-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--text-sm); font-weight: 600; color: var(--color-ink); }
+.admin-pill.is-done { background: var(--color-ok-wash); color: var(--color-ok); }
+.admin-tcard-date { display: flex; align-items: center; gap: 0.4rem; font-size: var(--text-xs); color: var(--color-ink-2); }
+.admin-tcard-desc { margin: 0; font-size: var(--text-sm); line-height: 1.4; color: var(--color-ink-2); }
+.admin-tcard-prog { display: grid; gap: 0.4rem; }
+.admin-tcard-prog > div:first-child { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; font-size: var(--text-sm); color: var(--color-ink-2); }
+.admin-tcard-prog b { color: var(--color-ink); font-variant-numeric: tabular-nums; }
+.admin-tcard-bar { height: 6px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-paper-3); }
+.admin-tcard-bar i { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); }
+.admin-tcard-bar.is-done i { background: var(--color-ok); }
+.admin-tcard-next { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border: 1px solid var(--color-rule); border-radius: 10px; background: var(--color-paper-3); color: var(--color-ink); font-size: var(--text-sm); text-decoration: none; }
+.admin-tcard-next > span { flex: 1; min-width: 0; overflow-wrap: break-word; }
+.admin-tcard-next small { display: block; font-size: var(--text-xs); color: var(--color-ink-2); }
+.admin-tcard-next svg { flex: none; }
+.admin-tcard-next.is-warn { background: var(--color-warn-wash); border-color: color-mix(in oklab, var(--color-warn) 30%, transparent); }
+.admin-tcard-next.is-warn > svg:first-child { color: var(--color-warn); }
+.admin-tcard-next:hover { border-color: var(--color-muted); }
+.admin-tcard-foot { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.1rem; border-top: 1px solid var(--color-rule); }
+.admin-tcard-foot .btn { margin-left: auto; }
+.admin-tcard-pub { display: inline-flex; white-space: nowrap; align-items: center; gap: 0.3rem; font-size: var(--text-xs); color: var(--color-ink-2); }
+.admin-tcard-more { position: relative; }
+.admin-tcard-more-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--color-rule); border-radius: 8px; background: transparent; color: var(--color-ink-2); cursor: pointer; }
+.admin-tcard-more-btn:hover, .admin-tcard-more-btn[aria-expanded='true'] { background: var(--color-paper-3); color: var(--color-ink); }
+.admin-tcard-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; min-width: 240px; padding: 0.3rem; white-space: nowrap; border: 1px solid var(--color-rule); border-radius: 10px; background: var(--color-paper-2); box-shadow: 0 12px 32px oklch(10% 0.01 250 / 0.25); }
+.admin-tcard-menu button { width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.6rem; border: 0; border-radius: 6px; background: none; color: var(--color-ink); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; }
+.admin-tcard-menu button:hover { background: var(--color-paper-3); }
+.admin-tcard-menu button.is-danger { color: var(--color-danger); }
+.admin-tcard-next:focus-visible, .admin-tcard-pub:focus-visible, .admin-tcard-more-btn:focus-visible, .admin-tcard-menu button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@media (max-width: 440px) {
+  .admin-tcard-foot { flex-wrap: wrap; }
+  .admin-tcard-foot .btn { order: -1; flex: 1 1 100%; justify-content: center; margin-left: 0; }
+  .admin-tcard-menu { top: calc(100% + 6px); bottom: auto; }
+}

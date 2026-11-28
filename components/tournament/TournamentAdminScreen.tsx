@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useClub } from '@/lib/club-context';
 import { Match } from '@/lib/supabase/types';
@@ -39,6 +40,9 @@ const pill = (tone: string): React.CSSProperties => ({
 });
 
 /** A tournament's admin screen: on a club's admin pages, and on /tournaments/{slug}/manage for public tournaments */
+const TAB_IDS = ['bracket', 'standings', 'fixtures', 'teams', 'fairplay', 'sponsors'] as const;
+type TabId = typeof TAB_IDS[number];
+
 export default function TournamentAdminScreen({ clubSlug, tournamentId }: { clubSlug: string; tournamentId: string }) {
   const {
     clubs,
@@ -67,8 +71,9 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
 
-  // Teams is the first tab, so the screen opens on it
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay' | 'sponsors'>('teams');
+  // Teams is the first tab, so the screen opens on it, unless a Tournaments list card links to one (?tab=fixtures)
+  const tabParam = useSearchParams().get('tab');
+  const [activeTab, setActiveTab] = useState<TabId>(() => TAB_IDS.find(t => t === tabParam) ?? 'teams');
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [runSheet, setRunSheet] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
