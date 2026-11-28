@@ -650,7 +650,7 @@ button.tp-team { background: none; border: 0; padding: 0; cursor: pointer; }
 .tp-ov-crests button:hover, .tp-ov-table button:hover { background: rgba(var(--club-primary-rgb), 0.08); }
 .tp-ov-crests button:focus-visible, .tp-ov-table button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: -2px; }
 .tp-ov-crests img { width: 36px; height: 36px; object-fit: contain; flex: none; }
-.tp-ov-crests span, .tp-ov-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-ov-crests span, .tp-ov-t { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
 .tp-ov-stage p { margin: 0; color: var(--text-secondary); line-height: 1.5; }
 .tp-ov-stage b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .tp-ov-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.75rem; padding: 0; }

@@ -265,10 +265,8 @@ export default function TournamentBracketView({
                                     fontSize: '0.8rem',
                                     fontWeight: isHomeWinner ? 800 : 600,
                                     color: isHomeWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : 'var(--text-primary)',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '135px',
+                                    overflowWrap: 'anywhere',
+                                    lineHeight: 1.25,
                                   }}
                                 >
                                   {match.home_team_name}
@@ -325,10 +323,8 @@ export default function TournamentBracketView({
                                     fontSize: '0.8rem',
                                     fontWeight: isAwayWinner ? 800 : 600,
                                     color: isAwayWinner ? 'var(--text-primary)' : isCompleted ? 'rgba(var(--tint-rgb), 0.6)' : 'var(--text-primary)',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '135px',
+                                    overflowWrap: 'anywhere',
+                                    lineHeight: 1.25,
                                   }}
                                 >
                                   {match.away_team_name}
