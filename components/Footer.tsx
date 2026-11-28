@@ -12,6 +12,7 @@ import { BrandIcon, BrandWordmark } from './BrandLogo';
 import { sponsorLabel } from '@/lib/sponsors';
 import { featureOn } from '@/lib/club-features';
 import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
+import { clubSocials } from '@/lib/club-socials';
 
 interface FooterProps {
   club?: Club | null;
@@ -244,6 +245,26 @@ export default function Footer({ club, sponsors, compact = false }: FooterProps)
                     <Phone size={14} color="var(--club-primary)" /> {club.contact_phone}
                   </span>
                 )}
+              </div>
+            )}
+            {club && clubSocials(club.config).length > 0 && (
+              <div className="row" style={{ gap: '0.6rem', marginTop: '1.1rem', flexWrap: 'wrap' }}>
+                {clubSocials(club.config).map(s => (
+                  <a
+                    key={s.key}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer me"
+                    aria-label={`${club.name} on ${s.name} (opens in a new tab)`}
+                    title={s.name}
+                    className="social-icon-link"
+                    style={{ '--brand': s.color } as React.CSSProperties}
+                  >
+                    <svg viewBox="0 0 24 24" width={18} height={18} fill="currentColor" aria-hidden="true">
+                      <path d={s.path} />
+                    </svg>
+                  </a>
+                ))}
               </div>
             )}
           </div>

@@ -1138,6 +1138,24 @@ textarea {
   border-color: var(--brand);
 }
 
+.social-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.95rem 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(var(--tint-rgb), 0.04);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: border-color 0.15s ease;
+}
+.social-chip svg { color: var(--brand); flex-shrink: 0; }
+.social-chip:hover,
+.social-chip:focus-visible { border-color: var(--brand); }
+
 .sponsor-marquee-item img {
   height: 60px;
   max-width: 210px;

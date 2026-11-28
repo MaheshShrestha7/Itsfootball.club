@@ -77,6 +77,9 @@ const clubEntity = clubData['@graph'].find(n => n.name === 'Ashfield FC' && Arra
 assert.ok(clubEntity, 'Club entity node must exist');
 assert.ok(clubEntity['@type'].includes('SportsClub'), 'Club must include SportsClub in @type');
 assert.ok(clubEntity['@type'].includes('SportsOrganization'), 'Club must include SportsOrganization in @type');
+assert.equal(clubEntity.sameAs, undefined, 'No social pages: no sameAs');
+const withSocials = clubSchema({ ...mockClub, config: { socials: { instagram: 'https://instagram.com/ashfieldfc', x: 'javascript:alert(1)' } } }) as { '@graph': any[] };
+assert.deepEqual(withSocials['@graph'].find(n => Array.isArray(n['@type'])).sameAs, ['https://instagram.com/ashfieldfc'], 'Club sameAs lists only its valid social pages');
 
 // 3. SportsEvent on live match fixtures
 const liveMatchEvent = clubData['@graph'].find(n => n['@type'] === 'SportsEvent' && n.name === 'Ashfield FC vs Burwood FC');
