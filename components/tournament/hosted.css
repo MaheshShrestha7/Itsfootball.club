@@ -706,3 +706,8 @@ button.tp-team { background: none; border: 0; padding: 0; cursor: pointer; }
 .tp-ov-prizes span { display: inline-flex; align-items: center; gap: 0.4rem; }
 .tp-ov-contact a { gap: 0.4rem; }
 .tp-ov-stage h3 { margin-bottom: 0.75rem; }
+
+/* One team's answer under its row buttons (Email link) */
+.ht-row-note { display: flex; align-items: flex-start; gap: 0.35rem; flex-basis: 100%; margin: 0.5rem 0 0 !important; white-space: normal; text-align: left; font-size: 0.8125rem; font-weight: 600; line-height: 1.4; color: var(--c-green); }
+.ht-row-note[data-tone='error'] { color: var(--c-red); }
+.ht-row-note > svg { flex: none; margin-top: 0.15rem; }

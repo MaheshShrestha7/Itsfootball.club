@@ -7,7 +7,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Plus, Pencil, Trash2, Link2, Copy, Check, Mail, Users, CreditCard, ClipboardCheck, Send, AlertTriangle, Info, X, RefreshCw, Shirt, Search, Unlink,
+  Plus, Pencil, Trash2, Link2, Copy, Check, Mail, Users, CreditCard, ClipboardCheck, Send, AlertTriangle, Info, X, RefreshCw, Shirt, Search, Unlink, Loader2,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { DEFAULT_CREST, crestOnError } from '@/lib/crest';
@@ -60,6 +60,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
   const [desk, setDesk] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [rowNote, setRowNote] = useState<{ id: string; tone: 'success' | 'error'; text: string } | null>(null);
 
   const entryOf = (id: string) => hosted.entries.find(e => e.participant_id === id);
   const playersOf = (id: string) => hosted.squads.filter(s => s.participant_id === id);
@@ -114,6 +115,22 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
     const skipped = res.skipped?.length ? ` No email address for ${res.skipped.join(', ')}: copy their link instead.` : '';
     onFeedback(res.sent ? 'success' : 'error', `${res.sent ? `Sent to ${res.sent} team${res.sent === 1 ? '' : 's'}.` : 'Nothing sent.'}${skipped}${res.error && res.sent ? ` ${res.error}` : ''}`);
   });
+
+  // One team's link, from its row. The answer shows on that row: the page banner is off screen on a phone.
+  const emailLink = async (p: TournamentParticipant, to: string) => {
+    if (!(await confirmAction({
+      title: `Email ${p.name} their entry link?`,
+      message: `It goes to ${to}. They use the link to enter their players, staff and contact details for this tournament.`,
+      confirmLabel: 'Send email',
+    }))) return;
+    setRowNote(null);
+    await run(`email-${p.id}`, async () => {
+      const res = await hosted.act(club.id, 'invite', [p.id]);
+      setRowNote(res.sent
+        ? { id: p.id, tone: 'success', text: `Entry link emailed to ${to}.` }
+        : { id: p.id, tone: 'error', text: res.error || (res.skipped?.length ? 'Their email address doesn\'t look right. Check it in Edit, or copy the link and send it yourself.' : 'That didn\'t send. Copy the link and send it yourself.') });
+    });
+  };
 
   const bill = () => run('bill', async () => {
     const res = await hosted.act(club.id, 'bill');
@@ -324,10 +341,17 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                             {copied === p.id ? <Check size={14} aria-hidden="true" /> : <Link2 size={14} aria-hidden="true" />}
                             <span>{copied === p.id ? 'Copied' : e?.entry_key ? 'Copy link' : 'Make link'}</span>
                           </button>
-                          <button type="button" className="ht-icon-btn" disabled={!!busy} onClick={() => email('invite', [p.id])}
-                            aria-label={`Email the link to ${p.name}`} title={e?.contact_email ? `Email the link to ${e.contact_email}` : 'Add their contact email first'}>
-                            <Mail size={16} aria-hidden="true" />
-                          </button>
+                          {e?.contact_email ? (
+                            <button type="button" className="btn btn-sm btn-secondary" style={btn} disabled={!!busy} onClick={() => emailLink(p, e.contact_email!)}>
+                              {busy === `email-${p.id}` ? <Loader2 size={14} aria-hidden="true" className="spin" /> : <Mail size={14} aria-hidden="true" />}
+                              <span>{busy === `email-${p.id}` ? 'Sending…' : 'Email link'}</span>
+                            </button>
+                          ) : (
+                            <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setEditing(p)}
+                              title="Their entry link is emailed to the contact. Add an email to send it.">
+                              <Mail size={14} aria-hidden="true" /><span>Add email</span>
+                            </button>
+                          )}
                         </>
                       )}
                       <button type="button" className="ht-icon-btn" onClick={() => setEditing(p)} aria-label={`Edit ${p.name}`} title="Edit">
@@ -336,6 +360,12 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                       <button type="button" className="ht-icon-btn is-danger" onClick={() => remove(p)} aria-label={`Remove ${p.name}`} title="Remove">
                         <Trash2 size={16} aria-hidden="true" />
                       </button>
+                      {rowNote?.id === p.id && (
+                        <p className="ht-row-note" data-tone={rowNote.tone} role={rowNote.tone === 'error' ? 'alert' : 'status'}>
+                          {rowNote.tone === 'error' ? <AlertTriangle size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
+                          <span>{rowNote.text}</span>
+                        </p>
+                      )}
                     </td>
                   </tr>
                 );
