@@ -17,6 +17,7 @@ import TieBreakersEditor from '@/components/tournament/TieBreakersEditor';
 import { confirmAction } from '@/components/ConfirmDialog';
 import PopupPanel from '@/components/PopupPanel';
 import { TeamEditor, type ContactFields } from '@/components/tournament/GuestTeamsPanel';
+import { saveLink, useLinksReady, type LinkPick } from '@/lib/tournament-links';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import { isEventClub } from '@/lib/public-tournaments';
 import '@/components/tournament/hosted.css';
@@ -103,6 +104,9 @@ export default function TournamentFormModal({
   const [contacts, setContacts] = useState<Record<string, ContactFields>>({});
   const [sending, setSending] = useState(false);
   const askContacts = hosted && !isEdit && !isEventClub(club);
+  // Guest clubs picked from "Find a club on itsfootball.club", by lower-case name; linked once the teams are saved
+  const [picks, setPicks] = useState<Record<string, LinkPick>>({});
+  const linksReady = useLinksReady(askContacts);
   const emailCount = askContacts ? externalTeams.filter(t => contacts[t.name.toLowerCase()]?.contact_email).length : 0;
   const [error, setError] = useState<string | null>(null);
 
@@ -178,6 +182,19 @@ export default function TournamentFormModal({
 
   /** After create: each guest's contact goes on its private entry (which makes its entry link);
    *  with sendInvites, the clubs with an email get their link straight away */
+  // Links the guest clubs picked from the search, once their team rows exist
+  const saveLinks = async (tournamentId: string): Promise<string> => {
+    const db = getSupabaseClient();
+    if (!db) return '';
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await saveNow();
+    const { data: teams } = await db.from('tournament_participants').select('id, name').eq('tournament_id', tournamentId);
+    const todo = (teams || []).filter(t => picks[t.name.toLowerCase()]);
+    const errors = (await Promise.all(todo.map(t => saveLink(t.id, picks[t.name.toLowerCase()])))).filter(Boolean);
+    if (errors.length) return ' Some clubs didn\'t link: open Edit on the Teams tab to try again.';
+    return todo.length ? ` ${todo.length} club${todo.length === 1 ? '' : 's'} on itsfootball.club got an invitation to accept.` : '';
+  };
+
   const saveContacts = async (tournamentId: string, sendInvites: boolean): Promise<string> => {
     const db = getSupabaseClient();
     if (!db) return ' Add the club emails on the Teams tab.';
@@ -270,7 +287,8 @@ export default function TournamentFormModal({
         // The draw waits: clubs enter first, the host presses Generate tiesheet when the teams are in
         { noDraw: true }
       );
-      const emailNote = askContacts && Object.keys(contacts).length ? await saveContacts(created.id, sendInvites) : '';
+      const linkNote = Object.keys(picks).length ? await saveLinks(created.id) : '';
+      const emailNote = (askContacts && Object.keys(contacts).length ? await saveContacts(created.id, sendInvites) : '') + linkNote;
       if (ageGroupOf) {
         onSaved(`✓ Added the ${ageGroup.trim() || fields.name} age group. Add its teams on the Teams tab.`);
         return;
@@ -642,7 +660,8 @@ export default function TournamentFormModal({
               <ul className="ht-setup-list">
                 {externalTeams.map((ext, idx) => {
                   const email = contacts[ext.name.toLowerCase()]?.contact_email;
-                  const staff = [email, ext.manager_name && `Manager ${ext.manager_name}`, ext.coach_name && `coach ${ext.coach_name}`].filter(Boolean).join(', ');
+                  const pick = picks[ext.name.toLowerCase()];
+                  const staff = [pick && `Linked to ${pick.club_name}`, email, ext.manager_name && `Manager ${ext.manager_name}`, ext.coach_name && `coach ${ext.coach_name}`].filter(Boolean).join(', ');
                   return (
                     <li key={`${ext.name}-${idx}`}>
                       <span className="ht-crest" style={{ width: 36, height: 36, '--ht-c1': ext.color || undefined, '--ht-c2': ext.secondary_color || ext.color || undefined } as React.CSSProperties}>
@@ -653,7 +672,7 @@ export default function TournamentFormModal({
                         <span className="ht-sub">{staff || (ext.logo_url && ext.logo_url !== DEFAULT_CREST ? ext.short_name : 'Add crest, colours and staff')}</span>
                       </button>
                       <button type="button" className="ht-icon-btn" aria-label={`Edit ${ext.name}`} onClick={() => setEditingGuest(idx)}><Pencil size={15} aria-hidden="true" /></button>
-                      <button type="button" className="ht-icon-btn is-danger" aria-label={`Remove ${ext.name}`} onClick={() => { setExternalTeams(prev => prev.filter((_, i) => i !== idx)); setContacts(prev => { const next = { ...prev }; delete next[ext.name.toLowerCase()]; return next; }); }}><X size={15} aria-hidden="true" /></button>
+                      <button type="button" className="ht-icon-btn is-danger" aria-label={`Remove ${ext.name}`} onClick={() => { setExternalTeams(prev => prev.filter((_, i) => i !== idx)); setContacts(prev => { const next = { ...prev }; delete next[ext.name.toLowerCase()]; return next; }); setPicks(prev => { const next = { ...prev }; delete next[ext.name.toLowerCase()]; return next; }); }}><X size={15} aria-hidden="true" /></button>
                     </li>
                   );
                 })}
@@ -726,9 +745,18 @@ export default function TournamentFormModal({
               ...ownIds.map(id => clubInternalTeams.find(t => t.id === id)?.name.toLowerCase() || ''),
               ...externalTeams.filter((_, i) => i !== editingGuest).map(t => t.name.toLowerCase()),
             ]}
+            canLink={linksReady}
             onClose={() => setEditingGuest(null)}
-            onSave={(fields, contact) => {
+            onSave={(fields, contact, pick) => {
               const old = editingGuest === 'new' ? null : externalTeams[editingGuest].name.toLowerCase();
+              // A renamed team keeps its link; a new one picked from the search adds it
+              setPicks(prev => {
+                const next = { ...prev };
+                const kept = old ? next[old] : undefined;
+                if (old) delete next[old];
+                if (pick || kept) next[fields.name.toLowerCase()] = (pick || kept)!;
+                return next;
+              });
               setContacts(prev => {
                 const next = { ...prev };
                 if (old) delete next[old];

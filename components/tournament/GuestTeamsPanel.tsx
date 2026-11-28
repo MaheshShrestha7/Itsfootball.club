@@ -4,10 +4,10 @@
 // staff and contact; each team's private entry link; entry fees; the check-in desk on the day; kit
 // clashes. Shown once migration 20261180 has run (the old list shows before it).
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Plus, Pencil, Trash2, Link2, Copy, Check, Mail, Users, CreditCard, ClipboardCheck, Send, AlertTriangle, Info, X, RefreshCw, Shirt,
+  Plus, Pencil, Trash2, Link2, Copy, Check, Mail, Users, CreditCard, ClipboardCheck, Send, AlertTriangle, Info, X, RefreshCw, Shirt, Search, Unlink,
 } from 'lucide-react';
 import { useClub } from '@/lib/club-context';
 import { DEFAULT_CREST, crestOnError } from '@/lib/crest';
@@ -17,6 +17,8 @@ import PopupPanel from '@/components/PopupPanel';
 import { GROUP_LETTERS, effectiveGroupRules } from '@/lib/tournament-engine';
 import { kitClashes, money, parseTeamList, shortCode, kickoffLabel } from '@/lib/hosted-tournaments';
 import { useTournamentEntries } from '@/lib/use-tournament-entries';
+import { findClubs, removeLink, saveLink, useTournamentLinks, type FoundClub, type LinkPick, type TournamentLink } from '@/lib/tournament-links';
+import { ourSide } from '@/lib/friendlies';
 import type { Club, Match, Tournament, TournamentEntry, TournamentParticipant } from '@/lib/supabase/types';
 import '@/components/tournament/hosted.css';
 
@@ -51,6 +53,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
 }) {
   const { addTournamentParticipant, updateTournamentParticipant, deleteTournamentParticipant, deleteMatch, saveTournament, saveNow } = useClub();
   const hosted = useTournamentEntries(tournament.id, !isEvent);
+  const linking = useTournamentLinks(isEvent ? undefined : tournament.id);
   const [editing, setEditing] = useState<TournamentParticipant | 'new' | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [squadOf, setSquadOf] = useState<TournamentParticipant | null>(null);
@@ -244,6 +247,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                 const billInfo = e?.payment_id ? hosted.bills[e.payment_id] : undefined;
                 const guest = p.team_type === 'external';
                 const here = !!e?.checked_in_at;
+                const linkOf = linking.linkOf(p.id);
                 const staff = [p.manager_name && `Manager ${p.manager_name}`, p.coach_name && `coach ${p.coach_name}`].filter(Boolean).join(', ');
                 return (
                   <tr key={p.id} data-here={desk && here ? 'true' : undefined}>
@@ -253,8 +257,9 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                         <div className="min-w-0">
                           <div className="ht-name">{p.name}</div>
                           <div className="ht-sub">
-                            {guest ? 'Guest club' : 'Our team'}{staff ? `. ${staff}` : ''}
+                            {linkOf ? <><Link2 size={12} aria-hidden="true" className="ht-inline-icon" />Linked to {linkOf.linked?.name || 'a club on itsfootball.club'}</> : guest ? 'Guest club' : 'Our team'}{staff ? `. ${staff}` : ''}
                           </div>
+                          {linkOf && <span className="ht-state" data-tone={LINK_STATUS[linkOf.status].tone}>{linkOf.status === 'pending' ? `Waiting for ${linkOf.linked?.name || 'them'} to accept` : LINK_STATUS[linkOf.status].label}</span>}
                           {guest && !isEvent && (e?.contact_name || e?.contact_email || e?.contact_phone) && (
                             <div className="ht-sub">Contact: {[e?.contact_name, e?.contact_email, e?.contact_phone].filter(Boolean).join(', ')}</div>
                           )}
@@ -349,19 +354,33 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
           entry={editing === 'new' ? undefined : entryOf(editing.id)}
           isEvent={isEvent}
           taken={participants.filter(p => editing === 'new' || p.id !== editing.id).map(p => p.name.toLowerCase())}
+          canLink={linking.ready}
+          link={editing === 'new' ? undefined : linking.linkOf(editing.id)}
           onClose={() => setEditing(null)}
-          onSave={async (fields, contact) => {
+          onSave={async (fields, contact, pick) => {
             if (editing === 'new') {
               const created = addTournamentParticipant({ tournament_id: tournament.id, team_type: 'external', seed: participants.length + 1, ...fields });
+              if (pick) {
+                saveAfterTeam(async () => {
+                  const err = await saveLink(created.id, pick);
+                  if (err) onFeedback('error', `Added ${fields.name}, but not linked to ${pick.club_name}: ${err}`);
+                  linking.reload();
+                });
+              }
               if (!isEvent && (contact.contact_name || contact.contact_email || contact.contact_phone)) {
                 saveAfterTeam(async () => {
                   const err = await hosted.saveEntry(created.id, contact);
                   if (err) onFeedback('error', `Contact not saved: ${err}. Open Edit to add it again.`);
                 });
               }
-              onFeedback('success', `Added ${fields.name}. Generate the tiesheet again to put them in the draw.`);
+              onFeedback('success', `Added ${fields.name}${pick ? `, linked to ${pick.club_name}. They get an invitation to accept` : ''}. Generate the tiesheet again to put them in the draw.`);
             } else {
               updateTournamentParticipant(editing.id, fields);
+              if (pick !== undefined) {
+                const err = pick ? await saveLink(editing.id, pick) : await removeLink(editing.id);
+                linking.reload();
+                if (err) return onFeedback('error', `Saved the team, but not the link: ${err}`);
+              }
               if (!isEvent && editing.team_type === 'external') {
                 const err = await hosted.saveEntry(editing.id, contact);
                 if (err) return onFeedback('error', `Saved the team, but not the contact: ${err}`);
@@ -428,15 +447,20 @@ function Shell({ label, onClose, children, wide }: { label: string; onClose: () 
 }
 
 /** Add or edit one team. Also used by the tournament setup form, before the tournament exists (no tournament: no contact box) */
-export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onClose, onSave }: {
+export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canLink, link, onClose, onSave }: {
   club: Club;
   tournament?: Tournament;
   team: Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name' | 'team_type'> | null;
   entry?: Partial<ContactFields>;
   isEvent: boolean;
   taken: string[];
+  /** The tournament_club_links table exists (migration 20261197): offer "Find a club on itsfootball.club" */
+  canLink?: boolean;
+  /** This team's link to a club on the platform, when editing one */
+  link?: TournamentLink;
   onClose: () => void;
-  onSave: (fields: TeamFields, contact: ContactFields) => void;
+  /** pick: the club it's linked to (undefined: no change, null: unlink) */
+  onSave: (fields: TeamFields, contact: ContactFields, pick?: LinkPick | null) => void;
 }) {
   // A new team is only in the fixtures once the draw is made again
   const drawn = useClub().matches.some(m => m.tournament_id === tournament?.id);
@@ -452,6 +476,22 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
   const [contactPhone, setContactPhone] = useState(entry?.contact_phone ?? '');
   const [error, setError] = useState<string | null>(null);
   const guest = !team || team.team_type === 'external';
+  // Linking a club already on the platform: search, then its team; crest and colours are copied and can be changed
+  const [mode, setMode] = useState<'find' | 'type'>(!team && canLink ? 'find' : 'type');
+  const [found, setFound] = useState<FoundClub | null>(null);
+  const [teamId, setTeamId] = useState<string>('');
+  const [show, setShow] = useState(link?.show_on_linked_site ?? true);
+  const [unlink, setUnlink] = useState(false);
+  const [changeLook, setChangeLook] = useState(false);
+  const pickClub = (c: FoundClub, tId = c.teams[0]?.id || '') => {
+    const t = c.teams.find(x => x.id === tId);
+    const n = ourSide(c.name, c.teams.length > 1 ? t?.name : null);
+    setFound(c); setTeamId(tId); setName(n); setCode(shortCode(n));
+    setLogo(t?.logo_url || c.logo_url || '');
+    setC1(hexOr(c.primary_color, hexOr(t?.color, '#2563EB'))); setC2(hexOr(c.secondary_color, '#FFFFFF'));
+    setError(null);
+  };
+  const finding = mode === 'find' && !team;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -459,21 +499,69 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
     if (!n) return setError('Give the team a name.');
     if (taken.includes(n.toLowerCase())) return setError(`"${n}" is already in this tournament. Team names must be unique.`);
     if (contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) return setError('That email address doesn\'t look right.');
+    if (finding && !found) return setError('Pick a club from the search, or use Type it in.');
+    const pick = finding && found ? { club_id: found.id, club_name: found.name, team_id: teamId || null, show }
+      : link ? (unlink ? null : { club_id: link.linked_club_id, club_name: link.linked?.name || '', team_id: link.linked_team_id, show })
+      : undefined;
     onSave(
       { name: n, short_name: (code.trim() || shortCode(n)).slice(0, 16).toUpperCase(), logo_url: logo || DEFAULT_CREST, color: c1, secondary_color: c2, manager_name: manager.trim() || null, coach_name: coach.trim() || null },
       { contact_name: contactName.trim() || null, contact_email: contactEmail.trim().toLowerCase() || null, contact_phone: contactPhone.trim() || null },
+      pick,
     );
   };
 
   return (
-    <Shell label={team ? `Edit ${team.name}` : 'Add a club'} onClose={onClose} wide>
+    <Shell label={team ? `Edit ${team.name}` : found ? `Link ${found.name}` : 'Add a club'} onClose={onClose} wide>
       <form onSubmit={submit} className="ht-form">
+        {!team && canLink && (
+          <div className="ht-seg" role="group" aria-label="How to add the club">
+            <button type="button" aria-pressed={mode === 'find'} onClick={() => setMode('find')}>Find a club on itsfootball.club</button>
+            <button type="button" aria-pressed={mode === 'type'} onClick={() => { setMode('type'); setFound(null); }}>Type it in</button>
+          </div>
+        )}
+        {finding && !found && <ClubSearch hostClubId={club.id} taken={taken} onPick={c => pickClub(c)} />}
+        {finding && found && (
+          <div className="ht-linked">
+            <Crest team={{ logo_url: logo || DEFAULT_CREST, color: c1, secondary_color: c2 }} size={46} />
+            <div className="min-w-0">
+              <div className="ht-name">{found.name}</div>
+              <div className="ht-sub">{changeLook ? 'Using your own crest and colours for this tournament' : 'Crest and colours copied from their club profile'}</div>
+            </div>
+            <div className="ht-linked-acts">
+              {!changeLook && <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setChangeLook(true)}><Pencil size={14} aria-hidden="true" /><span>Change</span></button>}
+              <button type="button" className="ht-link-btn" onClick={() => { setFound(null); setChangeLook(false); setName(''); setCode(''); setLogo(''); }}>Pick another club</button>
+            </div>
+          </div>
+        )}
+        {link && (
+          <div className="ht-linked">
+            <Link2 size={18} aria-hidden="true" />
+            <div className="min-w-0">
+              <div className="ht-name">{unlink ? 'Will be unlinked when you save' : `Linked to ${link.linked?.name || 'a club on itsfootball.club'}`}</div>
+              <div className="ht-sub">{unlink ? 'The team stays in your tournament as a typed-in team.' : LINK_STATUS[link.status].label}</div>
+            </div>
+            <div className="ht-linked-acts">
+              <button type="button" className="ht-link-btn" onClick={() => setUnlink(u => !u)} style={btn}>
+                {unlink ? 'Keep the link' : <><Unlink size={14} aria-hidden="true" /> Unlink</>}
+              </button>
+            </div>
+          </div>
+        )}
+        {(!finding || found) && (<>
         {team && name.trim() !== team.name && (
           <p className="ht-hint"><AlertTriangle size={14} aria-hidden="true" /> The new name also shows on {team.name}&rsquo;s fixtures.</p>
         )}
+        {finding && found && found.teams.length > 1 && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="ht-which">Which of their teams</label>
+            <select id="ht-which" className="form-input" value={teamId} onChange={e => pickClub(found, e.target.value)}>
+              {found.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
         <div className="ht-two">
           <div className="form-group">
-            <label className="form-label" htmlFor="ht-name">Club or team name</label>
+            <label className="form-label" htmlFor="ht-name">{found ? 'Name in this tournament' : 'Club or team name'}</label>
             <input id="ht-name" className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Bayside United U11" maxLength={128} required />
           </div>
           <div className="form-group">
@@ -482,6 +570,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
           </div>
         </div>
 
+        {(!found || changeLook) && (<>
         <ImageUploadZone clubId={club.id} folder="tournaments" aspectRatio="1:1" label="Crest" recommendedText="Square PNG with a see-through background looks best"
           currentImageUrl={logo || undefined} onUploadComplete={setLogo} />
 
@@ -495,6 +584,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
             <span className="ht-colour"><input id="ht-c2" type="color" value={c2} onChange={e => setC2(e.target.value.toUpperCase())} /><span>{c2}</span></span>
           </div>
         </div>
+        </>)}
 
         <div className="ht-two">
           <div className="form-group">
@@ -526,14 +616,72 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, onCl
             </div>
           </fieldset>
         )}
+        {((finding && found) || (link && !unlink)) && (
+          <label className="ht-linked is-check">
+            <input type="checkbox" className="ht-check" checked={show} onChange={e => setShow(e.target.checked)} />
+            <span>
+              <span className="ht-name">Show these games on {(found || link?.linked)?.name || 'their'}&rsquo;s site too</span>
+              <span className="ht-sub">They always show on your site. With this on, they also go in {(found || link?.linked)?.name || 'their'}&rsquo;s Fixtures and Results once they accept.</span>
+            </span>
+          </label>
+        )}
+        {finding && found && <p className="ht-hint"><Mail size={14} aria-hidden="true" /> <span>{found.name}&rsquo;s admins get an invitation on their dashboard to accept or decline.</span></p>}
+        </>)}
         {!team && tournament && drawn && <p className="ht-hint"><RefreshCw size={14} aria-hidden="true" /> Generate the tiesheet again afterwards to put them in the draw.</p>}
         {error && <p role="alert" className="ht-error">{error}</p>}
         <div className="ht-foot">
           <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary btn-sm">{team ? 'Save team' : 'Add club'}</button>
+          <button type="submit" className="btn btn-primary btn-sm" disabled={finding && !found}>{team ? 'Save team' : found ? 'Link club' : 'Add club'}</button>
         </div>
       </form>
     </Shell>
+  );
+}
+
+const LINK_STATUS: Record<TournamentLink['status'], { label: string; tone: string }> = {
+  pending: { label: 'Waiting for them to accept', tone: 'warn' },
+  accepted: { label: 'Accepted', tone: 'ok' },
+  declined: { label: 'Declined: shows as a typed-in team', tone: 'muted' },
+};
+
+/** Clubs already on itsfootball.club, found by name */
+function ClubSearch({ hostClubId, taken, onPick }: { hostClubId: string; taken: string[]; onPick: (c: FoundClub) => void }) {
+  const [q, setQ] = useState('');
+  const [list, setList] = useState<FoundClub[] | null>(null);
+  useEffect(() => {
+    if (q.trim().length < 2) { setList(null); return; }
+    let stale = false;
+    const id = setTimeout(() => { findClubs(q, hostClubId).then(r => { if (!stale) setList(r); }); }, 250);
+    return () => { stale = true; clearTimeout(id); };
+  }, [q, hostClubId]);
+  return (
+    <div>
+      <div className="form-group ht-search">
+        <label className="form-label" htmlFor="ht-find">Club name</label>
+        <Search size={16} aria-hidden="true" />
+        <input id="ht-find" className="form-input" value={q} onChange={e => setQ(e.target.value)} placeholder="Start typing, e.g. ANCC" autoComplete="off" autoFocus />
+      </div>
+      {list && (
+        <ul className="ht-found" aria-live="polite">
+          {list.map(c => {
+            const inAlready = taken.includes(c.name.toLowerCase());
+            return (
+              <li key={c.id}>
+                <Crest team={{ logo_url: c.logo_url || DEFAULT_CREST, color: c.primary_color ?? undefined, secondary_color: c.secondary_color }} size={38} />
+                <div className="min-w-0">
+                  <div className="ht-name">{c.name}</div>
+                  <div className="ht-sub">{c.teams.length > 1 ? `${c.teams.length} teams` : 'itsfootball.club/' + c.slug}</div>
+                </div>
+                <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => onPick(c)} disabled={inAlready} title={inAlready ? 'Already in this tournament' : undefined}>
+                  <Link2 size={14} aria-hidden="true" /><span>{inAlready ? 'Added' : 'Link'}</span>
+                </button>
+              </li>
+            );
+          })}
+          {!list.length && <li className="ht-sub">No club by that name on itsfootball.club. Use Type it in.</li>}
+        </ul>
+      )}
+    </div>
   );
 }
 

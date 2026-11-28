@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import GettingStartedChecklist from '@/components/admin/GettingStartedChecklist';
 import NeedsYouCard from '@/components/admin/NeedsYouCard';
 import FixtureOffersCard from '@/components/admin/FixtureOffersCard';
+import TournamentInvitesCard from '@/components/admin/TournamentInvitesCard';
 import { clubTeamsOf } from '@/lib/teams';
 import { useAdminAttention } from '@/lib/use-admin-attention';
 import { defaultFixture, kickoffIso } from '@/lib/fixtures';
@@ -109,6 +110,9 @@ export default function AdminDashboardPage({
 
           {/* Friendlies another club on itsfootball.club offered to our site */}
           {canFixtures && <FixtureOffersCard club={club} teams={clubTeamsOf(clubTeams, club.id)} canAdd={canEditFixtures} />}
+
+          {/* Another club linked one of our teams into its tournament (answered by admins / Tournaments editors) */}
+          <TournamentInvitesCard club={club} />
 
           {/* What's waiting on the committee, beside the club's next (or live) game; on phones the live game comes first */}
           <div className={liveMatch ? 'admin-dash-lead is-live' : 'admin-dash-lead'}>

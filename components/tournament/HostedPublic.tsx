@@ -5,7 +5,7 @@
 // did, and the "How we did" share graphic (TX-10).
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import { Share2, X } from 'lucide-react';
+import { ExternalLink, Share2, X } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { ageGroupFamily, ageGroupLabel, teamSummary, kickoffLabel } from '@/lib/hosted-tournaments';
 import { drawTeamCard } from '@/lib/team-card';
@@ -29,7 +29,7 @@ export function AgeGroupTabs({ tournaments, tournament, href }: { tournaments: T
   );
 }
 
-export function TeamDetail({ team, tournament, matches, events, squad, host, showName, onClose }: {
+export function TeamDetail({ team, tournament, matches, events, squad, host, showName, onClose, clubPage }: {
   team: TournamentParticipant;
   tournament: Tournament;
   matches: Match[];
@@ -38,6 +38,8 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
   host: { name: string; logo_url?: string | null };
   showName: (n: string) => string;
   onClose: () => void;
+  /** The team is a club on itsfootball.club that accepted the link */
+  clubPage?: { name: string; href: string };
 }) {
   const ids = new Set(matches.map(m => m.id));
   const s = teamSummary(team.name, matches, events.filter(e => ids.has(e.match_id)));
@@ -76,6 +78,7 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
         <div className="min-w-0">
           <h2 id="ht-team-name">{team.name}</h2>
           {(staff || s.finish) && <p className="ht-team-meta">{[s.finish, staff].filter(Boolean).join('. ')}</p>}
+          {clubPage && <Link className="ht-link-btn" href={clubPage.href}>{clubPage.name}&rsquo;s club page <ExternalLink size={13} aria-hidden="true" /></Link>}
         </div>
         <button type="button" className="ht-icon-btn" onClick={onClose} aria-label="Close team"><X size={18} /></button>
       </header>

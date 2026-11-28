@@ -24,6 +24,7 @@ import FairPlayTable from '@/components/tournament/FairPlayTable';
 import SupportedBy from '@/components/SupportedBy';
 import { TournamentPresenter, TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
 import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
+import { useTournamentLinks } from '@/lib/tournament-links';
 import { AgeGroupTabs, ChampionBanner, OnNowStrip, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
 import { juniorPublicName } from '@/lib/teams';
@@ -72,6 +73,8 @@ export default function PublicTournamentDetailPage({
   };
   const squads = usePublicSquads(tournament?.id, !!tournament);
   const { sponsors: tournamentSponsors } = useTournamentSponsors(tournament?.id);
+  // Teams that are clubs on itsfootball.club and accepted: their page links to the club's own site
+  const { linkOf } = useTournamentLinks(tournament?.id);
 
   // Open on the standings for a league, and while group games are still to play (the bracket then
   // holds only "1st Group A" placeholders); otherwise the bracket
@@ -420,7 +423,8 @@ export default function PublicTournamentDetailPage({
 
         {activeTab === 'teams' && openTeamRow && (
           <TeamDetail team={openTeamRow} tournament={tournament} matches={tourneyMatches} events={matchEvents}
-            squad={squads} host={club} showName={showName} onClose={() => openTeam(null)} />
+            squad={squads} host={club} showName={showName} onClose={() => openTeam(null)}
+            clubPage={(l => (l?.status === 'accepted' && l.linked ? { name: l.linked.name, href: `/${l.linked.slug}` } : undefined))(linkOf(openTeamRow.id))} />
         )}
 
         {/* Tab 4: Teams */}
