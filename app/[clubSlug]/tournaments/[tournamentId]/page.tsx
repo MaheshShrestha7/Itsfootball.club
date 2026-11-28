@@ -13,14 +13,12 @@ import {
   ArrowLeft,
   Calendar,
   Layers,
-  Users,
-  Radio,
   MapPin,
   Clock,
   Sparkles,
-  ShieldCheck,
 } from 'lucide-react';
-import FairPlayTable from '@/components/tournament/FairPlayTable';
+import { TournamentTabRow, TournamentStatsTab, TournamentNewsTab, type TournamentTab } from '@/components/tournament/TournamentStatsNews';
+import { tournamentWriteups, writeupSourceFor } from '@/lib/tournament-writeups';
 import SupportedBy from '@/components/SupportedBy';
 import { TournamentPresenter, TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
 import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
@@ -52,12 +50,15 @@ export default function PublicTournamentDetailPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === resolvedParams.tournamentId);
 
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>('bracket');
+  const [activeTab, setActiveTab] = useState<TournamentTab>('bracket');
   // ?team=<id> opens one team's page (the link in its entry email and the share card)
   const [teamId, setTeamId] = useState<string | null>(null);
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('team');
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get('team');
     if (id) { setTeamId(id); setActiveTab('teams'); }
+    // ?tab=news: the way back from a write-up
+    else if (q.get('tab') === 'news' || q.get('tab') === 'stats') setActiveTab(q.get('tab') as TournamentTab);
   }, []);
   const openTeam = (id: string | null) => {
     setTeamId(id);
@@ -83,7 +84,7 @@ export default function PublicTournamentDetailPage({
   const tournamentFormat = tournament?.format;
   useEffect(() => {
     if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && groupsLeft)) {
-      setActiveTab(t => (t === 'teams' ? t : 'standings'));
+      setActiveTab(t => (t === 'teams' || t === 'news' || t === 'stats' ? t : 'standings'));
     }
   }, [tournamentId, tournamentFormat, groupsLeft]);
 
@@ -107,6 +108,9 @@ export default function PublicTournamentDetailPage({
   const showName = (n: string) => (tournament.is_junior ? juniorPublicName(n) : n);
   const linkedEvent = tournament.event_id ? events.find(e => e.id === tournament.event_id) : undefined;
   const openTeamRow = teamId ? participants.find(p => p.id === teamId) : undefined;
+  const writeups = tournamentWriteups(club.slug, tournament.id, writeupSourceFor({
+    clubSlug: club.slug, tournament, matches, matchEvents, participants, getTournamentStandings, sponsors: tournamentSponsors,
+  }));
 
   const formatLabel =
     tournament.format === 'knockout'
@@ -253,125 +257,14 @@ export default function PublicTournamentDetailPage({
         {/* Shown only once the club has awarded it */}
         <PlayerOfTournament tournament={tournament} members={members.filter(m => m.club_id === club.id)} />
 
-        {/* Navigation Tabs */}
-        <div
-          id="tournament-tabs"
-          style={{
-            scrollMarginTop: '5rem',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-            borderBottom: '1px solid rgba(var(--tint-rgb), 0.08)',
-            marginBottom: '1.75rem',
-          }}
-        >
-          {tournament.format !== 'league' && (
-            <button
-              onClick={() => setActiveTab('bracket')}
-              style={{
-                padding: '0.85rem 1.5rem',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'bracket' ? '2px solid var(--club-primary)' : '2px solid transparent',
-                color: activeTab === 'bracket' ? 'var(--club-ink)' : 'var(--text-secondary)',
-                fontWeight: 800,
-                fontSize: '0.92rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Trophy size={16} />
-              <span>Draw & Bracket</span>
-            </button>
-          )}
-
-          {tournament.format !== 'knockout' && (
-            <button
-              onClick={() => setActiveTab('standings')}
-              style={{
-                padding: '0.85rem 1.5rem',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'standings' ? '2px solid var(--club-primary)' : '2px solid transparent',
-                color: activeTab === 'standings' ? 'var(--club-ink)' : 'var(--text-secondary)',
-                fontWeight: 800,
-                fontSize: '0.92rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Layers size={16} />
-              <span>Live Points Table (Standings)</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('fixtures')}
-            style={{
-              padding: '0.85rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'fixtures' ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: activeTab === 'fixtures' ? 'var(--club-ink)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Calendar size={16} />
-            <span>Fixtures & Results ({tourneyMatches.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('teams')}
-            style={{
-              padding: '0.85rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'teams' ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: activeTab === 'teams' ? 'var(--club-ink)' : 'var(--text-secondary)',
-              fontWeight: 800,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Users size={16} />
-            <span>Teams & Rosters ({participants.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('fairplay')}
-            style={{
-              padding: '0.85rem 1.5rem',
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'fairplay' ? '2px solid var(--club-primary)' : '2px solid transparent',
-              color: activeTab === 'fairplay' ? 'var(--club-ink)' : 'var(--text-secondary)',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <ShieldCheck size={16} />
-            <span>Fair play</span>
-          </button>
-        </div>
+        <TournamentTabRow active={activeTab} onChange={setActiveTab} tabs={[
+          ...(tournament.format !== 'knockout' ? [{ key: 'standings' as const, label: 'Table' }] : []),
+          ...(tournament.format !== 'league' ? [{ key: 'bracket' as const, label: 'Bracket' }] : []),
+          { key: 'fixtures', label: 'Games', count: tourneyMatches.length },
+          { key: 'stats', label: 'Stats' },
+          { key: 'news', label: 'News', count: writeups.length || undefined },
+          { key: 'teams', label: 'Teams', count: participants.length },
+        ]} />
 
         {/* Tab 1: Bracket */}
         {activeTab === 'bracket' && (
@@ -417,9 +310,11 @@ export default function PublicTournamentDetailPage({
           />
         )}
 
-        {activeTab === 'fairplay' && (
-          <FairPlayTable matches={tourneyMatches} events={matchEvents} participants={participants} showName={showName} />
+        {activeTab === 'stats' && (
+          <TournamentStatsTab matches={tourneyMatches} events={matchEvents} participants={participants} clubSlug={club.slug} showName={showName} onTeam={showTeamGames} />
         )}
+
+        {activeTab === 'news' && <TournamentNewsTab writeups={writeups} />}
 
         {activeTab === 'teams' && openTeamRow && (
           <TeamDetail team={openTeamRow} tournament={tournament} matches={tourneyMatches} events={matchEvents}

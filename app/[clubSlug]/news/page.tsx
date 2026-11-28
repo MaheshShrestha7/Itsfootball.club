@@ -7,6 +7,8 @@ import { newsPath } from '@/lib/slugs';
 import { newestFirst } from '@/lib/news';
 import { matchReportCards } from '@/lib/match-article';
 import { cupWriteupCards } from '@/lib/cup-writeup';
+import { plainText } from '@/lib/match-report';
+import { tournamentWriteups, writeupSourceFor } from '@/lib/tournament-writeups';
 import LocalTime from '@/components/LocalTime';
 import CoverImage from '@/components/CoverImage';
 import ClubSubPage, { EmptyState, ListSkeleton } from '@/components/ClubSubPage';
@@ -17,7 +19,7 @@ const PAGE = 12;
 /** /club/news: every article the club has posted, newest first (the home page shows the latest few) */
 export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: string }> }) {
   const { clubSlug } = use(params);
-  const { clubs, selectClubBySlug, news, isHydrated, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events } = useClub();
+  const { clubs, selectClubBySlug, news, isHydrated, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events, tournaments, tournamentParticipants, getTournamentStandings } = useClub();
   const club = selectClubBySlug(clubSlug) || clubs[0];
   // The topic is in the URL (?topic=Juniors) so a filtered list can be shared
   const [topic, setTopic] = useUrlParam('topic');
@@ -26,14 +28,27 @@ export default function ClubNewsPage({ params }: { params: Promise<{ clubSlug: s
   const [shown, setShown] = useState(PAGE);
 
   // The club's own articles, plus each finished match's report (its card opens the match page)
-  const clubNews = useMemo(() => newestFirst([
+  const clubNews = useMemo(() => {
+    // A hosted tournament's write-ups: group stage, semi-finals, final and round-up (each opens its own page)
+    const writeups = tournaments.filter(t => t.club_id === club.id).map(t => ({ t, list: tournamentWriteups(club.slug, t.id,
+      writeupSourceFor({ clubSlug: club.slug, tournament: t, matches, matchEvents, participants: tournamentParticipants, getTournamentStandings })) }));
+    // Once a tournament has write-ups they stand in for the guest teams' games, so a cup day doesn't fill the
+    // list; the club's own teams' games keep their reports
+    const covered = new Set(writeups.filter(w => w.list.length).map(w => w.t.id));
+    const ours = new Set(tournamentParticipants.filter(p => covered.has(p.tournament_id) && p.team_type === 'internal').map(p => `${p.tournament_id}|${p.name}`));
+    const coveredMatch = new Set(matches.filter(m => m.tournament_id && covered.has(m.tournament_id)
+      && !ours.has(`${m.tournament_id}|${m.home_team_name}`) && !ours.has(`${m.tournament_id}|${m.away_team_name}`)).map(m => m.id));
+    return newestFirst([
     ...news.filter(n => n.club_id === club.id).map(n => ({ ...n, href: newsPath(club.slug, n.slug) })),
     ...matchReportCards({ club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events })
+      .filter(r => !coveredMatch.has(r.id))
       .map(r => ({ id: r.id, href: r.href, title: r.title, summary: r.summary, published_at: r.published_at, cover_image_url: r.cover, tags: ['Match Report'] })),
     // A completed cup's write-up (its card opens the event page)
     ...cupWriteupCards({ club, events, matches, matchEvents, clubTeams })
       .map(r => ({ id: r.id, href: r.href, title: r.title, summary: r.summary, published_at: r.published_at, cover_image_url: r.cover, tags: ['Cup Report'] })),
-  ]), [news, club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events]);
+    ...writeups.flatMap(({ t, list }) => list.map(w => ({ id: `${t.id}:${w.kind}`, href: w.href, title: w.writeup.headline, summary: plainText(w.writeup.lead), published_at: w.at, cover_image_url: t.banner_url || undefined, tags: ['Tournament Report', t.name] }))),
+  ]);
+  }, [news, club, matches, matchEvents, members, clubTeams, clubTeamMembers, playerStats, activityLogs, events, tournaments, tournamentParticipants, getTournamentStandings]);
   // Tags used on at least two articles: one-off tags would just add noise
   const tags = useMemo(() => {
     const count = new Map<string, number>();
