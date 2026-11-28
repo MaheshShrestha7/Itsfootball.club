@@ -267,9 +267,8 @@ export default function TournamentMatchesList({
                         fontWeight: 700,
                         fontSize: '0.85rem',
                         color: 'var(--text-primary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        overflowWrap: 'anywhere',
+                        lineHeight: 1.25,
                       }}
                     >
                       {match.home_team_name}
@@ -317,9 +316,8 @@ export default function TournamentMatchesList({
                         fontWeight: 700,
                         fontSize: '0.85rem',
                         color: 'var(--text-primary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        overflowWrap: 'anywhere',
+                        lineHeight: 1.25,
                       }}
                     >
                       {match.away_team_name}

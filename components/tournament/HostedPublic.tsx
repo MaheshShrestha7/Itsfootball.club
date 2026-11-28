@@ -16,6 +16,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { matchPath } from '@/lib/slugs';
 import { formatClock } from '@/lib/dates';
 import type { Match, MatchEvent, Tournament, TournamentParticipant, TournamentSquadPlayer } from '@/lib/supabase/types';
+import { tournamentOver } from '@/lib/tournament-overview';
 import '@/components/tournament/hosted.css';
 
 export function AgeGroupTabs({ tournaments, tournament, href }: { tournaments: Tournament[]; tournament: Tournament; href: (t: Tournament) => string }) {
@@ -214,7 +215,7 @@ const playOrder = (m: Match) => (m.match_time ? `${(m.match_date || '').slice(0,
 const isOn = (m: Match) => m.status === 'live' || m.status === 'halftime';
 
 /** "On now": every game being played (two pitches at once on a cup day), else the next kick-off's games */
-export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; clubSlug: string; showName: (n: string) => string }) {
+export function OnNowStrip({ matches, clubSlug, showName, title = 'Next up' }: { matches: Match[]; clubSlug: string; showName: (n: string) => string; title?: string }) {
   const live = matches.filter(isOn);
   const upcoming = matches.filter(m => m.status === 'upcoming' && m.home_team_name !== 'TBD' && m.away_team_name !== 'TBD')
     .sort((a, b) => playOrder(a).localeCompare(playOrder(b)));
@@ -222,8 +223,8 @@ export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; 
     .sort((a, b) => (a.pitch_label || '').localeCompare(b.pitch_label || '', undefined, { numeric: true }));
   if (!games.length) return null;
   return (
-    <section className="ht-onnow" aria-label={live.length ? 'On now' : 'Next up'}>
-      <h2 className="ht-onnow-title">{live.length ? <><span className="ht-onnow-dot" aria-hidden="true" />On now</> : 'Next up'}</h2>
+    <section className="ht-onnow" aria-label={live.length ? 'On now' : title}>
+      <h2 className="ht-onnow-title">{live.length ? <><span className="ht-onnow-dot" aria-hidden="true" />On now</> : title}</h2>
       <div className="ht-onnow-list">
         {games.map(m => (
           <Link key={m.id} href={matchPath(clubSlug, m)} className="ht-onnow-game">
@@ -233,9 +234,9 @@ export function OnNowStrip({ matches, clubSlug, showName }: { matches: Match[]; 
                 {m.status === 'halftime' || m.period === 'halftime' ? 'Half time' : isOn(m) ? <><LiveMinute match={m} />&prime;</> : formatClock(m.match_time || '') || kickoffLabel(m)}
               </span>
             </span>
-            <span className="ht-onnow-team">{showName(m.home_team_name)}</span>
+            <span className="ht-onnow-team"><img src={m.home_team_logo || DEFAULT_CREST} alt="" width={28} height={28} loading="lazy" />{showName(m.home_team_name)}</span>
             <span className="ht-onnow-score">{isOn(m) ? `${m.home_score ?? 0}–${m.away_score ?? 0}` : 'v'}</span>
-            <span className="ht-onnow-team">{showName(m.away_team_name)}</span>
+            <span className="ht-onnow-team"><img src={m.away_team_logo || DEFAULT_CREST} alt="" width={28} height={28} loading="lazy" />{showName(m.away_team_name)}</span>
           </Link>
         ))}
       </div>
@@ -253,8 +254,7 @@ export function ChampionBanner({ tournament, matches, events, standingsLeader, s
   showName: (n: string) => string;
 }) {
   const final = matches.find(m => m.tournament_stage === 'final' && m.status === 'completed');
-  const over = tournament.status === 'completed' || (!!final && matches.every(m => m.status === 'completed' || m.status === 'cancelled'));
-  if (!over) return null;
+  if (!tournamentOver(tournament, matches)) return null;
   let champion = tournament.format === 'league' ? standingsLeader : undefined;
   let finalLine: string | null = null;
   if (final) {

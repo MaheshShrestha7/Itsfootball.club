@@ -7,7 +7,7 @@ import { useClub } from '@/lib/club-context';
 import TournamentBracketView from '@/components/tournament/TournamentBracketView';
 import TournamentStandingsTable from '@/components/tournament/TournamentStandingsTable';
 import TournamentMatchesList from '@/components/tournament/TournamentMatchesList';
-import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
+import TournamentOverview from '@/components/tournament/TournamentOverview';
 import {
   Trophy,
   ArrowLeft,
@@ -23,11 +23,11 @@ import SupportedBy from '@/components/SupportedBy';
 import { TournamentPresenter, TournamentSponsorStrip, TournamentSponsorList } from '@/components/tournament/TournamentSponsors';
 import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import { useTournamentLinks } from '@/lib/tournament-links';
-import { AgeGroupTabs, ChampionBanner, OnNowStrip, TeamDetail } from '@/components/tournament/HostedPublic';
+import { AgeGroupTabs, TeamDetail } from '@/components/tournament/HostedPublic';
 import { usePublicSquads } from '@/lib/use-tournament-entries';
 import { juniorPublicName } from '@/lib/teams';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { GROUP_LETTERS, parseTournamentDate } from '@/lib/tournament-engine';
+import { GROUP_LETTERS, knockoutStarted, parseTournamentDate } from '@/lib/tournament-engine';
 
 export default function PublicTournamentDetailPage({
   params,
@@ -50,7 +50,9 @@ export default function PublicTournamentDetailPage({
   const club = selectClubBySlug(resolvedParams.clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === resolvedParams.tournamentId);
 
-  const [activeTab, setActiveTab] = useState<TournamentTab>('bracket');
+  const [activeTab, setActiveTab] = useState<TournamentTab>('overview');
+  // Group + knockout cups: the Table tab holds both the groups and the knockout bracket
+  const [tableView, setTableView] = useState<'groups' | 'knockout' | null>(null);
   // ?team=<id> opens one team's page (the link in its entry email and the share card)
   const [teamId, setTeamId] = useState<string | null>(null);
   useEffect(() => {
@@ -59,7 +61,12 @@ export default function PublicTournamentDetailPage({
     if (id) { setTeamId(id); setActiveTab('teams'); }
     // ?tab=news: the way back from a write-up
     else if (q.get('tab') === 'news' || q.get('tab') === 'stats') setActiveTab(q.get('tab') as TournamentTab);
+    else if (q.get('tab') === 'bracket') { setActiveTab('bracket'); setTableView('knockout'); }
   }, []);
+  const showTab = (t: TournamentTab) => {
+    setActiveTab(t);
+    requestAnimationFrame(() => document.getElementById('tournament-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
   const openTeam = (id: string | null) => {
     setTeamId(id);
     const u = new URL(window.location.href);
@@ -77,16 +84,6 @@ export default function PublicTournamentDetailPage({
   // Teams that are clubs on itsfootball.club and accepted: their page links to the club's own site
   const { linkOf } = useTournamentLinks(tournament?.id);
 
-  // Open on the standings for a league, and while group games are still to play (the bracket then
-  // holds only "1st Group A" placeholders); otherwise the bracket
-  const groupsLeft = matches.some(m => m.tournament_id === tournament?.id && (m.tournament_stage || 'group') === 'group' && m.status !== 'completed');
-  const tournamentId = tournament?.id;
-  const tournamentFormat = tournament?.format;
-  useEffect(() => {
-    if (tournamentFormat === 'league' || (tournamentFormat === 'group_knockout' && groupsLeft)) {
-      setActiveTab(t => (t === 'teams' || t === 'news' || t === 'stats' ? t : 'standings'));
-    }
-  }, [tournamentId, tournamentFormat, groupsLeft]);
 
   if (!tournament) {
     return (
@@ -105,6 +102,11 @@ export default function PublicTournamentDetailPage({
   const participants = tournamentParticipants.filter(p => p.tournament_id === tournament.id);
   const tourneyMatches = matches.filter(m => m.tournament_id === tournament.id);
   const liveCount = tourneyMatches.filter(m => m.status === 'live').length;
+  const anyPlayed = tourneyMatches.some(m => m.status === 'completed' || m.status === 'live' || m.status === 'halftime');
+  // The Table tab opens on the knockout bracket once the host has started the knockout games
+  const table = tableView ?? (knockoutStarted(tournament, tourneyMatches) ? 'knockout' : 'groups');
+  // Old ?tab=bracket links: on a group + knockout cup the bracket lives inside the Table tab
+  const tab: TournamentTab = activeTab === 'bracket' && tournament.format !== 'knockout' ? 'standings' : activeTab;
   const showName = (n: string) => (tournament.is_junior ? juniorPublicName(n) : n);
   const linkedEvent = tournament.event_id ? events.find(e => e.id === tournament.event_id) : undefined;
   const openTeamRow = teamId ? participants.find(p => p.id === teamId) : undefined;
@@ -186,8 +188,12 @@ export default function PublicTournamentDetailPage({
                     {tournament.name}
                   </h1>
                   {liveCount > 0 && (
-                    <span
+                    <button type="button" onClick={() => showTab('overview')} aria-label={`${liveCount} live, see what's on now`}
                       style={{
+                        cursor: 'pointer',
+                        font: 'inherit',
+                        whiteSpace: 'nowrap',
+                        flex: 'none',
                         fontSize: '0.72rem',
                         fontWeight: 800,
                         padding: '2px 8px',
@@ -210,7 +216,7 @@ export default function PublicTournamentDetailPage({
                         }}
                       />
                       {liveCount} LIVE
-                    </span>
+                    </button>
                   )}
                 </div>
 
@@ -251,30 +257,41 @@ export default function PublicTournamentDetailPage({
       {/* Main Tabs and Content */}
       <main style={{ maxWidth: '1300px', margin: '0 auto', padding: '2rem 1.5rem 4rem 1.5rem' }}>
         <AgeGroupTabs tournaments={tournaments} tournament={tournament} href={t => `/${club.slug}/tournaments/${t.id}`} />
-        <ChampionBanner tournament={tournament} matches={tourneyMatches} events={matchEvents} showName={showName}
-          standingsLeader={tournament.format === 'league' ? getTournamentStandings(tournament.id)[0]?.name : undefined} />
-        {tournament.status !== 'completed' && <OnNowStrip matches={tourneyMatches} clubSlug={club.slug} showName={showName} />}
-        {/* Shown only once the club has awarded it */}
-        <PlayerOfTournament tournament={tournament} members={members.filter(m => m.club_id === club.id)} />
 
-        <TournamentTabRow active={activeTab} onChange={setActiveTab} tabs={[
-          ...(tournament.format !== 'knockout' ? [{ key: 'standings' as const, label: 'Table' }] : []),
-          ...(tournament.format !== 'league' ? [{ key: 'bracket' as const, label: 'Bracket' }] : []),
-          { key: 'fixtures', label: 'Games', count: tourneyMatches.length },
-          { key: 'stats', label: 'Stats' },
-          { key: 'news', label: 'News', count: writeups.length || undefined },
+        {/* Stats and News only once they have something in them */}
+        <TournamentTabRow active={tab} onChange={setActiveTab} tabs={[
+          { key: 'overview', label: 'Overview' },
           { key: 'teams', label: 'Teams', count: participants.length },
+          { key: 'fixtures', label: 'Games', count: tourneyMatches.length },
+          tournament.format === 'knockout' ? { key: 'bracket' as const, label: 'Bracket' } : { key: 'standings' as const, label: 'Table' },
+          ...(anyPlayed ? [{ key: 'stats' as const, label: 'Stats' }] : []),
+          ...(writeups.length ? [{ key: 'news' as const, label: 'News', count: writeups.length }] : []),
         ]} />
 
+        {tab === 'overview' && (
+          <TournamentOverview tournament={tournament} matches={tourneyMatches} events={matchEvents} participants={participants}
+            members={members.filter(m => m.club_id === club.id)} clubSlug={club.slug} host={club} writeups={writeups}
+            standings={g => getTournamentStandings(tournament.id, g)} showName={showName} onTeam={showTeamGames} onTab={showTab} />
+        )}
+
         {/* Tab 1: Bracket */}
-        {activeTab === 'bracket' && (
+        {tab === 'bracket' && (
           <div>
             <TournamentBracketView matches={tourneyMatches} isAdmin={false} />
           </div>
         )}
 
         {/* Tab 2: Standings */}
-        {activeTab === 'standings' && (
+        {tab === 'standings' && tournament.format === 'group_knockout' && (
+          <div className="ht-seg tp-switch" role="group" aria-label="Show">
+            <button type="button" aria-pressed={table === 'groups'} onClick={() => setTableView('groups')}>Groups</button>
+            <button type="button" aria-pressed={table === 'knockout'} onClick={() => setTableView('knockout')}>Knockout</button>
+          </div>
+        )}
+        {tab === 'standings' && tournament.format === 'group_knockout' && table === 'knockout' && (
+          <TournamentBracketView matches={tourneyMatches} isAdmin={false} />
+        )}
+        {tab === 'standings' && !(tournament.format === 'group_knockout' && table === 'knockout') && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {tournament.format === 'group_knockout' ? (
               GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(groupLetter => {
@@ -302,7 +319,7 @@ export default function PublicTournamentDetailPage({
         )}
 
         {/* Tab 3: Fixtures */}
-        {activeTab === 'fixtures' && (
+        {tab === 'fixtures' && (
           <TournamentMatchesList
             matches={tourneyMatches}
             clubSlug={club.slug}
@@ -310,20 +327,20 @@ export default function PublicTournamentDetailPage({
           />
         )}
 
-        {activeTab === 'stats' && (
+        {tab === 'stats' && (
           <TournamentStatsTab matches={tourneyMatches} events={matchEvents} participants={participants} clubSlug={club.slug} showName={showName} onTeam={showTeamGames} />
         )}
 
-        {activeTab === 'news' && <TournamentNewsTab writeups={writeups} />}
+        {tab === 'news' && <TournamentNewsTab writeups={writeups} />}
 
-        {activeTab === 'teams' && openTeamRow && (
+        {tab === 'teams' && openTeamRow && (
           <TeamDetail team={openTeamRow} tournament={tournament} matches={tourneyMatches} events={matchEvents}
             squad={squads} participants={participants} clubSlug={club.slug} host={club} showName={showName} onClose={() => openTeam(null)}
             clubPage={(l => (l?.status === 'accepted' && l.linked ? { name: l.linked.name, href: `/${l.linked.slug}` } : undefined))(linkOf(openTeamRow.id))} />
         )}
 
         {/* Tab 4: Teams */}
-        {activeTab === 'teams' && (
+        {tab === 'teams' && (
           <div
             style={{
               display: 'grid',
@@ -361,7 +378,7 @@ export default function PublicTournamentDetailPage({
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}
                 />
                 <div className="min-w-0">
-                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.95rem', overflowWrap: 'anywhere' }}>
                     {part.name}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>

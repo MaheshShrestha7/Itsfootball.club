@@ -898,9 +898,16 @@ export interface Tournament {
   final_half_minutes?: number | null;
   ko_match_minutes?: number | null;
   ko_break_minutes?: number | null;
+  /** Migration 20261198: prizes by category, in the host's order, and who to contact (shown publicly) */
+  prizes?: TournamentPrize[] | null;
+  organiser_name?: string | null;
+  organiser_phone?: string | null;
+  organiser_email?: string | null;
   created_at?: string;
   updated_at?: string;
 }
+
+export interface TournamentPrize { label: string; prize: string }
 
 export interface TournamentParticipant {
   id: string;

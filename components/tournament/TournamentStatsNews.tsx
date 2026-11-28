@@ -13,7 +13,7 @@ import { WRITEUP_LABELS, type tournamentWriteups } from '@/lib/tournament-writeu
 import type { Match, MatchEvent, TournamentParticipant } from '@/lib/supabase/types';
 import '@/components/tournament/hosted.css';
 
-export type TournamentTab = 'bracket' | 'standings' | 'fixtures' | 'stats' | 'news' | 'teams';
+export type TournamentTab = 'overview' | 'bracket' | 'standings' | 'fixtures' | 'stats' | 'news' | 'teams';
 
 /** One line of short tab names; scrolls sideways on a narrow phone */
 export function TournamentTabRow({ tabs, active, onChange }: {
@@ -21,8 +21,25 @@ export function TournamentTabRow({ tabs, active, onChange }: {
   active: TournamentTab;
   onChange: (t: TournamentTab) => void;
 }) {
+  const row = React.useRef<HTMLDivElement>(null);
+  const [more, setMore] = React.useState(false);
+  // A fade on the right edge while tabs are hidden off it; the picked tab scrolled into the row
+  React.useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const check = () => setMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+    return () => { el.removeEventListener('scroll', check); window.removeEventListener('resize', check); };
+  }, [tabs.length]);
+  React.useEffect(() => {
+    const el = row.current;
+    const on = el?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (el && on) el.scrollTo({ left: Math.max(0, on.offsetLeft - el.clientWidth / 2 + on.offsetWidth / 2), behavior: 'smooth' });
+  }, [active]);
   return (
-    <div id="tournament-tabs" className="tp-tabs" role="tablist" aria-label="Tournament">
+    <div id="tournament-tabs" ref={row} className="tp-tabs" data-more={more || undefined} role="tablist" aria-label="Tournament">
       {tabs.map(t => (
         <button key={t.key} type="button" role="tab" aria-selected={active === t.key} className="tp-tab" onClick={() => onChange(t.key)}>
           {t.label}{t.count != null && <span className="tp-tab-count">{t.count}</span>}
