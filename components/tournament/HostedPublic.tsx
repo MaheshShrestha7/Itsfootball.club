@@ -16,6 +16,7 @@ import LiveMinute from '@/components/LiveMinute';
 import { matchPath } from '@/lib/slugs';
 import { formatClock } from '@/lib/dates';
 import type { Match, MatchEvent, Tournament, TournamentParticipant, TournamentSquadPlayer } from '@/lib/supabase/types';
+import { tournamentOver } from '@/lib/tournament-overview';
 import '@/components/tournament/hosted.css';
 
 export function AgeGroupTabs({ tournaments, tournament, href }: { tournaments: Tournament[]; tournament: Tournament; href: (t: Tournament) => string }) {
@@ -241,12 +242,6 @@ export function OnNowStrip({ matches, clubSlug, showName, title = 'Next up' }: {
       </div>
     </section>
   );
-}
-
-/** The final (or every league game) is played, or the host marked the tournament completed */
-export function tournamentOver(tournament: Pick<Tournament, 'status' | 'format'>, matches: Match[]): boolean {
-  const done = matches.length > 0 && matches.every(m => m.status === 'completed' || m.status === 'cancelled');
-  return tournament.status === 'completed' || (done && (tournament.format === 'league' || matches.some(m => m.tournament_stage === 'final')));
 }
 
 /** Who won it, once the final (or the last league game) is played: the page people share at the end of the day */

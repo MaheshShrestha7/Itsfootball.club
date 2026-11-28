@@ -261,9 +261,9 @@ export default function PublicTournamentDetailPage({
         {/* Stats and News only once they have something in them */}
         <TournamentTabRow active={tab} onChange={setActiveTab} tabs={[
           { key: 'overview', label: 'Overview' },
+          { key: 'teams', label: 'Teams', count: participants.length },
           { key: 'fixtures', label: 'Games', count: tourneyMatches.length },
           tournament.format === 'knockout' ? { key: 'bracket' as const, label: 'Bracket' } : { key: 'standings' as const, label: 'Table' },
-          { key: 'teams', label: 'Teams', count: participants.length },
           ...(anyPlayed ? [{ key: 'stats' as const, label: 'Stats' }] : []),
           ...(writeups.length ? [{ key: 'news' as const, label: 'News', count: writeups.length }] : []),
         ]} />

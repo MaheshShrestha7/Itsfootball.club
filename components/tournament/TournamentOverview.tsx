@@ -5,10 +5,12 @@
 // the latest results; once the final is played, who won and how. Only what the host already stores.
 import React from 'react';
 import Link from 'next/link';
+import { Award, BadgeDollarSign, Building2, ClipboardList, Flag, History, Info, Mail, Medal, Phone, Shield, Shirt, TrendingUp, Trophy, Users } from 'lucide-react';
 import LocalTime from '@/components/LocalTime';
 import EventCountdown from '@/components/EventCountdown';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { ChampionBanner, OnNowStrip, tournamentOver } from '@/components/tournament/HostedPublic';
+import { ChampionBanner, OnNowStrip } from '@/components/tournament/HostedPublic';
+import { formatLines, STAGES, tournamentPhase } from '@/lib/tournament-overview';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { kickoffIso, latestFirst, soonestFirst } from '@/lib/fixtures';
 import { matchPath } from '@/lib/slugs';
@@ -19,44 +21,6 @@ import { formatMoney } from '@/lib/finance';
 import { WRITEUP_LABELS, type tournamentWriteups } from '@/lib/tournament-writeups';
 import type { ClubMember, Match, MatchEvent, Tournament, TournamentParticipant, TournamentStanding } from '@/lib/supabase/types';
 import '@/components/tournament/hosted.css';
-
-export type TournamentPhase = 'before' | 'during' | 'after';
-
-const isOn = (m: Match) => m.status === 'live' || m.status === 'halftime';
-
-/** From the games, not only the status the host sets: hosts often forget to mark a cup completed */
-export function tournamentPhase(tournament: Tournament, matches: Match[]): TournamentPhase {
-  if (tournamentOver(tournament, matches)) return 'after';
-  return matches.some(m => m.status === 'completed' || isOn(m)) ? 'during' : 'before';
-}
-
-const STAGES: [NonNullable<Match['tournament_stage']>, string][] = [
-  ['group', 'Group stage'], ['round_of_32', 'Round of 32'], ['round_of_16', 'Round of 16'],
-  ['quarter_final', 'Quarter-finals'], ['semi_final', 'Semi-finals'], ['final', 'Final'],
-];
-const koRound = (teams: number) => (teams <= 2 ? 'the final' : teams <= 4 ? 'the semi-finals' : teams <= 8 ? 'the quarter-finals' : 'the knockout rounds');
-const mins = (half?: number | null) => (half ? `2 × ${half} minutes` : null);
-
-/** "8 teams in 2 groups of 4. The top 2 in each group go into the semi-finals." from the stored settings */
-function formatLines(t: Tournament, teams: number): string[] {
-  const lines: string[] = [];
-  if (t.format === 'league') lines.push(`${teams} teams, everyone plays everyone once. Most points wins.`);
-  else if (t.format === 'knockout') lines.push(`${teams} teams, straight knockout. Win and you're through.`);
-  else {
-    const groups = t.group_count ?? 1;
-    const adv = t.teams_advancing_per_group ?? 2;
-    const per = Math.round(teams / groups);
-    lines.push(groups > 1 ? `${teams} teams in ${groups} groups of ${per}.` : `${teams} teams in one group.`);
-    lines.push(`The top ${adv} ${groups > 1 ? 'in each group go' : 'go'} into ${koRound(groups * adv)}${t.has_third_place_match ? ', with a game for third place' : ''}.`);
-  }
-  const group = mins(t.half_minutes);
-  const ko = t.format === 'group_knockout' ? mins(t.ko_half_minutes) : null;
-  const final = t.format !== 'league' ? mins(t.final_half_minutes) : null;
-  const len = [group && (ko || final ? `Group games ${group}` : `Games ${group}`), ko && `knockout games ${ko}`, final && `the final ${final}`].filter(Boolean);
-  if (len.length) lines.push(`${len.join(', ')}.`);
-  if (t.pitches && t.pitches > 1) lines.push(`Played on ${t.pitches} pitches at once.`);
-  return lines;
-}
 
 type Writeups = ReturnType<typeof tournamentWriteups>;
 
@@ -92,7 +56,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
         {firstAt && <EventCountdown startTime={firstAt} />}
         <div className="tp-ov-pair">
           <section className="glass-panel tp-card tp-ov-how" aria-labelledby="tp-ov-how">
-            <h3 id="tp-ov-how">How it works</h3>
+            <h3 id="tp-ov-how"><Info size={17} aria-hidden="true" />How it works</h3>
             {lines.map(l => <p key={l}>{l}</p>)}
             {tournament.description && <p className="tp-ov-desc">{tournament.description}</p>}
           </section>
@@ -102,7 +66,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
         {participants.length > 0 && (
           <section className="glass-panel tp-card" aria-labelledby="tp-ov-teams">
             <div className="tp-ov-head">
-              <h3 id="tp-ov-teams">Who&apos;s playing</h3>
+              <h3 id="tp-ov-teams"><Shield size={17} aria-hidden="true" />Who&apos;s playing</h3>
               <button type="button" className="tp-ov-more" onClick={() => onTab('teams')}>All {participants.length} teams</button>
             </div>
             {groups.length > 1 ? (
@@ -145,7 +109,8 @@ export default function TournamentOverview({ tournament, matches, events, partic
     return (
       <div className="tp-ov">
         <OnNowStrip matches={matches} clubSlug={clubSlug} showName={showName} />
-        <section className="glass-panel tp-card tp-ov-stage" aria-label="Where the tournament is">
+        <section className="glass-panel tp-card tp-ov-stage" aria-labelledby="tp-ov-stage">
+          <h3 id="tp-ov-stage"><Flag size={17} aria-hidden="true" />Where we are</h3>
           {stages.length > 1 && (
             <ol className="tp-ov-steps">
               {stages.map(([k, label]) => (
@@ -159,7 +124,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
         <div className="tp-grid">
           <section className="glass-panel tp-card" aria-labelledby="tp-ov-latest">
             <div className="tp-ov-head">
-              <h3 id="tp-ov-latest">Latest results</h3>
+              <h3 id="tp-ov-latest"><History size={17} aria-hidden="true" />Latest results</h3>
               <button type="button" className="tp-ov-more" onClick={() => onTab('fixtures')}>All games</button>
             </div>
             <ul className="tp-ov-results">
@@ -178,7 +143,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
           {inGroups && (
             <section className="glass-panel tp-card" aria-labelledby="tp-ov-leaders">
               <div className="tp-ov-head">
-                <h3 id="tp-ov-leaders">{tournament.format === 'league' ? 'Top of the table' : 'Going through now'}</h3>
+                <h3 id="tp-ov-leaders"><TrendingUp size={17} aria-hidden="true" />{tournament.format === 'league' ? 'Top of the table' : 'Going through now'}</h3>
                 <button type="button" className="tp-ov-more" onClick={() => onTab('standings')}>Full table</button>
               </div>
               {tables.map(t => (
@@ -228,7 +193,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
       {(s.fewestConceded || s.biggestWin) && (
         <section className="glass-panel tp-card" aria-labelledby="tp-ov-best">
           <div className="tp-ov-head">
-            <h3 id="tp-ov-best">Best of the tournament</h3>
+            <h3 id="tp-ov-best"><Medal size={17} aria-hidden="true" />Best of the tournament</h3>
             <button type="button" className="tp-ov-more" onClick={() => onTab('stats')}>All stats</button>
           </div>
           <dl className="tp-records">
@@ -247,19 +212,19 @@ type Host = { name: string; contact_email?: string | null; contact_phone?: strin
 
 /** Age group, squad size, entry fee and organiser: only the ones the host filled in */
 function Details({ tournament: t, host }: { tournament: Tournament; host: Host }) {
-  const facts: [string, React.ReactNode][] = [];
-  if (t.age_group) facts.push(['Age group', t.age_group]);
-  if (t.max_squad) facts.push(['Squad size', <>Up to {t.max_squad} players<small>a team</small></>]);
+  const facts: [string, React.ReactNode, React.ElementType][] = [];
+  if (t.age_group) facts.push(['Age group', t.age_group, Users]);
+  if (t.max_squad) facts.push(['Squad size', <>Up to {t.max_squad} players<small>a team</small></>, Shirt]);
   if (t.entry_fee_cents) facts.push(['Entry fee', <>
     {/* shortcut: AUD until the public page reads the club's payment currency */}
     {formatMoney(t.entry_fee_cents, 'AUD')}<small>a team{t.entry_deadline && <>, entries close <LocalTime value={t.entry_deadline} /></>}</small>
-  </>]);
-  facts.push(['Organiser', t.organiser_name || host.name]);
+  </>, BadgeDollarSign]);
+  facts.push(['Organiser', t.organiser_name || host.name, Building2]);
   return (
     <section className="glass-panel tp-card" aria-labelledby="tp-ov-details">
-      <h3 id="tp-ov-details">Details</h3>
+      <h3 id="tp-ov-details"><ClipboardList size={17} aria-hidden="true" />Details</h3>
       <dl className="tp-ov-facts">
-        {facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+        {facts.map(([k, v, Icon]) => <div key={k}><dt><Icon size={15} aria-hidden="true" />{k}</dt><dd>{v}</dd></div>)}
       </dl>
     </section>
   );
@@ -270,9 +235,9 @@ function Prizes({ tournament }: { tournament: Tournament }) {
   if (!list.length) return null;
   return (
     <section className="glass-panel tp-card" aria-labelledby="tp-ov-prizes">
-      <h3 id="tp-ov-prizes">Prizes</h3>
+      <h3 id="tp-ov-prizes"><Trophy size={17} aria-hidden="true" />Prizes</h3>
       <ul className="tp-ov-prizes">
-        {list.map((p, i) => <li key={`${p.label}-${i}`}><span>{p.label}</span><b>{p.prize}</b></li>)}
+        {list.map((p, i) => <li key={`${p.label}-${i}`}><span>{i === 0 && <Award size={16} aria-hidden="true" />}{p.label}</span><b>{p.prize}</b></li>)}
       </ul>
     </section>
   );
@@ -287,8 +252,8 @@ function Contact({ tournament: t, host }: { tournament: Tournament; host: Host }
   return (
     <section className="glass-panel tp-card tp-ov-contact" aria-label="Contact the organiser">
       <p>Questions? <b>{t.organiser_name || host.name}</b> runs this tournament.</p>
-      {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}>{phone}</a>}
-      {email && <a href={`mailto:${email}`}>{email}</a>}
+      {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}><Phone size={16} aria-hidden="true" />{phone}</a>}
+      {email && <a href={`mailto:${email}`}><Mail size={16} aria-hidden="true" />{email}</a>}
     </section>
   );
 }
