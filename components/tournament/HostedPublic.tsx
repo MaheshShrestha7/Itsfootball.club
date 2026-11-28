@@ -5,9 +5,12 @@
 // did, and the "How we did" share graphic (TX-10).
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Share2, X } from 'lucide-react';
+import { ExternalLink, Image as ImageIcon, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import ShareLinkButton from '@/components/ShareLinkButton';
 import { DEFAULT_CREST } from '@/lib/crest';
-import { ageGroupFamily, ageGroupLabel, teamSummary, kickoffLabel } from '@/lib/hosted-tournaments';
+import { ageGroupFamily, ageGroupLabel, teamSummary, kickoffLabel, gameOutcome, ENTRY_POSITIONS } from '@/lib/hosted-tournaments';
+import { fixtureWhenLabel, tournamentMatchLabel } from '@/lib/tournament-engine';
 import { drawTeamCard } from '@/lib/team-card';
 import LiveMinute from '@/components/LiveMinute';
 import { matchPath } from '@/lib/slugs';
@@ -29,12 +32,18 @@ export function AgeGroupTabs({ tournaments, tournament, href }: { tournaments: T
   );
 }
 
-export function TeamDetail({ team, tournament, matches, events, squad, host, showName, onClose, clubPage }: {
+const POSITION_GROUPS: [string | null, string][] = [['GK', 'Goalkeepers'], ['DEF', 'Defenders'], ['MID', 'Midfielders'], ['FWD', 'Forwards'], [null, 'Players']];
+const OUTCOME_WORD = { W: 'Won', D: 'Drew', L: 'Lost' } as const;
+
+export function TeamDetail({ team, tournament, matches, events, squad, participants, clubSlug, host, showName, onClose, clubPage }: {
   team: TournamentParticipant;
   tournament: Tournament;
   matches: Match[];
   events: MatchEvent[];
   squad: TournamentSquadPlayer[];
+  /** Every team in the tournament, for the opponents' crests */
+  participants: TournamentParticipant[];
+  clubSlug: string;
   host: { name: string; logo_url?: string | null };
   showName: (n: string) => string;
   onClose: () => void;
@@ -46,6 +55,7 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
   const players = squad.filter(p => p.participant_id === team.id);
   const done = s.games.length > 0 && s.games.every(g => g.status === 'completed');
   const title = tournament.age_group ? `${tournament.name} (${tournament.age_group})` : tournament.name;
+  const pathname = usePathname();
   const [busy, setBusy] = useState(false);
   const canvas = useRef<HTMLCanvasElement | null>(null);
 
@@ -68,6 +78,20 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
   };
 
   const staff = [team.manager_name && `Manager ${team.manager_name}`, team.coach_name && `coach ${team.coach_name}`].filter(Boolean).join(', ');
+  const crestOf = (name: string) => participants.find(p => p.name === name)?.logo_url || DEFAULT_CREST;
+  const sideIn = (m: Match) => (m.home_team_name === team.name ? 'home' : 'away') as 'home' | 'away';
+  const form = s.games.map(m => gameOutcome(m, sideIn(m))).filter((o): o is 'W' | 'D' | 'L' => !!o);
+
+  // One heading per day, so each row only needs the kick-off time
+  const days: { day: string; games: Match[] }[] = [];
+  for (const m of s.games) {
+    const day = fixtureWhenLabel({ match_date: m.match_date, match_time: '' });
+    const last = days[days.length - 1];
+    if (last?.day === day) last.games.push(m); else days.push({ day, games: [m] });
+  }
+  const groups = POSITION_GROUPS
+    .map(([pos, label]) => ({ label, list: players.filter(p => (pos ? p.position === pos : !(ENTRY_POSITIONS as readonly (string | null | undefined)[]).includes(p.position))) }))
+    .filter(g => g.list.length);
 
   return (
     <section className="ht-team glass-panel" aria-labelledby="ht-team-name"
@@ -75,74 +99,113 @@ export function TeamDetail({ team, tournament, matches, events, squad, host, sho
       {/* The team's two kit colours run along the top: the one thing every club recognises as its own */}
       <header className="ht-team-head">
         <span className="ht-crest ht-crest-lg"><img src={team.logo_url || DEFAULT_CREST} alt="" width={72} height={72} /></span>
-        <div className="min-w-0">
+        <div className="ht-team-id">
           <h2 id="ht-team-name">{team.name}</h2>
-          {(staff || s.finish) && <p className="ht-team-meta">{[s.finish, staff].filter(Boolean).join('. ')}</p>}
+          {(team.group || s.finish) && (
+            <p className="ht-team-tags">
+              {team.group && <span>Group {team.group}</span>}
+              {s.finish && <span className="is-finish">{s.finish}</span>}
+            </p>
+          )}
+          {staff && <p className="ht-team-meta">{staff}</p>}
           {clubPage && <Link className="ht-link-btn" href={clubPage.href}>{clubPage.name}&rsquo;s club page <ExternalLink size={13} aria-hidden="true" /></Link>}
+          <div className="ht-team-share">
+            <ShareLinkButton url={`${pathname}?team=${team.id}`} title={`${team.name} at ${title}`} label="Share team page" campaign={`tournament-team/${team.name}`} />
+            {s.played > 0 && (
+              <button type="button" className="btn btn-secondary btn-sm ht-share" onClick={share} disabled={busy}>
+                <ImageIcon size={14} aria-hidden="true" /> {busy ? 'Making the graphic…' : done ? 'Share how we did' : 'Share results so far'}
+              </button>
+            )}
+          </div>
         </div>
         <button type="button" className="ht-icon-btn" onClick={onClose} aria-label="Close team"><X size={18} /></button>
       </header>
 
       {s.played > 0 && (
-        <table className="ht-results">
-          <caption className="sr-only">{team.name} results</caption>
-          <thead><tr><th scope="col"><abbr title="Played">P</abbr></th><th scope="col"><abbr title="Won">W</abbr></th><th scope="col"><abbr title="Drawn">D</abbr></th><th scope="col"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goals for">GF</abbr></th><th scope="col"><abbr title="Goals against">GA</abbr></th></tr></thead>
-          <tbody><tr><td>{s.played}</td><td>{s.won}</td><td>{s.drawn}</td><td>{s.lost}</td><td>{s.goalsFor}</td><td>{s.goalsAgainst}</td></tr></tbody>
-        </table>
+        <div className="ht-record">
+          <dl className="ht-record-nums">
+            <div><dt>Played</dt><dd>{s.played}</dd></div>
+            <div><dt>Won</dt><dd>{s.won}</dd></div>
+            <div><dt>Drawn</dt><dd>{s.drawn}</dd></div>
+            <div><dt>Lost</dt><dd>{s.lost}</dd></div>
+            <div><dt>Goals</dt><dd>{s.goalsFor}<span className="ht-record-sep">–</span>{s.goalsAgainst}</dd></div>
+          </dl>
+          <ol className="ht-formline" aria-label="Results in order">
+            {form.map((o, i) => <li key={i} className={`is-${o}`}><span aria-hidden="true">{o}</span><span className="sr-only">{OUTCOME_WORD[o]}</span></li>)}
+          </ol>
+        </div>
       )}
 
       <div className="ht-team-cols">
         <div>
           <h3>Games</h3>
-          {s.games.length ? (
-            <table className="ht-table ht-fixtures">
-              <caption className="sr-only">{team.name} games</caption>
-              <tbody>
-                {s.games.map(m => {
-                  const home = m.home_team_name === team.name;
-                  const opp = home ? m.away_team_name : m.home_team_name;
+          {days.length ? days.map(({ day, games }) => (
+            <div key={day} className="ht-day">
+              {days.length > 1 || day !== 'TBD' ? <h4 className="ht-day-title">{day === 'TBD' ? 'Date to be set' : day}</h4> : null}
+              <ul className="ht-games">
+                {games.map(m => {
+                  const side = sideIn(m);
+                  const opp = side === 'home' ? m.away_team_name : m.home_team_name;
+                  const o = gameOutcome(m, side);
+                  const us = side === 'home' ? m.home_score : m.away_score;
+                  const them = side === 'home' ? m.away_score : m.home_score;
+                  const pens = m.home_penalty_score != null && m.away_penalty_score != null && (m.home_penalty_score || m.away_penalty_score)
+                    ? `${side === 'home' ? m.home_penalty_score : m.away_penalty_score}–${side === 'home' ? m.away_penalty_score : m.home_penalty_score} pens` : null;
+                  const stage = (m.tournament_stage || 'group') === 'group' ? m.tournament_group : tournamentMatchLabel(m);
                   return (
-                    <tr key={m.id}>
-                      <td><span className="ht-when">{kickoffLabel(m)}</span>{m.pitch_label && <span className="ht-sub">{m.pitch_label}</span>}</td>
-                      <th scope="row">v {opp}</th>
-                      <td className="ht-score">{m.status === 'completed' ? `${home ? m.home_score : m.away_score}-${home ? m.away_score : m.home_score}` : ''}</td>
-                    </tr>
+                    <li key={m.id}>
+                      <Link href={matchPath(clubSlug, m)} className="ht-game">
+                        <span className="ht-game-time">
+                          {m.match_time ? formatClock(m.match_time) : 'Time TBC'}
+                          {m.pitch_label && <span className="ht-sub">{m.pitch_label}</span>}
+                        </span>
+                        <span className="ht-game-opp">
+                          <img src={crestOf(opp)} alt="" width={28} height={28} />
+                          <span className="ht-game-name">
+                            <span className="sr-only">Against </span>{opp}
+                            {stage && <span className="ht-sub">{stage}</span>}
+                          </span>
+                        </span>
+                        {o ? (
+                          <span className={`ht-game-res is-${o}`}>
+                            <span className="sr-only">{OUTCOME_WORD[o]} </span>{us}–{them}
+                            {pens && <span className="ht-game-pens">{pens}</span>}
+                          </span>
+                        ) : isOn(m) ? (
+                          <span className="ht-game-res is-live">{us}–{them}<span className="ht-game-pens">{m.status === 'halftime' || m.period === 'halftime' ? 'Half time' : <>Live <LiveMinute match={m} />&prime;</>}</span></span>
+                        ) : (
+                          <span className="ht-game-res is-next">{m.status === 'cancelled' ? 'Off' : 'To play'}</span>
+                        )}
+                      </Link>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
-          ) : <p className="ht-hint">The draw isn&apos;t out yet.</p>}
+              </ul>
+            </div>
+          )) : <p className="ht-hint">The draw isn&apos;t out yet.</p>}
+        </div>
+
+        <div>
           {s.scorers.length > 0 && (
             <>
               <h3>Goals</h3>
-              <table className="ht-table">
-                <caption className="sr-only">{team.name} scorers</caption>
-                <tbody>{s.scorers.map(p => <tr key={p.name}><th scope="row">{showName(p.name)}</th><td className="ht-score">{p.goals}</td></tr>)}</tbody>
-              </table>
+              <ul className="ht-scorers">
+                {s.scorers.map(p => <li key={p.name}><span>{showName(p.name)}</span><strong>{p.goals}</strong></li>)}
+              </ul>
             </>
           )}
-        </div>
-        <div>
-          <h3>Team sheet</h3>
-          {players.length ? (
-            <table className="ht-table ht-sheet">
-              <caption className="sr-only">{team.name} players</caption>
-              <thead><tr><th scope="col" className="ht-num-col">No.</th><th scope="col">Name</th><th scope="col">Position</th></tr></thead>
-              <tbody>
-                {players.map(p => (
-                  <tr key={p.id}><td className="ht-num-col">{p.shirt_number ?? ''}</td><th scope="row">{p.name}</th><td>{p.position || ''}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          ) : <p className="ht-hint">The squad hasn&apos;t been sent yet.</p>}
+          <h3>Squad</h3>
+          {groups.length ? groups.map(g => (
+            <div key={g.label} className="ht-squad-group">
+              <h4 className="ht-day-title">{g.label}</h4>
+              <ul className="ht-squad">
+                {g.list.map(p => <li key={p.id}><span className="ht-shirt">{p.shirt_number ?? ''}</span><span>{p.name}</span></li>)}
+              </ul>
+            </div>
+          )) : <p className="ht-hint">The squad hasn&apos;t been sent yet.</p>}
         </div>
       </div>
 
-      {done && (
-        <button type="button" className="btn btn-primary ht-share" onClick={share} disabled={busy}>
-          <Share2 size={16} aria-hidden="true" /> {busy ? 'Making the graphic…' : 'Share how we did'}
-        </button>
-      )}
     </section>
   );
 }

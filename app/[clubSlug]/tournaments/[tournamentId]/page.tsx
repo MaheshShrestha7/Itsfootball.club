@@ -318,7 +318,7 @@ export default function PublicTournamentDetailPage({
 
         {activeTab === 'teams' && openTeamRow && (
           <TeamDetail team={openTeamRow} tournament={tournament} matches={tourneyMatches} events={matchEvents}
-            squad={squads} host={club} showName={showName} onClose={() => openTeam(null)}
+            squad={squads} participants={participants} clubSlug={club.slug} host={club} showName={showName} onClose={() => openTeam(null)}
             clubPage={(l => (l?.status === 'accepted' && l.linked ? { name: l.linked.name, href: `/${l.linked.slug}` } : undefined))(linkOf(openTeamRow.id))} />
         )}
 
