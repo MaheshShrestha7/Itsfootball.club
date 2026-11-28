@@ -13,6 +13,8 @@ interface TournamentStandingsTableProps {
   showForm?: boolean;
   /** Shows "Level on points? Decided by …" under the table. Left out: no line (free tools) */
   tieBreakers?: TieBreaker[] | null;
+  /** Makes each team name a button that opens that team's games and results */
+  onTeamClick?: (teamId: string) => void;
 }
 
 export default function TournamentStandingsTable({
@@ -21,6 +23,7 @@ export default function TournamentStandingsTable({
   advancingCount = 2,
   showForm = true,
   tieBreakers,
+  onTeamClick,
 }: TournamentStandingsTableProps) {
   if (!standings || standings.length === 0) {
     return (
@@ -133,9 +136,16 @@ export default function TournamentStandingsTable({
                         alt={`${team.name} crest`}
                         style={{ width: '26px', height: '26px', objectFit: 'contain', flexShrink: 0 }}
                       />
+                      {onTeamClick ? (
+                        <button type="button" className="ht-standing-team" onClick={() => onTeamClick(team.team_id)}>
+                          {team.name}<span aria-hidden="true" className="ht-standing-arrow">›</span>
+                          <span className="sr-only">: games and results</span>
+                        </button>
+                      ) : (
                       <span style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
                         {team.name}
                       </span>
+                      )}
                     </div>
                   </td>
 

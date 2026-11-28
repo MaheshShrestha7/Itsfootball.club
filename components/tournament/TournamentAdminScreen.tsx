@@ -11,7 +11,7 @@ import TournamentScoreModal from '@/components/tournament/TournamentScoreModal';
 import RunSheet from '@/components/tournament/RunSheet';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 import PlayerOfTournament from '@/components/tournament/PlayerOfTournament';
-import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play } from 'lucide-react';
+import { Trophy, ArrowLeft, Calendar, Layers, Shuffle, RefreshCw, Plus, Users, ExternalLink, Clock, Sparkles, Pencil, AlertCircle, CheckCircle2, NotebookPen, ShieldCheck, Lock, Play, Handshake } from 'lucide-react';
 import { DEFAULT_CREST } from '@/lib/crest';
 import { GROUP_LETTERS, parseTournamentDate, knockoutLockReason, knockoutStarted, groupGamesLeft, START_KNOCKOUT_CONFIRM } from '@/lib/tournament-engine';
 import { useGroupStageFinishedPrompt } from '@/components/tournament/useGroupStageFinishedPrompt';
@@ -24,6 +24,8 @@ import { useMatchReviewsReady } from '@/lib/use-match-reviews';
 import { useHostedTournamentsReady, useKnockoutStartReady } from '@/lib/use-event-fixtures-ready';
 import { ageGroupFamily, ageGroupLabel } from '@/lib/hosted-tournaments';
 import GuestTeamsPanel from '@/components/tournament/GuestTeamsPanel';
+import { TournamentSponsorsAdmin } from '@/components/tournament/TournamentSponsors';
+import { useTournamentSponsors } from '@/lib/use-tournament-sponsors';
 import FairPlayTable from '@/components/tournament/FairPlayTable';
 import '@/components/tournament/hosted.css';
 
@@ -58,13 +60,15 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
   const reviewsReady = useMatchReviewsReady();
   const hosted = useHostedTournamentsReady();
   const koStartReady = useKnockoutStartReady();
+  // The tournament's own sponsors: the tab shows once migration 20261196 has run
+  const sponsorApi = useTournamentSponsors(tournamentId);
   const [addAgeGroup, setAddAgeGroup] = useState(false);
 
   const club = selectClubBySlug(clubSlug) || clubs[0];
   const tournament = tournaments.find(t => t.id === tournamentId);
 
   // Teams is the first tab, so the screen opens on it
-  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay'>('teams');
+  const [activeTab, setActiveTab] = useState<'bracket' | 'standings' | 'fixtures' | 'teams' | 'fairplay' | 'sponsors'>('teams');
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [runSheet, setRunSheet] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -189,6 +193,7 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
     { id: 'bracket', label: 'Knockout bracket', Icon: Trophy, show: tournament.format !== 'league' },
     { id: 'standings', label: 'Standings', Icon: Layers, show: tournament.format !== 'knockout' },
     { id: 'fixtures', label: `Fixtures and results (${tourneyMatches.length})`, Icon: Calendar, show: true },
+    { id: 'sponsors', label: `Sponsors (${sponsorApi.sponsors.length})`, Icon: Handshake, show: sponsorApi.ready && !isEvent },
     { id: 'fairplay', label: 'Fair play', Icon: ShieldCheck, show: hosted },
   ] as const).filter(t => t.show);
   // Age groups of a hosted tournament (one tournament each); not on free public tournaments
@@ -461,6 +466,8 @@ export default function TournamentAdminScreen({ clubSlug, tournamentId }: { club
       {activeTab === 'teams' && hosted && (
         <GuestTeamsPanel club={club} tournament={tournament} participants={participants} matches={tourneyMatches} isEvent={isEvent} onFeedback={showFeedback} onRedraw={() => handleGenerateTiesheet(false, true)} />
       )}
+
+      {activeTab === 'sponsors' && sponsorApi.ready && <TournamentSponsorsAdmin clubId={club.id} api={sponsorApi} />}
 
       {activeTab === 'fairplay' && hosted && (
         <FairPlayTable matches={tourneyMatches} events={matchEvents} participants={participants} />
