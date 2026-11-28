@@ -206,7 +206,7 @@ export default function TournamentFormModal({
       const { data: teams } = await db.from('tournament_participants').select('id, name').eq('tournament_id', tournamentId);
       const rows = (teams || []).flatMap(t => {
         const c = contacts[t.name.toLowerCase()];
-        return c && (c.contact_name || c.contact_email || c.contact_phone)
+        return c && Object.values(c).some(Boolean)
           // tournament_id and club_id are filled in by the database from the team
           ? [{ participant_id: t.id, tournament_id: tournamentId, club_id: '00000000-0000-0000-0000-000000000000', entry_key: `te-${crypto.randomUUID().replace(/-/g, '')}`, ...c }]
           : [];
@@ -760,7 +760,7 @@ export default function TournamentFormModal({
               setContacts(prev => {
                 const next = { ...prev };
                 if (old) delete next[old];
-                if (contact.contact_name || contact.contact_email || contact.contact_phone) next[fields.name.toLowerCase()] = contact;
+                if (Object.values(contact).some(Boolean)) next[fields.name.toLowerCase()] = contact;
                 return next;
               });
               setExternalTeams(prev => editingGuest === 'new'

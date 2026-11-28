@@ -15,7 +15,7 @@ import { confirmAction } from '@/components/ConfirmDialog';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import PopupPanel from '@/components/PopupPanel';
 import { GROUP_LETTERS, effectiveGroupRules } from '@/lib/tournament-engine';
-import { kitClashes, money, parseTeamList, shortCode, kickoffLabel } from '@/lib/hosted-tournaments';
+import { ENTRY_POSITIONS, kitClashes, money, parseEntry, parsePlayers, parseTeamList, shortCode, kickoffLabel, type EntryPlayer } from '@/lib/hosted-tournaments';
 import { useTournamentEntries } from '@/lib/use-tournament-entries';
 import { findClubs, removeLink, saveLink, useTournamentLinks, type FoundClub, type LinkPick, type TournamentLink } from '@/lib/tournament-links';
 import { ourSide } from '@/lib/friendlies';
@@ -275,13 +275,13 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                         </select>
                       </td>
                     )}
-                    {!isEvent && <td data-label="Entry">{guest ? <span className="ht-state" data-tone={status.tone}>{status.label}</span> : <span className="ht-sub">Club squad</span>}</td>}
+                    {!isEvent && <td data-label="Entry">{guest ? <span className="ht-state" data-tone={status.tone}>{e?.status === 'submitted' && !e.submitted_at ? 'Entered by you' : status.label}</span> : <span className="ht-sub">Club squad</span>}</td>}
                     {!isEvent && (
                       <td data-label="Players">
                         {guest ? (
                           <button type="button" className="ht-link-btn" onClick={() => setSquadOf(p)} data-view-ok>
-                            <Users size={14} aria-hidden="true" />
-                            {desk ? `${players.filter(x => x.present).length} of ${players.length} here` : `${players.length} player${players.length === 1 ? '' : 's'}`}
+                            {players.length || desk ? <Users size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
+                            {desk ? `${players.filter(x => x.present).length} of ${players.length} here` : players.length ? `${players.length} player${players.length === 1 ? '' : 's'}` : 'Add players'}
                           </button>
                         ) : <span className="ht-sub">From Tournament sides</span>}
                       </td>
@@ -367,7 +367,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
                   linking.reload();
                 });
               }
-              if (!isEvent && (contact.contact_name || contact.contact_email || contact.contact_phone)) {
+              if (!isEvent && (Object.values(contact).some(Boolean))) {
                 saveAfterTeam(async () => {
                   const err = await hosted.saveEntry(created.id, contact);
                   if (err) onFeedback('error', `Contact not saved: ${err}. Open Edit to add it again.`);
@@ -418,7 +418,22 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
           entry={entryOf(squadOf.id)}
           desk={desk}
           juniorTournament={!!tournament.is_junior}
+          maxSquad={tournament.max_squad}
           onPresent={hosted.setPresent}
+          onSave={async (list, done) => {
+            const id = squadOf.id;
+            await saveNow(); // a team added a moment ago must be in the database first
+            const err = await hosted.saveSquad(id, list);
+            if (err) return err;
+            const e = entryOf(id);
+            const status = done ? 'submitted' : list.length ? 'in_progress' : 'not_started';
+            if (!e || e.status !== status) {
+              const statusErr = await hosted.saveEntry(id, { status });
+              if (statusErr) return `Players saved, but not the entry state: ${statusErr}`;
+            }
+            onFeedback('success', `Saved ${list.length} player${list.length === 1 ? '' : 's'} for ${squadOf.name}.`);
+            return null;
+          }}
           onClose={() => setSquadOf(null)}
           link={linkFor(entryOf(squadOf.id))}
         />
@@ -430,7 +445,7 @@ export default function GuestTeamsPanel({ club, tournament, participants, matche
 // ------------------------------------------------------------------------------
 
 export type TeamFields = Pick<TournamentParticipant, 'name' | 'short_name' | 'logo_url' | 'color' | 'secondary_color' | 'manager_name' | 'coach_name'>;
-export type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone'>;
+export type ContactFields = Pick<TournamentEntry, 'contact_name' | 'contact_email' | 'contact_phone' | 'assistant_name' | 'first_aid_name'>;
 
 function Shell({ label, onClose, children, wide }: { label: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
@@ -474,6 +489,8 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
   const [contactName, setContactName] = useState(entry?.contact_name ?? '');
   const [contactEmail, setContactEmail] = useState(entry?.contact_email ?? '');
   const [contactPhone, setContactPhone] = useState(entry?.contact_phone ?? '');
+  const [assistant, setAssistant] = useState(entry?.assistant_name ?? '');
+  const [firstAid, setFirstAid] = useState(entry?.first_aid_name ?? '');
   const [error, setError] = useState<string | null>(null);
   const guest = !team || team.team_type === 'external';
   // Linking a club already on the platform: search, then its team; crest and colours are copied and can be changed
@@ -505,7 +522,7 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
       : undefined;
     onSave(
       { name: n, short_name: (code.trim() || shortCode(n)).slice(0, 16).toUpperCase(), logo_url: logo || DEFAULT_CREST, color: c1, secondary_color: c2, manager_name: manager.trim() || null, coach_name: coach.trim() || null },
-      { contact_name: contactName.trim() || null, contact_email: contactEmail.trim().toLowerCase() || null, contact_phone: contactPhone.trim() || null },
+      { contact_name: contactName.trim() || null, contact_email: contactEmail.trim().toLowerCase() || null, contact_phone: contactPhone.trim() || null, assistant_name: assistant.trim() || null, first_aid_name: firstAid.trim() || null },
       pick,
     );
   };
@@ -614,6 +631,16 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
               <label className="form-label" htmlFor="ht-cemail">Email (their entry link goes here)</label>
               <input id="ht-cemail" className="form-input" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} maxLength={254} />
             </div>
+            <div className="ht-two">
+              <div className="form-group">
+                <label className="form-label" htmlFor="ht-assistant">Assistant</label>
+                <input id="ht-assistant" className="form-input" value={assistant} onChange={e => setAssistant(e.target.value)} maxLength={128} />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="ht-firstaid">First aid</label>
+                <input id="ht-firstaid" className="form-input" value={firstAid} onChange={e => setFirstAid(e.target.value)} maxLength={128} />
+              </div>
+            </div>
           </fieldset>
         )}
         {((finding && found) || (link && !unlink)) && (
@@ -704,22 +731,84 @@ function BulkAdd({ taken, onClose, onAdd }: { taken: string[]; onClose: () => vo
   );
 }
 
-function SquadPopup({ team, players, entry, desk, juniorTournament, onPresent, onClose, link }: {
+function SquadPopup({ team, players, entry, desk, juniorTournament, maxSquad, onPresent, onSave, onClose, link }: {
   team: TournamentParticipant;
   players: ReturnType<typeof useTournamentEntries>['squads'];
   entry?: TournamentEntry;
   desk: boolean;
   juniorTournament: boolean;
+  maxSquad: number | null | undefined;
   onPresent: (id: string, present: boolean) => void;
+  /** Saves the list; returns an error message or null */
+  onSave: (list: (EntryPlayer & { id?: string })[], done: boolean) => Promise<string | null>;
   onClose: () => void;
   link: string | null;
 }) {
   const here = players.filter(p => p.present).length;
+  const max = maxSquad && maxSquad > 0 ? maxSquad : 40;
+  const [list, setList] = useState<(EntryPlayer & { id?: string })[]>(() =>
+    players.map(p => ({ id: p.id, name: p.name, shirt_number: p.shirt_number, position: p.position, is_junior: !!p.is_junior, hide_public: !!p.hide_public })));
+  const [paste, setPaste] = useState<string | null>(null);
+  const [done, setDone] = useState(entry?.status === 'submitted');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const set = (i: number, patch: Partial<EntryPlayer>) => { setError(null); setList(l => l.map((p, j) => (j === i ? { ...p, ...patch } : p))); };
+  const named = list.filter(p => p.name.trim());
+  const counts = [...ENTRY_POSITIONS.map(x => [x, named.filter(p => p.position === x).length] as const), ['not set', named.filter(p => !p.position).length] as const]
+    .filter(([, n]) => n).map(([x, n]) => `${n} ${x}`).join(', ');
+
+  const save = async () => {
+    // Same checks as the club's own entry link (numbers 0 to 99, no shared number, squad size)
+    const parsed = parseEntry({ players: list }, maxSquad);
+    if (!parsed.ok) return setError(parsed.error);
+    const ids = list.filter(p => p.name.trim()).map(p => p.id);
+    setSaving(true);
+    const err = await onSave(parsed.value.players.map((p, i) => ({ ...p, id: ids[i] })), done);
+    setSaving(false);
+    if (err) setError(err); else onClose();
+  };
+
+  // On the day (check-in desk) the popup is for ticking who is here
+  if (desk) {
+    return (
+      <Shell label={`${team.name}: players`} onClose={onClose}>
+        <div className="ht-squad-head">
+          <Crest team={team} size={34} />
+          <span>{players.length ? `${players.length} player${players.length === 1 ? '' : 's'}, ${here} here` : 'No players entered yet.'}</span>
+        </div>
+        {players.length > 0 && (
+          <table className="ht-table ht-sheet">
+            <caption className="sr-only">{team.name} players</caption>
+            <thead>
+              <tr>
+                <th scope="col">Here</th>
+                <th scope="col" className="ht-num-col">No.</th>
+                <th scope="col">Name</th>
+                <th scope="col">Position</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map(p => (
+                <tr key={p.id}>
+                  <td><input type="checkbox" className="ht-check" checked={!!p.present} onChange={e => onPresent(p.id, e.target.checked)} aria-label={`${p.name} is here`} /></td>
+                  <td className="ht-num-col">{p.shirt_number ?? ''}</td>
+                  <th scope="row">{p.name}</th>
+                  <td>{p.position || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <div className="ht-foot"><button type="button" className="btn btn-primary btn-sm" onClick={onClose}>Done</button></div>
+      </Shell>
+    );
+  }
+
   return (
-    <Shell label={`${team.name}: players`} onClose={onClose}>
+    <Shell label={`${team.name}: players`} onClose={onClose} wide>
       <div className="ht-squad-head">
         <Crest team={team} size={34} />
-        <span>{players.length ? `${players.length} player${players.length === 1 ? '' : 's'}${desk ? `, ${here} here` : ''}` : 'No players entered yet.'}</span>
+        <span>{named.length ? `${named.length}${maxSquad ? ` of ${maxSquad}` : ''} player${named.length === 1 ? '' : 's'}. ${counts}` : 'No players yet. Add them here, or send the club its link.'}</span>
       </div>
       {(entry?.assistant_name || entry?.first_aid_name) && (
         <dl className="ht-staff">
@@ -727,41 +816,72 @@ function SquadPopup({ team, players, entry, desk, juniorTournament, onPresent, o
           {entry.first_aid_name && <><dt>First aid</dt><dd>{entry.first_aid_name}</dd></>}
         </dl>
       )}
-      {players.length > 0 && (
-        <table className="ht-table ht-sheet">
-          <caption className="sr-only">{team.name} players</caption>
-          <thead>
-            <tr>
-              {desk && <th scope="col">Here</th>}
-              <th scope="col" className="ht-num-col">No.</th>
-              <th scope="col">Name</th>
-              <th scope="col">Position</th>
-              <th scope="col">Public page</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map(p => (
-              <tr key={p.id}>
-                {desk && <td><input type="checkbox" className="ht-check" checked={!!p.present} onChange={e => onPresent(p.id, e.target.checked)} aria-label={`${p.name} is here`} /></td>}
-                <td className="ht-num-col">{p.shirt_number ?? ''}</td>
-                <th scope="row">{p.name}</th>
-                <td>{p.position || ''}</td>
-                <td className="ht-sub">{p.hide_public ? 'Hidden' : (p.is_junior || juniorTournament) ? 'First name and initial' : 'Full name'}</td>
-              </tr>
+      <p className="ht-hint" style={{ marginBottom: '0.6rem' }}>
+        {juniorTournament ? 'Junior tournament: public pages show first names and last initials only.' : 'Tick Junior for a player under 18: public pages then show first name and last initial.'} Hide keeps a player off public pages.
+      </p>
+      {list.length > 0 && (
+        <div className="te-sheet" role="table" aria-label={`${team.name} players`}>
+          <div className="te-sheet-head" role="row">
+            <span role="columnheader">No.</span>
+            <span role="columnheader">Name</span>
+            <span role="columnheader">Position</span>
+            <span role="columnheader">Public page</span>
+            <span role="columnheader"><span className="sr-only">Remove</span></span>
+          </div>
+          <ul className="te-players">
+            {list.map((p, i) => (
+              <li key={p.id || `new-${i}`} role="row">
+                <input className="form-input te-num" inputMode="numeric" aria-label={`Shirt number, player ${i + 1}`} placeholder="#" value={p.shirt_number ?? ''}
+                  onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); set(i, { shirt_number: v === '' ? null : Number(v) }); }} />
+                <input className="form-input te-pname" aria-label={`Name, player ${i + 1}`} placeholder="Full name" value={p.name} maxLength={80} onChange={e => set(i, { name: e.target.value })} />
+                <select className="form-select te-pos" aria-label={`Position, player ${i + 1}`} value={p.position || ''} onChange={e => set(i, { position: e.target.value || null })}>
+                  <option value="">Position</option>
+                  {ENTRY_POSITIONS.map(x => <option key={x} value={x}>{x}</option>)}
+                </select>
+                <span className="te-ticks">
+                  {!juniorTournament && <label className="te-tick"><input type="checkbox" checked={p.is_junior} onChange={e => set(i, { is_junior: e.target.checked })} /> Junior</label>}
+                  <label className="te-tick"><input type="checkbox" checked={p.hide_public} onChange={e => set(i, { hide_public: e.target.checked })} /> Hide</label>
+                </span>
+                <button type="button" className="te-remove" aria-label={`Remove ${p.name || `player ${i + 1}`}`} onClick={() => setList(l => l.filter((_, j) => j !== i))}><Trash2 size={15} aria-hidden="true" /></button>
+              </li>
             ))}
-          </tbody>
-        </table>
+          </ul>
+        </div>
       )}
-      {!players.length && link && (
-        <p className="ht-hint">They add players from their entry link. <Link href={link} target="_blank">Open it</Link> to see what they see.</p>
+      {paste !== null ? (
+        <div className="te-paste" style={{ marginTop: '0.6rem' }}>
+          <textarea className="form-input" rows={6} value={paste} onChange={e => setPaste(e.target.value)} aria-label="Players, one per line" placeholder={'7 Sam Patel\n10 Leo Brooks\nAri Haddad'} />
+          <div className="te-row">
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => { setList(l => [...l, ...parsePlayers(paste)].slice(0, max)); setPaste(null); }}>Add {parsePlayers(paste).length || ''} players</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPaste(null)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="te-row" style={{ marginTop: '0.6rem' }}>
+          <button type="button" className="btn btn-secondary btn-sm" style={btn} disabled={list.length >= max} onClick={() => setList(l => [...l, { name: '', shirt_number: null, position: null, is_junior: false, hide_public: false }])}>
+            <Plus size={14} aria-hidden="true" /><span>Add a player</span>
+          </button>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={list.length >= max} onClick={() => setPaste('')}>Paste a list</button>
+        </div>
       )}
+      <label className="ht-linked is-check" style={{ marginTop: '0.9rem' }}>
+        <input type="checkbox" className="ht-check" checked={done} onChange={e => setDone(e.target.checked)} />
+        <span>
+          <span className="ht-name">Mark their entry as done</span>
+          <span className="ht-sub">{entry?.submitted_at ? 'They already sent their entry.' : 'The Entry column says "Entered by you" and they get no reminder emails.'} They can still make changes on their link.</span>
+        </span>
+      </label>
+      {error && <p className="ht-hint" role="alert" style={{ color: 'var(--c-red)' }}><AlertTriangle size={14} aria-hidden="true" />{error}</p>}
       <div className="ht-foot">
         {link && (
           <button type="button" className="btn btn-secondary btn-sm" style={btn} onClick={() => navigator.clipboard?.writeText(link)}>
             <Copy size={14} aria-hidden="true" /><span>Copy their link</span>
           </button>
         )}
-        <button type="button" className="btn btn-primary btn-sm" onClick={onClose}>Done</button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn btn-primary btn-sm" style={btn} disabled={saving} onClick={save}>
+          <Check size={14} aria-hidden="true" /><span>{saving ? 'Saving...' : 'Save players'}</span>
+        </button>
       </div>
     </Shell>
   );

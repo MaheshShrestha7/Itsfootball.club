@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getAccessToken, getSupabaseClient } from '@/lib/supabase/client';
 import type { TournamentEntry, TournamentSquadPlayer } from '@/lib/supabase/types';
+import type { EntryPlayer } from '@/lib/hosted-tournaments';
 
 export function useTournamentEntries(tournamentId: string, enabled: boolean) {
   const [entries, setEntries] = useState<TournamentEntry[]>([]);
@@ -60,6 +61,34 @@ export function useTournamentEntries(tournamentId: string, enabled: boolean) {
     if (error) await reload();
   }, [reload]);
 
+  /**
+   * The host types a guest team's players. Rows keep their id (and the check-in tick) when edited;
+   * removed players are deleted. The guest's entry link shows the same list.
+   */
+  const saveSquad = useCallback(async (participantId: string, players: (EntryPlayer & { id?: string })[]) => {
+    const db = getSupabaseClient();
+    if (!db) return 'Not connected.';
+    const rows = players.map(({ id, ...p }, i) => ({ id, row: { ...p, participant_id: participantId, sort_order: i } }));
+    const keep = rows.filter(r => r.id).map(r => r.id!);
+    const gone = squads.filter(s => s.participant_id === participantId && !keep.includes(s.id)).map(s => s.id);
+    if (gone.length) {
+      const { error } = await db.from('tournament_squads').delete().in('id', gone);
+      if (error) return error.message;
+    }
+    for (const { id, row } of rows.filter(r => r.id)) {
+      const { error } = await db.from('tournament_squads').update(row).eq('id', id!);
+      if (error) { await reload(); return error.message; }
+    }
+    // tournament_id and club_id are filled in by the database from the team
+    const fresh = rows.filter(r => !r.id).map(({ row }) => ({ ...row, tournament_id: tournamentId, club_id: '00000000-0000-0000-0000-000000000000' }));
+    if (fresh.length) {
+      const { error } = await db.from('tournament_squads').insert(fresh);
+      if (error) { await reload(); return error.message; }
+    }
+    await reload();
+    return null;
+  }, [squads, tournamentId, reload]);
+
   const setCheckedIn = useCallback((participantId: string, on: boolean) =>
     saveEntry(participantId, { checked_in_at: on ? new Date().toISOString() : null }), [saveEntry]);
 
@@ -89,7 +118,7 @@ export function useTournamentEntries(tournamentId: string, enabled: boolean) {
     return r?.ok ? null : (data.error as string) || 'That didn\'t save.';
   }, [reload]);
 
-  return { entries, squads, bills, loaded, reload, saveEntry, newLink, setPresent, setCheckedIn, act, markPaid };
+  return { entries, squads, bills, loaded, reload, saveEntry, saveSquad, newLink, setPresent, setCheckedIn, act, markPaid };
 }
 
 /** A tournament's guest squads as visitors see them: no hidden players, junior names shortened */
