@@ -488,3 +488,22 @@ a.ts-presenter:hover .ts-presenter-name { color: var(--club-ink); }
 a.ts-presenter:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 4px; border-radius: 12px; }
 .ts-main { color: var(--club-ink); background: color-mix(in oklab, var(--club-primary) 16%, transparent); }
 @media (max-width: 640px) { .ts-presenter-logo { height: 80px; } }
+
+/* ---- Linked clubs (migration 20261197): a club already on itsfootball.club as a tournament team ---- */
+.ht-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(var(--tint-rgb), 0.06); }
+.ht-seg button { min-height: 40px; padding: 0.4rem 0.5rem; border: 0; border-radius: 9px; background: none; color: var(--text-secondary); font: 700 0.84rem var(--font-body); cursor: pointer; }
+.ht-seg button[aria-pressed='true'] { background: var(--club-primary); color: #fff; }
+.ht-seg button:focus-visible { outline: 2px solid var(--club-ink); outline-offset: 2px; }
+.ht-search { position: relative; }
+.ht-search > svg { position: absolute; left: 0.8rem; bottom: 0.8rem; color: var(--text-muted); pointer-events: none; }
+.ht-search .form-input { padding-left: 2.3rem; }
+.ht-found { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; padding: 0; list-style: none; }
+.ht-found > li, .ht-linked { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 14px; border: 1px solid var(--border-subtle); background: rgba(var(--tint-rgb), 0.03); }
+.ht-found > li > .min-w-0, .ht-linked > .min-w-0 { flex: 1 1 160px; }
+.ht-linked { flex-wrap: wrap; }
+.ht-linked > svg { flex: none; color: var(--club-ink); }
+.ht-linked-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.ht-linked.is-check { align-items: flex-start; flex-wrap: nowrap; cursor: pointer; }
+.ht-linked.is-check .ht-check { margin-top: 0.2rem; }
+.ht-inline-icon { display: inline; vertical-align: -1px; margin-right: 0.25rem; }
+.ht-team-cell .ht-state { margin-top: 0.3rem; }

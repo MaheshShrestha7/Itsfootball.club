@@ -9,6 +9,7 @@ import { groupByMonth, isPastFixture, seasonOfMatch, seasonOptions } from '@/lib
 import { useUrlParam, useUrlTab } from '@/lib/use-url-tab';
 import { SITE_URL } from '@/lib/slugs';
 import FixtureRow from '@/components/FixtureRow';
+import { useLinkedGames, type LinkedGame } from '@/lib/tournament-links';
 import ClubSubPage, { EmptyState, ListSkeleton, MonthGroup, UpcomingPastTabs } from '@/components/ClubSubPage';
 
 const VIEWS = ['upcoming', 'past'] as const;
@@ -32,8 +33,9 @@ export default function ClubFixturesPage({ params }: { params: Promise<{ clubSlu
 
   // In-house games (two of the club's own sides) stay with the squad unless the club plays nothing else
   const own = matches.filter(m => m.club_id === club.id);
-  const clubMatches = publicFixtures(own, own)
-    .filter(m => clubPlaysIn(m, tournamentParticipants, club.name))
+  // Plus our games in other clubs' tournaments we accepted (migration 20261197); they open on the host's site
+  const linked = useLinkedGames(club.id);
+  const clubMatches = [...publicFixtures(own, own).filter(m => clubPlaysIn(m, tournamentParticipants, club.name)), ...linked]
     .filter(m => !team || teamOfMatch(m, clubTeams)?.id === team.id);
 
   const upcoming = clubMatches
@@ -66,7 +68,7 @@ export default function ClubFixturesPage({ params }: { params: Promise<{ clubSlu
     return t ? teamLabel(t) : undefined;
   };
   const row = (m: (typeof matches)[number]) => (
-    <FixtureRow key={m.id} match={m} clubSlug={club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={label(m)} />
+    <FixtureRow key={m.id} match={m} clubSlug={(m as Partial<LinkedGame>).hostSlug || club.slug} hideScore={publicScoreHidden(m, clubTeams)} teamLabel={label(m)} />
   );
   const list = view === 'upcoming' ? upcoming : past.slice(0, shown);
   const seasonName = (s: string) => (s === NO_SEASON ? 'No season set' : s);
