@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { sponsorGroups, headerSponsors, titleSponsor, moveSponsor, normaliseWebsite, defaultPlacement, categoryLabel, TournamentSponsor } from './tournament-sponsors';
+import { sponsorGroups, sponsorSize, logoSpan, headerSponsors, titleSponsor, moveSponsor, normaliseWebsite, defaultPlacement, categoryLabel, TournamentSponsor } from './tournament-sponsors';
 
 const s = (id: string, category: string, display_order: number, placement: 'title' | 'header' | 'list' = 'list', is_active = true): TournamentSponsor =>
   ({ id, tournament_id: 't', name: id, category, placement, display_order, is_active });
@@ -8,8 +8,16 @@ const list = [s('food', 'Food partner', 0), s('radio', 'media', 1, 'header'), s(
 const groups = sponsorGroups(list);
 assert.deepEqual(groups.map(g => g.title), ['Platinum', 'Gold', 'Media partner', 'Food partner'], 'presets in order, own categories last, hidden left out');
 assert.deepEqual(groups[1].sponsors.map(x => x.id), ['gold2', 'gold1'], 'host order inside a category');
-assert.equal(groups[0].size, 'xl');
-assert.deepEqual(headerSponsors(list).map(x => x.id), ['radio', 'gold2', 'plat'], 'header strip in host order, hidden left out');
+assert.equal(groups[0].size, 'platinum');
+assert.equal(groups[3].size, 'small', 'own categories are small');
+assert.deepEqual(headerSponsors(list).map(x => x.id), ['plat', 'gold2', 'radio'], 'header strip biggest first, hidden left out');
+assert.equal(sponsorSize({ category: 'Food partner', logo_size: 'silver' }), 'silver', 'host size wins');
+assert.equal(sponsorSize({ category: 'gold', logo_size: null }), 'gold', 'no size: the category');
+assert.equal(sponsorSize({ category: 'gold' }), 'gold', 'before the migration');
+assert.deepEqual(logoSpan('silver', 'small'), { desk: 2, phone: 2 }, 'a bigger logo spans more of a small row');
+assert.deepEqual(logoSpan('platinum', 'small'), { desk: 3, phone: 3 });
+assert.deepEqual(logoSpan('small', 'platinum'), { desk: 1, phone: 1 });
+assert.deepEqual(logoSpan('gold', 'gold'), { desk: 1, phone: 1 });
 assert.deepEqual(moveSponsor(list, 'plat', -1), [{ id: 'plat', display_order: 2 }, { id: 'gold2', display_order: 3 }]);
 assert.deepEqual(moveSponsor(list, 'food', -1), [], 'first stays first');
 assert.equal(normaliseWebsite(' momohouse.com.au '), 'https://momohouse.com.au');

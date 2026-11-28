@@ -3,13 +3,16 @@
 // A tournament's own sponsors (migration 20261196), read straight from the database: they're not part
 // of the background sync. Visitors read the active ones; the club's Tournaments editors read and
 // change them all (row-level security). `ready` stays false until the table exists.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import type { TournamentSponsor } from '@/lib/tournament-sponsors';
 
 export function useTournamentSponsors(tournamentId: string | undefined) {
   const [sponsors, setSponsors] = useState<TournamentSponsor[]>([]);
   const [ready, setReady] = useState(false);
+  // logo_size arrives with migration 20261199; until then the admin's Logo size choice stays hidden
+  const [hasLogoSize, setHasLogoSize] = useState(false);
+  const hasLogoSizeChecked = useRef(false);
 
   const reload = useCallback(async () => {
     const db = getSupabaseClient();
@@ -17,6 +20,11 @@ export function useTournamentSponsors(tournamentId: string | undefined) {
     const { data, error } = await db.from('tournament_sponsors').select('*').eq('tournament_id', tournamentId).order('display_order');
     setReady(!error);
     if (!error) setSponsors((data || []) as TournamentSponsor[]);
+    if (!error && !hasLogoSizeChecked.current) {
+      hasLogoSizeChecked.current = true;
+      const probe = await db.from('tournament_sponsors').select('logo_size').limit(1);
+      setHasLogoSize(!probe.error);
+    }
   }, [tournamentId]);
 
   useEffect(() => { reload(); }, [reload]);
@@ -48,5 +56,5 @@ export function useTournamentSponsors(tournamentId: string | undefined) {
     await reload();
   }, [reload]);
 
-  return { sponsors, ready, save, remove, reorder };
+  return { sponsors, ready, hasLogoSize, save, remove, reorder };
 }
