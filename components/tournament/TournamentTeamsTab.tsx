@@ -1,34 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronRight, Search, Trophy } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { Search, Trophy } from 'lucide-react';
 import type { Match, MatchEvent, Tournament, TournamentParticipant, TournamentStanding } from '@/lib/supabase/types';
 import { GROUP_LETTERS } from '@/lib/tournament-engine';
-import { gameOutcome, teamSummary } from '@/lib/hosted-tournaments';
-import { DEFAULT_CREST } from '@/lib/crest';
-import { DATE_LOCALE } from '@/lib/dates';
+import { teamSummary } from '@/lib/hosted-tournaments';
 
-const OUTCOME_WORD = { W: 'Won', D: 'Drawn', L: 'Lost' } as const;
+// How far a team got, best first: the sections once the cup is over
+const FINISH_ORDER = ['Winners', 'Runners-up', 'Third place', 'Fourth place', 'Semi-Finals', 'Quarter-Finals', 'Round of 16', 'Round of 32', 'Group stage'];
+const FINISH_TITLE: Record<string, string> = { Winners: 'Champions', 'Semi-Finals': 'Semi-finals', 'Quarter-Finals': 'Quarter-finals' };
 
-function when(m: Match, oneDay: boolean) {
-  const day = m.match_date?.slice(0, 10);
-  if (!day) return 'time to be set';
-  const d = new Date(`${day}T${m.match_time?.slice(0, 5) || '12:00'}`);
-  const time = m.match_time ? d.toLocaleTimeString(DATE_LOCALE, { hour: 'numeric', minute: '2-digit' }) : '';
-  const date = d.toLocaleDateString(DATE_LOCALE, { weekday: 'short', day: 'numeric', month: 'short' });
-  return oneDay ? time || date : [date, time].filter(Boolean).join(', ');
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
+const monogram = (t: TournamentParticipant) => (t.short_name?.trim() || t.name.split(/\s+/).map(w => w[0]).join('')).slice(0, 3).toUpperCase();
+// Dark or light letters, whichever reads on the kit colour
+const inkOn = (hex?: string | null) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return 'var(--tt-ink-light)';
+  const n = parseInt(m[1], 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? 'var(--tt-ink-dark)' : 'var(--tt-ink-light)';
+};
+
+/** The team's crest, or without one a shield in its own kit colours with its short name */
+export function TeamCrest({ team, size }: { team: TournamentParticipant; size: number }) {
+  const clip = useId();
+  if (team.logo_url) return <img className="tt-crest" src={team.logo_url} alt="" width={size} height={size} loading="lazy" decoding="async" />;
+  const shield = 'M50 4 10 18v30c0 25 17 42 40 48 23-6 40-23 40-48V18L50 4Z';
+  return (
+    <svg className="tt-crest" viewBox="0 0 100 100" width={size} height={size} aria-hidden="true"
+      style={{ '--k1': team.color || 'var(--club-primary)', '--k2': team.secondary_color || team.color || 'var(--club-secondary)' } as React.CSSProperties}>
+      <clipPath id={clip}><path d={shield} /></clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <rect width="100" height="100" fill="var(--k1)" />
+        <rect x="0" y="62" width="100" height="12" fill="var(--k2)" />
+      </g>
+      <path d={shield} fill="none" stroke="var(--border-medium)" strokeWidth="2.5" />
+      <text x="50" y="49" textAnchor="middle" dominantBaseline="middle" fill={inkOn(team.color)} fontFamily="var(--font-heading)" fontWeight="800" fontSize="25">{monogram(team)}</text>
+    </svg>
+  );
 }
 
-/** Where a team got to, as a sentence: "Champions", "Runners-up", "Out in the semi-finals" */
-function finishLine(finish: string) {
-  if (finish === 'Winners') return 'Champions';
-  if (finish === 'Runners-up' || finish.endsWith('place')) return finish;
-  return `Out in the ${finish.toLowerCase()}`;
-}
-
-/** The public Teams tab: teams under their group, in table order once games are played (A to Z
- *  before), each with its kit, what's next for it (or where it finished) and its last results.
- *  Tapping a team opens its page. A search box shows from 8 teams. */
+/** The public Teams tab, laid out like a European clubs page: a grid of crests and names. Under each
+ *  group while the cup is on (table order once games are played), under how far each team got once
+ *  it's over. Tapping a crest opens the team's page. A search box shows from 8 teams. */
 export default function TournamentTeamsTab({ tournament, participants, matches, events, standings, onOpen }: {
   tournament: Tournament;
   participants: TournamentParticipant[];
@@ -42,14 +55,30 @@ export default function TournamentTeamsTab({ tournament, participants, matches, 
     return <p className="tt-empty">Teams show here once entries are in.</p>;
   }
 
-  const oneDay = new Set(matches.map(m => m.match_date?.slice(0, 10)).filter(Boolean)).size <= 1;
   const grouped = tournament.format === 'group_knockout' && participants.some(p => p.group);
-  const sections = grouped
-    ? GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(g => ({ title: `Group ${g}`, group: g as string | undefined, teams: participants.filter(p => p.group === g) }))
-    : [{ title: '', group: undefined as string | undefined, teams: participants }];
-  const groupGames = (g?: string) => matches.filter(m => (m.tournament_stage || 'group') === 'group' && (!g || m.tournament_group === g));
-  const hasTable = tournament.format !== 'knockout';
   const needle = q.trim().toLowerCase();
+  const finish = new Map(participants.map(t => [t.id, teamSummary(t.name, matches, events).finish]));
+
+  // Each team's place in its table, once a game in that table is played
+  const place = new Map<string, number>();
+  if (tournament.format !== 'knockout') {
+    for (const g of grouped ? GROUP_LETTERS.slice(0, tournament.group_count ?? 1) : [undefined]) {
+      if (matches.some(m => (m.tournament_stage || 'group') === 'group' && (!g || m.tournament_group === g) && m.status === 'completed')) {
+        standings(g).forEach((s, i) => place.set(s.team_id, i + 1));
+      }
+    }
+  }
+  const byPlace = (a: TournamentParticipant, b: TournamentParticipant) => (place.get(a.id) ?? 99) - (place.get(b.id) ?? 99) || a.name.localeCompare(b.name);
+
+  const over = participants.every(t => finish.get(t.id));
+  const sections = over
+    ? [...FINISH_ORDER, null].map(f => ({
+      key: f || 'other', title: f ? FINISH_TITLE[f] || f : 'Other',
+      teams: participants.filter(t => (f ? finish.get(t.id) === f : !FINISH_ORDER.includes(finish.get(t.id)!))).sort(byPlace),
+    }))
+    : grouped
+      ? GROUP_LETTERS.slice(0, tournament.group_count ?? 1).map(g => ({ key: g, title: `Group ${g}`, teams: participants.filter(p => p.group === g).sort(byPlace) }))
+      : [{ key: 'all', title: '', teams: [...participants].sort(byPlace) }];
 
   return (
     <div className="tt">
@@ -60,61 +89,31 @@ export default function TournamentTeamsTab({ tournament, participants, matches, 
           <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Find a team" autoComplete="off" />
         </label>
       )}
-      <div className="tt-groups">
-        {sections.map(sec => {
-          // Table order once a game in this group is played, else A to Z
-          const table = hasTable && groupGames(sec.group).some(m => m.status === 'completed') ? standings(sec.group) : [];
-          const rank = new Map(table.map((s, i) => [s.team_id, i]));
-          const teams = [...sec.teams]
-            .sort((a, b) => (rank.get(a.id) ?? 99) - (rank.get(b.id) ?? 99) || a.name.localeCompare(b.name))
-            .filter(t => !needle || t.name.toLowerCase().includes(needle));
-          if (!teams.length && needle) return null;
-          return (
-            <section key={sec.title || 'all'} className="tt-group" data-ranked={table.length > 0 || undefined} aria-label={sec.title || 'Teams'}>
-              {sec.title && <h3>{sec.title}<span>{sec.teams.length} teams</span></h3>}
-              <ul>
-                {teams.map(t => {
-                  const s = teamSummary(t.name, matches, events);
-                  const st = table.find(x => x.team_id === t.id);
-                  const live = s.games.find(m => m.status === 'live');
-                  const next = s.games.find(m => m.status === 'upcoming');
-                  const opp = (m: Match) => (m.home_team_name === t.name ? m.away_team_name : m.home_team_name);
-                  const form = s.games.filter(m => m.status === 'completed').map(m => gameOutcome(m, m.home_team_name === t.name ? 'home' : 'away')!).slice(-3);
-                  const champs = s.finish === 'Winners';
-                  const line = live ? <><b className="tt-live">Playing now</b> v {opp(live)}, {live.home_team_name === t.name ? live.home_score : live.away_score}-{live.home_team_name === t.name ? live.away_score : live.home_score}</>
-                    : s.finish ? finishLine(s.finish)
-                    : next ? <>{s.played ? 'Next' : 'First game'} {when(next, oneDay)} v {opp(next)}{next.pitch_label ? `, ${next.pitch_label}` : ''}</>
-                    : null;
-                  return (
-                    <li key={t.id}>
-                      <button type="button" className="tt-row" data-champs={champs || undefined} onClick={() => onOpen(t.id)}>
-                        {table.length > 0 && <span className="tt-pos" aria-label={st ? `Position ${rank.get(t.id)! + 1}` : undefined}>{st ? rank.get(t.id)! + 1 : ''}</span>}
-                        <span className="tt-crest">
-                          <img loading="lazy" decoding="async" width={36} height={36} src={t.logo_url || DEFAULT_CREST} alt="" />
-                          {t.color && <i className="tt-kit" style={{ '--k1': t.color, '--k2': t.secondary_color || t.color } as React.CSSProperties} title="Kit colours" />}
-                        </span>
-                        <span className="tt-main">
-                          <span className="tt-name">{champs && <Trophy size={14} aria-hidden />}{t.name}</span>
-                          {line && <span className="tt-line">{line}</span>}
-                        </span>
-                        <span className="tt-side">
-                          {st && <span className="tt-pts"><b>{st.points}</b> pts</span>}
-                          {form.length > 0 && (
-                            <ol className="ht-formline tt-form" aria-label="Last results">
-                              {form.map((o, i) => <li key={i} className={`is-${o}`}><span aria-hidden="true">{o}</span><span className="sr-only">{OUTCOME_WORD[o]}</span></li>)}
-                            </ol>
-                          )}
-                        </span>
-                        <ChevronRight size={16} className="tt-go" aria-hidden />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
+      {sections.map(sec => {
+        const teams = sec.teams.filter(t => !needle || t.name.toLowerCase().includes(needle));
+        if (!teams.length) return null;
+        return (
+          <section key={sec.key} className="tt-sec" aria-label={sec.title || 'Teams'}>
+            {sec.title && <h3>{sec.key === 'Winners' && <Trophy size={18} aria-hidden />}{sec.title}</h3>}
+            <ul className="tt-grid">
+              {teams.map(t => {
+                const pos = place.get(t.id);
+                // Under the name: the group once teams are sorted by finish, else the place in the group
+                const sub = over || !grouped ? (t.group ? `Group ${t.group}` : null) : pos ? ordinal(pos) : null;
+                return (
+                  <li key={t.id}>
+                    <button type="button" className="tt-club" onClick={() => onOpen(t.id)}>
+                      <TeamCrest team={t} size={72} />
+                      <span className="tt-name">{t.name}</span>
+                      {sub && <span className="tt-sub">{sub}</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
       {needle && !participants.some(t => t.name.toLowerCase().includes(needle)) && <p className="tt-empty">No team called &ldquo;{q.trim()}&rdquo;.</p>}
     </div>
   );

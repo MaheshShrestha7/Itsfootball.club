@@ -340,10 +340,10 @@ export default function PublicTournamentDetailPage({
         )}
 
         {/* Tab 4: Teams */}
-        {tab === 'teams' && (
+        {tab === 'teams' && !openTeamRow && (
           <TournamentTeamsTab tournament={tournament} participants={participants} matches={tourneyMatches} events={matchEvents}
             standings={g => getTournamentStandings(tournament.id, g)}
-            onOpen={id => { openTeam(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+            onOpen={showTeamGames} />
         )}
         {/* The tournament's own sponsors; without any, the event's or club's top sponsors as before */}
         <div style={{ marginTop: '2.5rem' }}>
