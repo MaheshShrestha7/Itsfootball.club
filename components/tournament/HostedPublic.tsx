@@ -233,9 +233,9 @@ export function OnNowStrip({ matches, clubSlug, showName, title = 'Next up' }: {
                 {m.status === 'halftime' || m.period === 'halftime' ? 'Half time' : isOn(m) ? <><LiveMinute match={m} />&prime;</> : formatClock(m.match_time || '') || kickoffLabel(m)}
               </span>
             </span>
-            <span className="ht-onnow-team">{showName(m.home_team_name)}</span>
+            <span className="ht-onnow-team"><img src={m.home_team_logo || DEFAULT_CREST} alt="" width={28} height={28} loading="lazy" />{showName(m.home_team_name)}</span>
             <span className="ht-onnow-score">{isOn(m) ? `${m.home_score ?? 0}–${m.away_score ?? 0}` : 'v'}</span>
-            <span className="ht-onnow-team">{showName(m.away_team_name)}</span>
+            <span className="ht-onnow-team"><img src={m.away_team_logo || DEFAULT_CREST} alt="" width={28} height={28} loading="lazy" />{showName(m.away_team_name)}</span>
           </Link>
         ))}
       </div>

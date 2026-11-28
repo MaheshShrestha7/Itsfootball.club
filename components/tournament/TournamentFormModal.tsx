@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useClub } from '@/lib/club-context';
-import { Club, TieBreaker, Tournament, TournamentFormat, TournamentParticipant } from '@/lib/supabase/types';
+import { Club, TieBreaker, Tournament, TournamentFormat, TournamentParticipant, TournamentPrize } from '@/lib/supabase/types';
 import { Trophy, X, Save, AlertTriangle, Pencil, Plus, Send } from 'lucide-react';
 import ImageUploadZone from '@/components/ImageUploadZone';
 import CoverPresetPicker from '@/components/CoverPresetPicker';
@@ -11,7 +11,7 @@ import { COVER_PRESETS } from '@/lib/cover-presets';
 import { defaultSeasonLabel } from '@/lib/season';
 import { STAGE_TITLES, buildTiesheet, knockoutTiming, effectiveGroupRules, knockoutStageFor, parseTournamentDate, tieBreakerOrder, toDateTimeLocal } from '@/lib/tournament-engine';
 import { packKickoffs, shortCode } from '@/lib/hosted-tournaments';
-import { useHostedTournamentsReady, useTieBreakersReady, useTournamentLengthReady } from '@/lib/use-event-fixtures-ready';
+import { useHostedTournamentsReady, useTieBreakersReady, useTournamentLengthReady, useTournamentPrizesReady } from '@/lib/use-event-fixtures-ready';
 import HalfLengthField, { parseHalfMinutes } from '@/components/HalfLengthField';
 import TieBreakersEditor from '@/components/tournament/TieBreakersEditor';
 import { confirmAction } from '@/components/ConfirmDialog';
@@ -44,6 +44,7 @@ export default function TournamentFormModal({
   const hosted = useHostedTournamentsReady();
   const tieReady = useTieBreakersReady();
   const lengthReady = useTournamentLengthReady();
+  const prizesReady = useTournamentPrizesReady();
   // A new age group copies the event's settings; its teams start empty
   const base = tournament ?? ageGroupOf;
   const clubInternalTeams = internalTeams.filter(t => t.club_id === club.id);
@@ -84,6 +85,10 @@ export default function TournamentFormModal({
   const [deadline, setDeadline] = useState(toDateTimeLocal(base?.entry_deadline ?? undefined));
   const [maxSquad, setMaxSquad] = useState(base?.max_squad ? String(base.max_squad) : '');
   const [teamInfo, setTeamInfo] = useState(base?.team_info ?? '');
+  const [prizes, setPrizes] = useState<TournamentPrize[]>(base?.prizes?.length ? base.prizes : []);
+  const [organiser, setOrganiser] = useState(base?.organiser_name ?? '');
+  const [orgPhone, setOrgPhone] = useState(base?.organiser_phone ?? '');
+  const [orgEmail, setOrgEmail] = useState(base?.organiser_email ?? '');
   const [eventId, setEventId] = useState(base?.event_id ?? '');
   const clubEvents = events.filter(ev => ev.club_id === club.id).sort((a, b) => b.start_time.localeCompare(a.start_time)).slice(0, 40);
   const [selectedInternalTeamIds, setSelectedInternalTeamIds] = useState<string[]>(
@@ -139,6 +144,16 @@ export default function TournamentFormModal({
       team_info: teamInfo.trim().slice(0, 4000) || null,
       event_id: eventId || null,
       ...(ageGroupOf && !isEdit ? { parent_id: ageGroupOf.parent_id || ageGroupOf.id } : {}),
+    };
+  };
+
+  const prizeFields = (): Partial<Tournament> => {
+    const list = prizes.map(p => ({ label: p.label.trim().slice(0, 60), prize: p.prize.trim().slice(0, 120) })).filter(p => p.label && p.prize).slice(0, 20);
+    return {
+      prizes: list.length ? list : null,
+      organiser_name: organiser.trim().slice(0, 120) || null,
+      organiser_phone: orgPhone.trim().slice(0, 40) || null,
+      organiser_email: orgEmail.trim().slice(0, 200) || null,
     };
   };
 
@@ -275,6 +290,7 @@ export default function TournamentFormModal({
       ...(hosted ? hostedFields() : {}),
       // Migration 20261194
       ...(lengthReady ? lengthFields() : {}),
+      ...(prizesReady ? prizeFields() : {}),
       // Migration 20261181; a knockout has no table to split
       ...(tieReady && format !== 'knockout' ? { tie_breakers: tieBreakers } : {}),
     };
@@ -528,6 +544,44 @@ export default function TournamentFormModal({
                 <textarea id="tfm-info" className="form-textarea" rows={3} maxLength={4000} placeholder="Parking, canteen, first aid, rules, what to bring" value={teamInfo} onChange={e => setTeamInfo(e.target.value)} style={{ resize: 'vertical' }} />
                 <p className="ht-hint">Shown on every team&rsquo;s entry page and in the info pack email.</p>
               </div>
+              {prizesReady && (
+                <>
+                  <fieldset className="form-group tfm-prizes">
+                    <legend className="form-label">Prizes</legend>
+                    {prizes.map((p, i) => (
+                      <div key={i} className="tfm-prize">
+                        <input className="form-input" list="tfm-prize-kinds" aria-label={`Prize ${i + 1}: what for`} maxLength={60} placeholder="Winner" value={p.label}
+                          onChange={e => setPrizes(list => list.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+                        <input className="form-input" aria-label={`Prize ${i + 1}: the prize`} maxLength={120} placeholder="$500 and the trophy" value={p.prize}
+                          onChange={e => setPrizes(list => list.map((x, j) => (j === i ? { ...x, prize: e.target.value } : x)))} />
+                        <button type="button" className="btn btn-secondary btn-sm" aria-label={`Remove prize ${i + 1}`} onClick={() => setPrizes(list => list.filter((_, j) => j !== i))}>Remove</button>
+                      </div>
+                    ))}
+                    <datalist id="tfm-prize-kinds">
+                      {['Winner', 'Runner-up', 'Third place', 'Player of the Tournament', 'Best goalkeeper', 'Top scorer', 'Fair play award'].map(k => <option key={k} value={k} />)}
+                    </datalist>
+                    {prizes.length < 20 && (
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPrizes(list => [...list, { label: list.length ? '' : 'Winner', prize: '' }])}>Add a prize</button>
+                    )}
+                    <p className="ht-hint">Shown on the public tournament page, in this order.</p>
+                  </fieldset>
+                  <div className="ht-three">
+                    <div className="form-group">
+                      <label htmlFor="tfm-org" className="form-label">Organiser</label>
+                      <input id="tfm-org" className="form-input" maxLength={120} placeholder={club.name} value={organiser} onChange={e => setOrganiser(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="tfm-org-phone" className="form-label">Contact phone</label>
+                      <input id="tfm-org-phone" className="form-input" type="tel" maxLength={40} autoComplete="off" value={orgPhone} onChange={e => setOrgPhone(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="tfm-org-email" className="form-label">Contact email</label>
+                      <input id="tfm-org-email" className="form-input" type="email" maxLength={200} autoComplete="off" value={orgEmail} onChange={e => setOrgEmail(e.target.value)} />
+                    </div>
+                  </div>
+                  <p className="ht-hint" style={{ marginTop: '-0.5rem', marginBottom: '1rem' }}>Shown to the public so families and teams can ask questions.</p>
+                </>
+              )}
               {clubEvents.length > 0 && (
                 <div className="form-group">
                   <label htmlFor="tfm-event" className="form-label">Part of a club event</label>

@@ -15,6 +15,7 @@ import { matchPath } from '@/lib/slugs';
 import { plainText } from '@/lib/match-report';
 import { tournamentStats } from '@/lib/tournament-stats';
 import { GROUP_LETTERS } from '@/lib/tournament-engine';
+import { formatMoney } from '@/lib/finance';
 import { WRITEUP_LABELS, type tournamentWriteups } from '@/lib/tournament-writeups';
 import type { ClubMember, Match, MatchEvent, Tournament, TournamentParticipant, TournamentStanding } from '@/lib/supabase/types';
 import '@/components/tournament/hosted.css';
@@ -59,13 +60,15 @@ function formatLines(t: Tournament, teams: number): string[] {
 
 type Writeups = ReturnType<typeof tournamentWriteups>;
 
-export default function TournamentOverview({ tournament, matches, events, participants, members, clubSlug, writeups, standings, showName, onTeam, onTab }: {
+export default function TournamentOverview({ tournament, matches, events, participants, members, clubSlug, host, writeups, standings, showName, onTeam, onTab }: {
   tournament: Tournament;
   matches: Match[];
   events: MatchEvent[];
   participants: TournamentParticipant[];
   members: ClubMember[];
   clubSlug: string;
+  /** The host club: the organiser and contact when the tournament names none */
+  host: { name: string; contact_email?: string | null; contact_phone?: string | null };
   writeups: Writeups;
   standings: (group?: string) => TournamentStanding[];
   showName: (n: string) => string;
@@ -87,11 +90,15 @@ export default function TournamentOverview({ tournament, matches, events, partic
     return (
       <div className="tp-ov">
         {firstAt && <EventCountdown startTime={firstAt} />}
-        <section className="glass-panel tp-card tp-ov-how" aria-labelledby="tp-ov-how">
-          <h3 id="tp-ov-how">How it works</h3>
-          {lines.map(l => <p key={l}>{l}</p>)}
-          {tournament.description && <p className="tp-ov-desc">{tournament.description}</p>}
-        </section>
+        <div className="tp-ov-pair">
+          <section className="glass-panel tp-card tp-ov-how" aria-labelledby="tp-ov-how">
+            <h3 id="tp-ov-how">How it works</h3>
+            {lines.map(l => <p key={l}>{l}</p>)}
+            {tournament.description && <p className="tp-ov-desc">{tournament.description}</p>}
+          </section>
+          <Details tournament={tournament} host={host} />
+        </div>
+        <Prizes tournament={tournament} />
         {participants.length > 0 && (
           <section className="glass-panel tp-card" aria-labelledby="tp-ov-teams">
             <div className="tp-ov-head">
@@ -113,6 +120,7 @@ export default function TournamentOverview({ tournament, matches, events, partic
         {matches.length
           ? <OnNowStrip matches={matches} clubSlug={clubSlug} showName={showName} title="First games" />
           : <p className="ht-empty">The draw hasn&apos;t been made yet. The games show here once it is.</p>}
+        <Contact tournament={tournament} host={host} />
       </div>
     );
   }
@@ -158,9 +166,9 @@ export default function TournamentOverview({ tournament, matches, events, partic
               {latest.map(m => (
                 <li key={m.id}>
                   <Link href={matchPath(clubSlug, m)}>
-                    <span className="tp-ov-t">{showName(m.home_team_name)}</span>
+                    <span className="tp-ov-t"><img src={m.home_team_logo || DEFAULT_CREST} alt="" width={24} height={24} loading="lazy" /><span>{showName(m.home_team_name)}</span></span>
                     <b>{m.home_score}–{m.away_score}</b>
-                    <span className="tp-ov-t">{showName(m.away_team_name)}</span>
+                    <span className="tp-ov-t"><img src={m.away_team_logo || DEFAULT_CREST} alt="" width={24} height={24} loading="lazy" /><span>{showName(m.away_team_name)}</span></span>
                     {m.home_score === m.away_score && m.home_penalty_score != null && <small>{m.home_penalty_score}–{m.away_penalty_score} on penalties</small>}
                   </Link>
                 </li>
@@ -193,6 +201,8 @@ export default function TournamentOverview({ tournament, matches, events, partic
           )}
         </div>
         {latestWriteup && <WriteupRow w={latestWriteup} />}
+        <Prizes tournament={tournament} />
+        <Contact tournament={tournament} host={host} />
       </div>
     );
   }
@@ -228,7 +238,58 @@ export default function TournamentOverview({ tournament, matches, events, partic
           </dl>
         </section>
       )}
+      <Contact tournament={tournament} host={host} />
     </div>
+  );
+}
+
+type Host = { name: string; contact_email?: string | null; contact_phone?: string | null };
+
+/** Age group, squad size, entry fee and organiser: only the ones the host filled in */
+function Details({ tournament: t, host }: { tournament: Tournament; host: Host }) {
+  const facts: [string, React.ReactNode][] = [];
+  if (t.age_group) facts.push(['Age group', t.age_group]);
+  if (t.max_squad) facts.push(['Squad size', <>Up to {t.max_squad} players<small>a team</small></>]);
+  if (t.entry_fee_cents) facts.push(['Entry fee', <>
+    {/* shortcut: AUD until the public page reads the club's payment currency */}
+    {formatMoney(t.entry_fee_cents, 'AUD')}<small>a team{t.entry_deadline && <>, entries close <LocalTime value={t.entry_deadline} /></>}</small>
+  </>]);
+  facts.push(['Organiser', t.organiser_name || host.name]);
+  return (
+    <section className="glass-panel tp-card" aria-labelledby="tp-ov-details">
+      <h3 id="tp-ov-details">Details</h3>
+      <dl className="tp-ov-facts">
+        {facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+      </dl>
+    </section>
+  );
+}
+
+function Prizes({ tournament }: { tournament: Tournament }) {
+  const list = (tournament.prizes ?? []).filter(p => p?.label && p?.prize);
+  if (!list.length) return null;
+  return (
+    <section className="glass-panel tp-card" aria-labelledby="tp-ov-prizes">
+      <h3 id="tp-ov-prizes">Prizes</h3>
+      <ul className="tp-ov-prizes">
+        {list.map((p, i) => <li key={`${p.label}-${i}`}><span>{p.label}</span><b>{p.prize}</b></li>)}
+      </ul>
+    </section>
+  );
+}
+
+/** Who to ask: the tournament's own contact, else the host club's public one */
+function Contact({ tournament: t, host }: { tournament: Tournament; host: Host }) {
+  const own = !!(t.organiser_phone || t.organiser_email);
+  const phone = own ? t.organiser_phone : host.contact_phone;
+  const email = own ? t.organiser_email : host.contact_email;
+  if (!phone && !email) return null;
+  return (
+    <section className="glass-panel tp-card tp-ov-contact" aria-label="Contact the organiser">
+      <p>Questions? <b>{t.organiser_name || host.name}</b> runs this tournament.</p>
+      {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}>{phone}</a>}
+      {email && <a href={`mailto:${email}`}>{email}</a>}
+    </section>
   );
 }
 

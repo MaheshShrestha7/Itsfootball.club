@@ -38,3 +38,6 @@ export const useCupFormatReady = () => useColumnReady('events', 'cup_format');
 
 /** True once a tournament can keep its game lengths and knockout timing (tournaments.half_minutes, migration 20261194) */
 export const useTournamentLengthReady = () => useColumnReady('tournaments', 'half_minutes');
+
+/** True once a tournament can keep its prizes and organiser contact (tournaments.prizes, migration 20261198) */
+export const useTournamentPrizesReady = () => useColumnReady('tournaments', 'prizes');

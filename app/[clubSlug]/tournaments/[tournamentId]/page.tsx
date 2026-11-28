@@ -270,7 +270,7 @@ export default function PublicTournamentDetailPage({
 
         {tab === 'overview' && (
           <TournamentOverview tournament={tournament} matches={tourneyMatches} events={matchEvents} participants={participants}
-            members={members.filter(m => m.club_id === club.id)} clubSlug={club.slug} writeups={writeups}
+            members={members.filter(m => m.club_id === club.id)} clubSlug={club.slug} host={club} writeups={writeups}
             standings={g => getTournamentStandings(tournament.id, g)} showName={showName} onTeam={showTeamGames} onTab={showTab} />
         )}
 
