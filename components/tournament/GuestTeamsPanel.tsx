@@ -540,12 +540,15 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
   const pickClub = (c: FoundClub, tId = c.teams[0]?.id || '') => {
     const t = c.teams.find(x => x.id === tId);
     const n = ourSide(c.name, c.teams.length > 1 ? t?.name : null);
-    setFound(c); setTeamId(tId); setName(n); setCode(shortCode(n));
+    setFound(c); setTeamId(tId);
+    // An existing team keeps its name, so its fixtures don't change
+    if (!team) { setName(n); setCode(shortCode(n)); }
     setLogo(t?.logo_url || c.logo_url || '');
     setC1(hexOr(c.primary_color, hexOr(t?.color, '#2563EB'))); setC2(hexOr(c.secondary_color, '#FFFFFF'));
     setError(null);
   };
-  const finding = mode === 'find' && !team;
+  // Adding a team, or editing a guest team that isn't linked yet
+  const finding = mode === 'find' && (!team || (guest && !link));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -573,7 +576,20 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
             <button type="button" aria-pressed={mode === 'type'} onClick={() => { setMode('type'); setFound(null); }}>Type it in</button>
           </div>
         )}
-        {finding && !found && <ClubSearch hostClubId={club.id} taken={taken} onPick={c => pickClub(c)} />}
+        {team && guest && !link && canLink && mode === 'type' && (
+          <div className="ht-linked">
+            <Link2 size={18} aria-hidden="true" />
+            <div className="min-w-0">
+              <div className="ht-name">Is {team.name} on itsfootball.club?</div>
+              <div className="ht-sub">Link it to their club profile. They get an invitation to accept.</div>
+            </div>
+            <div className="ht-linked-acts">
+              <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setMode('find')}><Search size={14} aria-hidden="true" /><span>Find their club</span></button>
+            </div>
+          </div>
+        )}
+        {finding && !found && <ClubSearch hostClubId={club.id} taken={team ? taken.filter(n => n !== team.name.toLowerCase()) : taken} onPick={c => pickClub(c)} />}
+        {team && finding && !found && <button type="button" className="ht-link-btn" onClick={() => setMode('type')}>Back to editing without a link</button>}
         {finding && found && (
           <div className="ht-linked">
             <Crest team={{ logo_url: logo || DEFAULT_CREST, color: c1, secondary_color: c2 }} size={46} />
@@ -583,7 +599,11 @@ export function TeamEditor({ club, tournament, team, entry, isEvent, taken, canL
             </div>
             <div className="ht-linked-acts">
               {!changeLook && <button type="button" className="btn btn-sm btn-secondary" style={btn} onClick={() => setChangeLook(true)}><Pencil size={14} aria-hidden="true" /><span>Change</span></button>}
-              <button type="button" className="ht-link-btn" onClick={() => { setFound(null); setChangeLook(false); setName(''); setCode(''); setLogo(''); }}>Pick another club</button>
+              <button type="button" className="ht-link-btn" onClick={() => {
+                setFound(null); setChangeLook(false);
+                if (!team) { setName(''); setCode(''); setLogo(''); return; }
+                setLogo(team.logo_url && team.logo_url !== DEFAULT_CREST ? team.logo_url : ''); setC1(hexOr(team.color, '#2563EB')); setC2(hexOr(team.secondary_color, '#FFFFFF'));
+              }}>Pick another club</button>
             </div>
           </div>
         )}
